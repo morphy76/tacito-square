@@ -37,13 +37,13 @@
 │              │ NATS                                  │
 │     ┌────────┴──────────────────────────┐            │
 │     │      Agent Communities            │            │
-│     │  ┌─────┐  ┌─────┐  ┌─────┐       │            │
+│     │  ┌─────┐  ┌─────┐  ┌─────┐        │            │
 │     │  │Hub  │──│Agent│──│Agent│        │            │
-│     │  └─────┘  └─────┘  └─────┘       │            │
+│     │  └─────┘  └─────┘  └─────┘        │            │
 │     └───────────────────────────────────┘            │
 │                                                      │
 │  Infrastructure: NATS │ Redis │ Qdrant │ PostgreSQL  │
-│                  Keycloak │ OpenTelemetry Collector   │
+│                  Keycloak │ OpenTelemetry Collector  │
 └──────────────────────────────────────────────────────┘
 ```
 
