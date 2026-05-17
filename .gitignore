@@ -1,0 +1,21 @@
+# Binaries
+bin/
+agent
+keeper
+operator
+bff
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+
+# Go
+vendor/
+
+# Helm
+deploy/helm/tacito-square/charts/
+deploy/helm/tacito-square/Chart.lock

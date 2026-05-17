@@ -1,0 +1,14 @@
+1. Get the Keeper URL:
+  export KEEPER_URL=$(kubectl get svc {{ .Release.Name }}-keeper -o jsonpath='{.spec.clusterIP}'):{{ .Values.keeper.service.port }}
+  echo "Keeper API: http://$KEEPER_URL"
+
+2. Spawn an agent:
+  curl -X POST http://$KEEPER_URL/api/v1/agents \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer <your-token>" \
+    -d '{"name":"my-agent","community_id":"...","prompt_id":"...","skill_ids":[]}'
+
+3. Check agent status:
+  curl http://$KEEPER_URL/api/v1/agents
+
+For more info visit: https://github.com/morphy76/tacito-square

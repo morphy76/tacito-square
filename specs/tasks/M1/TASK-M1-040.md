@@ -1,0 +1,16 @@
+# TASK-M1-040
+
+| Field       | Value |
+|-------------|-------|
+| Task ID     | TASK-M1-040 |
+| Spec        | SPEC-FR-12.6 |
+| Milestone   | M1 |
+| Status      | ✅ Done |
+
+## Description
+
+Helm umbrella Chart.yaml
+
+## Files
+
+- `deploy/helm/tacito-square/Chart.yaml`
