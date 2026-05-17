@@ -206,4 +206,4 @@
 | Milestone | Status | Tasks | Directory |
 |-----------|--------|-------|-----------|
 | M1: Foundation | ✅ COMPLETE | 53/53 | [tasks/M1/](tasks/M1/) |
-| M2: Memory, Tools, Storage & Cache | 🔄 IN PROGRESS | 20/24 | [tasks/M2/](tasks/M2/) |
+| M2: Memory, Tools, Storage & Cache | 🔄 IN PROGRESS | 20/25 | [tasks/M2/](tasks/M2/) |

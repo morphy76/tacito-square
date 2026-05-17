@@ -2,7 +2,7 @@
 
 | Field      | Value |
 |------------|-------|
-| Status     | 🔄 IN PROGRESS (20/24 tasks) |
+| Status     | 🔄 IN PROGRESS (20/25 tasks) |
 | Tests      | 32 (unit), integration pending |
 
 ## Goal
@@ -53,4 +53,5 @@ Agent processes multi-turn conversation with memory persistence and tool use.
 | TASK-M2-022 | SPEC-NFR-CACHE | Redis cache adapter implementation (JSON, namespaced) | ✅ Done |
 | TASK-M2-023 | SPEC-NFR-CACHE | Cache integration test (testcontainers) | ⬜ Pending |
 | TASK-M2-024 | ALL | Refactor pass: adapter abstractions | ⬜ Pending |
+| TASK-M2-025 | SPEC-FR-10.7 | GitHub Actions CI, static scan, Dependabot | ⬜ Pending |
 
