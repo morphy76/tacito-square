@@ -8,7 +8,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /bin/operator ./cmd/operator
 
 # Runtime stage
-FROM gcr.io/distroless/static-debian12:nonroot
+FROM gcr.io/distroless/base-nossl-debian13:nonroot
 COPY --from=builder /bin/operator /operator
 USER nonroot:nonroot
 ENTRYPOINT ["/operator"]
