@@ -4,7 +4,6 @@
 |---------------|------------------------------------|
 | ID            | SPEC-NFR-HTTP                      |
 | Status        | VERIFIED                           |
-| Milestone     | M1                                 |
 | Component     | keeper, agent, bff                 |
 
 ## Specification

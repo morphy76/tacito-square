@@ -3,10 +3,8 @@
 | Field         | Value                              |
 |---------------|------------------------------------|
 | ID            | SPEC-NFR-METRICS                   |
-| Status        | DRAFT                              |
-| Milestone     | M9                                 |
-| FR/NFR Ref    | FR-09.3                            |
-| Component     | all                                |
+| Status        | VERIFIED                           |
+| Component     | keeper, agent, bff                 |
 
 ## Specification
 
