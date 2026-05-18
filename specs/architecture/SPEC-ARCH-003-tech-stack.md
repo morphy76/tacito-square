@@ -18,14 +18,14 @@ These technology choices are LOCKED. Changes require a constitution amendment.
 | Tracing | OpenTelemetry OTLP gRPC | `go.opentelemetry.io/otel` |
 | Testing | testify + testcontainers-go | `github.com/stretchr/testify` |
 | Config | Viper | `github.com/spf13/viper` |
-| LLM Client | OpenAI-compatible REST | `net/http` |
+| LLM Client | OpenAI Go API Library | `github.com/openai/openai-go` |
 | STM | Redis | `github.com/redis/go-redis` |
 | LTM | Qdrant gRPC | `github.com/qdrant/go-client` |
 | Persistence | PostgreSQL | `github.com/jackc/pgx` |
-| Migrations | golang-migrate | `github.com/golang-migrate/migrate` |
+| Migrations | goose | `github.com/pressly/goose` |
 | Messaging | NATS | `github.com/nats-io/nats.go` |
-| Tools | MCP | `github.com/modelcontextprotocol/go-sdk` |
-| IAM | Keycloak (OIDC) | Bitnami Helm chart |
+| MCP | MCP (client SDKs) | `github.com/modelcontextprotocol/go-sdk` |
+| OIDC | Zitadel (client SDKs) | `github.com/zitadel/oidc/v3` |
 | Operator | Kubebuilder | `sigs.k8s.io/controller-runtime` |
 | Frontend | React 19 + Compiler | — |
 | Object Storage | S3-compatible (MinIO for dev) | `github.com/aws/aws-sdk-go-v2` |
@@ -33,8 +33,7 @@ These technology choices are LOCKED. Changes require a constitution amendment.
 | Metrics | Prometheus (exposition format) | `github.com/prometheus/client_golang` |
 | Autoscaling | HPA + custom metrics | prometheus-adapter or KEDA |
 | Deployment | Helm umbrella chart | `deploy/helm/tacito-square/` |
-| Docker base | distroless | `gcr.io/distroless/static-debian12` |
-| Image registry | `localhost:5000` (default) | Overridable per-component |
+| Docker base | distroless | `gcr.io/distroless/base-nossl-debian13` |
 
 ## Acceptance Criteria
 

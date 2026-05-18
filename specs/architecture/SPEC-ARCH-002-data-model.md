@@ -28,7 +28,7 @@ The Keeper PostgreSQL data model MUST implement the following entities:
 ### State Machines
 
 - `agent_instance.status`: `Pending → Running → Degraded → Terminated`
-- `thread.status`: `open → closed → archived`
+- `thread.status`: `active <-> idle <-> archived`
 - `hitl_callback.status`: `pending → responded → expired → escalated`
 
 ### Migrations
