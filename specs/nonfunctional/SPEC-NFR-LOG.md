@@ -21,8 +21,3 @@
 2. `WithTraceID(logger, spanCtx)` adds `trace_id` and `span_id` fields
 3. `WithClaims(logger, claims)` adds only keys listed in `LogClaimsKeys`
 4. Debug messages are suppressed at info level
-
-## Files
-
-- `internal/shared/observability/logger.go` ✅ IMPLEMENTED
-- `internal/shared/observability/logger_test.go` ✅ 6 tests passing

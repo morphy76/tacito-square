@@ -14,6 +14,7 @@
 3. Error responses MUST use `gin.H{"error": message}` JSON format.
 4. Route registration MUST be centralized via `RegisterRoutes(*gin.Engine)` per handler group.
 5. Tests MUST use `gin.TestMode` and `httptest.NewRecorder` with `r.ServeHTTP(w, req)`.
+6. Outbound HTTP requests need to propagate observability information (tracecontext, etc.) from the incoming request.
 
 ## Acceptance Criteria
 
@@ -21,8 +22,3 @@
 2. `ShouldBindJSON` validates required fields, returns 400 on failure
 3. Path params extracted via `c.Param("id")`
 4. All tests pass through Gin's ServeHTTP (full middleware stack)
-
-## Files
-
-- `internal/keeper/adapters/inbound/httphandler/handler.go` ✅ IMPLEMENTED
-- `internal/keeper/adapters/inbound/httphandler/handler_test.go` ✅ 5 tests passing
