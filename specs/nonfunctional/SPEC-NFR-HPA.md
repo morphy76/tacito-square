@@ -3,9 +3,8 @@
 | Field         | Value                              |
 |---------------|------------------------------------|
 | ID            | SPEC-NFR-HPA                       |
-| Status        | DRAFT                              |
-| Milestone     | M7                                 |
-| Component     | operator, deploy                   |
+| Status        | VERIFIED                           |
+| Component     | keeper, agent, bff                 |
 
 ## Specification
 

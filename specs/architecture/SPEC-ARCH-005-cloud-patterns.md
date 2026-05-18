@@ -3,7 +3,7 @@
 | Field         | Value                              |
 |---------------|------------------------------------|
 | ID            | SPEC-ARCH-005                      |
-| Status        | DRAFT                              |
+| Status        | VERIFIED                           |
 | Component     | all                                |
 
 ## Specification

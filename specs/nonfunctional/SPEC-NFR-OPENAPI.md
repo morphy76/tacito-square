@@ -3,9 +3,7 @@
 | Field         | Value                              |
 |---------------|------------------------------------|
 | ID            | SPEC-NFR-OPENAPI                   |
-| Status        | DRAFT                              |
-| Milestone     | M9                                 |
-| FR/NFR Ref    | FR-12.4                            |
+| Status        | VERIFIED                           |
 | Component     | keeper, agent, bff                 |
 
 ## Specification

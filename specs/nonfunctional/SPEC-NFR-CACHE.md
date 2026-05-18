@@ -3,8 +3,7 @@
 | Field         | Value                              |
 |---------------|------------------------------------|
 | ID            | SPEC-NFR-CACHE                     |
-| Status        | IMPLEMENTED                        |
-| Milestone     | M2                                 |
+| Status        | VERIFIED                           |
 | Component     | keeper, shared                     |
 
 ## Specification

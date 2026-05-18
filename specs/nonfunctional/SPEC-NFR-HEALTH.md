@@ -4,9 +4,7 @@
 |---------------|------------------------------------|
 | ID            | SPEC-NFR-HEALTH                    |
 | Status        | VERIFIED                           |
-| Milestone     | M1                                 |
-| FR/NFR Ref    | FR-09.5, FR-09.6, FR-09.7, FR-09.8, FR-09.9 |
-| Component     | shared, keeper, agent, bff, operator |
+| Component     | keeper, agent, bff                 |
 
 ## Specification
 

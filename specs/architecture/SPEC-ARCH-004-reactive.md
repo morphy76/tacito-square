@@ -3,8 +3,8 @@
 | Field         | Value                              |
 |---------------|------------------------------------|
 | ID            | SPEC-ARCH-004                      |
-| Status        | DRAFT                              |
-| Component     | all                                |
+| Status        | VERIFIED                           |
+| Component     | agent, keeper                      |
 
 ## Specification
 

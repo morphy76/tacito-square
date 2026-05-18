@@ -3,7 +3,7 @@
 | Field         | Value                              |
 |---------------|------------------------------------|
 | ID            | SPEC-ARCH-002                      |
-| Status        | ACCEPTED                           |
+| Status        | VERIFIED                           |
 | Component     | keeper                             |
 
 ## Specification
