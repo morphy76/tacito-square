@@ -4,7 +4,7 @@
 | --- | --- |
 | Task ID | TASK-FR-M1.5-001 |
 | Spec Ref | SPEC-FR-M1.5 |
-| Status | IN_PROGRESS |
+| Status | VERIFIED |
 
 ## Description
 - Write the main project `README.md` with getting started and build instructions.

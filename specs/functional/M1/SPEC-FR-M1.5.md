@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M1.5                                |
-| Status        | IN_PROGRESS                                 |
+| Status        | VERIFIED                                    |
 | Milestone     | M1                                          |
 | FR/NFR Ref    | FR-M1.5                                     |
 | Component     | shared                                      |
@@ -20,7 +20,7 @@ The system MUST include:
 
 ## Acceptance Criteria
 1. `README.md` contains build and run instructions.
-2. `charts/tacito-square/README.md` contains deployment instructions.
+2. `deploy/helm/tacito-square/README.md` contains deployment instructions.
 
 ## Test Plan
 - Review README files for completeness and accuracy.
@@ -30,4 +30,4 @@ N/A
 
 ## Files Affected
 - `README.md`
-- `charts/tacito-square/README.md`
+- `deploy/helm/tacito-square/README.md`

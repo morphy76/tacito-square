@@ -58,6 +58,6 @@ Documentation:
 |---------|-------|--------|
 | SPEC-FR-M1.1 | Build System & Layout | VERIFIED |
 | SPEC-FR-M1.2 | Containerization | VERIFIED |
-| SPEC-FR-M1.3 | Infrastructure Deployment | VERIFIED |
-| SPEC-FR-M1.4 | Continuous Integration | VERIFIED |
+| SPEC-FR-M1.3 | Infrastructure Deployment | IN_PROGRESS |
+| SPEC-FR-M1.4 | Continuous Integration | IN_PROGRESS |
 | SPEC-FR-M1.5 | Project Documentation | VERIFIED |

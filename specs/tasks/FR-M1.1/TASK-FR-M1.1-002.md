@@ -4,7 +4,7 @@
 | --- | --- |
 | Task ID | TASK-FR-M1.1-002 |
 | Spec Ref | SPEC-FR-M1.1 |
-| Status | IN_PROGRESS |
+| Status | VERIFIED |
 
 ## Description
 - Develop a Makefile to handle building binaries and running test suites (unit, integration, benchmark, and race).

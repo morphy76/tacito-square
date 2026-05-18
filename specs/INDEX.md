@@ -24,11 +24,11 @@
 
 | ID | Title | Status | Milestone | File |
 |----|-------|--------|-----------|------|
-| SPEC-FR-M1.1 | Build System & Layout | IN_PROGRESS | M1 | [SPEC-FR-M1.1](functional/M1/SPEC-FR-M1.1.md) |
-| SPEC-FR-M1.2 | Containerization | IN_PROGRESS | M1 | [SPEC-FR-M1.2](functional/M1/SPEC-FR-M1.2.md) |
+| SPEC-FR-M1.1 | Build System & Layout | VERIFIED | M1 | [SPEC-FR-M1.1](functional/M1/SPEC-FR-M1.1.md) |
+| SPEC-FR-M1.2 | Containerization | VERIFIED | M1 | [SPEC-FR-M1.2](functional/M1/SPEC-FR-M1.2.md) |
 | SPEC-FR-M1.3 | Infrastructure Deployment | IN_PROGRESS | M1 | [SPEC-FR-M1.3](functional/M1/SPEC-FR-M1.3.md) |
 | SPEC-FR-M1.4 | Continuous Integration | IN_PROGRESS | M1 | [SPEC-FR-M1.4](functional/M1/SPEC-FR-M1.4.md) |
-| SPEC-FR-M1.5 | Project Documentation | IN_PROGRESS | M1 | [SPEC-FR-M1.5](functional/M1/SPEC-FR-M1.5.md) |
+| SPEC-FR-M1.5 | Project Documentation | VERIFIED | M1 | [SPEC-FR-M1.5](functional/M1/SPEC-FR-M1.5.md) |
 
 ### FR-01: Agent Lifecycle Management
 

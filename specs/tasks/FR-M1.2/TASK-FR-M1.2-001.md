@@ -4,7 +4,7 @@
 | --- | --- |
 | Task ID | TASK-FR-M1.2-001 |
 | Spec Ref | SPEC-FR-M1.2 |
-| Status | IN_PROGRESS |
+| Status | VERIFIED |
 
 ## Description
 - Create Dockerfiles for containerizing the main components (Agent, Keeper, Operator, BFF).

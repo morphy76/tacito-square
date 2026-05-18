@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M1.2                                |
-| Status        | IN_PROGRESS                                 |
+| Status        | VERIFIED                                    |
 | Milestone     | M1                                          |
 | FR/NFR Ref    | FR-M1.2                                     |
 | Component     | shared                                      |
