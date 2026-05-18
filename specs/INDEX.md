@@ -39,17 +39,24 @@
 
 | ID | Title | Status | Milestone |
 |----|-------|--------|-----------|
-| SPEC-FR-02.1 | Prompt CRUD | DRAFT | M3 |
-| SPEC-FR-02.2 | Prompt versioning | DRAFT | M3 |
-| SPEC-FR-02.3 | Prompt import/export | DRAFT | M3 |
+| SPEC-FR-02.1 | Prompt CRUD | DRAFT | M4 |
+| SPEC-FR-02.2 | Prompt versioning | DRAFT | M4 |
+| SPEC-FR-02.3 | Prompt import/export | DRAFT | M4 |
 
-### FR-03: Skills Management
+### FR-03: Platform Foundations
+
+| ID | Title | Status | Milestone | File |
+|----|-------|--------|-----------|------|
+| SPEC-FR-03.1 | PostgreSQL AgentStore and Migrations | DRAFT | M3 | [SPEC-FR-03.1](functional/FR-03/SPEC-FR-03.1.md) |
+| SPEC-FR-03.2 | Gin RBAC middleware | DRAFT | M3 | [SPEC-FR-03.2](functional/FR-03/SPEC-FR-03.2.md) |
+
+### FR-17: Skills Management
 
 | ID | Title | Status | Milestone |
 |----|-------|--------|-----------|
-| SPEC-FR-03.1 | Skill CRUD | DRAFT | M3 |
-| SPEC-FR-03.2 | MCP tool attach/detach | DRAFT | M3 |
-| SPEC-FR-03.3 | Skill assignment at spawn | DRAFT | M3 |
+| SPEC-FR-17.1 | Skill CRUD | DRAFT | M4 |
+| SPEC-FR-17.2 | MCP tool attach/detach | DRAFT | M4 |
+| SPEC-FR-17.3 | Skill assignment at spawn | DRAFT | M4 |
 
 ### FR-04: Agent Reasoning & Conversation
 
@@ -155,7 +162,6 @@
 | ID | Title | Status | Milestone | File |
 |----|-------|--------|-----------|------|
 | SPEC-FR-13.1 | RBAC role model | DRAFT | M3 | — |
-| SPEC-FR-13.2 | Gin RBAC middleware | DRAFT | M3 | — |
 | SPEC-FR-13.3 | Principal logging | DRAFT | M3 | — |
 | SPEC-FR-13.4 | Audit trail with actor identity | DRAFT | M5, M3 | — |
 | SPEC-FR-13.5 | Keycloak realm via Helm | VERIFIED | M1 | [SPEC-FR-13.5](functional/FR-13/SPEC-FR-13.5.md) |

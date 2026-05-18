@@ -33,9 +33,9 @@ The Keeper PostgreSQL data model MUST implement the following entities:
 
 ### Migrations
 
-- Managed via `golang-migrate`
-- Migration files in `migrations/` directory
-- Applied at Keeper startup or via Makefile target
+- Managed via `goose`
+- Migration files in `db/migrations/` directory
+- Applied via K8s Helm pre-install/pre-upgrade Job (production) or Makefile target (local)
 
 ## Acceptance Criteria
 
