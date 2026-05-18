@@ -8,7 +8,7 @@ BFF_VERSION     := $(shell cat VERSION.bff 2>/dev/null || echo "0.0.1")
 
 REGISTRY       ?= localhost:5000/tacito-square
 HELM_RELEASE   ?= tacito-square
-HELM_CHART     := deploy/helm/tacito-square
+HELM_CHART     := tools/helm/tacito-square
 
 GO             := go
 GOTEST         := $(GO) test
@@ -75,16 +75,16 @@ generate: ## Run code generation (mocks, CRDs, etc.)
 docker-build: docker-build-agent docker-build-keeper docker-build-operator docker-build-bff ## Build all Docker images
 
 docker-build-agent: ## Build agent Docker image
-	docker build -f Dockerfile.agent -t $(REGISTRY)/agent:$(AGENT_VERSION) .
+	docker build -f tools/docker/Dockerfile.agent -t $(REGISTRY)/agent:$(AGENT_VERSION) .
 
 docker-build-keeper: ## Build keeper Docker image
-	docker build -f Dockerfile.keeper -t $(REGISTRY)/keeper:$(KEEPER_VERSION) .
+	docker build -f tools/docker/Dockerfile.keeper -t $(REGISTRY)/keeper:$(KEEPER_VERSION) .
 
 docker-build-operator: ## Build operator Docker image
-	docker build -f Dockerfile.operator -t $(REGISTRY)/operator:$(OPERATOR_VERSION) .
+	docker build -f tools/docker/Dockerfile.operator -t $(REGISTRY)/operator:$(OPERATOR_VERSION) .
 
 docker-build-bff: ## Build bff Docker image
-	docker build -f Dockerfile.bff -t $(REGISTRY)/bff:$(BFF_VERSION) .
+	docker build -f tools/docker/Dockerfile.bff -t $(REGISTRY)/bff:$(BFF_VERSION) .
 
 docker-push: ## Push all Docker images
 	docker push $(REGISTRY)/agent:$(AGENT_VERSION)
