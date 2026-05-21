@@ -1,37 +1,6 @@
 apiVersion: v2
 name: tacito-square
-description: Kubernetes-native multi-agent system — umbrella Helm chart
+description: Kubernetes-native multi-agent system — application Helm chart
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
-
-dependencies:
-  - name: nats
-    version: "1.2.*"
-    repository: https://nats-io.github.io/k8s/helm/charts/
-    condition: nats.enabled
-  - name: redis
-    version: "20.*"
-    repository: https://charts.bitnami.com/bitnami
-    condition: redis.enabled
-  - name: postgresql
-    version: "16.*"
-    repository: https://charts.bitnami.com/bitnami
-    condition: postgresql.enabled
-  - name: qdrant
-    version: "1.*"
-    repository: https://qdrant.to/helm
-    condition: qdrant.enabled
-  - name: opentelemetry-collector
-    version: "0.108.*"
-    repository: https://open-telemetry.github.io/opentelemetry-helm-charts
-    condition: otel-collector.enabled
-    alias: otel-collector
-  - name: keycloak
-    version: "24.*"
-    repository: https://charts.bitnami.com/bitnami
-    condition: keycloak.enabled
-  - name: minio
-    version: "14.*"
-    repository: https://charts.bitnami.com/bitnami
-    condition: minio.enabled

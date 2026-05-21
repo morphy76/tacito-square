@@ -1,0 +1,24 @@
+dependencies:
+- name: nats
+  repository: https://nats-io.github.io/k8s/helm/charts/
+  version: 1.2.11
+- name: redis
+  repository: https://charts.bitnami.com/bitnami
+  version: 20.13.4
+- name: postgresql
+  repository: https://charts.bitnami.com/bitnami
+  version: 16.7.27
+- name: qdrant
+  repository: https://qdrant.to/helm
+  version: 1.18.0
+- name: opentelemetry-collector
+  repository: https://open-telemetry.github.io/opentelemetry-helm-charts
+  version: 0.108.1
+- name: keycloak
+  repository: https://charts.bitnami.com/bitnami
+  version: 24.9.0
+- name: minio
+  repository: https://charts.bitnami.com/bitnami
+  version: 14.10.5
+digest: sha256:edbac8b7652e9eef66efee956ad7c6cb6d8c9961a1763f80030171473aa80fd9
+generated: "2026-05-22T01:40:28.064774+02:00"

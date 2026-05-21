@@ -1,0 +1,132 @@
+# Tacito Square — Infrastructure Helm values
+# Dev-friendly defaults: all services enabled, no auth, small volumes.
+
+# ── NATS (messaging backbone) ───────────────────────────
+nats:
+  enabled: true
+
+# ── Redis (STM + cache) ─────────────────────────────────
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: false
+
+# ── PostgreSQL (keeper persistence) ─────────────────────
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: tacito-dev
+    username: keeper
+    password: keeper-dev
+    database: tacito_keeper
+  primary:
+    persistence:
+      size: 1Gi
+
+# ── Qdrant (vector storage) ─────────────────────────────
+qdrant:
+  enabled: true
+  replicaCount: 1
+
+# ── OpenTelemetry Collector (tracing) ───────────────────
+otel-collector:
+  enabled: true
+  mode: deployment
+  image:
+    repository: otel/opentelemetry-collector-contrib
+  config:
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+    processors:
+      batch: {}
+    exporters:
+      debug:
+        verbosity: detailed
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [debug]
+
+# ── Keycloak (OIDC provider) ────────────────────────────
+keycloak:
+  enabled: true
+  auth:
+    adminUser: admin
+    adminPassword: admin-dev
+  production: false
+  proxy: edge
+  extraEnvVars:
+    - name: KC_FEATURES
+      value: "preview"
+  keycloakConfigCli:
+    enabled: true
+    configuration:
+      tacito-realm.json: |
+        {
+          "realm": "tacito",
+          "enabled": true,
+          "sslRequired": "none",
+          "roles": {
+            "realm": [
+              {"name": "keeper-admin", "description": "Full Keeper administration"},
+              {"name": "keeper-viewer", "description": "Read-only Keeper access"},
+              {"name": "user", "description": "End user — interact with agents"},
+              {"name": "agent-spawner", "description": "Can spawn agents"}
+            ]
+          },
+          "clients": [
+            {
+              "clientId": "tacito-keeper",
+              "enabled": true,
+              "protocol": "openid-connect",
+              "publicClient": false,
+              "secret": "keeper-dev-secret",
+              "directAccessGrantsEnabled": true,
+              "serviceAccountsEnabled": true,
+              "standardFlowEnabled": true,
+              "redirectUris": ["*"]
+            },
+            {
+              "clientId": "tacito-ui",
+              "enabled": true,
+              "protocol": "openid-connect",
+              "publicClient": true,
+              "standardFlowEnabled": true,
+              "directAccessGrantsEnabled": true,
+              "redirectUris": ["*"],
+              "webOrigins": ["*"]
+            }
+          ],
+          "users": [
+            {
+              "username": "admin",
+              "enabled": true,
+              "credentials": [{"type": "password", "value": "admin", "temporary": false}],
+              "realmRoles": ["keeper-admin", "agent-spawner"]
+            },
+            {
+              "username": "user",
+              "enabled": true,
+              "credentials": [{"type": "password", "value": "user", "temporary": false}],
+              "realmRoles": ["user"]
+            }
+          ]
+        }
+
+# ── MinIO (S3-compatible, opt-in) ───────────────────────
+minio:
+  enabled: false
+  auth:
+    rootUser: tacito-dev
+    rootPassword: tacito-dev-secret
+  defaultBuckets: "tacito-artifacts"
+  persistence:
+    size: 5Gi

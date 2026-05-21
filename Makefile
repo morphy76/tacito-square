@@ -7,15 +7,20 @@ OPERATOR_VERSION := $(shell cat VERSION.operator 2>/dev/null || echo "0.0.1")
 BFF_VERSION     := $(shell cat VERSION.bff 2>/dev/null || echo "0.0.1")
 
 REGISTRY       ?= localhost:5000/tacito-square
-HELM_RELEASE   ?= tacito-square
-HELM_CHART     := tools/helm/tacito-square
+HELM_RELEASE       ?= tacito-square
+HELM_CHART         := tools/helm/tacito-square
+HELM_INFRA_RELEASE ?= tacito-infra
+HELM_INFRA_CHART   := tools/helm/tacito-square-infra
 
 GO             := go
 GOTEST         := $(GO) test
 GOLINT         := golangci-lint
 
 .PHONY: all build test test-integration test-operator test-e2e test-bench test-race test-contract lint generate \
-        docker-build docker-push helm-template helm-install helm-uninstall ci clean help
+        docker-build docker-push \
+        helm-template helm-install helm-uninstall \
+        helm-infra-deps helm-infra-lint helm-infra-template helm-infra-install helm-infra-uninstall \
+        ci clean help
 
 ## —— Build ——————————————————————————————————————————————
 
@@ -92,16 +97,33 @@ docker-push: ## Push all Docker images
 	docker push $(REGISTRY)/operator:$(OPERATOR_VERSION)
 	docker push $(REGISTRY)/bff:$(BFF_VERSION)
 
-## —— Helm ———————————————————————————————————————————————
+## —— Helm (app) —————————————————————————————————————————
 
-helm-template: ## Render Helm templates locally
+helm-template: ## Render application Helm templates locally
 	helm template $(HELM_RELEASE) $(HELM_CHART)
 
-helm-install: ## Install/upgrade Helm release on current cluster
+helm-install: ## Install/upgrade application Helm release
 	helm upgrade --install $(HELM_RELEASE) $(HELM_CHART) --wait
 
-helm-uninstall: ## Uninstall Helm release
+helm-uninstall: ## Uninstall application Helm release
 	helm uninstall $(HELM_RELEASE)
+
+## —— Helm (infra) ———————————————————————————————————————
+
+helm-infra-deps: ## Download infrastructure chart dependencies
+	helm dependency update $(HELM_INFRA_CHART)
+
+helm-infra-lint: ## Lint the infrastructure Helm chart
+	helm lint $(HELM_INFRA_CHART)
+
+helm-infra-template: ## Render infrastructure Helm templates locally
+	helm template $(HELM_INFRA_RELEASE) $(HELM_INFRA_CHART)
+
+helm-infra-install: ## Install/upgrade infrastructure Helm release
+	helm upgrade --install $(HELM_INFRA_RELEASE) $(HELM_INFRA_CHART) --wait
+
+helm-infra-uninstall: ## Uninstall infrastructure Helm release
+	helm uninstall $(HELM_INFRA_RELEASE)
 
 ## —— CI —————————————————————————————————————————————————
 

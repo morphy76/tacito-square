@@ -26,8 +26,8 @@
 
 | ID | Title | Status | Component | File |
 |----|-------|--------|-----------|------|
-| SPEC-FR-M1.1 | Infrastructure Helm Chart | DRAFT | deploy | [SPEC-FR-M1.1](functional/M1/SPEC-FR-M1.1.md) |
-| SPEC-FR-M1.2 | Makefile Infrastructure Targets | DRAFT | build | [SPEC-FR-M1.2](functional/M1/SPEC-FR-M1.2.md) |
+| SPEC-FR-M1.1 | Infrastructure Helm Chart | IMPLEMENTED | deploy | [SPEC-FR-M1.1](functional/M1/SPEC-FR-M1.1.md) |
+| SPEC-FR-M1.2 | Makefile Infrastructure Targets | IMPLEMENTED | build | [SPEC-FR-M1.2](functional/M1/SPEC-FR-M1.2.md) |
 
 ### M2: Application Helm Chart & Component Scaffolding
 
@@ -135,6 +135,7 @@
 
 ## Task Files
 
-| Milestone | Status | Directory |
-|-----------|--------|-----------|
-| (tasks populated when a functional spec is engaged) | | [tasks/](tasks/) |
+| Spec | Tasks | Phase | Directory |
+|------|-------|-------|-----------|
+| SPEC-FR-M1.1 | 5 | RED → GREEN → REFACTOR | [tasks/M1.1/](tasks/M1.1/) |
+| SPEC-FR-M1.2 | 3 | RED → GREEN → REFACTOR | [tasks/M1.2/](tasks/M1.2/) |

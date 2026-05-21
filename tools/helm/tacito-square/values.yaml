@@ -1,10 +1,13 @@
-# Tacito Square — Helm values
-# Override these for your environment
+# Tacito Square — Application Helm values
+# Infrastructure bindings: configure these to point at your infrastructure release.
+# Default values assume infra release name "tacito-infra" in the same namespace.
 
 # --- Global ---
 global:
   imageRegistry: "localhost:5000"  # default: local registry
   imagePullSecrets: []
+  # Infrastructure release name — used to derive default service hostnames.
+  infraReleaseName: "tacito-infra"
 
 # --- Keeper ---
 keeper:
@@ -23,15 +26,18 @@ keeper:
       memory: 256Mi
   env:
     TS_KEEPER_LOG_LEVEL: info
-    TS_KEEPER_DB_HOST: "{{ .Release.Name }}-postgresql"
+    TS_KEEPER_PORT: "8080"
+    # Infrastructure bindings (defaults assume infra release = tacito-infra)
+    TS_KEEPER_DB_HOST: "tacito-infra-postgresql"
     TS_KEEPER_DB_PORT: "5432"
     TS_KEEPER_DB_NAME: tacito_keeper
     TS_KEEPER_DB_USER: keeper
-    TS_KEEPER_NATS_URL: "nats://{{ .Release.Name }}-nats:4222"
-    TS_KEEPER_OTEL_ENDPOINT: "{{ .Release.Name }}-otel-collector:4317"
-    TS_KEEPER_OIDC_ISSUER: "http://{{ .Release.Name }}-keycloak:8080/realms/tacito"
+    TS_KEEPER_NATS_URL: "nats://tacito-infra-nats:4222"
+    TS_KEEPER_REDIS_URL: "redis://tacito-infra-redis-master:6379"
+    TS_KEEPER_OTEL_ENDPOINT: "tacito-infra-otel-collector:4317"
+    TS_KEEPER_OIDC_ISSUER: "http://tacito-infra-keycloak:8080/realms/tacito"
     TS_KEEPER_OIDC_CLIENT_ID: tacito-keeper
-    TS_KEEPER_S3_ENDPOINT: "http://{{ .Release.Name }}-minio:9000"
+    TS_KEEPER_S3_ENDPOINT: "http://tacito-infra-minio:9000"
     TS_KEEPER_S3_BUCKET: tacito-artifacts
     TS_KEEPER_S3_REGION: us-east-1
   service:
@@ -40,7 +46,7 @@ keeper:
 
 # --- Agent (default template) ---
 agent:
-  replicaCount: 0  # agents are spawned dynamically by the keeper
+  replicaCount: 0  # agents are spawned dynamically by the operator
   image:
     registry: ""
     name: tacito-square/agent
@@ -55,17 +61,18 @@ agent:
       memory: 512Mi
   env:
     TS_AGENT_LOG_LEVEL: info
-    TS_AGENT_NATS_URL: "nats://{{ .Release.Name }}-nats:4222"
-    TS_AGENT_REDIS_URL: "redis://{{ .Release.Name }}-redis-master:6379"
-    TS_AGENT_QDRANT_URL: "http://{{ .Release.Name }}-qdrant:6334"
-    TS_AGENT_OTEL_ENDPOINT: "{{ .Release.Name }}-otel-collector:4317"
-    TS_AGENT_S3_ENDPOINT: "http://{{ .Release.Name }}-minio:9000"
+    TS_AGENT_PORT: "8081"
+    TS_AGENT_NATS_URL: "nats://tacito-infra-nats:4222"
+    TS_AGENT_REDIS_URL: "redis://tacito-infra-redis-master:6379"
+    TS_AGENT_QDRANT_URL: "http://tacito-infra-qdrant:6334"
+    TS_AGENT_OTEL_ENDPOINT: "tacito-infra-otel-collector:4317"
+    TS_AGENT_S3_ENDPOINT: "http://tacito-infra-minio:9000"
     TS_AGENT_S3_BUCKET: tacito-artifacts
     TS_AGENT_S3_REGION: us-east-1
 
 # --- Operator ---
 operator:
-  enabled: false  # enabled in M5
+  enabled: false  # enabled in M4
   replicaCount: 1
   image:
     registry: ""
@@ -75,7 +82,7 @@ operator:
 
 # --- BFF ---
 bff:
-  enabled: false  # enabled in M6
+  enabled: false  # enabled in M7
   replicaCount: 1
   image:
     registry: ""
@@ -83,131 +90,11 @@ bff:
     tag: "0.1.0"
     pullPolicy: IfNotPresent
   env:
-    TS_BFF_OIDC_ISSUER: "http://{{ .Release.Name }}-keycloak:8080/realms/tacito"
+    TS_BFF_LOG_LEVEL: info
+    TS_BFF_PORT: "8083"
+    TS_BFF_KEEPER_URL: "http://tacito-square-keeper:8080"
+    TS_BFF_OIDC_ISSUER: "http://tacito-infra-keycloak:8080/realms/tacito"
     TS_BFF_OIDC_CLIENT_ID: tacito-ui
   service:
     type: ClusterIP
-    port: 8081
-
-# --- Infrastructure sub-charts ---
-nats:
-  enabled: true
-
-redis:
-  enabled: true
-  architecture: standalone
-  auth:
-    enabled: false
-
-postgresql:
-  enabled: true
-  auth:
-    postgresPassword: tacito-dev
-    username: keeper
-    password: keeper-dev
-    database: tacito_keeper
-  primary:
-    persistence:
-      size: 1Gi
-
-qdrant:
-  enabled: true
-  replicaCount: 1
-
-otel-collector:
-  enabled: true
-  mode: deployment
-  config:
-    receivers:
-      otlp:
-        protocols:
-          grpc:
-            endpoint: 0.0.0.0:4317
-          http:
-            endpoint: 0.0.0.0:4318
-    processors:
-      batch: {}
-    exporters:
-      debug:
-        verbosity: detailed
-    service:
-      pipelines:
-        traces:
-          receivers: [otlp]
-          processors: [batch]
-          exporters: [debug]
-
-# --- IAM (Keycloak) ---
-keycloak:
-  enabled: true
-  auth:
-    adminUser: admin
-    adminPassword: admin-dev
-  production: false  # dev mode
-  proxy: edge
-  extraEnvVars:
-    - name: KC_FEATURES
-      value: "preview"
-  keycloakConfigCli:
-    enabled: true
-    configuration:
-      tacito-realm.json: |
-        {
-          "realm": "tacito",
-          "enabled": true,
-          "sslRequired": "none",
-          "roles": {
-            "realm": [
-              {"name": "keeper-admin", "description": "Full Keeper administration"},
-              {"name": "keeper-viewer", "description": "Read-only Keeper access"},
-              {"name": "user", "description": "End user — interact with agents"},
-              {"name": "agent-spawner", "description": "Can spawn agents"}
-            ]
-          },
-          "clients": [
-            {
-              "clientId": "tacito-keeper",
-              "enabled": true,
-              "protocol": "openid-connect",
-              "publicClient": false,
-              "secret": "keeper-dev-secret",
-              "directAccessGrantsEnabled": true,
-              "serviceAccountsEnabled": true,
-              "standardFlowEnabled": true,
-              "redirectUris": ["*"]
-            },
-            {
-              "clientId": "tacito-ui",
-              "enabled": true,
-              "protocol": "openid-connect",
-              "publicClient": true,
-              "standardFlowEnabled": true,
-              "directAccessGrantsEnabled": true,
-              "redirectUris": ["*"],
-              "webOrigins": ["*"]
-            }
-          ],
-          "users": [
-            {
-              "username": "admin",
-              "enabled": true,
-              "credentials": [{"type": "password", "value": "admin", "temporary": false}],
-              "realmRoles": ["keeper-admin", "agent-spawner"]
-            },
-            {
-              "username": "user",
-              "enabled": true,
-              "credentials": [{"type": "password", "value": "user", "temporary": false}],
-              "realmRoles": ["user"]
-            }
-          ]
-        }
-# --- Object Storage (S3-compatible, opt-in) ---
-minio:
-  enabled: false  # opt-in: enable for local S3-compatible storage
-  auth:
-    rootUser: tacito-dev
-    rootPassword: tacito-dev-secret
-  defaultBuckets: "tacito-artifacts"
-  persistence:
-    size: 5Gi
+    port: 8083
