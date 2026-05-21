@@ -3,7 +3,7 @@
 | Field         | Value                              |
 |---------------|------------------------------------|
 | ID            | SPEC-NFR-HEXAGONAL                 |
-| Status        | VERIFIED                           |
+| Status        | DRAFT                              |
 | Component     | agent, keeper                      |
 
 ## Specification

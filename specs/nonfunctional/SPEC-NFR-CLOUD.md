@@ -2,8 +2,8 @@
 
 | Field         | Value                              |
 |---------------|------------------------------------|
-| ID            | SPEC-NFR-CLOUD                      |
-| Status        | VERIFIED                           |
+| ID            | SPEC-NFR-CLOUD                     |
+| Status        | DRAFT                              |
 | Component     | all                                |
 
 ## Specification

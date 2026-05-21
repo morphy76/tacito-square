@@ -2,8 +2,8 @@
 
 | Field         | Value                              |
 |---------------|------------------------------------|
-| ID            | SPEC-NFR-REACTIVE                      |
-| Status        | VERIFIED                           |
+| ID            | SPEC-NFR-REACTIVE                  |
+| Status        | DRAFT                              |
 | Component     | agent, keeper                      |
 
 ## Specification

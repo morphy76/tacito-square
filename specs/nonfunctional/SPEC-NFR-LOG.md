@@ -3,7 +3,7 @@
 | Field         | Value                              |
 |---------------|------------------------------------|
 | ID            | SPEC-NFR-LOG                       |
-| Status        | VERIFIED                           |
+| Status        | DRAFT                              |
 | Component     | keeper, agent, bff                 |
 
 ## Specification
@@ -14,6 +14,7 @@
 4. A configurable (at build time via `LogClaimsKeys` variable) set of JWT token claims MUST be included in log entries. Default: `["sub", "email"]`.
 5. Log levels: `trace`, `debug`, `info`, `warn`, `error`. Default: `info`.
 6. Output format: JSON to stdout. No text mode in production.
+7. A runnable component logs its version at startup.
 
 ## Acceptance Criteria
 

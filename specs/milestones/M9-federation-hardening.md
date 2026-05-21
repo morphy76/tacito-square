@@ -6,28 +6,20 @@
 
 ## Goal
 
-External A2A federation, full observability, comprehensive testing, CI/CD pipeline, production documentation.
+External A2A federation, full observability with Prometheus metrics, OpenAPI contract validation, comprehensive testing (E2E, benchmarks), and production hardening.
 
 ## Deliverable
 
-External agent federation via A2A protocol. Prometheus metrics, OpenAPI contracts, E2E tests, benchmark baselines, automated CI/CD, production runbook.
+External agent federation via A2A protocol. Prometheus dashboards, validated OpenAPI contracts, E2E test suite on Kind cluster, production-ready Helm values with TLS and secrets management.
 
 ## Specs Required
 
-| Spec ID | Title | FR Ref | Component | Depends On |
-|---------|-------|--------|-----------|------------|
-| SPEC-FR-06.3 | A2A HTTP gateway | FR-06.3 | keeper | SPEC-FR-06.1 |
-| SPEC-FR-06.5 | External source registry | FR-06.5 | keeper | — |
-| SPEC-FR-06.6 | External agent messaging | FR-06.6 | keeper | SPEC-FR-06.5 |
-| SPEC-FR-06.7 | External source health | FR-06.7 | keeper | SPEC-FR-06.5 |
-| SPEC-NFR-METRICS | Prometheus metrics endpoints | NFR-METRICS | all | — |
-| SPEC-NFR-OPENAPI | Live OpenAPI spec endpoints | NFR-OPENAPI | all | — |
-| SPEC-FR-09.3 | Prometheus metrics | FR-09.3 | all | — |
-| SPEC-FR-10.4 | E2E tests | FR-10.4 | test | — |
-| SPEC-FR-10.5 | Benchmark tests | FR-10.5 | all | — |
-| SPEC-FR-10.6 | Concurrency tests | FR-10.6 | all | — |
-| SPEC-FR-12.4 | OpenAPI contracts | FR-12.4 | all | — |
-| SPEC-FR-12.5 | Contract tests | FR-12.5 | all | — |
-| SPEC-FR-M9-CICD | CI/CD pipeline | — | devops | — |
-| SPEC-FR-M9-PROD | Production Helm refinement | — | deploy | — |
-| SPEC-FR-M9-TOPO | Mesh & Pipeline topologies | FR-05.2 | agent | SPEC-FR-05.2 |
+| Spec ID | Title | Component | Depends On |
+|---------|-------|-----------|------------|
+| SPEC-FR-M9.1 | A2A HTTP Gateway | keeper | SPEC-FR-M6.5 |
+| SPEC-FR-M9.2 | External Agent Registry | keeper | SPEC-FR-M9.1 |
+| SPEC-FR-M9.3 | Prometheus Metrics Integration | all | SPEC-NFR-METRICS |
+| SPEC-FR-M9.4 | OpenAPI Contract Validation | all | SPEC-NFR-OPENAPI |
+| SPEC-FR-M9.5 | E2E & Benchmark Tests | test | all M1-M8 |
+| SPEC-FR-M9.6 | Production Helm & Hardening | deploy | SPEC-FR-M2.1 |
+| SPEC-FR-M9.7 | K8s NetworkPolicies | operator | SPEC-FR-M4.3, SPEC-FR-M6.3 |

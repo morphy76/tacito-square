@@ -37,17 +37,17 @@ all while remaining accountable, observable, and scalable.
 ### Specs catalog
 
 - Non functional (NFR): specs/nonfunctional/, once verified, no need to update them, except for major changes. Prescribe the architecture, technologies, patterns to follow.
-- Milestones: specs/milestones/, specs related to the objective of the milestone. They are used to group related features. Once achieved, the milestone is frozen.
-- Functional (FR): specs/functional/<milestoneId>/<FR-XX.Y>.md, specs related to the features to be implemented. A FR cannot be related to multiple milestones.
+- Functional (FR): specs/functional/<FR-XX.Y>.md, specs related to the features to be implemented.
 - Tasks: specs/tasks/<FR-ID>/<TASK-XX.Y>.md, specs related to the tasks to be achieved. A task is related to a single FR.
 
 ### Rules
 
 1. **No code without a spec.** Every feature, adapter, or NFR change requires a spec document.
-2. **Specs are atomic.** One spec = one testable capability. No compound specs.
-3. **Specs are immutable once accepted.** To change behavior, write a superseding spec.
-4. **Tasks are derived from specs.** Each spec generates one or more atomic tasks.
-5. **Status flows one way**: `DRAFT → ACCEPTED → IN_PROGRESS → IMPLEMENTED → VERIFIED`.
+2. **No code without a task.** Every task is derived from a spec.
+3. **No task can be started without review and approval** from the spec owner.
+4. **No task can be completed without review and approval** from the spec owner.
+5. **Specs are atomic.** One spec = one testable capability. No compound specs.
+6. **Specs are immutable once accepted.** To change behavior, write a superseding spec.
 
 ## 4. Spec Document Format
 
@@ -60,9 +60,8 @@ Every spec file MUST follow this structure:
 |---------------|---------------------------------------------|
 | ID            | SPEC-{FR|NFR}-{XX.Y}                       |
 | Status        | DRAFT | ACCEPTED | IN_PROGRESS | IMPLEMENTED | VERIFIED |
-| Milestone     | M{N}                                        |
-| FR/NFR Ref    | FR-{XX.Y} or NFR-{ID}                      |
-| Component     | agent | keeper | operator | bff | shared    |
+| Milestone     | MX (functional specs only)                  |
+| Component     | keeper, agent, operator, bff, shared, deploy, build, ui, test, docs |
 | Depends On    | SPEC-{ID}, ...                              |
 | Supersedes    | SPEC-{ID} (if replacing a previous spec)    |
 
@@ -84,79 +83,3 @@ Request/response shapes, status codes.
 ## Files Affected
 List of files to create or modify.
 ```
-
-## 5. Directory Structure
-
-```
-specs/
-├── INDEX.md
-├── brainstorming.md
-├── constitution.md
-├── functional/
-│   └── M1/
-│       ├── SPEC-FR-M1.1.md
-│       ├── SPEC-FR-M1.2.md
-│       ├── SPEC-FR-M1.3.md
-│       ├── SPEC-FR-M1.4.md
-│       └── SPEC-FR-M1.5.md
-├── milestones/
-│   ├── M1-foundation.md
-│   ├── M2-deployable-keeper.md
-│   ├── M3-deployable-core.md
-│   ├── M4-prompt-skills.md
-│   ├── M5-communities.md
-│   ├── M6-policies.md
-│   ├── M7-operator.md
-│   ├── M8-uis-bff.md
-│   └── M9-federation-hardening.md
-├── nonfunctional/
-│   ├── SPEC-NFR-CACHE.md
-│   ├── SPEC-NFR-CLOUD.md
-│   ├── SPEC-NFR-HEALTH.md
-│   ├── SPEC-NFR-HEXAGONAL.md
-│   ├── SPEC-NFR-HPA.md
-│   ├── SPEC-NFR-HTTP.md
-│   ├── SPEC-NFR-LOG.md
-│   ├── SPEC-NFR-METRICS.md
-│   ├── SPEC-NFR-OPENAPI.md
-│   ├── SPEC-NFR-REACTIVE.md
-│   └── SPEC-NFR-STACK.md
-└── tasks/
-    ├── FR-M1.1/
-    │   ├── TASK-FR-M1.1-001.md
-    │   └── TASK-FR-M1.1-002.md
-    ├── FR-M1.2/
-    │   └── TASK-FR-M1.2-001.md
-    ├── FR-M1.3/
-    │   ├── TASK-FR-M1.3-001.md
-    │   └── TASK-FR-M1.3-002.md
-    ├── FR-M1.4/
-    │   ├── TASK-FR-M1.4-001.md
-    │   └── TASK-FR-M1.4-002.md
-    └── FR-M1.5/
-        ├── TASK-FR-M1.5-001.md
-        └── TASK-FR-M1.5-002.md
-```
-
-## 6. Milestone Registry
-
-| Milestone | Name | Goal | Status |
-|-----------|------|------|--------|
-| M1 | Foundation | Scaffolding of the project | 🔄 In Progress |
-| M2 | Memory, Tools, Storage & Cache | Redis, Qdrant, MCP, S3, Cache adapters | ⬜ Planned |
-| M3 | Deployable Core | PG persistence, RBAC, production Helm | ⬜ Planned |
-| M4 | Prompt & Skills | Versioned prompts, skill CRUD, spawn integration | ⬜ Planned |
-| M5 | Communities & Messaging | Threads, Hub-Spoke, NATS, A2A Cards, audit | ⬜ Planned |
-| M6 | Policies & Governance | HITL, quotas, default agents, NetworkPolicies | ⬜ Planned |
-| M7 | K8s Operator | CRDs, reconcilers, webhooks, HPA | ⬜ Planned |
-| M8 | UIs & BFF | React 19, OIDC, Gin BFF | ⬜ Planned |
-| M9 | Federation & Hardening | A2A gateway, metrics, OpenAPI, CI/CD, E2E, benchmarks | ⬜ Planned |
-
-## 7. Component Registry
-
-| Component | Module Path | Version File | Port | Depends On |
-|-----------|-------------|--------------|------|------------|
-| Agent | `internal/agent` | `VERSION.agent` | 8090 | NATS, Redis, Qdrant, LLM, MCP |
-| Keeper | `internal/keeper` | `VERSION.keeper` | 8080 | PostgreSQL, NATS, Keycloak |
-| Operator | `operator/` | `VERSION.operator` | — | K8s API |
-| BFF | `internal/bff` | `VERSION.bff` | 8081 | Keeper API, Keycloak |

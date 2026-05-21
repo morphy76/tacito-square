@@ -4,218 +4,137 @@
 
 ## Non-Functional Requirement Specs
 
-| ID | Title | Status | Milestone | File |
-|----|-------|--------|-----------|------|
-| SPEC-NFR-HEXAGONAL | Hexagonal Architecture with Domain-Driven Design (DDD) | VERIFIED | All | [SPEC-NFR-HEXAGONAL](nonfunctional/SPEC-NFR-HEXAGONAL.md) |
-| SPEC-NFR-CLOUD | Cloud-First Patterns | VERIFIED | All | [SPEC-NFR-CLOUD](nonfunctional/SPEC-NFR-CLOUD.md) |
-| SPEC-NFR-REACTIVE | Reactive Programming | VERIFIED | All | [SPEC-NFR-REACTIVE](nonfunctional/SPEC-NFR-REACTIVE.md) |
-| SPEC-NFR-STACK | Technology Stack | VERIFIED | All | [SPEC-NFR-STACK](nonfunctional/SPEC-NFR-STACK.md) |
-| SPEC-NFR-LOG | Structured Logging (zerolog) | VERIFIED | All | [SPEC-NFR-LOG](nonfunctional/SPEC-NFR-LOG.md) |
-| SPEC-NFR-HTTP | HTTP Framework (Gin) | VERIFIED | All | [SPEC-NFR-HTTP](nonfunctional/SPEC-NFR-HTTP.md) |
-| SPEC-NFR-HEALTH | Dependency-Aware Health Probes | VERIFIED | All | [SPEC-NFR-HEALTH](nonfunctional/SPEC-NFR-HEALTH.md) |
-| SPEC-NFR-METRICS | Prometheus Metrics Endpoints | VERIFIED | All | [SPEC-NFR-METRICS](nonfunctional/SPEC-NFR-METRICS.md) |
-| SPEC-NFR-OPENAPI | Live OpenAPI Spec Endpoints | VERIFIED | All | [SPEC-NFR-OPENAPI](nonfunctional/SPEC-NFR-OPENAPI.md) |
-| SPEC-NFR-HPA | Horizontal Pod Autoscaling | VERIFIED | All | [SPEC-NFR-HPA](nonfunctional/SPEC-NFR-HPA.md) |
-| SPEC-NFR-CACHE | Redis Infrastructure Cache | VERIFIED | All | [SPEC-NFR-CACHE](nonfunctional/SPEC-NFR-CACHE.md) |
+| ID | Title | Status | File |
+|----|-------|--------|------|
+| SPEC-NFR-HEXAGONAL | Hexagonal Architecture with DDD | DRAFT | [SPEC-NFR-HEXAGONAL](nonfunctional/SPEC-NFR-HEXAGONAL.md) |
+| SPEC-NFR-CLOUD | Cloud-First Patterns | DRAFT | [SPEC-NFR-CLOUD](nonfunctional/SPEC-NFR-CLOUD.md) |
+| SPEC-NFR-REACTIVE | Reactive Programming | DRAFT | [SPEC-NFR-REACTIVE](nonfunctional/SPEC-NFR-REACTIVE.md) |
+| SPEC-NFR-STACK | Technology Stack | DRAFT | [SPEC-NFR-STACK](nonfunctional/SPEC-NFR-STACK.md) |
+| SPEC-NFR-LOG | Structured Logging (zerolog) | DRAFT | [SPEC-NFR-LOG](nonfunctional/SPEC-NFR-LOG.md) |
+| SPEC-NFR-HTTP | HTTP Framework (Gin) | DRAFT | [SPEC-NFR-HTTP](nonfunctional/SPEC-NFR-HTTP.md) |
+| SPEC-NFR-HEALTH | Dependency-Aware Health Probes | DRAFT | [SPEC-NFR-HEALTH](nonfunctional/SPEC-NFR-HEALTH.md) |
+| SPEC-NFR-METRICS | Prometheus Metrics Endpoints | DRAFT | [SPEC-NFR-METRICS](nonfunctional/SPEC-NFR-METRICS.md) |
+| SPEC-NFR-OPENAPI | Live OpenAPI Spec Endpoints | DRAFT | [SPEC-NFR-OPENAPI](nonfunctional/SPEC-NFR-OPENAPI.md) |
+| SPEC-NFR-HPA | Horizontal Pod Autoscaling | DRAFT | [SPEC-NFR-HPA](nonfunctional/SPEC-NFR-HPA.md) |
+| SPEC-NFR-CACHE | Redis Infrastructure Cache | DRAFT | [SPEC-NFR-CACHE](nonfunctional/SPEC-NFR-CACHE.md) |
+| SPEC-NFR-BUILDING | Build System | DRAFT | [SPEC-NFR-BUILDING](nonfunctional/SPEC-NFR-BUILDING.md) |
+| SPEC-NFR-VERSIONING | Component Versioning & Lifecycle | DRAFT | [SPEC-NFR-VERSIONING](nonfunctional/SPEC-NFR-VERSIONING.md) |
 
 ## Functional Requirement Specs
 
-### FR-M1: Project Foundation & Scaffolding
+### M1: Infrastructure Helm Chart
 
-| ID | Title | Status | Milestone | File |
+| ID | Title | Status | Component | File |
 |----|-------|--------|-----------|------|
-| SPEC-FR-M1.1 | Build System & Layout | VERIFIED | M1 | [SPEC-FR-M1.1](functional/M1/SPEC-FR-M1.1.md) |
-| SPEC-FR-M1.2 | Containerization | VERIFIED | M1 | [SPEC-FR-M1.2](functional/M1/SPEC-FR-M1.2.md) |
-| SPEC-FR-M1.3 | Infrastructure Deployment | IN_PROGRESS | M1 | [SPEC-FR-M1.3](functional/M1/SPEC-FR-M1.3.md) |
-| SPEC-FR-M1.4 | Continuous Integration | IN_PROGRESS | M1 | [SPEC-FR-M1.4](functional/M1/SPEC-FR-M1.4.md) |
-| SPEC-FR-M1.5 | Project Documentation | VERIFIED | M1 | [SPEC-FR-M1.5](functional/M1/SPEC-FR-M1.5.md) |
+| SPEC-FR-M1.1 | Infrastructure Helm Chart | DRAFT | deploy | [SPEC-FR-M1.1](functional/M1/SPEC-FR-M1.1.md) |
+| SPEC-FR-M1.2 | Makefile Infrastructure Targets | DRAFT | build | [SPEC-FR-M1.2](functional/M1/SPEC-FR-M1.2.md) |
 
-### FR-01: Agent Lifecycle Management
+### M2: Application Helm Chart & Component Scaffolding
 
-| ID | Title | Status | Milestone | File |
+| ID | Title | Status | Component | File |
 |----|-------|--------|-----------|------|
-| SPEC-FR-01.1 | Spawn agent | VERIFIED | M2, M3 | [SPEC-FR-01.1](functional/FR-01/SPEC-FR-01.1.md) |
-| SPEC-FR-01.2 | State transitions | VERIFIED | M2 | [SPEC-FR-01.2](functional/FR-01/SPEC-FR-01.2.md) |
-| SPEC-FR-01.3 | Config snapshot | VERIFIED | M2 | [SPEC-FR-01.3](functional/FR-01/SPEC-FR-01.3.md) |
-| SPEC-FR-01.4 | Heartbeat processing | DRAFT | M2 | — |
-| SPEC-FR-01.5 | Terminate agents | VERIFIED | M2 | [SPEC-FR-01.5](functional/FR-01/SPEC-FR-01.5.md) |
-| SPEC-FR-01.6 | Audit log per transition | DRAFT | M4 | — |
+| SPEC-FR-M2.1 | Application Helm Chart (infra-free, binding interfaces) | DRAFT | deploy | [SPEC-FR-M2.1](functional/M2/SPEC-FR-M2.1.md) |
+| SPEC-FR-M2.2 | Shared Foundation Library | DRAFT | shared | [SPEC-FR-M2.2](functional/M2/SPEC-FR-M2.2.md) |
+| SPEC-FR-M2.3 | Keeper Hello World | DRAFT | keeper | [SPEC-FR-M2.3](functional/M2/SPEC-FR-M2.3.md) |
+| SPEC-FR-M2.4 | Agent Hello World | DRAFT | agent | [SPEC-FR-M2.4](functional/M2/SPEC-FR-M2.4.md) |
+| SPEC-FR-M2.5 | Operator Hello World | DRAFT | operator | [SPEC-FR-M2.5](functional/M2/SPEC-FR-M2.5.md) |
+| SPEC-FR-M2.6 | BFF Hello World | DRAFT | bff | [SPEC-FR-M2.6](functional/M2/SPEC-FR-M2.6.md) |
+| SPEC-FR-M2.7 | Container Images (distroless, multi-stage) | DRAFT | build | [SPEC-FR-M2.7](functional/M2/SPEC-FR-M2.7.md) |
+| SPEC-FR-M2.8 | Continuous Integration (GitHub Actions) | DRAFT | build | [SPEC-FR-M2.8](functional/M2/SPEC-FR-M2.8.md) |
+| SPEC-FR-M2.9 | Project Documentation | DRAFT | docs | [SPEC-FR-M2.9](functional/M2/SPEC-FR-M2.9.md) |
 
-### FR-02: Prompt Management
+### M3: Keeper Core
 
-| ID | Title | Status | Milestone |
-|----|-------|--------|-----------|
-| SPEC-FR-02.1 | Prompt CRUD | DRAFT | M4 |
-| SPEC-FR-02.2 | Prompt versioning | DRAFT | M4 |
-| SPEC-FR-02.3 | Prompt import/export | DRAFT | M4 |
-
-### FR-03: Platform Foundations
-
-| ID | Title | Status | Milestone | File |
+| ID | Title | Status | Component | File |
 |----|-------|--------|-----------|------|
-| SPEC-FR-03.1 | PostgreSQL AgentStore and Migrations | DRAFT | M3 | [SPEC-FR-03.1](functional/FR-03/SPEC-FR-03.1.md) |
-| SPEC-FR-03.2 | Gin RBAC middleware | DRAFT | M3 | [SPEC-FR-03.2](functional/FR-03/SPEC-FR-03.2.md) |
+| SPEC-FR-M3.1 | Agent Domain Model & CRUD API | DRAFT | keeper | [SPEC-FR-M3.1](functional/M3/SPEC-FR-M3.1.md) |
+| SPEC-FR-M3.2 | Community Domain Model & CRUD API | DRAFT | keeper | [SPEC-FR-M3.2](functional/M3/SPEC-FR-M3.2.md) |
+| SPEC-FR-M3.3 | Agent-Community Assignment | DRAFT | keeper | [SPEC-FR-M3.3](functional/M3/SPEC-FR-M3.3.md) |
+| SPEC-FR-M3.4 | PostgreSQL Persistence & Migrations | DRAFT | keeper | [SPEC-FR-M3.4](functional/M3/SPEC-FR-M3.4.md) |
+| SPEC-FR-M3.5 | OIDC/JWT Authentication | DRAFT | keeper, shared | [SPEC-FR-M3.5](functional/M3/SPEC-FR-M3.5.md) |
+| SPEC-FR-M3.6 | Agent CRD Submission | DRAFT | keeper | [SPEC-FR-M3.6](functional/M3/SPEC-FR-M3.6.md) |
 
-### FR-17: Skills Management
+### M4: Operator Core
 
-| ID | Title | Status | Milestone |
-|----|-------|--------|-----------|
-| SPEC-FR-17.1 | Skill CRUD | DRAFT | M4 |
-| SPEC-FR-17.2 | MCP tool attach/detach | DRAFT | M4 |
-| SPEC-FR-17.3 | Skill assignment at spawn | DRAFT | M4 |
-
-### FR-04: Agent Reasoning & Conversation
-
-| ID | Title | Status | Milestone | File |
+| ID | Title | Status | Component | File |
 |----|-------|--------|-----------|------|
-| SPEC-FR-04.1 | LLM reasoning (brain adapter) | VERIFIED | M2 | [SPEC-FR-04.1](functional/FR-04/SPEC-FR-04.1.md) |
-| SPEC-FR-04.2 | Short-term memory (Redis) | IMPLEMENTED | M2 | [SPEC-FR-04.2](functional/FR-04/SPEC-FR-04.2.md) |
-| SPEC-FR-04.3 | Long-term memory (Qdrant) | IMPLEMENTED | M2 | [SPEC-FR-04.3](functional/FR-04/SPEC-FR-04.3.md) |
-| SPEC-FR-04.4 | Tool invocation (MCP) | IMPLEMENTED | M2 | [SPEC-FR-04.4](functional/FR-04/SPEC-FR-04.4.md) |
-| SPEC-FR-04.5 | Specialist agent spawn | DRAFT | M5 | — |
-| SPEC-FR-04.6 | Conversation handoff | DRAFT | M5 | — |
-| SPEC-FR-04.7 | HITL yield | DRAFT | M6 | — |
+| SPEC-FR-M4.1 | Agent CRD Definition & Registration | DRAFT | operator | [SPEC-FR-M4.1](functional/M4/SPEC-FR-M4.1.md) |
+| SPEC-FR-M4.2 | AgentCommunity CRD Definition | DRAFT | operator | [SPEC-FR-M4.2](functional/M4/SPEC-FR-M4.2.md) |
+| SPEC-FR-M4.3 | Reconciliation Controller | DRAFT | operator | [SPEC-FR-M4.3](functional/M4/SPEC-FR-M4.3.md) |
+| SPEC-FR-M4.4 | Zero-Scaling Support | DRAFT | operator | [SPEC-FR-M4.4](functional/M4/SPEC-FR-M4.4.md) |
 
-### FR-05: Community Management
+### M5: Agent Core
 
-| ID | Title | Status | Milestone |
-|----|-------|--------|-----------|
-| SPEC-FR-05.1 | Community domain & service | DRAFT | M5 |
-| SPEC-FR-05.2 | Hub-Spoke topology | DRAFT | M5 |
-| SPEC-FR-05.3 | NATS subject namespacing | DRAFT | M5 |
-| SPEC-FR-05.4 | K8s NetworkPolicies | DRAFT | M6 |
-| SPEC-FR-05.5 | Multi-thread engagements | DRAFT | M5 |
-| SPEC-FR-05.6 | Thread CRUD | DRAFT | M5 |
-
-### FR-06: Inter-Agent Communication
-
-| ID | Title | Status | Milestone |
-|----|-------|--------|-----------|
-| SPEC-FR-06.1 | A2A Agent Cards | DRAFT | M5 |
-| SPEC-FR-06.2 | NATS internal messaging | DRAFT | M5 |
-| SPEC-FR-06.3 | A2A HTTP gateway | DRAFT | M9 |
-| SPEC-FR-06.4 | Hub routing | DRAFT | M5 |
-| SPEC-FR-06.5 | External source registry | DRAFT | M9 |
-| SPEC-FR-06.6 | External agent messaging | DRAFT | M9 |
-| SPEC-FR-06.7 | External source health | DRAFT | M9 |
-
-### FR-07: K8s Operator
-
-| ID | Title | Status | Milestone |
-|----|-------|--------|-----------|
-| SPEC-FR-07.1 | Agent CRD | DRAFT | M7 |
-| SPEC-FR-07.2 | AgentCommunity CRD | DRAFT | M7 |
-| SPEC-FR-07.3 | Validating webhooks | DRAFT | M7 |
-| SPEC-FR-07.4 | Mutating webhooks | DRAFT | M7 |
-
-### FR-08: APIs, UIs & Authentication
-
-| ID | Title | Status | Milestone | File |
+| ID | Title | Status | Component | File |
 |----|-------|--------|-----------|------|
-| SPEC-FR-08.1 | Keeper REST API | VERIFIED | M2 | [SPEC-FR-08.1](functional/FR-08/SPEC-FR-08.1.md) |
-| SPEC-FR-08.2 | User REST API | DRAFT | M8 | — |
-| SPEC-FR-08.3 | Keeper UI | DRAFT | M8 | — |
-| SPEC-FR-08.4 | User UI | DRAFT | M8 | — |
-| SPEC-FR-08.5 | OIDC/JWT auth | VERIFIED | M2, M8 | [SPEC-FR-08.5](functional/FR-08/SPEC-FR-08.5.md) |
-| SPEC-FR-08.6 | BFF layer | DRAFT | M8 | — |
+| SPEC-FR-M5.1 | Agent Configuration from CRD Spec | DRAFT | agent | [SPEC-FR-M5.1](functional/M5/SPEC-FR-M5.1.md) |
+| SPEC-FR-M5.2 | LLM Reasoning (Brain Adapter) | DRAFT | agent | [SPEC-FR-M5.2](functional/M5/SPEC-FR-M5.2.md) |
+| SPEC-FR-M5.3 | Short-Term Memory (Redis) | DRAFT | agent | [SPEC-FR-M5.3](functional/M5/SPEC-FR-M5.3.md) |
+| SPEC-FR-M5.4 | Long-Term Memory (Qdrant) | DRAFT | agent | [SPEC-FR-M5.4](functional/M5/SPEC-FR-M5.4.md) |
+| SPEC-FR-M5.5 | Tool Invocation (MCP) | DRAFT | agent | [SPEC-FR-M5.5](functional/M5/SPEC-FR-M5.5.md) |
+| SPEC-FR-M5.6 | Object Storage (S3/MinIO) | DRAFT | agent | [SPEC-FR-M5.6](functional/M5/SPEC-FR-M5.6.md) |
 
-### FR-09: Observability & Traceability
+### M6: Communities & Messaging
 
-| ID | Title | Status | Milestone | File |
+| ID | Title | Status | Component | File |
 |----|-------|--------|-----------|------|
-| SPEC-FR-09.1 | OpenTelemetry tracing | VERIFIED | M2 | [SPEC-FR-09.1](functional/FR-09/SPEC-FR-09.1.md) |
-| SPEC-FR-09.2 | Structured logging (zerolog) | VERIFIED | M2 | (see NFR-LOG) |
-| SPEC-FR-09.3 | Prometheus metrics | DRAFT | M9 | — |
-| SPEC-FR-09.4 | Audit log queries | DRAFT | M5 | — |
-| SPEC-FR-09.5–09.9 | Health probes | VERIFIED | M2 | (see NFR-HEALTH) |
+| SPEC-FR-M6.1 | Community Topology (Hub-Spoke) | DRAFT | keeper, agent | [SPEC-FR-M6.1](functional/M6/SPEC-FR-M6.1.md) |
+| SPEC-FR-M6.2 | NATS Inter-Agent Messaging | DRAFT | agent | [SPEC-FR-M6.2](functional/M6/SPEC-FR-M6.2.md) |
+| SPEC-FR-M6.3 | NATS Subject Namespacing | DRAFT | agent, keeper | [SPEC-FR-M6.3](functional/M6/SPEC-FR-M6.3.md) |
+| SPEC-FR-M6.4 | Thread Management | DRAFT | keeper | [SPEC-FR-M6.4](functional/M6/SPEC-FR-M6.4.md) |
+| SPEC-FR-M6.5 | A2A Agent Cards | DRAFT | agent | [SPEC-FR-M6.5](functional/M6/SPEC-FR-M6.5.md) |
+| SPEC-FR-M6.6 | Conversation Handoff | DRAFT | agent | [SPEC-FR-M6.6](functional/M6/SPEC-FR-M6.6.md) |
+| SPEC-FR-M6.7 | Specialist Agent Spawn | DRAFT | keeper, agent | [SPEC-FR-M6.7](functional/M6/SPEC-FR-M6.7.md) |
 
-### FR-10: Testing & Quality
+### M7: BFF & UIs
 
-| ID | Title | Status | Milestone | File |
+| ID | Title | Status | Component | File |
 |----|-------|--------|-----------|------|
-| SPEC-FR-10.1 | Unit tests (TDD) | VERIFIED | M1+ | [SPEC-FR-10.1](functional/FR-10/SPEC-FR-10.1.md) |
-| SPEC-FR-10.2 | Integration tests | DRAFT | M2+ | — |
-| SPEC-FR-10.3 | Operator tests | DRAFT | M7 | — |
-| SPEC-FR-10.4 | E2E tests | DRAFT | M9 | — |
-| SPEC-FR-10.5 | Benchmark tests | DRAFT | M9 | — |
-| SPEC-FR-10.6 | Concurrency tests | DRAFT | M9 | — |
-| SPEC-FR-10.7 | Makefile targets | VERIFIED | M2 | [SPEC-FR-10.7](functional/FR-10/SPEC-FR-10.7.md) |
+| SPEC-FR-M7.1 | BFF API Bridge Layer | DRAFT | bff | [SPEC-FR-M7.1](functional/M7/SPEC-FR-M7.1.md) |
+| SPEC-FR-M7.2 | Configurator UI | DRAFT | ui | [SPEC-FR-M7.2](functional/M7/SPEC-FR-M7.2.md) |
+| SPEC-FR-M7.3 | Auditor UI | DRAFT | ui | [SPEC-FR-M7.3](functional/M7/SPEC-FR-M7.3.md) |
+| SPEC-FR-M7.4 | OIDC Login Flow (Keycloak) | DRAFT | bff | [SPEC-FR-M7.4](functional/M7/SPEC-FR-M7.4.md) |
 
-### FR-11: Human in the Loop (HITL)
+### M8: Governance
 
-| ID | Title | Status | Milestone |
-|----|-------|--------|-----------|
-| SPEC-FR-11.1 | HITL Agent Card flag | DRAFT | M6 |
-| SPEC-FR-11.2 | HITL yield in reasoning | DRAFT | M6 |
-| SPEC-FR-11.3 | HITL callback persistence | DRAFT | M6 |
-| SPEC-FR-11.4 | HITL human response | DRAFT | M6 |
-| SPEC-FR-11.5 | HITL TTL/escalation | DRAFT | M6 |
-| SPEC-FR-11.6 | HITL audit events | DRAFT | M6 |
-
-### FR-12: API-First & Component Versioning
-
-| ID | Title | Status | Milestone | File |
+| ID | Title | Status | Component | File |
 |----|-------|--------|-----------|------|
-| SPEC-FR-12.1 | Bearer JWT auth | VERIFIED | M2 | [SPEC-FR-12.1](functional/FR-12/SPEC-FR-12.1.md) |
-| SPEC-FR-12.2 | API-first design | VERIFIED | M2 | [SPEC-FR-12.2](functional/FR-12/SPEC-FR-12.2.md) |
-| SPEC-FR-12.3 | Independent versioning | VERIFIED | M2 | [SPEC-FR-12.3](functional/FR-12/SPEC-FR-12.3.md) |
-| SPEC-FR-12.4 | OpenAPI contracts | DRAFT | M9 | — |
-| SPEC-FR-12.5 | Contract tests | DRAFT | M9 | — |
-| SPEC-FR-12.6 | Helm sub-charts | VERIFIED | M2 | [SPEC-FR-12.6](functional/FR-12/SPEC-FR-12.6.md) |
+| SPEC-FR-M8.1 | RBAC Role Model & Route Protection | DRAFT | keeper, shared | [SPEC-FR-M8.1](functional/M8/SPEC-FR-M8.1.md) |
+| SPEC-FR-M8.2 | Usage Quotas (community + agent) | DRAFT | keeper | [SPEC-FR-M8.2](functional/M8/SPEC-FR-M8.2.md) |
+| SPEC-FR-M8.3 | Quota Enforcement (Redis counters) | DRAFT | keeper | [SPEC-FR-M8.3](functional/M8/SPEC-FR-M8.3.md) |
+| SPEC-FR-M8.4 | HITL Yield & Callback Flows | DRAFT | agent, keeper | [SPEC-FR-M8.4](functional/M8/SPEC-FR-M8.4.md) |
+| SPEC-FR-M8.5 | Audit Trail (events + queries) | DRAFT | keeper | [SPEC-FR-M8.5](functional/M8/SPEC-FR-M8.5.md) |
+| SPEC-FR-M8.6 | Prompt Management (CRUD + versioning) | DRAFT | keeper | [SPEC-FR-M8.6](functional/M8/SPEC-FR-M8.6.md) |
+| SPEC-FR-M8.7 | Skills Management (CRUD + MCP attach) | DRAFT | keeper | [SPEC-FR-M8.7](functional/M8/SPEC-FR-M8.7.md) |
 
-### FR-13: Accountability & RBAC
+### M9: Federation & Hardening
 
-| ID | Title | Status | Milestone | File |
+| ID | Title | Status | Component | File |
 |----|-------|--------|-----------|------|
-| SPEC-FR-13.1 | RBAC role model | DRAFT | M3 | — |
-| SPEC-FR-13.3 | Principal logging | DRAFT | M3 | — |
-| SPEC-FR-13.4 | Audit trail with actor identity | DRAFT | M5, M3 | — |
-| SPEC-FR-13.5 | Keycloak realm via Helm | VERIFIED | M2 | [SPEC-FR-13.5](functional/FR-13/SPEC-FR-13.5.md) |
-| SPEC-FR-13.6 | Role-based route protection | DRAFT | M3 | — |
-| SPEC-FR-13.7 | Service-to-service auth | DRAFT | M8 | — |
+| SPEC-FR-M9.1 | A2A HTTP Gateway | DRAFT | keeper | [SPEC-FR-M9.1](functional/M9/SPEC-FR-M9.1.md) |
+| SPEC-FR-M9.2 | External Agent Registry | DRAFT | keeper | [SPEC-FR-M9.2](functional/M9/SPEC-FR-M9.2.md) |
+| SPEC-FR-M9.3 | Prometheus Metrics Integration | DRAFT | all | [SPEC-FR-M9.3](functional/M9/SPEC-FR-M9.3.md) |
+| SPEC-FR-M9.4 | OpenAPI Contract Validation | DRAFT | all | [SPEC-FR-M9.4](functional/M9/SPEC-FR-M9.4.md) |
+| SPEC-FR-M9.5 | E2E & Benchmark Tests | DRAFT | test | [SPEC-FR-M9.5](functional/M9/SPEC-FR-M9.5.md) |
+| SPEC-FR-M9.6 | Production Helm & Hardening | DRAFT | deploy | [SPEC-FR-M9.6](functional/M9/SPEC-FR-M9.6.md) |
+| SPEC-FR-M9.7 | K8s NetworkPolicies | DRAFT | operator | [SPEC-FR-M9.7](functional/M9/SPEC-FR-M9.7.md) |
 
-### FR-14: Default & Built-in Agents (NEW)
+## Milestones
 
-| ID | Title | Status | Milestone | File |
-|----|-------|--------|-----------|------|
-| SPEC-FR-14.1 | Default community agent (entry point) | DRAFT | M6 | [SPEC-FR-14](functional/FR-14/SPEC-FR-14.md) |
-| SPEC-FR-14.2 | Built-in agent archetypes | DRAFT | M6 | [SPEC-FR-14](functional/FR-14/SPEC-FR-14.md) |
-| SPEC-FR-14.3 | Community template with agent manifest | DRAFT | M6 | [SPEC-FR-14](functional/FR-14/SPEC-FR-14.md) |
-
-### FR-15: Usage Quotas (NEW)
-
-| ID | Title | Status | Milestone | File |
-|----|-------|--------|-----------|------|
-| SPEC-FR-15.1 | Community quotas | DRAFT | M6 | [SPEC-FR-15](functional/FR-15/SPEC-FR-15.md) |
-| SPEC-FR-15.2 | Agent quotas | DRAFT | M6 | [SPEC-FR-15](functional/FR-15/SPEC-FR-15.md) |
-| SPEC-FR-15.3 | Quota enforcement (Redis counters) | DRAFT | M6, M7 | [SPEC-FR-15](functional/FR-15/SPEC-FR-15.md) |
-| SPEC-FR-15.4 | Quota tracking & reporting | DRAFT | M6 | [SPEC-FR-15](functional/FR-15/SPEC-FR-15.md) |
-
-### FR-16: Object Storage (NEW)
-
-| ID | Title | Status | Milestone | File |
-|----|-------|--------|-----------|------|
-| SPEC-FR-16.1 | S3 outbound port (BlobStore) | IMPLEMENTED | M2 | [SPEC-FR-16](functional/FR-16/SPEC-FR-16.md) |
-| SPEC-FR-16.2 | S3/MinIO adapter | IMPLEMENTED | M2 | [SPEC-FR-16](functional/FR-16/SPEC-FR-16.md) |
-| SPEC-FR-16.3 | Payload offloading (size threshold) | IMPLEMENTED | M2 | [SPEC-FR-16](functional/FR-16/SPEC-FR-16.md) |
-
-## Milestone Specs
-
-| Milestone | Status | File |
-|-----------|--------|------|
-| M1: Foundation | ✅ COMPLETE | [M1](milestones/M1-foundation.md) |
-| M2: Memory, Tools, Storage & Cache | 🔄 IN PROGRESS | [M2](milestones/M2-memory-tools.md) |
-| M3: Deployable Core | ⬜ PLANNED | [M3](milestones/M3-deployable-core.md) |
-| M4: Prompt & Skills | ⬜ PLANNED | [M4](milestones/M4-prompt-skills.md) |
-| M5: Communities & Messaging | ⬜ PLANNED | [M5](milestones/M5-communities.md) |
-| M6: Policies & Governance | ⬜ PLANNED | [M6](milestones/M6-policies.md) |
-| M7: K8s Operator | ⬜ PLANNED | [M7](milestones/M7-operator.md) |
-| M8: UIs & BFF | ⬜ PLANNED | [M8](milestones/M8-uis-bff.md) |
-| M9: Federation & Hardening | ⬜ PLANNED | [M9](milestones/M9-federation-hardening.md) |
+| Milestone | Title | Status | Specs | File |
+|-----------|-------|--------|-------|------|
+| M1 | Infrastructure Helm Chart | ⬜ PLANNED | 2 | [M1](milestones/M1-infrastructure.md) |
+| M2 | Application Helm Chart & Component Scaffolding | ⬜ PLANNED | 9 | [M2](milestones/M2-packaging.md) |
+| M3 | Keeper Core | ⬜ PLANNED | 6 | [M3](milestones/M3-keeper-core.md) |
+| M4 | Operator Core | ⬜ PLANNED | 4 | [M4](milestones/M4-operator-core.md) |
+| M5 | Agent Core | ⬜ PLANNED | 6 | [M5](milestones/M5-agent-core.md) |
+| M6 | Communities & Messaging | ⬜ PLANNED | 7 | [M6](milestones/M6-communities.md) |
+| M7 | BFF & UIs | ⬜ PLANNED | 4 | [M7](milestones/M7-bff-uis.md) |
+| M8 | Governance | ⬜ PLANNED | 7 | [M8](milestones/M8-governance.md) |
+| M9 | Federation & Hardening | ⬜ PLANNED | 7 | [M9](milestones/M9-federation-hardening.md) |
 
 ## Task Files
 
-| Milestone | Status | Tasks | Directory |
-|-----------|--------|-------|-----------|
-| M1: Foundation | ✅ VERIFIED | 5/5 | [tasks/FR-M1.*/](tasks/) |
-| M2: Memory, Tools, Storage & Cache | 🔄 IN PROGRESS | 20/25 | [tasks/M2/](tasks/M2/) |
+| Milestone | Status | Directory |
+|-----------|--------|-----------|
+| (tasks populated when a functional spec is engaged) | | [tasks/](tasks/) |

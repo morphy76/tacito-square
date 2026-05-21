@@ -3,7 +3,7 @@
 | Field         | Value                              |
 |---------------|------------------------------------|
 | ID            | SPEC-NFR-OPENAPI                   |
-| Status        | VERIFIED                           |
+| Status        | DRAFT                              |
 | Component     | keeper, agent, bff                 |
 
 ## Specification
