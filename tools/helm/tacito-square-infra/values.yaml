@@ -8,7 +8,7 @@ nats:
     nats:
       tls:
         enabled: true
-        secretName: ts-infra-nats-tls
+        secretName: ts-infra-tacito-square-infra-nats-tls
         cert: tls.crt
         key: tls.key
       authorization:
@@ -18,15 +18,11 @@ nats:
 redis:
   enabled: true
   useDeploymentWhenNonHA: true
-  image:
-    registry: docker.io
-    repository: library/redis
-    tag: alpine
   args:
     - "--tls-port"
-    - "6379"
+    - "\"6479\""
     - "--port"
-    - "0"
+    - "\"6379\""
     - "--tls-cert-file"
     - "/tls/tls.crt"
     - "--tls-key-file"
@@ -36,17 +32,13 @@ redis:
     - "--requirepass"
     - "tacito-redis-dev"
   extraRedisSecrets:
-    - name: ts-infra-redis-tls
+    - name: ts-infra-tacito-square-infra-redis-tls
       defaultMode: 0440
       mountPath: /tls
 
 # ── PostgreSQL (keeper persistence) ─────────────────────
 postgresql:
   enabled: true
-  image:
-    registry: docker.io
-    repository: library/postgres
-    tag: 16-alpine
   settings:
     superuser:
       value: postgres
@@ -65,11 +57,9 @@ postgresql:
     ssl_key_file = '/tls/tls.key'
     ssl_ca_file = '/tls/ca.crt'
   extraSecrets:
-    - name: ts-infra-pg-tls
+    - name: ts-infra-tacito-square-infra-pg-tls
       defaultMode: 0600
       mountPath: /tls
-  extraScripts:
-    configMapName: ts-infra-pg-init
   storage:
     requestedSize: 1Gi
 
@@ -77,6 +67,24 @@ postgresql:
 qdrant:
   enabled: true
   replicaCount: 1
+  config:
+    service:
+      enable_tls: true
+    tls:
+      cert: /tls/tls.crt
+      key: /tls/tls.key
+      ca_cert: /tls/ca.crt
+  extraSecrets:
+    - name: ts-infra-tacito-square-infra-qdrant-tls
+      defaultMode: 0600
+      mountPath: /tls
+  additionalVolumes:
+    - name: qdrant-tls
+      secret:
+        secretName: ts-infra-tacito-square-infra-qdrant-tls
+  additionalVolumeMounts:
+    - name: qdrant-tls
+      mountPath: /tls
 
 # ── OpenTelemetry Collector (tracing) ───────────────────
 otel-collector:
@@ -106,7 +114,7 @@ otel-collector:
 
 # ── Keycloak (OIDC provider) ────────────────────────────
 keycloak:
-  enabled: true
+  enabled: false
   image:
     repository: quay.io/keycloak/keycloak
     tag: "24.0.0"
@@ -149,6 +157,10 @@ keycloak:
 # ── MinIO (S3-compatible) ───────────────────────────────
 minio:
   enabled: true
+  mode: standalone
+  resources:
+    requests:
+      memory: "1Gi"
   rootUser: "tacito-dev"
   rootPassword: "tacito-dev-secret"
   buckets:
@@ -157,8 +169,8 @@ minio:
       purge: false
   tls:
     enabled: true
-    certSecret: ts-infra-minio-tls
+    certSecret: ts-infra-tacito-square-infra-minio-tls
     publicCrt: tls.crt
     privateKey: tls.key
   persistence:
-    size: 5Gi
+    size: 2Gi

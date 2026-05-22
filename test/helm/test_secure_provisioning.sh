@@ -54,6 +54,14 @@ else
   fail "TLS Job RBAC (ServiceAccount) exists"
 fi
 
+# 1d. TLS generator Job has correct name (ts-infra-tls-generate)
+if grep -q "name: ts-infra-tls-generate" "${TEMPLATE_FILE}"; then
+  pass "TLS generator Job name is ts-infra-tls-generate"
+else
+  fail "TLS generator Job name is ts-infra-tls-generate"
+fi
+
+
 # ══════════════════════════════════════════════════════════
 # 2. PostgreSQL Security (TASK-M2.11.1)
 # ══════════════════════════════════════════════════════════
