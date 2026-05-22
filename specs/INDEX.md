@@ -151,5 +151,5 @@
 | SPEC-FR-M2.8 | 3 | RED → GREEN → REFACTOR | [tasks/M2.8/](tasks/M2.8/) |
 | SPEC-FR-M2.9 | 4 | RED → GREEN → REFACTOR | [tasks/M2.9/](tasks/M2.9/) |
 | SPEC-FR-M2.10 | 3 | RED → GREEN → REFACTOR | [tasks/M2.10/](tasks/M2.10/) |
-| SPEC-FR-M2.11 | - | TBD | - |
+| SPEC-FR-M2.11 | 3 | RED → GREEN → REFACTOR | [tasks/M2.11/](tasks/M2.11/) |
 
