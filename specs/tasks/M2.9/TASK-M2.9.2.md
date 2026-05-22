@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | TASK-M2.9.2                                 |
-| Status        | TODO                                        |
+| Status        | DONE                                        |
 | Spec          | SPEC-FR-M2.9                                |
 | Phase         | GREEN                                       |
 | Depends On    | TASK-M2.9.1                                 |

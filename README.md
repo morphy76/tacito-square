@@ -138,18 +138,27 @@ To release a component:
 
 ### Deployment
 
+The platform is deployed using a decoupled two-chart model:
+1. **Infrastructure Chart** (`tacito-square-infra`): Deploys external resources (PostgreSQL, Redis, Qdrant, NATS, OTel, Keycloak, etc.).
+2. **Application Chart** (`tacito-square`): Deploys Tacito components (Keeper, BFF, Operator) configured to bind to the infrastructure release.
+
 ```bash
 # Create local Kind cluster
 kind create cluster --config deploy/dev/kind-config.yaml
 
-# Install the full platform
+# Step 1: Install external infrastructure dependencies
+make helm-infra-deps
+make helm-infra-install
+
+# Step 2: Install Tacito Square application components
 make helm-install
 
-# Uninstall
+# Uninstall both
 make helm-uninstall
+make helm-infra-uninstall
 ```
 
-See [`deploy/helm/tacito-square/README.md`](deploy/helm/tacito-square/README.md) for detailed Helm configuration.
+See [Infrastructure Chart docs](file:///Users/R.Pasquini/Projects/side/tacito-square/tools/helm/tacito-square-infra/README.md) and [Application Chart docs](file:///Users/R.Pasquini/Projects/side/tacito-square/tools/helm/tacito-square/README.md) for detailed configuration.
 
 ## Project Structure
 
@@ -172,7 +181,7 @@ tacito-square/
 ├── operator/               # Kubebuilder CRD operator
 ├── ui/                     # React 19 frontends
 ├── api/openapi/            # OpenAPI contracts
-├── deploy/helm/            # Umbrella Helm chart
+├── tools/helm/             # Decoupled Helm charts (infra & app)
 ├── docs/                   # Architecture docs, feature mapping
 ├── migrations/             # Keeper DB migrations
 └── test/                   # Integration, contract, E2E tests

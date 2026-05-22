@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M2.9                                |
-| Status        | ACCEPTED                                       |
+| Status        | IMPLEMENTED                                 |
 | Milestone     | M2                                          |
 | Component     | docs                                        |
 | Depends On    | all M2 specs                                |

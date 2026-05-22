@@ -1,182 +1,108 @@
-# Tacito Square Helm Chart
+# Tacito Square — Application Helm Chart
 
-Umbrella Helm chart for deploying the complete Tacito Square multi-agent platform on Kubernetes.
+Deploys the Tacito Square application components (Keeper, Operator, BFF, and the Agent characterization templates) on Kubernetes.
+
+> [!IMPORTANT]
+> **Decoupled Architecture**: This chart does NOT bundle database or messaging infrastructure. It depends on external infrastructure services. The [Infrastructure Helm Chart](file:///Users/R.Pasquini/Projects/side/tacito-square/tools/helm/tacito-square-infra/README.md) is a hard prerequisite and must be installed first.
 
 ## Components Deployed
 
 | Component | Default | Description |
 |-----------|---------|-------------|
-| Keeper | Enabled | Control plane for agent lifecycle management |
-| Agent template | ConfigMap | Template config used by Keeper to spawn agents |
-| NATS | Enabled | Inter-agent and agent-keeper messaging |
-| Redis | Enabled | Agent short-term memory |
-| PostgreSQL | Enabled | Keeper persistence |
-| Qdrant | Enabled | Agent long-term vector memory |
-| OpenTelemetry Collector | Enabled | Span/metrics collection and export |
-| Keycloak | Enabled (dev) | OIDC identity provider with realm config |
-| MinIO | Disabled | S3-compatible object storage (opt-in) |
-| Operator | Disabled | CRD-based agent management (enable in M5) |
-| BFF | Disabled | Backend-for-frontend (enable in M6) |
+| **Keeper** | Enabled | Control plane for agent lifecycle management |
+| **Agent template** | ConfigMap | Base template used to characterize spawned agents |
+| **Operator** | Disabled (enable in M4) | CRD reconciliation controller watching Agent resources |
+| **BFF** | Disabled (enable in M7) | Backend-for-frontend routing and API translation layer |
 
-## Quick Start — Minimal Deployment
+## Prerequisites
+
+1. **Kubernetes Cluster** (v1.29+ or local Kind/Minikube)
+2. **Infrastructure Release** (`tacito-square-infra` installed and running)
+3. **Local Registry** (default `localhost:5000` or custom configured registry)
+
+## Quick Start
 
 ```bash
-# Create local Kind cluster
-kind create cluster --config deploy/dev/kind-config.yaml
+# Step 1: Add external infrastructure chart dependencies & install them
+make helm-infra-deps
+make helm-infra-install
 
-# Install with defaults (all infrastructure included)
-helm dependency update deploy/helm/tacito-square
-helm install tacito-square deploy/helm/tacito-square --wait
+# Step 2: Install application components
+make helm-install
 ```
 
-This deploys the Keeper + all infrastructure dependencies in a single command.
-Images default to `localhost:5000` registry — suitable for Kind with a local registry.
+Using Helm directly (assuming default release name `tacito-infra` for infrastructure):
+
+```bash
+helm install tacito tools/helm/tacito-square/ --wait
+```
+
+## Binding Interfaces
+
+The application components connect to database, messaging, and storage via binding environment variables in `values.yaml`. Default values in `values.yaml` are auto-configured to bind to an infrastructure release named `tacito-infra`.
+
+If your infrastructure release has a different name or is hosted externally, adjust the binding variables accordingly:
+
+### Keeper Bindings
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `keeper.env.TS_KEEPER_DB_HOST` | `tacito-infra-postgresql` | PostgreSQL host |
+| `keeper.env.TS_KEEPER_NATS_URL` | `nats://tacito-infra-nats:4222` | NATS connection URL |
+| `keeper.env.TS_KEEPER_REDIS_URL` | `redis://tacito-infra-redis-master:6379` | Redis connection URL |
+| `keeper.env.TS_KEEPER_OTEL_ENDPOINT` | `tacito-infra-otel-collector:4317` | OpenTelemetry gRPC endpoint |
+| `keeper.env.TS_KEEPER_OIDC_ISSUER` | `http://tacito-infra-keycloak:8080/realms/tacito` | OIDC provider token issuer |
+| `keeper.env.TS_KEEPER_S3_ENDPOINT` | `http://tacito-infra-minio:9000` | S3 endpoint (e.g. MinIO) |
+
+### Agent Template Bindings
+
+When the Keeper and Operator spawn agents, they receive configurations defined under the `agent.env` block:
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `agent.env.TS_AGENT_NATS_URL` | `nats://tacito-infra-nats:4222` | NATS connection URL |
+| `agent.env.TS_AGENT_REDIS_URL` | `redis://tacito-infra-redis-master:6379` | Redis connection URL |
+| `agent.env.TS_AGENT_QDRANT_URL` | `http://tacito-infra-qdrant:6334` | Qdrant gRPC vector store URL |
+| `agent.env.TS_AGENT_OTEL_ENDPOINT` | `tacito-infra-otel-collector:4317` | OpenTelemetry gRPC endpoint |
 
 ## Values Reference
 
-### Global
+### Global Resolution
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `global.imageRegistry` | `localhost:5000` | Default container registry (local) |
-| `global.imagePullSecrets` | `[]` | Pull secrets for private registries |
+| `global.imageRegistry` | `localhost:5000` | Fallback container registry |
+| `global.infraReleaseName` | `tacito-infra` | Default prefix for infrastructure services |
 
-### Image Resolution
-
-Each component's image is resolved as: `{registry}/{name}:{tag}` where registry falls back: **per-component** → **global.imageRegistry** → **localhost:5000**.
-
-### Keeper
+### Keeper Settings
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `keeper.replicaCount` | `1` | Number of Keeper replicas |
-| `keeper.image.registry` | `""` | Override `global.imageRegistry` |
-| `keeper.image.name` | `tacito-square/keeper` | Image name (without registry) |
+| `keeper.replicaCount` | `1` | Replica count |
+| `keeper.image.registry` | `""` | Registry override |
+| `keeper.image.name` | `tacito-square/keeper` | Container image name |
 | `keeper.image.tag` | `0.1.0` | Image version tag |
-| `keeper.resources.requests.cpu` | `100m` | CPU request |
-| `keeper.resources.limits.memory` | `256Mi` | Memory limit |
-| `keeper.env.TS_KEEPER_OIDC_ISSUER` | `...keycloak.../realms/tacito` | OIDC issuer URL |
-| `keeper.env.TS_KEEPER_OIDC_CLIENT_ID` | `tacito-keeper` | OIDC client ID |
-| `keeper.service.port` | `8080` | Service port |
+| `keeper.service.port` | `8080` | Port exposed by service |
 
-### Agent (Template)
+### Operator Settings
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `agent.image.registry` | `""` | Override `global.imageRegistry` |
-| `agent.image.name` | `tacito-square/agent` | Image name (without registry) |
-| `agent.image.tag` | `0.1.0` | Agent image version |
-| `agent.resources.limits.memory` | `512Mi` | Memory limit per agent |
+| `operator.enabled` | `false` | Enable the CRD Operator controller |
+| `operator.image.name` | `tacito-square/operator` | Image name |
+| `operator.image.tag` | `0.1.0` | Version tag |
 
-### Infrastructure
+### BFF Settings
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `nats.enabled` | `true` | Deploy NATS |
-| `redis.enabled` | `true` | Deploy Redis |
-| `postgresql.enabled` | `true` | Deploy PostgreSQL |
-| `qdrant.enabled` | `true` | Deploy Qdrant |
-| `otel-collector.enabled` | `true` | Deploy OpenTelemetry Collector |
-| `keycloak.enabled` | `true` | Deploy Keycloak (dev mode) |
-| `minio.enabled` | `false` | Deploy MinIO (S3-compatible, opt-in) |
-| `minio.auth.rootUser` | `tacito-dev` | MinIO root user |
-| `minio.auth.rootPassword` | `tacito-dev-secret` | MinIO root password |
-| `minio.defaultBuckets` | `tacito-artifacts` | Auto-created bucket |
-| `minio.persistence.size` | `5Gi` | Storage size |
-
-### IAM (Keycloak)
-
-The chart ships with a Keycloak dev instance pre-configured with:
-
-| Resource | Value | Description |
-|----------|-------|-------------|
-| Realm | `tacito` | OIDC realm for all Tacito Square components |
-| Client: `tacito-keeper` | Confidential | Keeper service account (secret: `keeper-dev-secret`) |
-| Client: `tacito-ui` | Public | SPA/UI PKCE client |
-| Role: `keeper-admin` | — | Full Keeper administration |
-| Role: `keeper-viewer` | — | Read-only Keeper access |
-| Role: `user` | — | End user agent interaction |
-| Role: `agent-spawner` | — | Can spawn agents |
-| User: `admin` / `admin` | `keeper-admin`, `agent-spawner` | Dev admin user |
-| User: `user` / `user` | `user` | Dev end user |
-
-## Externalizing Dependencies
-
-For production deployments, disable bundled infrastructure and point to external services:
-
-```yaml
-# values-production.yaml
-
-# Use private registry
-global:
-  imageRegistry: "ghcr.io/morphy76"
-
-# Disable bundled infrastructure
-nats:
-  enabled: false
-redis:
-  enabled: false
-postgresql:
-  enabled: false
-qdrant:
-  enabled: false
-keycloak:
-  enabled: false
-otel-collector:
-  enabled: false
-minio:
-  enabled: false
-
-# Point to external services
-keeper:
-  env:
-    TS_KEEPER_DB_HOST: "my-rds-instance.region.rds.amazonaws.com"
-    TS_KEEPER_NATS_URL: "nats://my-nats-cluster:4222"
-    TS_KEEPER_OIDC_ISSUER: "https://my-keycloak.example.com/realms/tacito"
-    TS_KEEPER_OIDC_CLIENT_ID: "tacito-keeper-prod"
-    TS_KEEPER_OTEL_ENDPOINT: "my-otel-collector:4317"
-    TS_KEEPER_S3_ENDPOINT: "https://s3.us-east-1.amazonaws.com"
-    TS_KEEPER_S3_BUCKET: "my-tacito-artifacts"
-    TS_KEEPER_S3_REGION: "us-east-1"
-
-agent:
-  env:
-    TS_AGENT_REDIS_URL: "redis://my-elasticache:6379"
-    TS_AGENT_QDRANT_URL: "http://my-qdrant:6334"
-    TS_AGENT_NATS_URL: "nats://my-nats-cluster:4222"
-    TS_AGENT_OTEL_ENDPOINT: "my-otel-collector:4317"
-```
-
-Deploy with overrides:
-
-```bash
-helm install tacito-square deploy/helm/tacito-square -f values-production.yaml
-```
+| `bff.enabled` | `false` | Enable the BFF API bridge |
+| `bff.image.name` | `tacito-square/bff` | Image name |
+| `bff.image.tag` | `0.1.0` | Version tag |
+| `bff.service.port` | `8083` | Port exposed by service |
 
 ## Health Probes
 
-All components expose health endpoints validated by K8s probes:
-
-| Endpoint | Type | Checks |
-|----------|------|--------|
-| `/healthz` | Liveness | Process is alive |
-| `/readyz` | Readiness | All dependencies reachable (DB, NATS, Redis, Qdrant) |
-
-Readiness checks per component:
-
-- **Keeper**: PostgreSQL ping + NATS connection
-- **Agent**: NATS + Redis + Qdrant + LLM reachability
-- **BFF**: Keeper API reachability
-- **Operator**: K8s API server connectivity
-
-## Upgrading
-
-```bash
-# Update a single component version
-helm upgrade tacito-square deploy/helm/tacito-square \
-  --set keeper.image.tag=0.2.0
-
-# Switch to remote registry
-helm upgrade tacito-square deploy/helm/tacito-square \
-  --set global.imageRegistry=ghcr.io/morphy76
-```
+All running components expose structured health endpoints validated by Kubernetes probes:
+- `/healthz` (liveness): returns `{"status":"alive"}` when the engine is running.
+- `/readyz` (readiness): returns `{"status":"ready"}` if external services are reachable.

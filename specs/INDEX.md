@@ -41,7 +41,7 @@
 | SPEC-FR-M2.6 | BFF Hello World | IMPLEMENTED | bff | [SPEC-FR-M2.6](functional/M2/SPEC-FR-M2.6.md) |
 | SPEC-FR-M2.7 | Container Images (distroless, multi-stage) | IMPLEMENTED | build | [SPEC-FR-M2.7](functional/M2/SPEC-FR-M2.7.md) |
 | SPEC-FR-M2.8 | Continuous Integration (GitHub Actions) | ACCEPTED | build | [SPEC-FR-M2.8](functional/M2/SPEC-FR-M2.8.md) |
-| SPEC-FR-M2.9 | Project Documentation | ACCEPTED | docs | [SPEC-FR-M2.9](functional/M2/SPEC-FR-M2.9.md) |
+| SPEC-FR-M2.9 | Project Documentation | IMPLEMENTED | docs | [SPEC-FR-M2.9](functional/M2/SPEC-FR-M2.9.md) |
 
 ### M3: Keeper Core
 
@@ -147,4 +147,4 @@
 | SPEC-FR-M2.6 | 3 | RED → GREEN → REFACTOR | [tasks/M2.6/](tasks/M2.6/) |
 | SPEC-FR-M2.7 | 3 | RED → GREEN → REFACTOR | [tasks/M2.7/](tasks/M2.7/) |
 | SPEC-FR-M2.8 | 3 | RED → GREEN → REFACTOR | [tasks/M2.8/](tasks/M2.8/) |
-| SPEC-FR-M2.9 | 3 | RED → GREEN → REFACTOR | [tasks/M2.9/](tasks/M2.9/) |
+| SPEC-FR-M2.9 | 4 | RED → GREEN → REFACTOR | [tasks/M2.9/](tasks/M2.9/) |

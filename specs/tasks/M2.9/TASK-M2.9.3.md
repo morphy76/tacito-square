@@ -1,24 +1,26 @@
-# TASK-M2.9.3: Review documentation completeness (REFACTOR)
+# TASK-M2.9.3: Write infrastructure documentation (GREEN)
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | TASK-M2.9.3                                 |
-| Status        | TODO                                        |
+| Status        | DONE                                        |
 | Spec          | SPEC-FR-M2.9                                |
-| Phase         | REFACTOR                                    |
-| Depends On    | TASK-M2.9.2                                 |
+| Phase         | GREEN                                       |
+| Depends On    | TASK-M2.9.1                                 |
 
 ## Description
 
-Final review of all documentation for completeness, accuracy, and consistency.
+Write/update README file for the infrastructure Helm chart.
 
 ## Work Items
 
-1. Run all validation checks.
-2. Verify README instructions work on a clean checkout.
-3. Ensure consistency between root README, infra chart README, and app chart README.
+1. Update `tools/helm/tacito-square-infra/README.md` with:
+   - What services are included.
+   - Installation instructions.
+   - Configuration reference (key values.yaml knobs).
+2. Run `test/docs/test_documentation.sh` — all checks MUST pass.
 
 ## Acceptance Criteria
 
-1. All validation checks pass.
-2. Documentation is accurate and consistent.
+1. The infrastructure chart README file contains required sections.
+2. All validation checks pass.
