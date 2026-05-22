@@ -1,13 +1,13 @@
 # SPEC-FR-M2.7: Container Images (distroless, multi-stage)
 
-| Field         | Value                                       |
-|---------------|---------------------------------------------|
-| ID            | SPEC-FR-M2.7                                |
-| Status        | IMPLEMENTED                                 |
-| Milestone     | M2                                          |
-| Component     | build                                       |
-| Depends On    | SPEC-FR-M2.3, SPEC-FR-M2.4, SPEC-FR-M2.5, SPEC-FR-M2.6 |
-| Supersedes    | none                                        |
+| Field      | Value                                                  |
+| ---------- | ------------------------------------------------------ |
+| ID         | SPEC-FR-M2.7                                           |
+| Status     | IMPLEMENTED                                            |
+| Milestone  | M2                                                     |
+| Component  | build                                                  |
+| Depends On | SPEC-FR-M2.3, SPEC-FR-M2.4, SPEC-FR-M2.5, SPEC-FR-M2.6 |
+| Supersedes | none                                                   |
 
 ## Context
 
@@ -23,7 +23,7 @@ Each component is packaged as a minimal Docker image using multi-stage builds wi
 6. `make docker-build` MUST build all 4 component images.
 7. `make docker-build-<component>` MUST build individual component images.
 8. Image tags MUST use the version from `VERSION.<component>` files.
-9. The `REGISTRY` variable MUST be configurable (default: `localhost:5000/tacito-square`).
+9. The `REGISTRY` variable MUST be configurable (default: `tacito-square`).
 
 ## Acceptance Criteria
 

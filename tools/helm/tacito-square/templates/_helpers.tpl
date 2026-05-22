@@ -25,7 +25,7 @@ Create a default fully qualified app name.
 Resolve image registry: per-component override > global.
 */}}
 {{- define "tacito-square.imageRegistry" -}}
-{{- $registry := .componentRegistry | default .global.imageRegistry | default "localhost:5000" -}}
+{{- $registry := .componentRegistry | default .global.imageRegistry | default "" -}}
 {{- $registry -}}
 {{- end -}}
 
@@ -34,7 +34,11 @@ Full image reference: registry/name:tag.
 */}}
 {{- define "tacito-square.image" -}}
 {{- $registry := include "tacito-square.imageRegistry" (dict "componentRegistry" .registry "global" .global) -}}
+{{- if $registry -}}
 {{- printf "%s/%s:%s" $registry .name .tag -}}
+{{- else -}}
+{{- printf "%s:%s" .name .tag -}}
+{{- end -}}
 {{- end -}}
 
 {{/*

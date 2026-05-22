@@ -6,7 +6,7 @@ KEEPER_VERSION  := $(shell cat VERSION.keeper 2>/dev/null || echo "0.0.1")
 OPERATOR_VERSION := $(shell cat VERSION.operator 2>/dev/null || echo "0.0.1")
 BFF_VERSION     := $(shell cat VERSION.bff 2>/dev/null || echo "0.0.1")
 
-REGISTRY       ?= localhost:5000/tacito-square
+REGISTRY       ?= tacito-square
 HELM_RELEASE       ?= tacito-square
 HELM_CHART         := tools/helm/tacito-square
 HELM_INFRA_RELEASE ?= tacito-infra

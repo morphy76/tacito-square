@@ -7,18 +7,18 @@ Deploys the Tacito Square application components (Keeper, Operator, BFF, and the
 
 ## Components Deployed
 
-| Component | Default | Description |
-|-----------|---------|-------------|
-| **Keeper** | Enabled | Control plane for agent lifecycle management |
-| **Agent template** | ConfigMap | Base template used to characterize spawned agents |
-| **Operator** | Disabled (enable in M4) | CRD reconciliation controller watching Agent resources |
-| **BFF** | Disabled (enable in M7) | Backend-for-frontend routing and API translation layer |
+| Component          | Default                 | Description                                            |
+| ------------------ | ----------------------- | ------------------------------------------------------ |
+| **Keeper**         | Enabled                 | Control plane for agent lifecycle management           |
+| **Agent template** | ConfigMap               | Base template used to characterize spawned agents      |
+| **Operator**       | Disabled (enable in M4) | CRD reconciliation controller watching Agent resources |
+| **BFF**            | Disabled (enable in M7) | Backend-for-frontend routing and API translation layer |
 
 ## Prerequisites
 
 1. **Kubernetes Cluster** (v1.29+ or local Kind/Minikube)
 2. **Infrastructure Release** (`tacito-square-infra` installed and running)
-3. **Local Registry** (default `localhost:5000` or custom configured registry)
+3. **Local Registry** (default `tacito-square` or custom configured registry)
 
 ## Quick Start
 
@@ -45,61 +45,61 @@ If your infrastructure release has a different name or is hosted externally, adj
 
 ### Keeper Bindings
 
-| Key | Default | Description |
-|-----|---------|-------------|
-| `keeper.env.TS_KEEPER_DB_HOST` | `tacito-infra-postgresql` | PostgreSQL host |
-| `keeper.env.TS_KEEPER_NATS_URL` | `nats://tacito-infra-nats:4222` | NATS connection URL |
-| `keeper.env.TS_KEEPER_REDIS_URL` | `redis://tacito-infra-redis-master:6379` | Redis connection URL |
-| `keeper.env.TS_KEEPER_OTEL_ENDPOINT` | `tacito-infra-otel-collector:4317` | OpenTelemetry gRPC endpoint |
-| `keeper.env.TS_KEEPER_OIDC_ISSUER` | `http://tacito-infra-keycloak:8080/realms/tacito` | OIDC provider token issuer |
-| `keeper.env.TS_KEEPER_S3_ENDPOINT` | `http://tacito-infra-minio:9000` | S3 endpoint (e.g. MinIO) |
+| Key                                  | Default                                           | Description                 |
+| ------------------------------------ | ------------------------------------------------- | --------------------------- |
+| `keeper.env.TS_KEEPER_DB_HOST`       | `tacito-infra-postgresql`                         | PostgreSQL host             |
+| `keeper.env.TS_KEEPER_NATS_URL`      | `nats://tacito-infra-nats:4222`                   | NATS connection URL         |
+| `keeper.env.TS_KEEPER_REDIS_URL`     | `redis://tacito-infra-redis-master:6379`          | Redis connection URL        |
+| `keeper.env.TS_KEEPER_OTEL_ENDPOINT` | `tacito-infra-otel-collector:4317`                | OpenTelemetry gRPC endpoint |
+| `keeper.env.TS_KEEPER_OIDC_ISSUER`   | `http://tacito-infra-keycloak:8080/realms/tacito` | OIDC provider token issuer  |
+| `keeper.env.TS_KEEPER_S3_ENDPOINT`   | `http://tacito-infra-minio:9000`                  | S3 endpoint (e.g. MinIO)    |
 
 ### Agent Template Bindings
 
 When the Keeper and Operator spawn agents, they receive configurations defined under the `agent.env` block:
 
-| Key | Default | Description |
-|-----|---------|-------------|
-| `agent.env.TS_AGENT_NATS_URL` | `nats://tacito-infra-nats:4222` | NATS connection URL |
-| `agent.env.TS_AGENT_REDIS_URL` | `redis://tacito-infra-redis-master:6379` | Redis connection URL |
-| `agent.env.TS_AGENT_QDRANT_URL` | `http://tacito-infra-qdrant:6334` | Qdrant gRPC vector store URL |
-| `agent.env.TS_AGENT_OTEL_ENDPOINT` | `tacito-infra-otel-collector:4317` | OpenTelemetry gRPC endpoint |
+| Key                                | Default                                  | Description                  |
+| ---------------------------------- | ---------------------------------------- | ---------------------------- |
+| `agent.env.TS_AGENT_NATS_URL`      | `nats://tacito-infra-nats:4222`          | NATS connection URL          |
+| `agent.env.TS_AGENT_REDIS_URL`     | `redis://tacito-infra-redis-master:6379` | Redis connection URL         |
+| `agent.env.TS_AGENT_QDRANT_URL`    | `http://tacito-infra-qdrant:6334`        | Qdrant gRPC vector store URL |
+| `agent.env.TS_AGENT_OTEL_ENDPOINT` | `tacito-infra-otel-collector:4317`       | OpenTelemetry gRPC endpoint  |
 
 ## Values Reference
 
 ### Global Resolution
 
-| Key | Default | Description |
-|-----|---------|-------------|
-| `global.imageRegistry` | `localhost:5000` | Fallback container registry |
-| `global.infraReleaseName` | `tacito-infra` | Default prefix for infrastructure services |
+| Key                       | Default          | Description                                |
+| ------------------------- | ---------------- | ------------------------------------------ |
+| `global.imageRegistry`    | `""`             | Fallback container registry                |
+| `global.infraReleaseName` | `tacito-infra`   | Default prefix for infrastructure services |
 
 ### Keeper Settings
 
-| Key | Default | Description |
-|-----|---------|-------------|
-| `keeper.replicaCount` | `1` | Replica count |
-| `keeper.image.registry` | `""` | Registry override |
-| `keeper.image.name` | `tacito-square/keeper` | Container image name |
-| `keeper.image.tag` | `0.1.0` | Image version tag |
-| `keeper.service.port` | `8080` | Port exposed by service |
+| Key                     | Default                | Description             |
+| ----------------------- | ---------------------- | ----------------------- |
+| `keeper.replicaCount`   | `1`                    | Replica count           |
+| `keeper.image.registry` | `""`                   | Registry override       |
+| `keeper.image.name`     | `tacito-square/keeper` | Container image name    |
+| `keeper.image.tag`      | `0.1.0`                | Image version tag       |
+| `keeper.service.port`   | `8080`                 | Port exposed by service |
 
 ### Operator Settings
 
-| Key | Default | Description |
-|-----|---------|-------------|
-| `operator.enabled` | `false` | Enable the CRD Operator controller |
-| `operator.image.name` | `tacito-square/operator` | Image name |
-| `operator.image.tag` | `0.1.0` | Version tag |
+| Key                   | Default                  | Description                        |
+| --------------------- | ------------------------ | ---------------------------------- |
+| `operator.enabled`    | `false`                  | Enable the CRD Operator controller |
+| `operator.image.name` | `tacito-square/operator` | Image name                         |
+| `operator.image.tag`  | `0.1.0`                  | Version tag                        |
 
 ### BFF Settings
 
-| Key | Default | Description |
-|-----|---------|-------------|
-| `bff.enabled` | `false` | Enable the BFF API bridge |
-| `bff.image.name` | `tacito-square/bff` | Image name |
-| `bff.image.tag` | `0.1.0` | Version tag |
-| `bff.service.port` | `8083` | Port exposed by service |
+| Key                | Default             | Description               |
+| ------------------ | ------------------- | ------------------------- |
+| `bff.enabled`      | `false`             | Enable the BFF API bridge |
+| `bff.image.name`   | `tacito-square/bff` | Image name                |
+| `bff.image.tag`    | `0.1.0`             | Version tag               |
+| `bff.service.port` | `8083`              | Port exposed by service   |
 
 ## Health Probes
 
