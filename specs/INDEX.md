@@ -42,6 +42,7 @@
 | SPEC-FR-M2.7 | Container Images (distroless, multi-stage) | IMPLEMENTED | build | [SPEC-FR-M2.7](functional/M2/SPEC-FR-M2.7.md) |
 | SPEC-FR-M2.8 | Continuous Integration (GitHub Actions) | ACCEPTED | build | [SPEC-FR-M2.8](functional/M2/SPEC-FR-M2.8.md) |
 | SPEC-FR-M2.9 | Project Documentation | IMPLEMENTED | docs | [SPEC-FR-M2.9](functional/M2/SPEC-FR-M2.9.md) |
+| SPEC-FR-M2.10 | Avoid Bitnami (Leverage Free & Non-Commercial Infrastructural Dependencies) | ACCEPTED | deploy | [SPEC-FR-M2.10](functional/M2/SPEC-FR-M2.10.md) |
 
 ### M3: Keeper Core
 
@@ -148,3 +149,4 @@
 | SPEC-FR-M2.7 | 3 | RED → GREEN → REFACTOR | [tasks/M2.7/](tasks/M2.7/) |
 | SPEC-FR-M2.8 | 3 | RED → GREEN → REFACTOR | [tasks/M2.8/](tasks/M2.8/) |
 | SPEC-FR-M2.9 | 4 | RED → GREEN → REFACTOR | [tasks/M2.9/](tasks/M2.9/) |
+| SPEC-FR-M2.10 | 3 | RED → GREEN → REFACTOR | [tasks/M2.10/](tasks/M2.10/) |
