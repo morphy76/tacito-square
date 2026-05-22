@@ -114,10 +114,7 @@ otel-collector:
 
 # ── Keycloak (OIDC provider) ────────────────────────────
 keycloak:
-  enabled: false
-  image:
-    repository: quay.io/keycloak/keycloak
-    tag: "24.0.0"
+  enabled: true
   command:
     - "/opt/keycloak/bin/kc.sh"
   args:
@@ -135,14 +132,14 @@ keycloak:
     username: tacito
     password: tacito-dev
   extraEnv: |
-    - name: KEYCLOAK_ADMIN
+    - name: KC_BOOTSTRAP_ADMIN_USERNAME
       value: "admin"
-    - name: KEYCLOAK_ADMIN_PASSWORD
+    - name: KC_BOOTSTRAP_ADMIN_PASSWORD
       value: "admin-dev"
   extraVolumes: |
     - name: keycloak-tls
       secret:
-        secretName: ts-infra-keycloak-tls
+        secretName: ts-infra-tacito-square-infra-keycloak-tls
     - name: keycloak-realm
       configMap:
         name: keycloak-realm
