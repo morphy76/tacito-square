@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M2.7                                |
-| Status        | DRAFT                                       |
+| Status        | IMPLEMENTED                                 |
 | Milestone     | M2                                          |
 | Component     | build                                       |
 | Depends On    | SPEC-FR-M2.3, SPEC-FR-M2.4, SPEC-FR-M2.5, SPEC-FR-M2.6 |

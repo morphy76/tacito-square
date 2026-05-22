@@ -1,0 +1,17 @@
+{{- if .Values.bff.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tacito-square.fullname" . }}-bff
+  labels:
+    {{- include "tacito-square.labels" (dict "component" "bff" "context" .) | nindent 4 }}
+spec:
+  type: {{ .Values.bff.service.type }}
+  ports:
+    - port: {{ .Values.bff.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "tacito-square.selectorLabels" (dict "component" "bff" "context" .) | nindent 4 }}
+{{- end }}

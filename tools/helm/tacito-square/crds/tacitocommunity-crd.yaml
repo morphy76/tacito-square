@@ -1,0 +1,75 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: tacitocommunities.tacito.square.io
+  labels:
+    app.kubernetes.io/part-of: tacito-square
+spec:
+  group: tacito.square.io
+  names:
+    kind: TacitoCommunity
+    listKind: TacitoCommunityList
+    plural: tacitocommunities
+    singular: tacitocommunity
+    shortNames:
+      - tc
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: TacitoCommunity represents a group of cooperating AI agents.
+          properties:
+            spec:
+              type: object
+              required:
+                - communityName
+                - topology
+              properties:
+                communityName:
+                  type: string
+                  description: Human-readable community name.
+                topology:
+                  type: string
+                  enum:
+                    - hub-spoke
+                  description: Communication topology for the community.
+                hubAgentRef:
+                  type: string
+                  description: Reference to the hub agent (required for hub-spoke topology).
+                maxAgents:
+                  type: integer
+                  minimum: 1
+                  default: 10
+                  description: Maximum number of agents in this community.
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  description: Current lifecycle phase (Pending, Active, Degraded).
+                agentCount:
+                  type: integer
+                  description: Number of agents currently assigned.
+                lastTransitionTime:
+                  type: string
+                  format: date-time
+                  description: Timestamp of last status change.
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Topology
+          type: string
+          jsonPath: .spec.topology
+        - name: Agents
+          type: integer
+          jsonPath: .status.agentCount
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp

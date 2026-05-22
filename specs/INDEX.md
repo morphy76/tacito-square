@@ -33,15 +33,15 @@
 
 | ID | Title | Status | Component | File |
 |----|-------|--------|-----------|------|
-| SPEC-FR-M2.1 | Application Helm Chart (infra-free, binding interfaces) | DRAFT | deploy | [SPEC-FR-M2.1](functional/M2/SPEC-FR-M2.1.md) |
-| SPEC-FR-M2.2 | Shared Foundation Library | DRAFT | shared | [SPEC-FR-M2.2](functional/M2/SPEC-FR-M2.2.md) |
-| SPEC-FR-M2.3 | Keeper Hello World | DRAFT | keeper | [SPEC-FR-M2.3](functional/M2/SPEC-FR-M2.3.md) |
-| SPEC-FR-M2.4 | Agent Hello World | DRAFT | agent | [SPEC-FR-M2.4](functional/M2/SPEC-FR-M2.4.md) |
-| SPEC-FR-M2.5 | Operator Hello World | DRAFT | operator | [SPEC-FR-M2.5](functional/M2/SPEC-FR-M2.5.md) |
-| SPEC-FR-M2.6 | BFF Hello World | DRAFT | bff | [SPEC-FR-M2.6](functional/M2/SPEC-FR-M2.6.md) |
-| SPEC-FR-M2.7 | Container Images (distroless, multi-stage) | DRAFT | build | [SPEC-FR-M2.7](functional/M2/SPEC-FR-M2.7.md) |
-| SPEC-FR-M2.8 | Continuous Integration (GitHub Actions) | DRAFT | build | [SPEC-FR-M2.8](functional/M2/SPEC-FR-M2.8.md) |
-| SPEC-FR-M2.9 | Project Documentation | DRAFT | docs | [SPEC-FR-M2.9](functional/M2/SPEC-FR-M2.9.md) |
+| SPEC-FR-M2.1 | Application Helm Chart (infra-free, binding interfaces) | IMPLEMENTED | deploy | [SPEC-FR-M2.1](functional/M2/SPEC-FR-M2.1.md) |
+| SPEC-FR-M2.2 | Shared Foundation Library | IMPLEMENTED | shared | [SPEC-FR-M2.2](functional/M2/SPEC-FR-M2.2.md) |
+| SPEC-FR-M2.3 | Keeper Hello World | IMPLEMENTED | keeper | [SPEC-FR-M2.3](functional/M2/SPEC-FR-M2.3.md) |
+| SPEC-FR-M2.4 | Agent Hello World | IMPLEMENTED | agent | [SPEC-FR-M2.4](functional/M2/SPEC-FR-M2.4.md) |
+| SPEC-FR-M2.5 | Operator Hello World | IMPLEMENTED | operator | [SPEC-FR-M2.5](functional/M2/SPEC-FR-M2.5.md) |
+| SPEC-FR-M2.6 | BFF Hello World | IMPLEMENTED | bff | [SPEC-FR-M2.6](functional/M2/SPEC-FR-M2.6.md) |
+| SPEC-FR-M2.7 | Container Images (distroless, multi-stage) | IMPLEMENTED | build | [SPEC-FR-M2.7](functional/M2/SPEC-FR-M2.7.md) |
+| SPEC-FR-M2.8 | Continuous Integration (GitHub Actions) | ACCEPTED | build | [SPEC-FR-M2.8](functional/M2/SPEC-FR-M2.8.md) |
+| SPEC-FR-M2.9 | Project Documentation | ACCEPTED | docs | [SPEC-FR-M2.9](functional/M2/SPEC-FR-M2.9.md) |
 
 ### M3: Keeper Core
 
@@ -139,3 +139,12 @@
 |------|-------|-------|-----------|
 | SPEC-FR-M1.1 | 5 | RED → GREEN → REFACTOR | [tasks/M1.1/](tasks/M1.1/) |
 | SPEC-FR-M1.2 | 3 | RED → GREEN → REFACTOR | [tasks/M1.2/](tasks/M1.2/) |
+| SPEC-FR-M2.1 | 4 | RED → GREEN → REFACTOR | [tasks/M2.1/](tasks/M2.1/) |
+| SPEC-FR-M2.2 | 3 | RED → GREEN → REFACTOR | [tasks/M2.2/](tasks/M2.2/) |
+| SPEC-FR-M2.3 | 3 | RED → GREEN → REFACTOR | [tasks/M2.3/](tasks/M2.3/) |
+| SPEC-FR-M2.4 | 3 | RED → GREEN → REFACTOR | [tasks/M2.4/](tasks/M2.4/) |
+| SPEC-FR-M2.5 | 3 | RED → GREEN → REFACTOR | [tasks/M2.5/](tasks/M2.5/) |
+| SPEC-FR-M2.6 | 3 | RED → GREEN → REFACTOR | [tasks/M2.6/](tasks/M2.6/) |
+| SPEC-FR-M2.7 | 3 | RED → GREEN → REFACTOR | [tasks/M2.7/](tasks/M2.7/) |
+| SPEC-FR-M2.8 | 3 | RED → GREEN → REFACTOR | [tasks/M2.8/](tasks/M2.8/) |
+| SPEC-FR-M2.9 | 3 | RED → GREEN → REFACTOR | [tasks/M2.9/](tasks/M2.9/) |

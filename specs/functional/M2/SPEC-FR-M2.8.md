@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M2.8                                |
-| Status        | DRAFT                                       |
+| Status        | ACCEPTED                                       |
 | Milestone     | M2                                          |
 | Component     | build                                       |
 | Depends On    | SPEC-FR-M2.7                                |

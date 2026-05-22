@@ -1,0 +1,38 @@
+{{- if .Values.operator.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tacito-square.fullname" . }}-operator
+  labels:
+    {{- include "tacito-square.labels" (dict "component" "operator" "context" .) | nindent 4 }}
+spec:
+  replicas: {{ .Values.operator.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "tacito-square.selectorLabels" (dict "component" "operator" "context" .) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "tacito-square.selectorLabels" (dict "component" "operator" "context" .) | nindent 8 }}
+    spec:
+      containers:
+        - name: operator
+          image: {{ include "tacito-square.image" (dict "registry" .Values.operator.image.registry "name" .Values.operator.image.name "tag" .Values.operator.image.tag "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.operator.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8082
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+{{- end }}

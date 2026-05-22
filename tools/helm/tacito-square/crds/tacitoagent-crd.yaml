@@ -1,0 +1,77 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: tacitoagents.tacito.square.io
+  labels:
+    app.kubernetes.io/part-of: tacito-square
+spec:
+  group: tacito.square.io
+  names:
+    kind: TacitoAgent
+    listKind: TacitoAgentList
+    plural: tacitoagents
+    singular: tacitoagent
+    shortNames:
+      - ta
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: TacitoAgent represents a managed AI agent instance.
+          properties:
+            spec:
+              type: object
+              required:
+                - name
+                - communityRef
+              properties:
+                name:
+                  type: string
+                  description: Human-readable agent name.
+                communityRef:
+                  type: string
+                  description: Reference to the TacitoCommunity this agent belongs to.
+                replicas:
+                  type: integer
+                  minimum: 0
+                  default: 1
+                  description: Number of desired agent pod replicas.
+                image:
+                  type: string
+                  description: Container image for this agent.
+                config:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                  description: Agent-specific configuration (passed as env/volume).
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  description: Current lifecycle phase (Pending, Running, Idle, Terminated).
+                readyReplicas:
+                  type: integer
+                  description: Number of ready replicas.
+                lastTransitionTime:
+                  type: string
+                  format: date-time
+                  description: Timestamp of last status change.
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Community
+          type: string
+          jsonPath: .spec.communityRef
+        - name: Replicas
+          type: integer
+          jsonPath: .spec.replicas
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
