@@ -7,10 +7,11 @@ OPERATOR_VERSION := $(shell cat VERSION.operator 2>/dev/null || echo "0.0.1")
 BFF_VERSION     := $(shell cat VERSION.bff 2>/dev/null || echo "0.0.1")
 
 REGISTRY       ?= tacito-square
-HELM_RELEASE       ?= tacito-square
+HELM_RELEASE       ?= ts
 HELM_CHART         := tools/helm/tacito-square
-HELM_INFRA_RELEASE ?= tacito-infra
+HELM_INFRA_RELEASE ?= ts-infra
 HELM_INFRA_CHART   := tools/helm/tacito-square-infra
+NAMESPACE          ?= tacito
 
 GO             := go
 GOTEST         := $(GO) test
@@ -100,13 +101,13 @@ docker-push: ## Push all Docker images
 ## —— Helm (app) —————————————————————————————————————————
 
 helm-template: ## Render application Helm templates locally
-	helm template $(HELM_RELEASE) $(HELM_CHART)
+	helm template $(HELM_RELEASE) $(HELM_CHART) --namespace $(NAMESPACE)
 
 helm-install: ## Install/upgrade application Helm release
-	helm upgrade --install $(HELM_RELEASE) $(HELM_CHART) --wait
+	helm upgrade --install $(HELM_RELEASE) $(HELM_CHART) --namespace $(NAMESPACE) --create-namespace --wait
 
 helm-uninstall: ## Uninstall application Helm release
-	helm uninstall $(HELM_RELEASE)
+	helm uninstall $(HELM_RELEASE) --namespace $(NAMESPACE)
 
 ## —— Helm (infra) ———————————————————————————————————————
 
@@ -117,13 +118,13 @@ helm-infra-lint: ## Lint the infrastructure Helm chart
 	helm lint $(HELM_INFRA_CHART)
 
 helm-infra-template: ## Render infrastructure Helm templates locally
-	helm template $(HELM_INFRA_RELEASE) $(HELM_INFRA_CHART)
+	helm template $(HELM_INFRA_RELEASE) $(HELM_INFRA_CHART) --namespace $(NAMESPACE)
 
 helm-infra-install: ## Install/upgrade infrastructure Helm release
-	helm upgrade --install $(HELM_INFRA_RELEASE) $(HELM_INFRA_CHART) --wait
+	helm upgrade --install $(HELM_INFRA_RELEASE) $(HELM_INFRA_CHART) --namespace $(NAMESPACE) --create-namespace --wait
 
 helm-infra-uninstall: ## Uninstall infrastructure Helm release
-	helm uninstall $(HELM_INFRA_RELEASE)
+	helm uninstall $(HELM_INFRA_RELEASE) --namespace $(NAMESPACE)
 
 ## —— CI —————————————————————————————————————————————————
 

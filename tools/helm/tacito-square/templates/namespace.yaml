@@ -1,6 +1,6 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: tacito-square
+  name: {{ .Release.Namespace }}
   labels:
     app.kubernetes.io/part-of: tacito-square
