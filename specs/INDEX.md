@@ -43,6 +43,7 @@
 | SPEC-FR-M2.8 | Continuous Integration (GitHub Actions) | ACCEPTED | build | [SPEC-FR-M2.8](functional/M2/SPEC-FR-M2.8.md) |
 | SPEC-FR-M2.9 | Project Documentation | IMPLEMENTED | docs | [SPEC-FR-M2.9](functional/M2/SPEC-FR-M2.9.md) |
 | SPEC-FR-M2.10 | Avoid Bitnami (Leverage Free & Non-Commercial Infrastructural Dependencies) | IMPLEMENTED | deploy | [SPEC-FR-M2.10](functional/M2/SPEC-FR-M2.10.md) |
+| SPEC-FR-M2.11 | Secured Infrastructure Provisioning (Initial Provisioning & TLS Enforcement) | ACCEPTED | deploy | [SPEC-FR-M2.11](functional/M2/SPEC-FR-M2.11.md) |
 
 ### M3: Keeper Core
 
@@ -125,7 +126,7 @@
 | Milestone | Title | Status | Specs | File |
 |-----------|-------|--------|-------|------|
 | M1 | Infrastructure Helm Chart | ✔️ IMPLEMENTED | 2 | [M1](milestones/M1-infrastructure.md) |
-| M2 | Application Helm Chart & Component Scaffolding | ⬜ PLANNED | 9 | [M2](milestones/M2-packaging.md) |
+| M2 | Application Helm Chart & Component Scaffolding | ⬜ PLANNED | 11 | [M2](milestones/M2-packaging.md) |
 | M3 | Keeper Core | ⬜ PLANNED | 6 | [M3](milestones/M3-keeper-core.md) |
 | M4 | Operator Core | ⬜ PLANNED | 4 | [M4](milestones/M4-operator-core.md) |
 | M5 | Agent Core | ⬜ PLANNED | 6 | [M5](milestones/M5-agent-core.md) |
@@ -150,3 +151,5 @@
 | SPEC-FR-M2.8 | 3 | RED → GREEN → REFACTOR | [tasks/M2.8/](tasks/M2.8/) |
 | SPEC-FR-M2.9 | 4 | RED → GREEN → REFACTOR | [tasks/M2.9/](tasks/M2.9/) |
 | SPEC-FR-M2.10 | 3 | RED → GREEN → REFACTOR | [tasks/M2.10/](tasks/M2.10/) |
+| SPEC-FR-M2.11 | - | TBD | - |
+
