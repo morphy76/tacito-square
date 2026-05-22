@@ -1,0 +1,51 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "tacito-square-infra.fullname" . }}-tls-generate
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "tacito-square-infra.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "tacito-square-infra.fullname" . }}-tls-generate
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "tacito-square-infra.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "create", "list"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "create", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "tacito-square-infra.fullname" . }}-tls-generate
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "tacito-square-infra.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "tacito-square-infra.fullname" . }}-tls-generate
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "tacito-square-infra.fullname" . }}-tls-generate
+    namespace: {{ .Release.Namespace }}

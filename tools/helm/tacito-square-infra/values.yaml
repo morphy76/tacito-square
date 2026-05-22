@@ -1,9 +1,18 @@
 # Tacito Square — Infrastructure Helm values
-# Dev-friendly defaults: all services enabled, no auth, small volumes.
+# Secured defaults: TLS everywhere, authenticated connections, auto-provisioned tenants.
 
 # ── NATS (messaging backbone) ───────────────────────────
 nats:
   enabled: true
+  config:
+    nats:
+      tls:
+        enabled: true
+        secretName: ts-infra-nats-tls
+        cert: tls.crt
+        key: tls.key
+      authorization:
+        token: "tacito-nats-dev-token"
 
 # ── Redis (STM + cache) ─────────────────────────────────
 redis:
@@ -13,6 +22,23 @@ redis:
     registry: docker.io
     repository: library/redis
     tag: alpine
+  args:
+    - "--tls-port"
+    - "6379"
+    - "--port"
+    - "0"
+    - "--tls-cert-file"
+    - "/tls/tls.crt"
+    - "--tls-key-file"
+    - "/tls/tls.key"
+    - "--tls-ca-cert-file"
+    - "/tls/ca.crt"
+    - "--requirepass"
+    - "tacito-redis-dev"
+  extraRedisSecrets:
+    - name: ts-infra-redis-tls
+      defaultMode: 0440
+      mountPath: /tls
 
 # ── PostgreSQL (keeper persistence) ─────────────────────
 postgresql:
@@ -28,11 +54,22 @@ postgresql:
       value: tacito-dev
   userDatabase:
     name:
-      value: tacito_keeper
+      value: tacito
     user:
-      value: keeper
+      value: tacito
     password:
-      value: keeper-dev
+      value: tacito-dev
+  customConfig: |
+    ssl = on
+    ssl_cert_file = '/tls/tls.crt'
+    ssl_key_file = '/tls/tls.key'
+    ssl_ca_file = '/tls/ca.crt'
+  extraSecrets:
+    - name: ts-infra-pg-tls
+      defaultMode: 0600
+      mountPath: /tls
+  extraScripts:
+    configMapName: ts-infra-pg-init
   storage:
     requestedSize: 1Gi
 
@@ -76,37 +113,52 @@ keycloak:
   command:
     - "/opt/keycloak/bin/kc.sh"
   args:
-    - "start-dev"
+    - "start"
     - "--import-realm"
+    - "--hostname-strict=false"
+    - "--https-certificate-file=/tls/tls.crt"
+    - "--https-certificate-key-file=/tls/tls.key"
+    - "--http-enabled=true"
   database:
     vendor: postgres
     hostname: ts-infra-postgresql
     port: 5432
-    database: tacito_keeper
-    username: keeper
-    password: keeper-dev
+    database: tacito
+    username: tacito
+    password: tacito-dev
   extraEnv: |
     - name: KEYCLOAK_ADMIN
       value: "admin"
     - name: KEYCLOAK_ADMIN_PASSWORD
       value: "admin-dev"
   extraVolumes: |
+    - name: keycloak-tls
+      secret:
+        secretName: ts-infra-keycloak-tls
     - name: keycloak-realm
       configMap:
         name: keycloak-realm
   extraVolumeMounts: |
+    - name: keycloak-tls
+      mountPath: /tls
+      readOnly: true
     - name: keycloak-realm
       mountPath: /opt/keycloak/data/import
       readOnly: true
 
-# ── MinIO (S3-compatible, opt-in) ───────────────────────
+# ── MinIO (S3-compatible) ───────────────────────────────
 minio:
-  enabled: false
+  enabled: true
   rootUser: "tacito-dev"
   rootPassword: "tacito-dev-secret"
   buckets:
-    - name: tacito-artifacts
-      policy: public
+    - name: tacito
+      policy: none
       purge: false
+  tls:
+    enabled: true
+    certSecret: ts-infra-minio-tls
+    publicCrt: tls.crt
+    privateKey: tls.key
   persistence:
     size: 5Gi

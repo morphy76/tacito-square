@@ -10,7 +10,7 @@ data:
     {
       "realm": "tacito",
       "enabled": true,
-      "sslRequired": "none",
+      "sslRequired": "external",
       "roles": {
         "realm": [
           {"name": "keeper-admin", "description": "Full Keeper administration"},

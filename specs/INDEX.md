@@ -43,7 +43,7 @@
 | SPEC-FR-M2.8 | Continuous Integration (GitHub Actions) | ACCEPTED | build | [SPEC-FR-M2.8](functional/M2/SPEC-FR-M2.8.md) |
 | SPEC-FR-M2.9 | Project Documentation | IMPLEMENTED | docs | [SPEC-FR-M2.9](functional/M2/SPEC-FR-M2.9.md) |
 | SPEC-FR-M2.10 | Avoid Bitnami (Leverage Free & Non-Commercial Infrastructural Dependencies) | IMPLEMENTED | deploy | [SPEC-FR-M2.10](functional/M2/SPEC-FR-M2.10.md) |
-| SPEC-FR-M2.11 | Secured Infrastructure Provisioning (Initial Provisioning & TLS Enforcement) | ACCEPTED | deploy | [SPEC-FR-M2.11](functional/M2/SPEC-FR-M2.11.md) |
+| SPEC-FR-M2.11 | Secured Infrastructure Provisioning (Initial Provisioning & TLS Enforcement) | IMPLEMENTED | deploy | [SPEC-FR-M2.11](functional/M2/SPEC-FR-M2.11.md) |
 
 ### M3: Keeper Core
 
