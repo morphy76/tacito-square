@@ -8,21 +8,33 @@ nats:
 # ── Redis (STM + cache) ─────────────────────────────────
 redis:
   enabled: true
-  architecture: standalone
-  auth:
-    enabled: false
+  useDeploymentWhenNonHA: true
+  image:
+    registry: docker.io
+    repository: library/redis
+    tag: alpine
 
 # ── PostgreSQL (keeper persistence) ─────────────────────
 postgresql:
   enabled: true
-  auth:
-    postgresPassword: tacito-dev
-    username: keeper
-    password: keeper-dev
-    database: tacito_keeper
-  primary:
-    persistence:
-      size: 1Gi
+  image:
+    registry: docker.io
+    repository: library/postgres
+    tag: 16-alpine
+  settings:
+    superuser:
+      value: postgres
+    superuserPassword:
+      value: tacito-dev
+  userDatabase:
+    name:
+      value: tacito_keeper
+    user:
+      value: keeper
+    password:
+      value: keeper-dev
+  storage:
+    requestedSize: 1Gi
 
 # ── Qdrant (vector storage) ─────────────────────────────
 qdrant:
@@ -58,75 +70,43 @@ otel-collector:
 # ── Keycloak (OIDC provider) ────────────────────────────
 keycloak:
   enabled: true
-  auth:
-    adminUser: admin
-    adminPassword: admin-dev
-  production: false
-  proxy: edge
-  extraEnvVars:
-    - name: KC_FEATURES
-      value: "preview"
-  keycloakConfigCli:
-    enabled: true
-    configuration:
-      tacito-realm.json: |
-        {
-          "realm": "tacito",
-          "enabled": true,
-          "sslRequired": "none",
-          "roles": {
-            "realm": [
-              {"name": "keeper-admin", "description": "Full Keeper administration"},
-              {"name": "keeper-viewer", "description": "Read-only Keeper access"},
-              {"name": "user", "description": "End user — interact with agents"},
-              {"name": "agent-spawner", "description": "Can spawn agents"}
-            ]
-          },
-          "clients": [
-            {
-              "clientId": "tacito-keeper",
-              "enabled": true,
-              "protocol": "openid-connect",
-              "publicClient": false,
-              "secret": "keeper-dev-secret",
-              "directAccessGrantsEnabled": true,
-              "serviceAccountsEnabled": true,
-              "standardFlowEnabled": true,
-              "redirectUris": ["*"]
-            },
-            {
-              "clientId": "tacito-ui",
-              "enabled": true,
-              "protocol": "openid-connect",
-              "publicClient": true,
-              "standardFlowEnabled": true,
-              "directAccessGrantsEnabled": true,
-              "redirectUris": ["*"],
-              "webOrigins": ["*"]
-            }
-          ],
-          "users": [
-            {
-              "username": "admin",
-              "enabled": true,
-              "credentials": [{"type": "password", "value": "admin", "temporary": false}],
-              "realmRoles": ["keeper-admin", "agent-spawner"]
-            },
-            {
-              "username": "user",
-              "enabled": true,
-              "credentials": [{"type": "password", "value": "user", "temporary": false}],
-              "realmRoles": ["user"]
-            }
-          ]
-        }
+  image:
+    repository: quay.io/keycloak/keycloak
+    tag: "24.0.0"
+  command:
+    - "/opt/keycloak/bin/kc.sh"
+  args:
+    - "start-dev"
+    - "--import-realm"
+  database:
+    vendor: postgres
+    hostname: ts-infra-postgresql
+    port: 5432
+    database: tacito_keeper
+    username: keeper
+    password: keeper-dev
+  extraEnv: |
+    - name: KEYCLOAK_ADMIN
+      value: "admin"
+    - name: KEYCLOAK_ADMIN_PASSWORD
+      value: "admin-dev"
+  extraVolumes: |
+    - name: keycloak-realm
+      configMap:
+        name: keycloak-realm
+  extraVolumeMounts: |
+    - name: keycloak-realm
+      mountPath: /opt/keycloak/data/import
+      readOnly: true
 
 # ── MinIO (S3-compatible, opt-in) ───────────────────────
 minio:
   enabled: false
-  auth:
-    rootUser: tacito-dev
-    rootPassword: tacito-dev-secret
-  defaultBuckets: "tacito-artifacts"
+  rootUser: "tacito-dev"
+  rootPassword: "tacito-dev-secret"
+  buckets:
+    - name: tacito-artifacts
+      policy: public
+      purge: false
   persistence:
     size: 5Gi

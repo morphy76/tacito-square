@@ -33,9 +33,9 @@ keeper:
     TS_KEEPER_DB_NAME: tacito_keeper
     TS_KEEPER_DB_USER: keeper
     TS_KEEPER_NATS_URL: "nats://tacito-infra-nats:4222"
-    TS_KEEPER_REDIS_URL: "redis://tacito-infra-redis-master:6379"
+    TS_KEEPER_REDIS_URL: "redis://tacito-infra-redis:6379"
     TS_KEEPER_OTEL_ENDPOINT: "tacito-infra-otel-collector:4317"
-    TS_KEEPER_OIDC_ISSUER: "http://tacito-infra-keycloak:8080/realms/tacito"
+    TS_KEEPER_OIDC_ISSUER: "http://tacito-infra-keycloak-http:8080/realms/tacito"
     TS_KEEPER_OIDC_CLIENT_ID: tacito-keeper
     TS_KEEPER_S3_ENDPOINT: "http://tacito-infra-minio:9000"
     TS_KEEPER_S3_BUCKET: tacito-artifacts
@@ -63,7 +63,7 @@ agent:
     TS_AGENT_LOG_LEVEL: info
     TS_AGENT_PORT: "8081"
     TS_AGENT_NATS_URL: "nats://tacito-infra-nats:4222"
-    TS_AGENT_REDIS_URL: "redis://tacito-infra-redis-master:6379"
+    TS_AGENT_REDIS_URL: "redis://tacito-infra-redis:6379"
     TS_AGENT_QDRANT_URL: "http://tacito-infra-qdrant:6334"
     TS_AGENT_OTEL_ENDPOINT: "tacito-infra-otel-collector:4317"
     TS_AGENT_S3_ENDPOINT: "http://tacito-infra-minio:9000"
@@ -93,7 +93,7 @@ bff:
     TS_BFF_LOG_LEVEL: info
     TS_BFF_PORT: "8083"
     TS_BFF_KEEPER_URL: "http://tacito-square-keeper:8080"
-    TS_BFF_OIDC_ISSUER: "http://tacito-infra-keycloak:8080/realms/tacito"
+    TS_BFF_OIDC_ISSUER: "http://tacito-infra-keycloak-http:8080/realms/tacito"
     TS_BFF_OIDC_CLIENT_ID: tacito-ui
   service:
     type: ClusterIP

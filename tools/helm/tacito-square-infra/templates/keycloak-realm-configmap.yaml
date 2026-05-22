@@ -1,0 +1,60 @@
+{{- if .Values.keycloak.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-realm
+  labels:
+    {{- include "tacito-square-infra.labels" . | nindent 4 }}
+data:
+  tacito-realm.json: |
+    {
+      "realm": "tacito",
+      "enabled": true,
+      "sslRequired": "none",
+      "roles": {
+        "realm": [
+          {"name": "keeper-admin", "description": "Full Keeper administration"},
+          {"name": "keeper-viewer", "description": "Read-only Keeper access"},
+          {"name": "user", "description": "End user — interact with agents"},
+          {"name": "agent-spawner", "description": "Can spawn agents"}
+        ]
+      },
+      "clients": [
+        {
+          "clientId": "tacito-keeper",
+          "enabled": true,
+          "protocol": "openid-connect",
+          "publicClient": false,
+          "secret": "keeper-dev-secret",
+          "directAccessGrantsEnabled": true,
+          "serviceAccountsEnabled": true,
+          "standardFlowEnabled": true,
+          "redirectUris": ["*"]
+        },
+        {
+          "clientId": "tacito-ui",
+          "enabled": true,
+          "protocol": "openid-connect",
+          "publicClient": true,
+          "standardFlowEnabled": true,
+          "directAccessGrantsEnabled": true,
+          "redirectUris": ["*"],
+          "webOrigins": ["*"]
+        }
+      ],
+      "users": [
+        {
+          "username": "admin",
+          "enabled": true,
+          "credentials": [{"type": "password", "value": "admin", "temporary": false}],
+          "realmRoles": ["keeper-admin", "agent-spawner"]
+        },
+        {
+          "username": "user",
+          "enabled": true,
+          "credentials": [{"type": "password", "value": "user", "temporary": false}],
+          "realmRoles": ["user"]
+        }
+      ]
+    }
+{{- end }}

@@ -5,11 +5,11 @@ Installed services:
   • NATS         → {{ .Release.Name }}-nats:4222
 {{- end }}
 {{- if .Values.redis.enabled }}
-  • Redis        → {{ .Release.Name }}-redis-master:6379
+  • Redis        → {{ .Release.Name }}-redis:6379
 {{- end }}
 {{- if .Values.postgresql.enabled }}
   • PostgreSQL   → {{ .Release.Name }}-postgresql:5432
-                    db={{ .Values.postgresql.auth.database }} user={{ .Values.postgresql.auth.username }}
+                    db={{ .Values.postgresql.userDatabase.name.value }} user={{ .Values.postgresql.userDatabase.user.value }}
 {{- end }}
 {{- if .Values.qdrant.enabled }}
   • Qdrant       → {{ .Release.Name }}-qdrant:6334 (gRPC) / :6333 (HTTP)
@@ -19,11 +19,12 @@ Installed services:
 {{- end }}
 {{- if .Values.keycloak.enabled }}
   • Keycloak     → {{ .Release.Name }}-keycloak:8080
-                    realm=tacito  admin={{ .Values.keycloak.auth.adminUser }}
+                    realm=tacito  admin=admin
 {{- end }}
 {{- if .Values.minio.enabled }}
   • MinIO        → {{ .Release.Name }}-minio:9000
-                    bucket={{ .Values.minio.defaultBuckets }}
+                    bucket=tacito-artifacts
 {{- end }}
 
 Use these endpoints when configuring the application chart (tools/helm/tacito-square/).
+
