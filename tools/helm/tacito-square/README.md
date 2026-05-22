@@ -45,25 +45,31 @@ If your infrastructure release has a different name or is hosted externally, adj
 
 ### Keeper Bindings
 
-| Key                                  | Default                                           | Description                 |
-| ------------------------------------ | ------------------------------------------------- | --------------------------- |
-| `keeper.env.TS_KEEPER_DB_HOST`       | `tacito-infra-postgresql`                         | PostgreSQL host             |
-| `keeper.env.TS_KEEPER_NATS_URL`      | `nats://tacito-infra-nats:4222`                   | NATS connection URL         |
-| `keeper.env.TS_KEEPER_REDIS_URL`     | `redis://tacito-infra-redis-master:6379`          | Redis connection URL        |
-| `keeper.env.TS_KEEPER_OTEL_ENDPOINT` | `tacito-infra-otel-collector:4317`                | OpenTelemetry gRPC endpoint |
-| `keeper.env.TS_KEEPER_OIDC_ISSUER`   | `http://tacito-infra-keycloak:8080/realms/tacito` | OIDC provider token issuer  |
-| `keeper.env.TS_KEEPER_S3_ENDPOINT`   | `http://tacito-infra-minio:9000`                  | S3 endpoint (e.g. MinIO)    |
+| Key                                  | Default                                                    | Description                 |
+| ------------------------------------ | ---------------------------------------------------------- | --------------------------- |
+| `keeper.env.TS_KEEPER_DB_HOST`       | `tacito-infra-postgresql`                                  | PostgreSQL host             |
+| `keeper.env.TS_KEEPER_DB_NAME`       | `tacito`                                                   | PostgreSQL database         |
+| `keeper.env.TS_KEEPER_DB_USER`       | `tacito`                                                   | PostgreSQL user             |
+| `keeper.env.TS_KEEPER_DB_SSLMODE`    | `require`                                                  | PostgreSQL SSL mode         |
+| `keeper.env.TS_KEEPER_NATS_URL`      | `nats://tacito-infra-nats:4222`                            | NATS connection URL         |
+| `keeper.env.TS_KEEPER_REDIS_URL`     | `rediss://tacito-infra-redis:6379`                         | Redis connection URL (TLS)  |
+| `keeper.env.TS_KEEPER_OTEL_ENDPOINT` | `tacito-infra-otel-collector:4317`                         | OpenTelemetry gRPC endpoint |
+| `keeper.env.TS_KEEPER_OIDC_ISSUER`   | `https://tacito-infra-keycloak-http:8443/realms/tacito`    | OIDC provider token issuer  |
+| `keeper.env.TS_KEEPER_S3_ENDPOINT`   | `https://tacito-infra-minio:9000`                          | S3 endpoint (MinIO, TLS)    |
+| `keeper.env.TS_KEEPER_CA_CERT_PATH`  | `/etc/ssl/tacito/ca.crt`                                   | CA trust bundle mount path  |
 
 ### Agent Template Bindings
 
 When the Keeper and Operator spawn agents, they receive configurations defined under the `agent.env` block:
 
-| Key                                | Default                                  | Description                  |
-| ---------------------------------- | ---------------------------------------- | ---------------------------- |
-| `agent.env.TS_AGENT_NATS_URL`      | `nats://tacito-infra-nats:4222`          | NATS connection URL          |
-| `agent.env.TS_AGENT_REDIS_URL`     | `redis://tacito-infra-redis-master:6379` | Redis connection URL         |
-| `agent.env.TS_AGENT_QDRANT_URL`    | `http://tacito-infra-qdrant:6334`        | Qdrant gRPC vector store URL |
-| `agent.env.TS_AGENT_OTEL_ENDPOINT` | `tacito-infra-otel-collector:4317`       | OpenTelemetry gRPC endpoint  |
+| Key                                | Default                                    | Description                  |
+| ---------------------------------- | ------------------------------------------ | ---------------------------- |
+| `agent.env.TS_AGENT_NATS_URL`      | `nats://tacito-infra-nats:4222`            | NATS connection URL          |
+| `agent.env.TS_AGENT_REDIS_URL`     | `rediss://tacito-infra-redis:6379`         | Redis connection URL (TLS)   |
+| `agent.env.TS_AGENT_QDRANT_URL`    | `http://tacito-infra-qdrant:6334`          | Qdrant gRPC vector store URL |
+| `agent.env.TS_AGENT_OTEL_ENDPOINT` | `tacito-infra-otel-collector:4317`         | OpenTelemetry gRPC endpoint  |
+| `agent.env.TS_AGENT_S3_ENDPOINT`   | `https://tacito-infra-minio:9000`          | S3 endpoint (MinIO, TLS)     |
+| `agent.env.TS_AGENT_CA_CERT_PATH`  | `/etc/ssl/tacito/ca.crt`                   | CA trust bundle mount path   |
 
 ## Values Reference
 
