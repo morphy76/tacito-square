@@ -4,3 +4,4 @@ description: Kubernetes-native multi-agent system — application Helm chart
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
+icon: https://raw.githubusercontent.com/morphy76/tacito-square/main/assets/icon.png
