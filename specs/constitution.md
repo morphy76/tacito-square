@@ -55,6 +55,7 @@ all while remaining accountable, observable, and scalable.
 11. **Superseding specs MUST be tracked:** a spec can supersede a previous spec. Use `Supersedes:` field.
 12. **NFR specs are the foundation:** they are written once and updated only when necessary.
 13. **FR specs are the building blocks:** they are written for each feature and are used to derive tasks.
+14. **Milestones track groups of specs.** A milestone has its own lifecycle depending on the state of its required functional specs (see Section 5).
 
 ## 4. Spec Document Format
 
@@ -90,3 +91,14 @@ Request/response shapes, status codes.
 ## Files Affected
 List of files to create or modify.
 ```
+
+## 5. Milestone Lifecycle
+
+Milestones aggregate multiple functional specs (FR) representing key deliverables. A milestone’s status transitions automatically based on the status of its required specs:
+
+| Status | Description | Transition Rule |
+|--------|-------------|-----------------|
+| `⬜ PLANNED` | The milestone is defined and planned. | All required specs are in `DRAFT` or `ACCEPTED` status. |
+| `🏃 IN_PROGRESS` | Active execution. | At least one required spec is `IN_PROGRESS` or `IMPLEMENTED`, but not all are implemented. |
+| `✔️ IMPLEMENTED` | All specs are implemented. | Every required spec has achieved at least `IMPLEMENTED` status. |
+| `🎉 COMPLETED` | Fully verified. | Every required spec has achieved `VERIFIED` status. |

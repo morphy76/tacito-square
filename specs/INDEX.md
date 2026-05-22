@@ -123,7 +123,7 @@
 
 | Milestone | Title | Status | Specs | File |
 |-----------|-------|--------|-------|------|
-| M1 | Infrastructure Helm Chart | ⬜ PLANNED | 2 | [M1](milestones/M1-infrastructure.md) |
+| M1 | Infrastructure Helm Chart | ✔️ IMPLEMENTED | 2 | [M1](milestones/M1-infrastructure.md) |
 | M2 | Application Helm Chart & Component Scaffolding | ⬜ PLANNED | 9 | [M2](milestones/M2-packaging.md) |
 | M3 | Keeper Core | ⬜ PLANNED | 6 | [M3](milestones/M3-keeper-core.md) |
 | M4 | Operator Core | ⬜ PLANNED | 4 | [M4](milestones/M4-operator-core.md) |

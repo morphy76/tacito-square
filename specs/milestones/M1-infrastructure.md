@@ -2,7 +2,7 @@
 
 | Field      | Value |
 |------------|-------|
-| Status     | ⬜ PLANNED |
+| Status     | ✔️ IMPLEMENTED |
 
 ## Goal
 
