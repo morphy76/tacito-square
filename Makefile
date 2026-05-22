@@ -14,7 +14,7 @@ HELM_INFRA_CHART   := tools/helm/tacito-square-infra
 
 GO             := go
 GOTEST         := $(GO) test
-GOLINT         := golangci-lint
+GOLINT         := $(shell which golangci-lint 2>/dev/null || echo "$(shell go env GOPATH 2>/dev/null)/bin/golangci-lint")
 
 .PHONY: all build test test-integration test-operator test-e2e test-bench test-race test-contract lint generate \
         docker-build docker-push \

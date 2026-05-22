@@ -61,7 +61,8 @@ func TestWithTraceID_AddsTraceFields(t *testing.T) {
 	enriched.Info().Msg("traced")
 
 	var entry map[string]interface{}
-	json.Unmarshal(buf.Bytes(), &entry)
+	err := json.Unmarshal(buf.Bytes(), &entry)
+	require.NoError(t, err)
 	assert.Equal(t, "4bf92f3577b34da6a3ce929d0e0e4736", entry["trace_id"])
 	assert.Equal(t, "00f067aa0ba902b7", entry["span_id"])
 }
@@ -74,7 +75,8 @@ func TestWithTraceID_NoTraceID_NoFields(t *testing.T) {
 	enriched.Info().Msg("no trace")
 
 	var entry map[string]interface{}
-	json.Unmarshal(buf.Bytes(), &entry)
+	err := json.Unmarshal(buf.Bytes(), &entry)
+	require.NoError(t, err)
 	assert.Nil(t, entry["trace_id"])
 }
 
@@ -98,7 +100,8 @@ func TestWithClaims_AddsConfiguredClaims(t *testing.T) {
 	enriched.Info().Msg("with claims")
 
 	var entry map[string]interface{}
-	json.Unmarshal(buf.Bytes(), &entry)
+	err := json.Unmarshal(buf.Bytes(), &entry)
+	require.NoError(t, err)
 	assert.Equal(t, "user-123", entry["sub"])
 	assert.Equal(t, "user@example.com", entry["email"])
 	assert.Equal(t, "acme", entry["org"])

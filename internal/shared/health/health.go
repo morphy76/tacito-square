@@ -49,7 +49,7 @@ type ReadinessResult struct {
 func (p *Probe) LivezHandler(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "alive"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "alive"})
 }
 
 // ReadyzHandler handles GET /readyz — checks all dependencies in parallel.
@@ -86,7 +86,7 @@ func (p *Probe) ReadyzHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(httpStatus)
-	json.NewEncoder(w).Encode(ReadinessResult{
+	_ = json.NewEncoder(w).Encode(ReadinessResult{
 		Status: status,
 		Checks: results,
 	})

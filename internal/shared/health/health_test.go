@@ -64,7 +64,8 @@ func TestReadyzHandler_OneUnhealthy(t *testing.T) {
 	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
 
 	var result ReadinessResult
-	json.Unmarshal(w.Body.Bytes(), &result)
+	err := json.Unmarshal(w.Body.Bytes(), &result)
+	require.NoError(t, err)
 	assert.Equal(t, "not_ready", result.Status)
 
 	// Find the unhealthy check
