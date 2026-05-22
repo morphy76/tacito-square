@@ -112,7 +112,7 @@ helm-uninstall: ## Uninstall application Helm release
 ## —— Helm (infra) ———————————————————————————————————————
 
 helm-infra-deps: ## Download infrastructure chart dependencies
-	helm dependency update $(HELM_INFRA_CHART)
+	GODEBUG=http2client=0 helm dependency update $(HELM_INFRA_CHART)
 
 helm-infra-lint: ## Lint the infrastructure Helm chart
 	helm lint $(HELM_INFRA_CHART)
