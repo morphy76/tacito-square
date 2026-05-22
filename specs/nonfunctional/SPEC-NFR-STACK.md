@@ -3,7 +3,7 @@
 | Field         | Value                              |
 |---------------|------------------------------------|
 | ID            | SPEC-NFR-STACK                     |
-| Status        | DRAFT                              |
+| Status        | ACCEPTED                           |
 | Component     | all                                |
 
 ## Specification

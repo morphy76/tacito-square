@@ -6,19 +6,19 @@
 
 | ID | Title | Status | File |
 |----|-------|--------|------|
-| SPEC-NFR-HEXAGONAL | Hexagonal Architecture with DDD | DRAFT | [SPEC-NFR-HEXAGONAL](nonfunctional/SPEC-NFR-HEXAGONAL.md) |
-| SPEC-NFR-CLOUD | Cloud-First Patterns | DRAFT | [SPEC-NFR-CLOUD](nonfunctional/SPEC-NFR-CLOUD.md) |
-| SPEC-NFR-REACTIVE | Reactive Programming | DRAFT | [SPEC-NFR-REACTIVE](nonfunctional/SPEC-NFR-REACTIVE.md) |
-| SPEC-NFR-STACK | Technology Stack | DRAFT | [SPEC-NFR-STACK](nonfunctional/SPEC-NFR-STACK.md) |
-| SPEC-NFR-LOG | Structured Logging (zerolog) | DRAFT | [SPEC-NFR-LOG](nonfunctional/SPEC-NFR-LOG.md) |
-| SPEC-NFR-HTTP | HTTP Framework (Gin) | DRAFT | [SPEC-NFR-HTTP](nonfunctional/SPEC-NFR-HTTP.md) |
-| SPEC-NFR-HEALTH | Dependency-Aware Health Probes | DRAFT | [SPEC-NFR-HEALTH](nonfunctional/SPEC-NFR-HEALTH.md) |
-| SPEC-NFR-METRICS | Prometheus Metrics Endpoints | DRAFT | [SPEC-NFR-METRICS](nonfunctional/SPEC-NFR-METRICS.md) |
-| SPEC-NFR-OPENAPI | Live OpenAPI Spec Endpoints | DRAFT | [SPEC-NFR-OPENAPI](nonfunctional/SPEC-NFR-OPENAPI.md) |
-| SPEC-NFR-HPA | Horizontal Pod Autoscaling | DRAFT | [SPEC-NFR-HPA](nonfunctional/SPEC-NFR-HPA.md) |
-| SPEC-NFR-CACHE | Redis Infrastructure Cache | DRAFT | [SPEC-NFR-CACHE](nonfunctional/SPEC-NFR-CACHE.md) |
-| SPEC-NFR-BUILDING | Build System | DRAFT | [SPEC-NFR-BUILDING](nonfunctional/SPEC-NFR-BUILDING.md) |
-| SPEC-NFR-VERSIONING | Component Versioning & Lifecycle | DRAFT | [SPEC-NFR-VERSIONING](nonfunctional/SPEC-NFR-VERSIONING.md) |
+| SPEC-NFR-HEXAGONAL | Hexagonal Architecture with DDD | ACCEPTED | [SPEC-NFR-HEXAGONAL](nonfunctional/SPEC-NFR-HEXAGONAL.md) |
+| SPEC-NFR-CLOUD | Cloud-First Patterns | ACCEPTED | [SPEC-NFR-CLOUD](nonfunctional/SPEC-NFR-CLOUD.md) |
+| SPEC-NFR-REACTIVE | Reactive Programming | ACCEPTED | [SPEC-NFR-REACTIVE](nonfunctional/SPEC-NFR-REACTIVE.md) |
+| SPEC-NFR-STACK | Technology Stack | ACCEPTED | [SPEC-NFR-STACK](nonfunctional/SPEC-NFR-STACK.md) |
+| SPEC-NFR-LOG | Structured Logging (zerolog) | ACCEPTED | [SPEC-NFR-LOG](nonfunctional/SPEC-NFR-LOG.md) |
+| SPEC-NFR-HTTP | HTTP Framework (Gin) | ACCEPTED | [SPEC-NFR-HTTP](nonfunctional/SPEC-NFR-HTTP.md) |
+| SPEC-NFR-HEALTH | Dependency-Aware Health Probes | ACCEPTED | [SPEC-NFR-HEALTH](nonfunctional/SPEC-NFR-HEALTH.md) |
+| SPEC-NFR-METRICS | Prometheus Metrics Endpoints | ACCEPTED | [SPEC-NFR-METRICS](nonfunctional/SPEC-NFR-METRICS.md) |
+| SPEC-NFR-OPENAPI | Live OpenAPI Spec Endpoints | ACCEPTED | [SPEC-NFR-OPENAPI](nonfunctional/SPEC-NFR-OPENAPI.md) |
+| SPEC-NFR-HPA | Horizontal Pod Autoscaling | ACCEPTED | [SPEC-NFR-HPA](nonfunctional/SPEC-NFR-HPA.md) |
+| SPEC-NFR-CACHE | Redis Infrastructure Cache | ACCEPTED | [SPEC-NFR-CACHE](nonfunctional/SPEC-NFR-CACHE.md) |
+| SPEC-NFR-BUILDING | Build System | ACCEPTED | [SPEC-NFR-BUILDING](nonfunctional/SPEC-NFR-BUILDING.md) |
+| SPEC-NFR-VERSIONING | Component Versioning & Lifecycle | ACCEPTED | [SPEC-NFR-VERSIONING](nonfunctional/SPEC-NFR-VERSIONING.md) |
 
 ## Functional Requirement Specs
 

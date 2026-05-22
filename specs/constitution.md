@@ -48,6 +48,13 @@ all while remaining accountable, observable, and scalable.
 4. **No task can be completed without review and approval** from the spec owner.
 5. **Specs are atomic.** One spec = one testable capability. No compound specs.
 6. **Specs are immutable once accepted.** To change behavior, write a superseding spec.
+7. **Organize tasks according to boundaries:** by component, by package, by subdomain.
+8. **Do not organize tasks by TDD phases:** TDD phases are operational, not organizational.
+9. **Tasks MUST be linked to a single spec:** each task must be linked to a single FR spec.
+10. **Dependencies between specs MUST be tracked:** a spec can depend on other specs (FR or NFR). Use `Depends On:` field.
+11. **Superseding specs MUST be tracked:** a spec can supersede a previous spec. Use `Supersedes:` field.
+12. **NFR specs are the foundation:** they are written once and updated only when necessary.
+13. **FR specs are the building blocks:** they are written for each feature and are used to derive tasks.
 
 ## 4. Spec Document Format
 

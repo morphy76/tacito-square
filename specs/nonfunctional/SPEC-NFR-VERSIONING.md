@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-NFR-VERSIONING                         |
-| Status        | DRAFT                                       |
+| Status        | ACCEPTED                                    |
 | Component     | all                                         |
 | Depends On    | none                                        |
 

@@ -3,7 +3,7 @@
 | Field         | Value                              |
 |---------------|------------------------------------|
 | ID            | SPEC-NFR-LOG                       |
-| Status        | DRAFT                              |
+| Status        | ACCEPTED                           |
 | Component     | keeper, agent, bff                 |
 
 ## Specification

@@ -3,7 +3,7 @@
 | Field         | Value                              |
 |---------------|------------------------------------|
 | ID            | SPEC-NFR-CACHE                     |
-| Status        | DRAFT                              |
+| Status        | ACCEPTED                           |
 | Component     | keeper, shared                     |
 
 ## Specification
