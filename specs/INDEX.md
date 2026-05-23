@@ -57,7 +57,7 @@
 | SPEC-FR-M3.5 | Agent Domain Model & CRUD API | IMPLEMENTED | keeper | [SPEC-FR-M3.5](functional/M3/SPEC-FR-M3.5.md) |
 | SPEC-FR-M3.6 | Community Domain Model & CRUD API | IMPLEMENTED | keeper | [SPEC-FR-M3.6](functional/M3/SPEC-FR-M3.6.md) |
 | SPEC-FR-M3.7 | Agent-Community Assignment | IMPLEMENTED | keeper | [SPEC-FR-M3.7](functional/M3/SPEC-FR-M3.7.md) |
-| SPEC-FR-M3.8 | PostgreSQL Persistence & Migrations | DRAFT | keeper | [SPEC-FR-M3.8](functional/M3/SPEC-FR-M3.8.md) |
+| SPEC-FR-M3.8 | PostgreSQL Persistence & Migrations | ACCEPTED | keeper | [SPEC-FR-M3.8](functional/M3/SPEC-FR-M3.8.md) |
 | SPEC-FR-M3.9 | OIDC/JWT Authentication | DRAFT | keeper, shared | [SPEC-FR-M3.9](functional/M3/SPEC-FR-M3.9.md) |
 | SPEC-FR-M3.10 | Agent CRD Submission | DRAFT | keeper | [SPEC-FR-M3.10](functional/M3/SPEC-FR-M3.10.md) |
 
