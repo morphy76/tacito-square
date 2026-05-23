@@ -61,6 +61,12 @@
 | SPEC-FR-M3.9 | OIDC/JWT Authentication | DRAFT | keeper, shared | [SPEC-FR-M3.9](functional/M3/SPEC-FR-M3.9.md) |
 | SPEC-FR-M3.10 | Agent CRD Submission | DRAFT | keeper | [SPEC-FR-M3.10](functional/M3/SPEC-FR-M3.10.md) |
 
+### M3: Bugs
+
+| ID | Title | Status | Severity | File |
+|----|-------|--------|----------|------|
+| BUG-M3.1 | Supporting Entity Models Lack Tenant Segregation | OPEN | HIGH | [BUG-M3.1](tasks/M3.BUG1/BUG-M3.1.md) |
+
 ### M4: Operator Core
 
 | ID | Title | Status | Component | File |

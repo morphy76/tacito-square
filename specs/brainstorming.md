@@ -1,10 +1,3 @@
-# Known TODOs
-
-- add spec in m3 for bug fix having supporting entities not supporting the multitenancy non functional requirement
-- domain tags per openapi
-- checks in liveness and readiness probes to check for the presence of the required entities in the cluster
-- bind keeper and postgres
-
 # Brainstorming
 
 - Tacito multistage builds addirional make steps, they are faster than the single stage builds and decouples the workspace from tooling and runtime dependencies. This is especially useful for development, where we want to iterate quickly on the workspace without having to rebuild the entire image.

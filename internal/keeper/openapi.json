@@ -11,11 +11,32 @@
       "description": "Primary API Version 1"
     }
   ],
+  "tags": [
+    {
+      "name": "agent-config/llm-bindings",
+      "description": "Bounded context: Agent Configuration \u00b7 Model Bindings. Manages LLM provider registrations used by agents at runtime."
+    },
+    {
+      "name": "agent-config/mcp-servers",
+      "description": "Bounded context: Agent Configuration \u00b7 Tool Bindings. Manages MCP server profiles that expose tools to agents."
+    },
+    {
+      "name": "agent-config/skills",
+      "description": "Bounded context: Agent Configuration \u00b7 Skills. Defines skill collections and controls which tools an agent may use."
+    },
+    {
+      "name": "agent-config/prompt-engineering",
+      "description": "Bounded context: Agent Configuration \u00b7 Prompt Engineering. Manages versioned prompt templates and the collections that group them."
+    }
+  ],
   "paths": {
     "/llm-bindings": {
       "post": {
         "summary": "Create a new LLM provider binding",
         "operationId": "createLLMBinding",
+        "tags": [
+          "agent-config/llm-bindings"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -62,6 +83,9 @@
       "get": {
         "summary": "List all LLM provider bindings",
         "operationId": "listLLMBindings",
+        "tags": [
+          "agent-config/llm-bindings"
+        ],
         "responses": {
           "200": {
             "description": "List of LLM provider bindings",
@@ -93,6 +117,9 @@
       "get": {
         "summary": "Retrieve a specific LLM provider binding by ID",
         "operationId": "getLLMBinding",
+        "tags": [
+          "agent-config/llm-bindings"
+        ],
         "parameters": [
           {
             "name": "id",
@@ -131,6 +158,9 @@
       "put": {
         "summary": "Update an LLM provider binding by ID",
         "operationId": "updateLLMBinding",
+        "tags": [
+          "agent-config/llm-bindings"
+        ],
         "parameters": [
           {
             "name": "id",
@@ -199,6 +229,9 @@
       "delete": {
         "summary": "Delete an LLM provider binding by ID",
         "operationId": "deleteLLMBinding",
+        "tags": [
+          "agent-config/llm-bindings"
+        ],
         "parameters": [
           {
             "name": "id",
@@ -242,6 +275,9 @@
       "post": {
         "summary": "Register a new MCP server profile",
         "operationId": "createMCPServer",
+        "tags": [
+          "agent-config/mcp-servers"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -288,6 +324,9 @@
       "get": {
         "summary": "List registered MCP server profiles",
         "operationId": "listMCPServers",
+        "tags": [
+          "agent-config/mcp-servers"
+        ],
         "responses": {
           "200": {
             "description": "List of MCP server profiles",
@@ -319,6 +358,9 @@
       "get": {
         "summary": "Retrieve a specific MCP server profile by ID",
         "operationId": "getMCPServer",
+        "tags": [
+          "agent-config/mcp-servers"
+        ],
         "parameters": [
           {
             "name": "id",
@@ -357,6 +399,9 @@
       "put": {
         "summary": "Update an MCP server profile by ID",
         "operationId": "updateMCPServer",
+        "tags": [
+          "agent-config/mcp-servers"
+        ],
         "parameters": [
           {
             "name": "id",
@@ -425,6 +470,9 @@
       "delete": {
         "summary": "Unregister an MCP server profile by ID",
         "operationId": "deleteMCPServer",
+        "tags": [
+          "agent-config/mcp-servers"
+        ],
         "parameters": [
           {
             "name": "id",
@@ -468,6 +516,9 @@
       "post": {
         "summary": "Create a new Skill Collection",
         "operationId": "createSkill",
+        "tags": [
+          "agent-config/skills"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -514,6 +565,9 @@
       "get": {
         "summary": "List all Skill Collections",
         "operationId": "listSkills",
+        "tags": [
+          "agent-config/skills"
+        ],
         "responses": {
           "200": {
             "description": "List of Skill Collections",
@@ -545,6 +599,9 @@
       "get": {
         "summary": "Retrieve a specific Skill Collection by ID",
         "operationId": "getSkill",
+        "tags": [
+          "agent-config/skills"
+        ],
         "parameters": [
           {
             "name": "id",
@@ -583,6 +640,9 @@
       "put": {
         "summary": "Update a Skill Collection by ID",
         "operationId": "updateSkill",
+        "tags": [
+          "agent-config/skills"
+        ],
         "parameters": [
           {
             "name": "id",
@@ -651,6 +711,9 @@
       "delete": {
         "summary": "Delete a Skill Collection by ID",
         "operationId": "deleteSkill",
+        "tags": [
+          "agent-config/skills"
+        ],
         "parameters": [
           {
             "name": "id",
@@ -694,6 +757,9 @@
       "post": {
         "summary": "Attach a Skill Collection to an Agent",
         "operationId": "attachSkillToAgent",
+        "tags": [
+          "agent-config/skills"
+        ],
         "parameters": [
           {
             "name": "agent_id",
@@ -758,6 +824,9 @@
       "delete": {
         "summary": "Detach a Skill Collection from an Agent",
         "operationId": "detachSkillFromAgent",
+        "tags": [
+          "agent-config/skills"
+        ],
         "parameters": [
           {
             "name": "agent_id",
@@ -852,7 +921,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "agent-config/prompt-engineering"
+        ]
       },
       "get": {
         "summary": "List unique Prompt Templates (highest version of each name)",
@@ -881,7 +953,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "agent-config/prompt-engineering"
+        ]
       }
     },
     "/prompts/{id}": {
@@ -921,7 +996,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "agent-config/prompt-engineering"
+        ]
       },
       "put": {
         "summary": "Update/revision a Prompt Template (creates a new version)",
@@ -989,7 +1067,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "agent-config/prompt-engineering"
+        ]
       },
       "delete": {
         "summary": "Delete a specific Prompt Template version by UUID",
@@ -1020,7 +1101,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "agent-config/prompt-engineering"
+        ]
       }
     },
     "/prompt-collections": {
@@ -1068,7 +1152,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "agent-config/prompt-engineering"
+        ]
       },
       "get": {
         "summary": "List all configured Prompt Collections",
@@ -1097,7 +1184,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "agent-config/prompt-engineering"
+        ]
       }
     },
     "/prompt-collections/{id}": {
@@ -1137,7 +1227,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "agent-config/prompt-engineering"
+        ]
       },
       "put": {
         "summary": "Update Prompt Collection properties",
@@ -1205,7 +1298,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "agent-config/prompt-engineering"
+        ]
       },
       "delete": {
         "summary": "Delete a Prompt Collection by UUID",
@@ -1236,7 +1332,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "agent-config/prompt-engineering"
+        ]
       }
     },
     "/prompt-collections/{id}/resolve": {
@@ -1279,7 +1378,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "agent-config/prompt-engineering"
+        ]
       }
     }
   },
@@ -1305,7 +1407,13 @@
           },
           "provider": {
             "type": "string",
-            "enum": ["openai", "anthropic", "groq", "ollama", "custom"],
+            "enum": [
+              "openai",
+              "anthropic",
+              "groq",
+              "ollama",
+              "custom"
+            ],
             "example": "openai"
           },
           "api_base_url": {
@@ -1363,7 +1471,13 @@
           },
           "provider": {
             "type": "string",
-            "enum": ["openai", "anthropic", "groq", "ollama", "custom"],
+            "enum": [
+              "openai",
+              "anthropic",
+              "groq",
+              "ollama",
+              "custom"
+            ],
             "example": "openai"
           },
           "api_base_url": {
@@ -1430,7 +1544,13 @@
           },
           "provider": {
             "type": "string",
-            "enum": ["openai", "anthropic", "groq", "ollama", "custom"]
+            "enum": [
+              "openai",
+              "anthropic",
+              "groq",
+              "ollama",
+              "custom"
+            ]
           },
           "api_base_url": {
             "type": "string",
@@ -1454,7 +1574,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["active", "suspended", "inactive"]
+            "enum": [
+              "active",
+              "suspended",
+              "inactive"
+            ]
           },
           "created_at": {
             "type": "string",
@@ -1483,7 +1607,10 @@
           },
           "transport": {
             "type": "string",
-            "enum": ["stdio", "sse"],
+            "enum": [
+              "stdio",
+              "sse"
+            ],
             "example": "stdio"
           },
           "command": {
@@ -1495,14 +1622,19 @@
             "items": {
               "type": "string"
             },
-            "example": ["--db", "test.db"]
+            "example": [
+              "--db",
+              "test.db"
+            ]
           },
           "env": {
             "type": "object",
             "additionalProperties": {
               "type": "string"
             },
-            "example": {"DEBUG": "true"}
+            "example": {
+              "DEBUG": "true"
+            }
           },
           "url": {
             "type": "string",
@@ -1532,7 +1664,10 @@
           },
           "transport": {
             "type": "string",
-            "enum": ["stdio", "sse"],
+            "enum": [
+              "stdio",
+              "sse"
+            ],
             "example": "stdio"
           },
           "command": {
@@ -1544,14 +1679,19 @@
             "items": {
               "type": "string"
             },
-            "example": ["--db", "test.db"]
+            "example": [
+              "--db",
+              "test.db"
+            ]
           },
           "env": {
             "type": "object",
             "additionalProperties": {
               "type": "string"
             },
-            "example": {"DEBUG": "true"}
+            "example": {
+              "DEBUG": "true"
+            }
           },
           "url": {
             "type": "string",
@@ -1587,7 +1727,10 @@
           },
           "transport": {
             "type": "string",
-            "enum": ["stdio", "sse"]
+            "enum": [
+              "stdio",
+              "sse"
+            ]
           },
           "command": {
             "type": "string"
@@ -1613,7 +1756,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["active", "suspended", "inactive"]
+            "enum": [
+              "active",
+              "suspended",
+              "inactive"
+            ]
           },
           "created_at": {
             "type": "string",
@@ -1645,21 +1792,28 @@
               "type": "string",
               "format": "uuid"
             },
-            "example": ["550e8400-e29b-41d4-a716-446655440000"]
+            "example": [
+              "550e8400-e29b-41d4-a716-446655440000"
+            ]
           },
           "allowed_tools": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "example": ["search_google", "fetch_url"]
+            "example": [
+              "search_google",
+              "fetch_url"
+            ]
           },
           "denied_tools": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "example": ["format_disk"]
+            "example": [
+              "format_disk"
+            ]
           }
         }
       },
@@ -1683,21 +1837,28 @@
               "type": "string",
               "format": "uuid"
             },
-            "example": ["550e8400-e29b-41d4-a716-446655440000"]
+            "example": [
+              "550e8400-e29b-41d4-a716-446655440000"
+            ]
           },
           "allowed_tools": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "example": ["search_google", "fetch_url"]
+            "example": [
+              "search_google",
+              "fetch_url"
+            ]
           },
           "denied_tools": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "example": ["format_disk"]
+            "example": [
+              "format_disk"
+            ]
           }
         }
       },
@@ -1742,7 +1903,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["active", "suspended", "inactive"]
+            "enum": [
+              "active",
+              "suspended",
+              "inactive"
+            ]
           },
           "created_at": {
             "type": "string",
@@ -1771,12 +1936,20 @@
           },
           "role": {
             "type": "string",
-            "enum": ["system", "user", "assistant"],
+            "enum": [
+              "system",
+              "user",
+              "assistant"
+            ],
             "example": "system"
           },
           "status": {
             "type": "string",
-            "enum": ["draft", "active", "archived"],
+            "enum": [
+              "draft",
+              "active",
+              "archived"
+            ],
             "example": "active"
           }
         }
@@ -1794,12 +1967,20 @@
           },
           "role": {
             "type": "string",
-            "enum": ["system", "user", "assistant"],
+            "enum": [
+              "system",
+              "user",
+              "assistant"
+            ],
             "example": "system"
           },
           "status": {
             "type": "string",
-            "enum": ["draft", "active", "archived"],
+            "enum": [
+              "draft",
+              "active",
+              "archived"
+            ],
             "example": "active"
           }
         }
@@ -1828,14 +2009,22 @@
           },
           "role": {
             "type": "string",
-            "enum": ["system", "user", "assistant"]
+            "enum": [
+              "system",
+              "user",
+              "assistant"
+            ]
           },
           "version": {
             "type": "integer"
           },
           "status": {
             "type": "string",
-            "enum": ["draft", "active", "archived"]
+            "enum": [
+              "draft",
+              "active",
+              "archived"
+            ]
           },
           "created_at": {
             "type": "string",
@@ -1863,7 +2052,9 @@
               "type": "string",
               "format": "uuid"
             },
-            "example": ["550e8400-e29b-41d4-a716-446655440000"]
+            "example": [
+              "550e8400-e29b-41d4-a716-446655440000"
+            ]
           }
         }
       },
@@ -1887,7 +2078,9 @@
               "type": "string",
               "format": "uuid"
             },
-            "example": ["550e8400-e29b-41d4-a716-446655440000"]
+            "example": [
+              "550e8400-e29b-41d4-a716-446655440000"
+            ]
           }
         }
       },
@@ -1930,7 +2123,9 @@
       },
       "ErrorResponse": {
         "type": "object",
-        "required": ["error"],
+        "required": [
+          "error"
+        ],
         "properties": {
           "error": {
             "type": "string",
