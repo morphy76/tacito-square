@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/morphy76/tacito-square/internal/keeper/domain"
+	"github.com/morphy76/tacito-square/internal/shared/tenant"
 )
 
 // PromptRepository implements outbound.PromptRepository port using pgxpool.
@@ -24,11 +25,17 @@ func NewPromptRepository(pool *pgxpool.Pool) *PromptRepository {
 
 // CreateTemplate inserts a new Prompt Template revision.
 func (r *PromptRepository) CreateTemplate(ctx context.Context, t *domain.PromptTemplate) error {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return errors.New("tenant resolution failed")
+	}
+	t.TenantID = ten.FullName()
+
 	query := `INSERT INTO prompt_templates (
-		id, name, content, role, version, status, created_at
-	) VALUES ($1, $2, $3, $4, $5, $6, $7)`
+		id, tenant_id, name, content, role, version, status, created_at
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 	_, err := r.pool.Exec(ctx, query,
-		t.ID, t.Name, t.Content, t.Role, t.Version, t.Status, t.CreatedAt,
+		t.ID, t.TenantID, t.Name, t.Content, t.Role, t.Version, t.Status, t.CreatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("create prompt template: %w", err)
@@ -38,11 +45,16 @@ func (r *PromptRepository) CreateTemplate(ctx context.Context, t *domain.PromptT
 
 // GetTemplateByID retrieves a specific template version by UUID.
 func (r *PromptRepository) GetTemplateByID(ctx context.Context, id uuid.UUID) (*domain.PromptTemplate, error) {
-	query := `SELECT id, name, content, role, version, status, created_at 
-		FROM prompt_templates WHERE id = $1`
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return nil, errors.New("tenant resolution failed")
+	}
+
+	query := `SELECT id, tenant_id, name, content, role, version, status, created_at 
+		FROM prompt_templates WHERE id = $1 AND tenant_id = $2`
 	var t domain.PromptTemplate
-	err := r.pool.QueryRow(ctx, query, id).Scan(
-		&t.ID, &t.Name, &t.Content, &t.Role, &t.Version, &t.Status, &t.CreatedAt,
+	err := r.pool.QueryRow(ctx, query, id, ten.FullName()).Scan(
+		&t.ID, &t.TenantID, &t.Name, &t.Content, &t.Role, &t.Version, &t.Status, &t.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -55,11 +67,16 @@ func (r *PromptRepository) GetTemplateByID(ctx context.Context, id uuid.UUID) (*
 
 // GetLatestTemplateByName retrieves the highest version of a template name.
 func (r *PromptRepository) GetLatestTemplateByName(ctx context.Context, name string) (*domain.PromptTemplate, error) {
-	query := `SELECT id, name, content, role, version, status, created_at 
-		FROM prompt_templates WHERE name = $1 ORDER BY version DESC LIMIT 1`
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return nil, errors.New("tenant resolution failed")
+	}
+
+	query := `SELECT id, tenant_id, name, content, role, version, status, created_at 
+		FROM prompt_templates WHERE name = $1 AND tenant_id = $2 ORDER BY version DESC LIMIT 1`
 	var t domain.PromptTemplate
-	err := r.pool.QueryRow(ctx, query, name).Scan(
-		&t.ID, &t.Name, &t.Content, &t.Role, &t.Version, &t.Status, &t.CreatedAt,
+	err := r.pool.QueryRow(ctx, query, name, ten.FullName()).Scan(
+		&t.ID, &t.TenantID, &t.Name, &t.Content, &t.Role, &t.Version, &t.Status, &t.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -72,10 +89,16 @@ func (r *PromptRepository) GetLatestTemplateByName(ctx context.Context, name str
 
 // ListTemplates lists the latest versions of unique template names.
 func (r *PromptRepository) ListTemplates(ctx context.Context) ([]*domain.PromptTemplate, error) {
-	query := `SELECT DISTINCT ON (name) id, name, content, role, version, status, created_at 
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return nil, errors.New("tenant resolution failed")
+	}
+
+	query := `SELECT DISTINCT ON (name) id, tenant_id, name, content, role, version, status, created_at 
 		FROM prompt_templates 
+		WHERE tenant_id = $1
 		ORDER BY name, version DESC`
-	rows, err := r.pool.Query(ctx, query)
+	rows, err := r.pool.Query(ctx, query, ten.FullName())
 	if err != nil {
 		return nil, fmt.Errorf("list templates: %w", err)
 	}
@@ -84,7 +107,7 @@ func (r *PromptRepository) ListTemplates(ctx context.Context) ([]*domain.PromptT
 	var templates []*domain.PromptTemplate
 	for rows.Next() {
 		var t domain.PromptTemplate
-		err := rows.Scan(&t.ID, &t.Name, &t.Content, &t.Role, &t.Version, &t.Status, &t.CreatedAt)
+		err := rows.Scan(&t.ID, &t.TenantID, &t.Name, &t.Content, &t.Role, &t.Version, &t.Status, &t.CreatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("scan template: %w", err)
 		}
@@ -95,9 +118,14 @@ func (r *PromptRepository) ListTemplates(ctx context.Context) ([]*domain.PromptT
 
 // ListTemplateVersions lists all historical versions of a template name.
 func (r *PromptRepository) ListTemplateVersions(ctx context.Context, name string) ([]*domain.PromptTemplate, error) {
-	query := `SELECT id, name, content, role, version, status, created_at 
-		FROM prompt_templates WHERE name = $1 ORDER BY version DESC`
-	rows, err := r.pool.Query(ctx, query, name)
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return nil, errors.New("tenant resolution failed")
+	}
+
+	query := `SELECT id, tenant_id, name, content, role, version, status, created_at 
+		FROM prompt_templates WHERE name = $1 AND tenant_id = $2 ORDER BY version DESC`
+	rows, err := r.pool.Query(ctx, query, name, ten.FullName())
 	if err != nil {
 		return nil, fmt.Errorf("list template versions: %w", err)
 	}
@@ -106,7 +134,7 @@ func (r *PromptRepository) ListTemplateVersions(ctx context.Context, name string
 	var templates []*domain.PromptTemplate
 	for rows.Next() {
 		var t domain.PromptTemplate
-		err := rows.Scan(&t.ID, &t.Name, &t.Content, &t.Role, &t.Version, &t.Status, &t.CreatedAt)
+		err := rows.Scan(&t.ID, &t.TenantID, &t.Name, &t.Content, &t.Role, &t.Version, &t.Status, &t.CreatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("scan template version: %w", err)
 		}
@@ -117,8 +145,13 @@ func (r *PromptRepository) ListTemplateVersions(ctx context.Context, name string
 
 // DeleteTemplate deletes a specific template version.
 func (r *PromptRepository) DeleteTemplate(ctx context.Context, id uuid.UUID) error {
-	query := `DELETE FROM prompt_templates WHERE id = $1`
-	_, err := r.pool.Exec(ctx, query, id)
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return errors.New("tenant resolution failed")
+	}
+
+	query := `DELETE FROM prompt_templates WHERE id = $1 AND tenant_id = $2`
+	_, err := r.pool.Exec(ctx, query, id, ten.FullName())
 	if err != nil {
 		return fmt.Errorf("delete template: %w", err)
 	}
@@ -127,6 +160,12 @@ func (r *PromptRepository) DeleteTemplate(ctx context.Context, id uuid.UUID) err
 
 // CreateCollection saves a prompt collection and its linked template UUID associations.
 func (r *PromptRepository) CreateCollection(ctx context.Context, c *domain.PromptCollection) error {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return errors.New("tenant resolution failed")
+	}
+	c.TenantID = ten.FullName()
+
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
@@ -134,9 +173,9 @@ func (r *PromptRepository) CreateCollection(ctx context.Context, c *domain.Promp
 	defer tx.Rollback(ctx)
 
 	query := `INSERT INTO prompt_collections (
-		id, name, description, created_at, updated_at
-	) VALUES ($1, $2, $3, $4, $5)`
-	_, err = tx.Exec(ctx, query, c.ID, c.Name, c.Description, c.CreatedAt, c.UpdatedAt)
+		id, tenant_id, name, description, created_at, updated_at
+	) VALUES ($1, $2, $3, $4, $5, $6)`
+	_, err = tx.Exec(ctx, query, c.ID, c.TenantID, c.Name, c.Description, c.CreatedAt, c.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("insert prompt collection: %w", err)
 	}
@@ -153,11 +192,16 @@ func (r *PromptRepository) CreateCollection(ctx context.Context, c *domain.Promp
 
 // GetCollectionByID loads collection details and linked template UUIDs.
 func (r *PromptRepository) GetCollectionByID(ctx context.Context, id uuid.UUID) (*domain.PromptCollection, error) {
-	query := `SELECT id, name, description, created_at, updated_at 
-		FROM prompt_collections WHERE id = $1`
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return nil, errors.New("tenant resolution failed")
+	}
+
+	query := `SELECT id, tenant_id, name, description, created_at, updated_at 
+		FROM prompt_collections WHERE id = $1 AND tenant_id = $2`
 	var c domain.PromptCollection
-	err := r.pool.QueryRow(ctx, query, id).Scan(
-		&c.ID, &c.Name, &c.Description, &c.CreatedAt, &c.UpdatedAt,
+	err := r.pool.QueryRow(ctx, query, id, ten.FullName()).Scan(
+		&c.ID, &c.TenantID, &c.Name, &c.Description, &c.CreatedAt, &c.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -177,9 +221,14 @@ func (r *PromptRepository) GetCollectionByID(ctx context.Context, id uuid.UUID) 
 
 // ListCollections lists all collections.
 func (r *PromptRepository) ListCollections(ctx context.Context) ([]*domain.PromptCollection, error) {
-	query := `SELECT id, name, description, created_at, updated_at 
-		FROM prompt_collections ORDER BY name ASC`
-	rows, err := r.pool.Query(ctx, query)
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return nil, errors.New("tenant resolution failed")
+	}
+
+	query := `SELECT id, tenant_id, name, description, created_at, updated_at 
+		FROM prompt_collections WHERE tenant_id = $1 ORDER BY name ASC`
+	rows, err := r.pool.Query(ctx, query, ten.FullName())
 	if err != nil {
 		return nil, fmt.Errorf("list collections: %w", err)
 	}
@@ -188,7 +237,7 @@ func (r *PromptRepository) ListCollections(ctx context.Context) ([]*domain.Promp
 	var collections []*domain.PromptCollection
 	for rows.Next() {
 		var c domain.PromptCollection
-		err := rows.Scan(&c.ID, &c.Name, &c.Description, &c.CreatedAt, &c.UpdatedAt)
+		err := rows.Scan(&c.ID, &c.TenantID, &c.Name, &c.Description, &c.CreatedAt, &c.UpdatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("scan collection: %w", err)
 		}
@@ -204,6 +253,12 @@ func (r *PromptRepository) ListCollections(ctx context.Context) ([]*domain.Promp
 
 // UpdateCollection updates a collection and refreshes its templates list.
 func (r *PromptRepository) UpdateCollection(ctx context.Context, c *domain.PromptCollection) error {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return errors.New("tenant resolution failed")
+	}
+	c.TenantID = ten.FullName()
+
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
@@ -213,8 +268,8 @@ func (r *PromptRepository) UpdateCollection(ctx context.Context, c *domain.Promp
 	c.UpdatedAt = time.Now().UTC()
 	query := `UPDATE prompt_collections SET 
 		name = $1, description = $2, updated_at = $3 
-		WHERE id = $4`
-	_, err = tx.Exec(ctx, query, c.Name, c.Description, c.UpdatedAt, c.ID)
+		WHERE id = $4 AND tenant_id = $5`
+	_, err = tx.Exec(ctx, query, c.Name, c.Description, c.UpdatedAt, c.ID, c.TenantID)
 	if err != nil {
 		return fmt.Errorf("update prompt collection: %w", err)
 	}
@@ -231,8 +286,13 @@ func (r *PromptRepository) UpdateCollection(ctx context.Context, c *domain.Promp
 
 // DeleteCollection deletes a collection.
 func (r *PromptRepository) DeleteCollection(ctx context.Context, id uuid.UUID) error {
-	query := `DELETE FROM prompt_collections WHERE id = $1`
-	_, err := r.pool.Exec(ctx, query, id)
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return errors.New("tenant resolution failed")
+	}
+
+	query := `DELETE FROM prompt_collections WHERE id = $1 AND tenant_id = $2`
+	_, err := r.pool.Exec(ctx, query, id, ten.FullName())
 	if err != nil {
 		return fmt.Errorf("delete collection: %w", err)
 	}
@@ -241,16 +301,22 @@ func (r *PromptRepository) DeleteCollection(ctx context.Context, id uuid.UUID) e
 
 // ResolveCollectionPrompts resolves the latest active version of each template name associated with the collection.
 func (r *PromptRepository) ResolveCollectionPrompts(ctx context.Context, collectionID uuid.UUID) ([]*domain.PromptTemplate, error) {
-	query := `SELECT DISTINCT ON (pt.name) pt.id, pt.name, pt.content, pt.role, pt.version, pt.status, pt.created_at
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return nil, errors.New("tenant resolution failed")
+	}
+
+	query := `SELECT DISTINCT ON (pt.name) pt.id, pt.tenant_id, pt.name, pt.content, pt.role, pt.version, pt.status, pt.created_at
 		FROM prompt_templates pt
 		WHERE pt.name IN (
 			SELECT name FROM prompt_templates 
 			JOIN prompt_collection_templates pct ON prompt_templates.id = pct.prompt_template_id
-			WHERE pct.prompt_collection_id = $1
+			WHERE pct.prompt_collection_id = $1 AND prompt_templates.tenant_id = $2
 		)
-		AND pt.status = $2
+		AND pt.status = $3
+		AND pt.tenant_id = $2
 		ORDER BY pt.name, pt.version DESC`
-	rows, err := r.pool.Query(ctx, query, collectionID, domain.PromptStatusActive)
+	rows, err := r.pool.Query(ctx, query, collectionID, ten.FullName(), domain.PromptStatusActive)
 	if err != nil {
 		return nil, fmt.Errorf("resolve collection prompts: %w", err)
 	}
@@ -259,7 +325,7 @@ func (r *PromptRepository) ResolveCollectionPrompts(ctx context.Context, collect
 	var resolved []*domain.PromptTemplate
 	for rows.Next() {
 		var t domain.PromptTemplate
-		err := rows.Scan(&t.ID, &t.Name, &t.Content, &t.Role, &t.Version, &t.Status, &t.CreatedAt)
+		err := rows.Scan(&t.ID, &t.TenantID, &t.Name, &t.Content, &t.Role, &t.Version, &t.Status, &t.CreatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("scan resolved template: %w", err)
 		}

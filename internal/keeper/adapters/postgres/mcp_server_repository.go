@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/morphy76/tacito-square/internal/keeper/domain"
+	"github.com/morphy76/tacito-square/internal/shared/tenant"
 )
 
 // MCPServerRepository implements the outbound.MCPServerRepository port interface using PostgreSQL.
@@ -25,6 +26,12 @@ func NewMCPServerRepository(pool *pgxpool.Pool) *MCPServerRepository {
 
 // Create inserts a new MCP server configuration into the database.
 func (r *MCPServerRepository) Create(ctx context.Context, s *domain.MCPServer) error {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return errors.New("tenant resolution failed")
+	}
+	s.TenantID = ten.FullName()
+
 	argsJSON, err := json.Marshal(s.Args)
 	if err != nil {
 		return fmt.Errorf("marshal args: %w", err)
@@ -35,12 +42,12 @@ func (r *MCPServerRepository) Create(ctx context.Context, s *domain.MCPServer) e
 	}
 
 	query := `INSERT INTO mcp_servers (
-		id, name, description, transport, command, args, env, 
+		id, tenant_id, name, description, transport, command, args, env, 
 		url, auth_secret_ref, status, created_at, updated_at
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`
 
 	_, err = r.pool.Exec(ctx, query,
-		s.ID, s.Name, s.Description, s.Transport, s.Command, argsJSON, envJSON,
+		s.ID, s.TenantID, s.Name, s.Description, s.Transport, s.Command, argsJSON, envJSON,
 		s.URL, s.AuthSecretRef, s.Status, s.CreatedAt, s.UpdatedAt,
 	)
 	if err != nil {
@@ -51,17 +58,22 @@ func (r *MCPServerRepository) Create(ctx context.Context, s *domain.MCPServer) e
 
 // GetByID retrieves an MCP server configuration by its ID.
 func (r *MCPServerRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.MCPServer, error) {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return nil, errors.New("tenant resolution failed")
+	}
+
 	query := `SELECT 
-		id, name, description, transport, command, args, env, 
+		id, tenant_id, name, description, transport, command, args, env, 
 		url, auth_secret_ref, status, created_at, updated_at
-	FROM mcp_servers WHERE id = $1`
+	FROM mcp_servers WHERE id = $1 AND tenant_id = $2`
 
 	var s domain.MCPServer
 	var argsBytes []byte
 	var envBytes []byte
 
-	err := r.pool.QueryRow(ctx, query, id).Scan(
-		&s.ID, &s.Name, &s.Description, &s.Transport, &s.Command, &argsBytes, &envBytes,
+	err := r.pool.QueryRow(ctx, query, id, ten.FullName()).Scan(
+		&s.ID, &s.TenantID, &s.Name, &s.Description, &s.Transport, &s.Command, &argsBytes, &envBytes,
 		&s.URL, &s.AuthSecretRef, &s.Status, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
@@ -87,17 +99,22 @@ func (r *MCPServerRepository) GetByID(ctx context.Context, id uuid.UUID) (*domai
 
 // GetByName retrieves an MCP server configuration by its unique name.
 func (r *MCPServerRepository) GetByName(ctx context.Context, name string) (*domain.MCPServer, error) {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return nil, errors.New("tenant resolution failed")
+	}
+
 	query := `SELECT 
-		id, name, description, transport, command, args, env, 
+		id, tenant_id, name, description, transport, command, args, env, 
 		url, auth_secret_ref, status, created_at, updated_at
-	FROM mcp_servers WHERE name = $1`
+	FROM mcp_servers WHERE name = $1 AND tenant_id = $2`
 
 	var s domain.MCPServer
 	var argsBytes []byte
 	var envBytes []byte
 
-	err := r.pool.QueryRow(ctx, query, name).Scan(
-		&s.ID, &s.Name, &s.Description, &s.Transport, &s.Command, &argsBytes, &envBytes,
+	err := r.pool.QueryRow(ctx, query, name, ten.FullName()).Scan(
+		&s.ID, &s.TenantID, &s.Name, &s.Description, &s.Transport, &s.Command, &argsBytes, &envBytes,
 		&s.URL, &s.AuthSecretRef, &s.Status, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
@@ -123,12 +140,17 @@ func (r *MCPServerRepository) GetByName(ctx context.Context, name string) (*doma
 
 // List retrieves all MCP server configurations.
 func (r *MCPServerRepository) List(ctx context.Context) ([]*domain.MCPServer, error) {
-	query := `SELECT 
-		id, name, description, transport, command, args, env, 
-		url, auth_secret_ref, status, created_at, updated_at
-	FROM mcp_servers ORDER BY name ASC`
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return nil, errors.New("tenant resolution failed")
+	}
 
-	rows, err := r.pool.Query(ctx, query)
+	query := `SELECT 
+		id, tenant_id, name, description, transport, command, args, env, 
+		url, auth_secret_ref, status, created_at, updated_at
+	FROM mcp_servers WHERE tenant_id = $1 ORDER BY name ASC`
+
+	rows, err := r.pool.Query(ctx, query, ten.FullName())
 	if err != nil {
 		return nil, fmt.Errorf("list mcp servers: %w", err)
 	}
@@ -141,7 +163,7 @@ func (r *MCPServerRepository) List(ctx context.Context) ([]*domain.MCPServer, er
 		var envBytes []byte
 
 		err := rows.Scan(
-			&s.ID, &s.Name, &s.Description, &s.Transport, &s.Command, &argsBytes, &envBytes,
+			&s.ID, &s.TenantID, &s.Name, &s.Description, &s.Transport, &s.Command, &argsBytes, &envBytes,
 			&s.URL, &s.AuthSecretRef, &s.Status, &s.CreatedAt, &s.UpdatedAt,
 		)
 		if err != nil {
@@ -166,6 +188,12 @@ func (r *MCPServerRepository) List(ctx context.Context) ([]*domain.MCPServer, er
 
 // Update updates an existing MCP server configuration.
 func (r *MCPServerRepository) Update(ctx context.Context, s *domain.MCPServer) error {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return errors.New("tenant resolution failed")
+	}
+	s.TenantID = ten.FullName()
+
 	argsJSON, err := json.Marshal(s.Args)
 	if err != nil {
 		return fmt.Errorf("marshal args: %w", err)
@@ -178,12 +206,12 @@ func (r *MCPServerRepository) Update(ctx context.Context, s *domain.MCPServer) e
 	query := `UPDATE mcp_servers SET 
 		name = $1, description = $2, transport = $3, command = $4, args = $5, env = $6, 
 		url = $7, auth_secret_ref = $8, status = $9, updated_at = $10
-	WHERE id = $11`
+	WHERE id = $11 AND tenant_id = $12`
 
 	s.UpdatedAt = time.Now().UTC()
 	_, err = r.pool.Exec(ctx, query,
 		s.Name, s.Description, s.Transport, s.Command, argsJSON, envJSON,
-		s.URL, s.AuthSecretRef, s.Status, s.UpdatedAt, s.ID,
+		s.URL, s.AuthSecretRef, s.Status, s.UpdatedAt, s.ID, s.TenantID,
 	)
 	if err != nil {
 		return fmt.Errorf("update mcp server: %w", err)
@@ -193,8 +221,13 @@ func (r *MCPServerRepository) Update(ctx context.Context, s *domain.MCPServer) e
 
 // Delete removes an MCP server configuration from the database by its ID.
 func (r *MCPServerRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	query := `DELETE FROM mcp_servers WHERE id = $1`
-	_, err := r.pool.Exec(ctx, query, id)
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return errors.New("tenant resolution failed")
+	}
+
+	query := `DELETE FROM mcp_servers WHERE id = $1 AND tenant_id = $2`
+	_, err := r.pool.Exec(ctx, query, id, ten.FullName())
 	if err != nil {
 		return fmt.Errorf("delete mcp server: %w", err)
 	}

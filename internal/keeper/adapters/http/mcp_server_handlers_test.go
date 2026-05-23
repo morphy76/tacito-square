@@ -68,6 +68,7 @@ func TestMCPServerHandlers_Create(t *testing.T) {
 		handler := NewMCPServerHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.POST("/api/v1/mcp-servers", handler.Create)
 
 		payload := map[string]interface{}{
@@ -103,6 +104,7 @@ func TestMCPServerHandlers_Create(t *testing.T) {
 		handler := NewMCPServerHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.POST("/api/v1/mcp-servers", handler.Create)
 
 		payload := map[string]interface{}{
@@ -129,6 +131,7 @@ func TestMCPServerHandlers_Create(t *testing.T) {
 		handler := NewMCPServerHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.POST("/api/v1/mcp-servers", handler.Create)
 
 		payload := map[string]interface{}{
@@ -157,6 +160,7 @@ func TestMCPServerHandlers_GetByID(t *testing.T) {
 		handler := NewMCPServerHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.GET("/api/v1/mcp-servers/:id", handler.GetByID)
 
 		id := uuid.New()
@@ -193,6 +197,7 @@ func TestMCPServerHandlers_List(t *testing.T) {
 		handler := NewMCPServerHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.GET("/api/v1/mcp-servers", handler.List)
 
 		servers := []*domain.MCPServer{
@@ -224,6 +229,7 @@ func TestMCPServerHandlers_Update(t *testing.T) {
 		handler := NewMCPServerHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.PUT("/api/v1/mcp-servers/:id", handler.Update)
 
 		id := uuid.New()
@@ -264,6 +270,7 @@ func TestMCPServerHandlers_Delete(t *testing.T) {
 		handler := NewMCPServerHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.DELETE("/api/v1/mcp-servers/:id", handler.Delete)
 
 		id := uuid.New()

@@ -65,7 +65,7 @@
 
 | ID | Title | Status | Severity | File |
 |----|-------|--------|----------|------|
-| BUG-M3.1 | Supporting Entity Models Lack Tenant Segregation | OPEN | HIGH | [BUG-M3.1](tasks/M3.BUG1/BUG-M3.1.md) |
+| BUG-M3.1 | Supporting Entity Models Lack Tenant Segregation | CLOSED | HIGH | [BUG-M3.1](tasks/M3.BUG1/BUG-M3.1.md) |
 
 ### M4: Operator Core
 

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/morphy76/tacito-square/internal/keeper/domain"
+	"github.com/morphy76/tacito-square/internal/shared/tenant"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +20,9 @@ func TestSkillRepository_Lifecycle(t *testing.T) {
 		t.Skip("Skipping PostgreSQL integration test: TS_DATABASE_URL not set")
 	}
 
-	ctx := context.Background()
+	ten, _ := tenant.New("test-tenant.com", "")
+	ctx := tenant.ContextWithTenant(context.Background(), ten)
+
 	pool, err := pgxpool.New(ctx, dbURL)
 	require.NoError(t, err)
 	defer pool.Close()
@@ -138,6 +141,99 @@ func TestSkillRepository_Lifecycle(t *testing.T) {
 		skills, err = repo.ListSkillsByAgent(ctx, agentID)
 		require.NoError(t, err)
 		assert.Empty(t, skills)
+	})
+
+	t.Run("Multi-Tenant Isolation", func(t *testing.T) {
+		tenA, _ := tenant.New("tenant-a.com", "")
+		ctxA := tenant.ContextWithTenant(context.Background(), tenA)
+
+		tenB, _ := tenant.New("tenant-b.com", "")
+		ctxB := tenant.ContextWithTenant(context.Background(), tenB)
+
+		// Clean up previous records for these tenants to prevent conflict with parallel tests
+		_, _ = pool.Exec(ctx, "DELETE FROM skills WHERE tenant_id IN ($1, $2)", tenA.FullName(), tenB.FullName())
+
+		skillA := &domain.Skill{
+			ID:           uuid.New(),
+			Name:         "test-tenant-scoped",
+			Description:  "Tenant A Skill",
+			MCPServers:   []uuid.UUID{},
+			AllowedTools: []string{"search_google"},
+			DeniedTools:  []string{"format_disk"},
+			Status:       domain.SkillStatusActive,
+			CreatedAt:    time.Now().UTC(),
+			UpdatedAt:    time.Now().UTC(),
+		}
+
+		skillB := &domain.Skill{
+			ID:           uuid.New(),
+			Name:         "test-tenant-scoped", // same name
+			Description:  "Tenant B Skill",
+			MCPServers:   []uuid.UUID{},
+			AllowedTools: []string{"search_google"},
+			DeniedTools:  []string{"format_disk"},
+			Status:       domain.SkillStatusActive,
+			CreatedAt:    time.Now().UTC(),
+			UpdatedAt:    time.Now().UTC(),
+		}
+
+		// Create under Tenant A
+		err := repo.Create(ctxA, skillA)
+		require.NoError(t, err)
+
+		// Create under Tenant B (should succeed because of (tenant_id, name) composite unique constraint!)
+		err = repo.Create(ctxB, skillB)
+		require.NoError(t, err)
+
+		// Tenant B should not see Tenant A's record by ID
+		_, err = repo.GetByID(ctxB, skillA.ID)
+		assert.Error(t, err)
+
+		// Tenant A should not see Tenant B's record by ID
+		_, err = repo.GetByID(ctxA, skillB.ID)
+		assert.Error(t, err)
+
+		// GetByName under Tenant A should return skillA
+		fetchedA, err := repo.GetByName(ctxA, "test-tenant-scoped")
+		require.NoError(t, err)
+		assert.Equal(t, skillA.ID, fetchedA.ID)
+
+		// GetByName under Tenant B should return skillB
+		fetchedB, err := repo.GetByName(ctxB, "test-tenant-scoped")
+		require.NoError(t, err)
+		assert.Equal(t, skillB.ID, fetchedB.ID)
+
+		// List under Tenant A should contain skillA but NOT skillB
+		listA, err := repo.List(ctxA)
+		require.NoError(t, err)
+		foundA := false
+		foundBInA := false
+		for _, s := range listA {
+			if s.ID == skillA.ID {
+				foundA = true
+			}
+			if s.ID == skillB.ID {
+				foundBInA = true
+			}
+		}
+		assert.True(t, foundA)
+		assert.False(t, foundBInA)
+
+		// Agent-Skill association isolation
+		agentID := uuid.New()
+
+		// Detach under Tenant B for Tenant A's skill should have no effect
+		err = repo.AttachSkillToAgent(ctxB, agentID, skillA.ID) // should fail/do nothing because skillA is not in Tenant B
+		require.NoError(t, err)
+
+		// List by agent under Tenant B should be empty
+		skillsB, err := repo.ListSkillsByAgent(ctxB, agentID)
+		require.NoError(t, err)
+		assert.Empty(t, skillsB)
+
+		// Clean up
+		_ = repo.Delete(ctxA, skillA.ID)
+		_ = repo.Delete(ctxB, skillB.ID)
 	})
 
 	t.Run("Delete Skill", func(t *testing.T) {

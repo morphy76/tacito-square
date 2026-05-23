@@ -10,6 +10,7 @@ import (
 func TestLLMBinding_Validation(t *testing.T) {
 	validBinding := LLMBinding{
 		ID:                 uuid.New(),
+		TenantID:           "test-tenant.com",
 		Name:               "openai-gpt4o",
 		Description:        "Production GPT-4o Binding",
 		Provider:           ProviderOpenAI,
@@ -25,6 +26,14 @@ func TestLLMBinding_Validation(t *testing.T) {
 	t.Run("Valid LLM Binding", func(t *testing.T) {
 		err := validBinding.Validate()
 		assert.NoError(t, err)
+	})
+
+	t.Run("Missing Tenant ID", func(t *testing.T) {
+		invalid := validBinding
+		invalid.TenantID = ""
+		err := invalid.Validate()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "tenant id is required")
 	})
 
 	t.Run("Missing Name", func(t *testing.T) {

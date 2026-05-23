@@ -12,6 +12,7 @@ func TestPromptTemplate_Validate(t *testing.T) {
 	t.Run("Valid Prompt Template", func(t *testing.T) {
 		pt := PromptTemplate{
 			ID:        uuid.New(),
+			TenantID:  "test-tenant.com",
 			Name:      "system-behavior",
 			Content:   "You are a helpful assistant.",
 			Role:      PromptRoleSystem,
@@ -22,13 +23,27 @@ func TestPromptTemplate_Validate(t *testing.T) {
 		assert.NoError(t, pt.Validate())
 	})
 
+	t.Run("Missing Tenant ID", func(t *testing.T) {
+		pt := PromptTemplate{
+			ID:        uuid.New(),
+			TenantID:  "",
+			Name:      "system-behavior",
+			Role:      PromptRoleSystem,
+			Version:   1,
+			Status:    PromptStatusActive,
+		}
+		assert.Error(t, pt.Validate())
+		assert.Contains(t, pt.Validate().Error(), "tenant id is required")
+	})
+
 	t.Run("Missing ID", func(t *testing.T) {
 		pt := PromptTemplate{
-			ID:      uuid.Nil,
-			Name:    "system-behavior",
-			Role:    PromptRoleSystem,
-			Version: 1,
-			Status:  PromptStatusActive,
+			ID:       uuid.Nil,
+			TenantID: "test-tenant.com",
+			Name:     "system-behavior",
+			Role:     PromptRoleSystem,
+			Version:  1,
+			Status:   PromptStatusActive,
 		}
 		assert.Error(t, pt.Validate())
 		assert.Contains(t, pt.Validate().Error(), "id is required")
@@ -36,11 +51,12 @@ func TestPromptTemplate_Validate(t *testing.T) {
 
 	t.Run("Missing Name", func(t *testing.T) {
 		pt := PromptTemplate{
-			ID:      uuid.New(),
-			Name:    "",
-			Role:    PromptRoleSystem,
-			Version: 1,
-			Status:  PromptStatusActive,
+			ID:       uuid.New(),
+			TenantID: "test-tenant.com",
+			Name:     "",
+			Role:     PromptRoleSystem,
+			Version:  1,
+			Status:   PromptStatusActive,
 		}
 		assert.Error(t, pt.Validate())
 		assert.Contains(t, pt.Validate().Error(), "name is required")
@@ -48,11 +64,12 @@ func TestPromptTemplate_Validate(t *testing.T) {
 
 	t.Run("Invalid Role", func(t *testing.T) {
 		pt := PromptTemplate{
-			ID:      uuid.New(),
-			Name:    "system-behavior",
-			Role:    "invalid-role",
-			Version: 1,
-			Status:  PromptStatusActive,
+			ID:       uuid.New(),
+			TenantID: "test-tenant.com",
+			Name:     "system-behavior",
+			Role:     "invalid-role",
+			Version:  1,
+			Status:   PromptStatusActive,
 		}
 		assert.Error(t, pt.Validate())
 		assert.Contains(t, pt.Validate().Error(), "invalid role")
@@ -60,11 +77,12 @@ func TestPromptTemplate_Validate(t *testing.T) {
 
 	t.Run("Invalid Status", func(t *testing.T) {
 		pt := PromptTemplate{
-			ID:      uuid.New(),
-			Name:    "system-behavior",
-			Role:    PromptRoleSystem,
-			Version: 1,
-			Status:  "invalid-status",
+			ID:       uuid.New(),
+			TenantID: "test-tenant.com",
+			Name:     "system-behavior",
+			Role:     PromptRoleSystem,
+			Version:  1,
+			Status:   "invalid-status",
 		}
 		assert.Error(t, pt.Validate())
 		assert.Contains(t, pt.Validate().Error(), "invalid status")
@@ -72,11 +90,12 @@ func TestPromptTemplate_Validate(t *testing.T) {
 
 	t.Run("Invalid Version", func(t *testing.T) {
 		pt := PromptTemplate{
-			ID:      uuid.New(),
-			Name:    "system-behavior",
-			Role:    PromptRoleSystem,
-			Version: 0,
-			Status:  PromptStatusActive,
+			ID:       uuid.New(),
+			TenantID: "test-tenant.com",
+			Name:     "system-behavior",
+			Role:     PromptRoleSystem,
+			Version:  0,
+			Status:   PromptStatusActive,
 		}
 		assert.Error(t, pt.Validate())
 		assert.Contains(t, pt.Validate().Error(), "version must be greater than zero")
@@ -87,6 +106,7 @@ func TestPromptCollection_Validate(t *testing.T) {
 	t.Run("Valid Prompt Collection", func(t *testing.T) {
 		pc := PromptCollection{
 			ID:          uuid.New(),
+			TenantID:    "test-tenant.com",
 			Name:        "agent-a-prompts",
 			Description: "Collection for agent A",
 			Templates:   []uuid.UUID{uuid.New()},
@@ -96,10 +116,21 @@ func TestPromptCollection_Validate(t *testing.T) {
 		assert.NoError(t, pc.Validate())
 	})
 
+	t.Run("Missing Tenant ID", func(t *testing.T) {
+		pc := PromptCollection{
+			ID:       uuid.New(),
+			TenantID: "",
+			Name:     "agent-a-prompts",
+		}
+		assert.Error(t, pc.Validate())
+		assert.Contains(t, pc.Validate().Error(), "tenant id is required")
+	})
+
 	t.Run("Missing ID", func(t *testing.T) {
 		pc := PromptCollection{
-			ID:   uuid.Nil,
-			Name: "agent-a-prompts",
+			ID:       uuid.Nil,
+			TenantID: "test-tenant.com",
+			Name:     "agent-a-prompts",
 		}
 		assert.Error(t, pc.Validate())
 		assert.Contains(t, pc.Validate().Error(), "id is required")
@@ -107,8 +138,9 @@ func TestPromptCollection_Validate(t *testing.T) {
 
 	t.Run("Missing Name", func(t *testing.T) {
 		pc := PromptCollection{
-			ID:   uuid.New(),
-			Name: "",
+			ID:       uuid.New(),
+			TenantID: "test-tenant.com",
+			Name:     "",
 		}
 		assert.Error(t, pc.Validate())
 		assert.Contains(t, pc.Validate().Error(), "name is required")

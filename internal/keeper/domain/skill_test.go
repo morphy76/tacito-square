@@ -11,6 +11,7 @@ import (
 func TestSkill_Validation(t *testing.T) {
 	validSkill := Skill{
 		ID:          uuid.New(),
+		TenantID:    "test-tenant.com",
 		Name:        "web-search",
 		Description: "Provides google search tools",
 		MCPServers:  []uuid.UUID{uuid.New()},
@@ -27,6 +28,15 @@ func TestSkill_Validation(t *testing.T) {
 		{
 			name:  "Valid skill",
 			skill: validSkill,
+		},
+		{
+			name: "Missing Tenant ID",
+			skill: func() Skill {
+				s := validSkill
+				s.TenantID = ""
+				return s
+			}(),
+			wantErr: "tenant id is required",
 		},
 		{
 			name: "Missing ID",

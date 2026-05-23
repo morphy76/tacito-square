@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/morphy76/tacito-square/internal/keeper/domain"
+	"github.com/morphy76/tacito-square/internal/shared/tenant"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +20,9 @@ func TestMCPServerRepository_Lifecycle(t *testing.T) {
 		t.Skip("Skipping PostgreSQL integration test: TS_DATABASE_URL not set")
 	}
 
-	ctx := context.Background()
+	ten, _ := tenant.New("test-tenant.com", "")
+	ctx := tenant.ContextWithTenant(context.Background(), ten)
+
 	pool, err := pgxpool.New(ctx, dbURL)
 	require.NoError(t, err)
 	defer pool.Close()
@@ -90,6 +93,85 @@ func TestMCPServerRepository_Lifecycle(t *testing.T) {
 		assert.Equal(t, "Updated desc", fetched.Description)
 		assert.Equal(t, []string{"--db", "prod.db", "--verbose"}, fetched.Args)
 		assert.Equal(t, map[string]string{"ENV_VAR": "newval", "OTHER": "xyz"}, fetched.Env)
+	})
+
+	t.Run("Multi-Tenant Isolation", func(t *testing.T) {
+		tenA, _ := tenant.New("tenant-a.com", "")
+		ctxA := tenant.ContextWithTenant(context.Background(), tenA)
+
+		tenB, _ := tenant.New("tenant-b.com", "")
+		ctxB := tenant.ContextWithTenant(context.Background(), tenB)
+
+		// Clean up previous records for these tenants to prevent conflict with parallel tests
+		_, _ = pool.Exec(ctx, "DELETE FROM mcp_servers WHERE tenant_id IN ($1, $2)", tenA.FullName(), tenB.FullName())
+
+		serverA := &domain.MCPServer{
+			ID:            uuid.New(),
+			Name:          "test-tenant-scoped",
+			Description:   "Tenant A MCP",
+			Transport:     domain.TransportStdio,
+			Command:       "mcp-a",
+			Status:        domain.MCPServerStatusActive,
+			CreatedAt:     time.Now().UTC(),
+			UpdatedAt:     time.Now().UTC(),
+		}
+
+		serverB := &domain.MCPServer{
+			ID:            uuid.New(),
+			Name:          "test-tenant-scoped", // same name
+			Description:   "Tenant B MCP",
+			Transport:     domain.TransportStdio,
+			Command:       "mcp-b",
+			Status:        domain.MCPServerStatusActive,
+			CreatedAt:     time.Now().UTC(),
+			UpdatedAt:     time.Now().UTC(),
+		}
+
+		// Create under Tenant A
+		err := repo.Create(ctxA, serverA)
+		require.NoError(t, err)
+
+		// Create under Tenant B (should succeed because of (tenant_id, name) composite unique constraint!)
+		err = repo.Create(ctxB, serverB)
+		require.NoError(t, err)
+
+		// Tenant B should not see Tenant A's record by ID
+		_, err = repo.GetByID(ctxB, serverA.ID)
+		assert.Error(t, err)
+
+		// Tenant A should not see Tenant B's record by ID
+		_, err = repo.GetByID(ctxA, serverB.ID)
+		assert.Error(t, err)
+
+		// GetByName under Tenant A should return serverA
+		fetchedA, err := repo.GetByName(ctxA, "test-tenant-scoped")
+		require.NoError(t, err)
+		assert.Equal(t, serverA.ID, fetchedA.ID)
+
+		// GetByName under Tenant B should return serverB
+		fetchedB, err := repo.GetByName(ctxB, "test-tenant-scoped")
+		require.NoError(t, err)
+		assert.Equal(t, serverB.ID, fetchedB.ID)
+
+		// List under Tenant A should contain serverA but NOT serverB
+		listA, err := repo.List(ctxA)
+		require.NoError(t, err)
+		foundA := false
+		foundBInA := false
+		for _, s := range listA {
+			if s.ID == serverA.ID {
+				foundA = true
+			}
+			if s.ID == serverB.ID {
+				foundBInA = true
+			}
+		}
+		assert.True(t, foundA)
+		assert.False(t, foundBInA)
+
+		// Clean up
+		_ = repo.Delete(ctxA, serverA.ID)
+		_ = repo.Delete(ctxB, serverB.ID)
 	})
 
 	t.Run("Delete MCP Server", func(t *testing.T) {

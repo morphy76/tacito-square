@@ -28,6 +28,7 @@ const (
 // PromptTemplate represents a single parameterized instruction block with a role.
 type PromptTemplate struct {
 	ID        uuid.UUID    `json:"id"`
+	TenantID  string       `json:"tenant_id"`
 	Name      string       `json:"name"`
 	Content   string       `json:"content"`
 	Role      PromptRole   `json:"role"`
@@ -39,6 +40,7 @@ type PromptTemplate struct {
 // PromptCollection represents a suite of templates used together by an agent profile.
 type PromptCollection struct {
 	ID          uuid.UUID   `json:"id"`
+	TenantID    string      `json:"tenant_id"`
 	Name        string      `json:"name"`
 	Description string      `json:"description"`
 	Templates   []uuid.UUID `json:"templates"`
@@ -50,6 +52,9 @@ type PromptCollection struct {
 func (t PromptTemplate) Validate() error {
 	if t.ID == uuid.Nil {
 		return errors.New("id is required")
+	}
+	if t.TenantID == "" {
+		return errors.New("tenant id is required")
 	}
 	if t.Name == "" {
 		return errors.New("name is required")
@@ -70,6 +75,9 @@ func (t PromptTemplate) Validate() error {
 func (c PromptCollection) Validate() error {
 	if c.ID == uuid.Nil {
 		return errors.New("id is required")
+	}
+	if c.TenantID == "" {
+		return errors.New("tenant id is required")
 	}
 	if c.Name == "" {
 		return errors.New("name is required")

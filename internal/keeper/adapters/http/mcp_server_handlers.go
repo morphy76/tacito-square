@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/keeper/domain"
+	"github.com/morphy76/tacito-square/internal/shared/tenant"
 )
 
 // MCPServerHandler implements the HTTP controllers for MCP servers CRUD operations.
@@ -53,8 +54,15 @@ func (h *MCPServerHandler) Create(c *gin.Context) {
 		return
 	}
 
+	ten := tenant.FromContext(c.Request.Context())
+	if ten == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
 	server := &domain.MCPServer{
 		ID:            uuid.New(),
+		TenantID:      ten.FullName(),
 		Name:          req.Name,
 		Description:   req.Description,
 		Transport:     domain.Transport(req.Transport),
@@ -130,6 +138,13 @@ func (h *MCPServerHandler) Update(c *gin.Context) {
 		return
 	}
 
+	ten := tenant.FromContext(c.Request.Context())
+	if ten == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	existing.TenantID = ten.FullName()
 	existing.Name = req.Name
 	existing.Description = req.Description
 	existing.Transport = domain.Transport(req.Transport)

@@ -2,15 +2,17 @@
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS skills (
     id UUID PRIMARY KEY,
-    name VARCHAR(255) UNIQUE NOT NULL,
+    tenant_id VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
     description TEXT,
     allowed_tools JSONB,
     denied_tools JSONB,
     status VARCHAR(50) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    CONSTRAINT unique_skills_tenant_name UNIQUE (tenant_id, name)
 );
-CREATE INDEX IF NOT EXISTS idx_skills_name ON skills(name);
+CREATE INDEX IF NOT EXISTS idx_skills_tenant_id ON skills(tenant_id);
 
 CREATE TABLE IF NOT EXISTS skill_mcp_servers (
     skill_id UUID REFERENCES skills(id) ON DELETE CASCADE,

@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/morphy76/tacito-square/internal/keeper/domain"
+	"github.com/morphy76/tacito-square/internal/shared/tenant"
 )
 
 // LLMBindingRepository implements the outbound.LLMBindingRepository port interface using PostgreSQL.
@@ -24,13 +25,19 @@ func NewLLMBindingRepository(pool *pgxpool.Pool) *LLMBindingRepository {
 
 // Create inserts a new LLM provider binding into the database.
 func (r *LLMBindingRepository) Create(ctx context.Context, b *domain.LLMBinding) error {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return errors.New("tenant resolution failed")
+	}
+	b.TenantID = ten.FullName()
+
 	query := `INSERT INTO llm_bindings (
-		id, name, description, provider, api_base_url, api_key_secret_ref, 
+		id, tenant_id, name, description, provider, api_base_url, api_key_secret_ref, 
 		default_model, default_temperature, default_max_tokens, timeout_seconds, status, created_at, updated_at
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`
 
 	_, err := r.pool.Exec(ctx, query,
-		b.ID, b.Name, b.Description, b.Provider, b.APIBaseURL, b.APIKeySecretRef,
+		b.ID, b.TenantID, b.Name, b.Description, b.Provider, b.APIBaseURL, b.APIKeySecretRef,
 		b.DefaultModel, b.DefaultTemperature, b.DefaultMaxTokens, b.TimeoutSeconds, b.Status, b.CreatedAt, b.UpdatedAt,
 	)
 	if err != nil {
@@ -41,14 +48,19 @@ func (r *LLMBindingRepository) Create(ctx context.Context, b *domain.LLMBinding)
 
 // GetByID retrieves an LLM provider binding by its ID.
 func (r *LLMBindingRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.LLMBinding, error) {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return nil, errors.New("tenant resolution failed")
+	}
+
 	query := `SELECT 
-		id, name, description, provider, api_base_url, api_key_secret_ref, 
+		id, tenant_id, name, description, provider, api_base_url, api_key_secret_ref, 
 		default_model, default_temperature, default_max_tokens, timeout_seconds, status, created_at, updated_at
-	FROM llm_bindings WHERE id = $1`
+	FROM llm_bindings WHERE id = $1 AND tenant_id = $2`
 
 	var b domain.LLMBinding
-	err := r.pool.QueryRow(ctx, query, id).Scan(
-		&b.ID, &b.Name, &b.Description, &b.Provider, &b.APIBaseURL, &b.APIKeySecretRef,
+	err := r.pool.QueryRow(ctx, query, id, ten.FullName()).Scan(
+		&b.ID, &b.TenantID, &b.Name, &b.Description, &b.Provider, &b.APIBaseURL, &b.APIKeySecretRef,
 		&b.DefaultModel, &b.DefaultTemperature, &b.DefaultMaxTokens, &b.TimeoutSeconds, &b.Status, &b.CreatedAt, &b.UpdatedAt,
 	)
 	if err != nil {
@@ -62,14 +74,19 @@ func (r *LLMBindingRepository) GetByID(ctx context.Context, id uuid.UUID) (*doma
 
 // GetByName retrieves an LLM provider binding by its unique name.
 func (r *LLMBindingRepository) GetByName(ctx context.Context, name string) (*domain.LLMBinding, error) {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return nil, errors.New("tenant resolution failed")
+	}
+
 	query := `SELECT 
-		id, name, description, provider, api_base_url, api_key_secret_ref, 
+		id, tenant_id, name, description, provider, api_base_url, api_key_secret_ref, 
 		default_model, default_temperature, default_max_tokens, timeout_seconds, status, created_at, updated_at
-	FROM llm_bindings WHERE name = $1`
+	FROM llm_bindings WHERE name = $1 AND tenant_id = $2`
 
 	var b domain.LLMBinding
-	err := r.pool.QueryRow(ctx, query, name).Scan(
-		&b.ID, &b.Name, &b.Description, &b.Provider, &b.APIBaseURL, &b.APIKeySecretRef,
+	err := r.pool.QueryRow(ctx, query, name, ten.FullName()).Scan(
+		&b.ID, &b.TenantID, &b.Name, &b.Description, &b.Provider, &b.APIBaseURL, &b.APIKeySecretRef,
 		&b.DefaultModel, &b.DefaultTemperature, &b.DefaultMaxTokens, &b.TimeoutSeconds, &b.Status, &b.CreatedAt, &b.UpdatedAt,
 	)
 	if err != nil {
@@ -83,12 +100,17 @@ func (r *LLMBindingRepository) GetByName(ctx context.Context, name string) (*dom
 
 // List retrieves all LLM provider bindings.
 func (r *LLMBindingRepository) List(ctx context.Context) ([]*domain.LLMBinding, error) {
-	query := `SELECT 
-		id, name, description, provider, api_base_url, api_key_secret_ref, 
-		default_model, default_temperature, default_max_tokens, timeout_seconds, status, created_at, updated_at
-	FROM llm_bindings ORDER BY name ASC`
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return nil, errors.New("tenant resolution failed")
+	}
 
-	rows, err := r.pool.Query(ctx, query)
+	query := `SELECT 
+		id, tenant_id, name, description, provider, api_base_url, api_key_secret_ref, 
+		default_model, default_temperature, default_max_tokens, timeout_seconds, status, created_at, updated_at
+	FROM llm_bindings WHERE tenant_id = $1 ORDER BY name ASC`
+
+	rows, err := r.pool.Query(ctx, query, ten.FullName())
 	if err != nil {
 		return nil, fmt.Errorf("list llm bindings: %w", err)
 	}
@@ -98,7 +120,7 @@ func (r *LLMBindingRepository) List(ctx context.Context) ([]*domain.LLMBinding, 
 	for rows.Next() {
 		var b domain.LLMBinding
 		err := rows.Scan(
-			&b.ID, &b.Name, &b.Description, &b.Provider, &b.APIBaseURL, &b.APIKeySecretRef,
+			&b.ID, &b.TenantID, &b.Name, &b.Description, &b.Provider, &b.APIBaseURL, &b.APIKeySecretRef,
 			&b.DefaultModel, &b.DefaultTemperature, &b.DefaultMaxTokens, &b.TimeoutSeconds, &b.Status, &b.CreatedAt, &b.UpdatedAt,
 		)
 		if err != nil {
@@ -111,16 +133,22 @@ func (r *LLMBindingRepository) List(ctx context.Context) ([]*domain.LLMBinding, 
 
 // Update updates an existing LLM provider binding.
 func (r *LLMBindingRepository) Update(ctx context.Context, b *domain.LLMBinding) error {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return errors.New("tenant resolution failed")
+	}
+	b.TenantID = ten.FullName()
+
 	query := `UPDATE llm_bindings SET 
 		name = $1, description = $2, provider = $3, api_base_url = $4, api_key_secret_ref = $5, 
 		default_model = $6, default_temperature = $7, default_max_tokens = $8, timeout_seconds = $9, 
 		status = $10, updated_at = $11
-	WHERE id = $12`
+	WHERE id = $12 AND tenant_id = $13`
 
 	b.UpdatedAt = time.Now().UTC()
 	_, err := r.pool.Exec(ctx, query,
 		b.Name, b.Description, b.Provider, b.APIBaseURL, b.APIKeySecretRef,
-		b.DefaultModel, b.DefaultTemperature, b.DefaultMaxTokens, b.TimeoutSeconds, b.Status, b.UpdatedAt, b.ID,
+		b.DefaultModel, b.DefaultTemperature, b.DefaultMaxTokens, b.TimeoutSeconds, b.Status, b.UpdatedAt, b.ID, b.TenantID,
 	)
 	if err != nil {
 		return fmt.Errorf("update llm binding: %w", err)
@@ -130,8 +158,13 @@ func (r *LLMBindingRepository) Update(ctx context.Context, b *domain.LLMBinding)
 
 // Delete removes an LLM provider binding from the database by its ID.
 func (r *LLMBindingRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	query := `DELETE FROM llm_bindings WHERE id = $1`
-	_, err := r.pool.Exec(ctx, query, id)
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return errors.New("tenant resolution failed")
+	}
+
+	query := `DELETE FROM llm_bindings WHERE id = $1 AND tenant_id = $2`
+	_, err := r.pool.Exec(ctx, query, id, ten.FullName())
 	if err != nil {
 		return fmt.Errorf("delete llm binding: %w", err)
 	}

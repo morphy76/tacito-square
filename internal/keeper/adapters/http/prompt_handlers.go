@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/keeper/domain"
+	"github.com/morphy76/tacito-square/internal/shared/tenant"
 )
 
 // PromptHandler implements the HTTP controllers for Prompts and Collections.
@@ -58,6 +59,12 @@ func (h *PromptHandler) CreateTemplate(c *gin.Context) {
 		return
 	}
 
+	ten := tenant.FromContext(c.Request.Context())
+	if ten == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
 	status := req.Status
 	if status == "" {
 		status = domain.PromptStatusActive
@@ -65,6 +72,7 @@ func (h *PromptHandler) CreateTemplate(c *gin.Context) {
 
 	pt := &domain.PromptTemplate{
 		ID:        uuid.New(),
+		TenantID:  ten.FullName(),
 		Name:      req.Name,
 		Content:   req.Content,
 		Role:      req.Role,
@@ -129,6 +137,12 @@ func (h *PromptHandler) UpdateTemplate(c *gin.Context) {
 		return
 	}
 
+	ten := tenant.FromContext(c.Request.Context())
+	if ten == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
 	existing, err := h.repo.GetTemplateByID(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -144,6 +158,7 @@ func (h *PromptHandler) UpdateTemplate(c *gin.Context) {
 	// Immutable versioning: create a NEW record with bumped version
 	newPT := &domain.PromptTemplate{
 		ID:        uuid.New(),
+		TenantID:  ten.FullName(),
 		Name:      existing.Name,
 		Content:   req.Content,
 		Role:      req.Role,
@@ -190,6 +205,12 @@ func (h *PromptHandler) CreateCollection(c *gin.Context) {
 		return
 	}
 
+	ten := tenant.FromContext(c.Request.Context())
+	if ten == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
 	var templateUUIDs []uuid.UUID
 	for _, idStr := range req.Templates {
 		id, err := uuid.Parse(idStr)
@@ -202,6 +223,7 @@ func (h *PromptHandler) CreateCollection(c *gin.Context) {
 
 	col := &domain.PromptCollection{
 		ID:          uuid.New(),
+		TenantID:    ten.FullName(),
 		Name:        req.Name,
 		Description: req.Description,
 		Templates:   templateUUIDs,
@@ -281,6 +303,13 @@ func (h *PromptHandler) UpdateCollection(c *gin.Context) {
 		templateUUIDs = append(templateUUIDs, id)
 	}
 
+	ten := tenant.FromContext(c.Request.Context())
+	if ten == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	existing.TenantID = ten.FullName()
 	existing.Name = req.Name
 	existing.Description = req.Description
 	existing.Templates = templateUUIDs

@@ -19,6 +19,7 @@ const (
 // Skill defines a Skill Collection aggregate grouping tools and server bindings.
 type Skill struct {
 	ID           uuid.UUID       `json:"id"`
+	TenantID     string          `json:"tenant_id"`
 	Name         string          `json:"name"`
 	Description  string          `json:"description"`
 	MCPServers   []uuid.UUID     `json:"mcp_servers"`
@@ -33,6 +34,9 @@ type Skill struct {
 func (s Skill) Validate() error {
 	if s.ID == uuid.Nil {
 		return errors.New("id is required")
+	}
+	if s.TenantID == "" {
+		return errors.New("tenant id is required")
 	}
 	if s.Name == "" {
 		return errors.New("name is required")

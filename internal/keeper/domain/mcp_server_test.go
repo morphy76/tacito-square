@@ -11,6 +11,7 @@ import (
 func TestMCPServer_Validation(t *testing.T) {
 	validStdio := MCPServer{
 		ID:          uuid.New(),
+		TenantID:    "test-tenant.com",
 		Name:        "sqlite-mcp",
 		Description: "SQLite MCP server",
 		Transport:   TransportStdio,
@@ -24,6 +25,7 @@ func TestMCPServer_Validation(t *testing.T) {
 
 	validSSE := MCPServer{
 		ID:          uuid.New(),
+		TenantID:    "test-tenant.com",
 		Name:        "github-mcp",
 		Description: "GitHub MCP server",
 		Transport:   TransportSSE,
@@ -45,6 +47,15 @@ func TestMCPServer_Validation(t *testing.T) {
 		{
 			name:   "Valid sse server",
 			server: validSSE,
+		},
+		{
+			name: "Missing Tenant ID",
+			server: func() MCPServer {
+				s := validStdio
+				s.TenantID = ""
+				return s
+			}(),
+			wantErr: "tenant id is required",
 		},
 		{
 			name: "Missing ID",

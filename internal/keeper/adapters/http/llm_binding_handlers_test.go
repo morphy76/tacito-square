@@ -12,9 +12,19 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/morphy76/tacito-square/internal/keeper/domain"
+	"github.com/morphy76/tacito-square/internal/shared/tenant"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
+
+func testTenantMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ten, _ := tenant.New("test-tenant.com", "")
+		ctx := tenant.ContextWithTenant(c.Request.Context(), ten)
+		c.Request = c.Request.WithContext(ctx)
+		c.Next()
+	}
+}
 
 // MockLLMBindingRepository is a mock implementation of outbound.LLMBindingRepository.
 type MockLLMBindingRepository struct {
@@ -68,6 +78,7 @@ func TestLLMBindingHandlers_Create(t *testing.T) {
 		handler := NewLLMBindingHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.POST("/api/v1/llm-bindings", handler.Create)
 
 		payload := map[string]interface{}{
@@ -105,6 +116,7 @@ func TestLLMBindingHandlers_Create(t *testing.T) {
 		handler := NewLLMBindingHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.POST("/api/v1/llm-bindings", handler.Create)
 
 		// Missing name and invalid URL
@@ -134,6 +146,7 @@ func TestLLMBindingHandlers_GetByID(t *testing.T) {
 		handler := NewLLMBindingHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.GET("/api/v1/llm-bindings/:id", handler.GetByID)
 
 		id := uuid.New()
@@ -166,6 +179,7 @@ func TestLLMBindingHandlers_GetByID(t *testing.T) {
 		handler := NewLLMBindingHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.GET("/api/v1/llm-bindings/:id", handler.GetByID)
 
 		id := uuid.New()
@@ -188,6 +202,7 @@ func TestLLMBindingHandlers_List(t *testing.T) {
 		handler := NewLLMBindingHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.GET("/api/v1/llm-bindings", handler.List)
 
 		bindings := []*domain.LLMBinding{
@@ -225,6 +240,7 @@ func TestLLMBindingHandlers_Update(t *testing.T) {
 		handler := NewLLMBindingHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.PUT("/api/v1/llm-bindings/:id", handler.Update)
 
 		id := uuid.New()
@@ -281,6 +297,7 @@ func TestLLMBindingHandlers_Delete(t *testing.T) {
 		handler := NewLLMBindingHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.DELETE("/api/v1/llm-bindings/:id", handler.Delete)
 
 		id := uuid.New()

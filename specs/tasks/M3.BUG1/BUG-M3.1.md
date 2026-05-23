@@ -3,7 +3,7 @@
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
 | ID            | BUG-M3.1                                                           |
-| Status        | OPEN                                                               |
+| Status        | CLOSED                                                             |
 | Severity      | HIGH                                                               |
 | Milestone     | M3 — Keeper Core                                                   |
 | Affects       | TASK-M3.1.1, TASK-M3.2.1, TASK-M3.3.1, TASK-M3.4.1              |
@@ -28,27 +28,36 @@ Keeper is classified as a **Shared Multi-Tenant Unit** under SPEC-NFR-MULTITENAN
 
 ## Impact
 
-1. **Data isolation broken**: any authenticated (or unauthenticated) request to `GET /api/v1/llm-bindings`, `/mcp-servers`, `/skills`, `/prompts`, or `/prompt-collections` returns records belonging to **all** tenants, with no filtering boundary.
-2. **Write operations unscoped**: `POST` and `PUT` handlers persist new entities without stamping a tenant owner, making future retrospective scoping impossible without a destructive migration.
-3. **Compliance failure**: the system cannot satisfy SPEC-NFR-MULTITENANCY AC-2 ("if tenant resolution fails or is missing, requests must be rejected") because the domain layer provides no anchor for tenant-aware enforcement.
+1. **Data isolation broken**: any request to `GET /api/v1/llm-bindings`, `/mcp-servers`, `/skills`, `/prompts`, or `/prompt-collections` returned records belonging to **all** tenants.
+2. **Write operations unscoped**: `POST` and `PUT` handlers persisted new entities without stamping a tenant owner.
+3. **Compliance failure**: the system could not satisfy SPEC-NFR-MULTITENANCY AC-2.
 
-## Root Cause
+## Expected Behaviour (per SPEC-NFR-MULTITENANCY & User Feedback)
 
-The M3.1–M3.4 implementation tasks (TASK-M3.1.1, TASK-M3.2.1, TASK-M3.3.1, TASK-M3.4.1) specified domain model and repository boundaries without cross-referencing SPEC-NFR-MULTITENANCY. The NFR was accepted before M3 started but was not propagated as a constraint into the per-entity task acceptance criteria, leaving `tenant_id` out of the data model and all downstream artefacts (Postgres migrations, repository queries, HTTP handlers).
-
-## Expected Behaviour (per SPEC-NFR-MULTITENANCY)
-
-1. Every aggregate root persisted by Keeper MUST carry a non-nullable `TenantID uuid.UUID` field that is stamped at creation time from the resolved tenant context.
-2. All repository list and get queries MUST include a `WHERE tenant_id = $1` predicate derived from `context.Context`.
-3. All repository create and update operations MUST set `tenant_id` from the tenant context, never from the request payload.
-4. HTTP handlers MUST propagate the tenant resolved by the authentication middleware into `context.Context` before calling any application or repository port.
-5. Postgres schema migrations for all five tables MUST add a non-nullable `tenant_id UUID NOT NULL` column with an index.
+1. Every aggregate root persisted by Keeper MUST carry a non-nullable `TenantID string` field, representing the canonical `FullName()` format (`tenantId-subscriptionId`), which is stamped at creation/update time from the resolved tenant context.
+2. All repository list, get, update, and delete queries MUST be strictly filtered by `tenant_id` derived from `context.Context`.
+3. HTTP handlers MUST validate and propagate the tenant resolved by the extensible `TenantResolutionMiddleware` into `context.Context`.
+4. Postgres schema migrations (edited directly since the database is not yet provisioned in production) MUST add non-nullable `tenant_id VARCHAR(255) NOT NULL` columns, indexes, and composite uniqueness constraints qualified by `(tenant_id, name)`.
 
 ## Acceptance Criteria
 
-1. `LLMBinding`, `MCPServer`, `Skill`, `PromptTemplate`, and `PromptCollection` each declare a `TenantID uuid.UUID` field.
+1. `LLMBinding`, `MCPServer`, `Skill`, `PromptTemplate`, and `PromptCollection` each declare a `TenantID string` field.
 2. Repository adapters for all five entities filter every read query by `tenant_id` extracted from the Go `context.Context`.
-3. Repository create adapters for all five entities set `tenant_id` from the Go `context.Context`; the field is never accepted from HTTP request payloads.
-4. New Postgres migration scripts add `tenant_id UUID NOT NULL` plus a covering index to each affected table.
+3. Repository create/update adapters set `tenant_id` from the Go `context.Context`; the field is never accepted from HTTP request payloads.
+4. Postgres migrations add `tenant_id VARCHAR(255) NOT NULL` plus composite unique bounds to each affected table.
 5. Domain unit tests and repository integration tests assert tenant scoping: a record created under tenant A is not visible to tenant B.
 6. No existing passing tests are broken by the fix.
+
+## Resolution Details
+
+The bug is fully resolved via TDD (Red-Green-Refactor) approach:
+1. **Domain Models**: Added `TenantID string` to all five aggregates, with strict invariant validation checks in `Validate()` rejecting empty tenant strings.
+2. **HTTP Middleware**: Implemented an extensible policy pattern using a `TenantResolver` interface, equipped with a standard `HeaderTenantResolver` policy reading `X-Tenant-ID` and `X-Subscription-ID` headers.
+3. **Controller & Handler Updates**: Stamped HTTP request payloads with resolved tenant credentials before checking invariants, preserving clean decoupling.
+4. **Direct DB Migrations**: Modified migrations `00001` through `00004` directly, introducing `tenant_id VARCHAR(255) NOT NULL` columns, indexes, and composite uniqueness bounds (unique per-tenant names).
+5. **Context-Scoped Repository Adapters**: Updated all database repositories to fetch tenant IDs from context and securely segregate reads, writes, joins, and relationships.
+6. **Multi-Tenant Integration Tests**: Added robust subtests asserting comprehensive multi-tenant isolation, data visibility, and composite uniqueness boundaries across all five aggregates.
+
+Closed: 2026-05-23
+Approver: USER (approved implementation_plan.md)
+

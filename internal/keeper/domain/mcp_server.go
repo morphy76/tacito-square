@@ -28,6 +28,7 @@ const (
 // MCPServer defines the configuration needed for an agent to communicate with an MCP Server.
 type MCPServer struct {
 	ID            uuid.UUID         `json:"id"`
+	TenantID      string            `json:"tenant_id"`
 	Name          string            `json:"name"`
 	Description   string            `json:"description"`
 	Transport     Transport         `json:"transport"`
@@ -45,6 +46,9 @@ type MCPServer struct {
 func (s MCPServer) Validate() error {
 	if s.ID == uuid.Nil {
 		return errors.New("id is required")
+	}
+	if s.TenantID == "" {
+		return errors.New("tenant id is required")
 	}
 	if s.Name == "" {
 		return errors.New("name is required")

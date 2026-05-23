@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/morphy76/tacito-square/internal/keeper/domain"
+	"github.com/morphy76/tacito-square/internal/shared/tenant"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +20,9 @@ func TestPromptRepository_Lifecycle(t *testing.T) {
 		t.Skip("Skipping PostgreSQL integration test: TS_DATABASE_URL not set")
 	}
 
-	ctx := context.Background()
+	ten, _ := tenant.New("test-tenant.com", "")
+	ctx := tenant.ContextWithTenant(context.Background(), ten)
+
 	pool, err := pgxpool.New(ctx, dbURL)
 	require.NoError(t, err)
 	defer pool.Close()
@@ -163,6 +166,139 @@ func TestPromptRepository_Lifecycle(t *testing.T) {
 		assert.Equal(t, "test-greeting", resolved[0].Name)
 		assert.Equal(t, 2, resolved[0].Version)
 		assert.Equal(t, pt1_v2.ID, resolved[0].ID)
+	})
+
+	t.Run("Multi-Tenant Isolation", func(t *testing.T) {
+		tenA, _ := tenant.New("tenant-a.com", "")
+		ctxA := tenant.ContextWithTenant(context.Background(), tenA)
+
+		tenB, _ := tenant.New("tenant-b.com", "")
+		ctxB := tenant.ContextWithTenant(context.Background(), tenB)
+
+		// Clean up previous records for these tenants to prevent conflict with parallel tests
+		_, _ = pool.Exec(ctx, "DELETE FROM prompt_collections WHERE tenant_id IN ($1, $2)", tenA.FullName(), tenB.FullName())
+		_, _ = pool.Exec(ctx, "DELETE FROM prompt_templates WHERE tenant_id IN ($1, $2)", tenA.FullName(), tenB.FullName())
+
+		ptA := &domain.PromptTemplate{
+			ID:        uuid.New(),
+			Name:      "test-tenant-scoped",
+			Content:   "Content A",
+			Role:      domain.PromptRoleSystem,
+			Version:   1,
+			Status:    domain.PromptStatusActive,
+			CreatedAt: time.Now().UTC(),
+		}
+
+		ptB := &domain.PromptTemplate{
+			ID:        uuid.New(),
+			Name:      "test-tenant-scoped", // same name
+			Content:   "Content B",
+			Role:      domain.PromptRoleSystem,
+			Version:   1,
+			Status:    domain.PromptStatusActive,
+			CreatedAt: time.Now().UTC(),
+		}
+
+		// Create under Tenant A
+		err := repo.CreateTemplate(ctxA, ptA)
+		require.NoError(t, err)
+
+		// Create under Tenant B (should succeed because of uniqueness constraints per tenant!)
+		err = repo.CreateTemplate(ctxB, ptB)
+		require.NoError(t, err)
+
+		// Tenant B should not see Tenant A's template by ID
+		_, err = repo.GetTemplateByID(ctxB, ptA.ID)
+		assert.Error(t, err)
+
+		// Tenant A should not see Tenant B's template by ID
+		_, err = repo.GetTemplateByID(ctxA, ptB.ID)
+		assert.Error(t, err)
+
+		// GetLatestTemplateByName under Tenant A should return ptA
+		fetchedA, err := repo.GetLatestTemplateByName(ctxA, "test-tenant-scoped")
+		require.NoError(t, err)
+		assert.Equal(t, ptA.ID, fetchedA.ID)
+
+		// GetLatestTemplateByName under Tenant B should return ptB
+		fetchedB, err := repo.GetLatestTemplateByName(ctxB, "test-tenant-scoped")
+		require.NoError(t, err)
+		assert.Equal(t, ptB.ID, fetchedB.ID)
+
+		// ListTemplates under Tenant A should contain ptA but NOT ptB
+		listA, err := repo.ListTemplates(ctxA)
+		require.NoError(t, err)
+		foundA := false
+		foundBInA := false
+		for _, pt := range listA {
+			if pt.ID == ptA.ID {
+				foundA = true
+			}
+			if pt.ID == ptB.ID {
+				foundBInA = true
+			}
+		}
+		assert.True(t, foundA)
+		assert.False(t, foundBInA)
+
+		// Collection multi-tenancy
+		collA := &domain.PromptCollection{
+			ID:          uuid.New(),
+			Name:        "test-tenant-coll",
+			Description: "Tenant A Coll",
+			Templates:   []uuid.UUID{ptA.ID},
+			CreatedAt:   time.Now().UTC(),
+			UpdatedAt:   time.Now().UTC(),
+		}
+
+		collB := &domain.PromptCollection{
+			ID:          uuid.New(),
+			Name:        "test-tenant-coll", // same name
+			Description: "Tenant B Coll",
+			Templates:   []uuid.UUID{ptB.ID},
+			CreatedAt:   time.Now().UTC(),
+			UpdatedAt:   time.Now().UTC(),
+		}
+
+		// Create under Tenant A
+		err = repo.CreateCollection(ctxA, collA)
+		require.NoError(t, err)
+
+		// Create under Tenant B
+		err = repo.CreateCollection(ctxB, collB)
+		require.NoError(t, err)
+
+		// Tenant B should not see Tenant A's collection by ID
+		_, err = repo.GetCollectionByID(ctxB, collA.ID)
+		assert.Error(t, err)
+
+		// ListCollections under Tenant A should contain collA but NOT collB
+		collsA, err := repo.ListCollections(ctxA)
+		require.NoError(t, err)
+		foundCollA := false
+		foundCollBInA := false
+		for _, col := range collsA {
+			if col.ID == collA.ID {
+				foundCollA = true
+			}
+			if col.ID == collB.ID {
+				foundCollBInA = true
+			}
+		}
+		assert.True(t, foundCollA)
+		assert.False(t, foundCollBInA)
+
+		// Resolve collection prompts isolation
+		resolvedA, err := repo.ResolveCollectionPrompts(ctxA, collA.ID)
+		require.NoError(t, err)
+		assert.Len(t, resolvedA, 1)
+		assert.Equal(t, ptA.ID, resolvedA[0].ID)
+
+		// Clean up
+		_ = repo.DeleteCollection(ctxA, collA.ID)
+		_ = repo.DeleteCollection(ctxB, collB.ID)
+		_ = repo.DeleteTemplate(ctxA, ptA.ID)
+		_ = repo.DeleteTemplate(ctxB, ptB.ID)
 	})
 
 	t.Run("Delete Collection", func(t *testing.T) {

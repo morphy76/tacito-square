@@ -86,6 +86,7 @@ func TestSkillHandlers_Create(t *testing.T) {
 		handler := NewSkillHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.POST("/api/v1/skills", handler.Create)
 
 		mcpID := uuid.New()
@@ -120,6 +121,7 @@ func TestSkillHandlers_Create(t *testing.T) {
 		handler := NewSkillHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.POST("/api/v1/skills", handler.Create)
 
 		payload := map[string]interface{}{
@@ -146,6 +148,7 @@ func TestSkillHandlers_GetByID(t *testing.T) {
 		handler := NewSkillHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.GET("/api/v1/skills/:id", handler.GetByID)
 
 		id := uuid.New()
@@ -177,6 +180,7 @@ func TestSkillHandlers_List(t *testing.T) {
 		handler := NewSkillHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.GET("/api/v1/skills", handler.List)
 
 		skills := []*domain.Skill{
@@ -206,6 +210,7 @@ func TestSkillHandlers_Update(t *testing.T) {
 		handler := NewSkillHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.PUT("/api/v1/skills/:id", handler.Update)
 
 		id := uuid.New()
@@ -242,6 +247,7 @@ func TestSkillHandlers_Delete(t *testing.T) {
 		handler := NewSkillHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.DELETE("/api/v1/skills/:id", handler.Delete)
 
 		id := uuid.New()
@@ -264,6 +270,7 @@ func TestSkillHandlers_AgentAssociations(t *testing.T) {
 		handler := NewSkillHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.POST("/api/v1/agents/:agent_id/skills/:skill_id", handler.AttachSkillToAgent)
 
 		agentID := uuid.New()
@@ -284,6 +291,7 @@ func TestSkillHandlers_AgentAssociations(t *testing.T) {
 		handler := NewSkillHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.DELETE("/api/v1/agents/:agent_id/skills/:skill_id", handler.DetachSkillFromAgent)
 
 		agentID := uuid.New()

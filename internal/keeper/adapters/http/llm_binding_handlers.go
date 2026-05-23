@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/keeper/domain"
+	"github.com/morphy76/tacito-square/internal/shared/tenant"
 )
 
 // LLMBindingHandler implements the HTTP controllers for LLM bindings CRUD operations.
@@ -53,6 +54,12 @@ func (h *LLMBindingHandler) Create(c *gin.Context) {
 		return
 	}
 
+	ten := tenant.FromContext(c.Request.Context())
+	if ten == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
 	temp := 0.7
 	if req.DefaultTemperature != nil {
 		temp = *req.DefaultTemperature
@@ -68,6 +75,7 @@ func (h *LLMBindingHandler) Create(c *gin.Context) {
 
 	binding := &domain.LLMBinding{
 		ID:                 uuid.New(),
+		TenantID:           ten.FullName(),
 		Name:               req.Name,
 		Description:        req.Description,
 		Provider:           domain.Provider(req.Provider),
@@ -157,6 +165,13 @@ func (h *LLMBindingHandler) Update(c *gin.Context) {
 		timeout = req.TimeoutSeconds
 	}
 
+	ten := tenant.FromContext(c.Request.Context())
+	if ten == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	existing.TenantID = ten.FullName()
 	existing.Name = req.Name
 	existing.Description = req.Description
 	existing.Provider = domain.Provider(req.Provider)

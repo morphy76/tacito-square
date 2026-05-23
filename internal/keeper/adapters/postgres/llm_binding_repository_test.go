@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/morphy76/tacito-square/internal/keeper/domain"
+	"github.com/morphy76/tacito-square/internal/shared/tenant"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +20,9 @@ func TestLLMBindingRepository_Lifecycle(t *testing.T) {
 		t.Skip("Skipping PostgreSQL integration test: TS_DATABASE_URL not set")
 	}
 
-	ctx := context.Background()
+	ten, _ := tenant.New("test-tenant.com", "")
+	ctx := tenant.ContextWithTenant(context.Background(), ten)
+
 	pool, err := pgxpool.New(ctx, dbURL)
 	require.NoError(t, err)
 	defer pool.Close()
@@ -90,6 +93,89 @@ func TestLLMBindingRepository_Lifecycle(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "Updated description", fetched.Description)
 		assert.Equal(t, 0.5, fetched.DefaultTemperature)
+	})
+
+	t.Run("Multi-Tenant Isolation", func(t *testing.T) {
+		tenA, _ := tenant.New("tenant-a.com", "")
+		ctxA := tenant.ContextWithTenant(context.Background(), tenA)
+
+		tenB, _ := tenant.New("tenant-b.com", "")
+		ctxB := tenant.ContextWithTenant(context.Background(), tenB)
+
+		// Clean up previous records for these tenants to prevent conflict with parallel tests
+		_, _ = pool.Exec(ctx, "DELETE FROM llm_bindings WHERE tenant_id IN ($1, $2)", tenA.FullName(), tenB.FullName())
+
+		bindingA := &domain.LLMBinding{
+			ID:                 uuid.New(),
+			Name:               "test-tenant-scoped",
+			Description:        "Tenant A GPT-4",
+			Provider:           domain.ProviderOpenAI,
+			APIBaseURL:         "https://api.openai.com/v1",
+			APIKeySecretRef:    "test-secret-key",
+			DefaultModel:       "gpt-4",
+			Status:             domain.StatusActive,
+			CreatedAt:          time.Now().UTC(),
+			UpdatedAt:          time.Now().UTC(),
+		}
+
+		bindingB := &domain.LLMBinding{
+			ID:                 uuid.New(),
+			Name:               "test-tenant-scoped", // same name
+			Description:        "Tenant B GPT-4",
+			Provider:           domain.ProviderOpenAI,
+			APIBaseURL:         "https://api.openai.com/v1",
+			APIKeySecretRef:    "test-secret-key",
+			DefaultModel:       "gpt-4",
+			Status:             domain.StatusActive,
+			CreatedAt:          time.Now().UTC(),
+			UpdatedAt:          time.Now().UTC(),
+		}
+
+		// Create under Tenant A
+		err := repo.Create(ctxA, bindingA)
+		require.NoError(t, err)
+
+		// Create under Tenant B (should succeed because of (tenant_id, name) composite unique constraint!)
+		err = repo.Create(ctxB, bindingB)
+		require.NoError(t, err)
+
+		// Tenant B should not see Tenant A's record by ID
+		_, err = repo.GetByID(ctxB, bindingA.ID)
+		assert.Error(t, err)
+
+		// Tenant A should not see Tenant B's record by ID
+		_, err = repo.GetByID(ctxA, bindingB.ID)
+		assert.Error(t, err)
+
+		// GetByName under Tenant A should return bindingA
+		fetchedA, err := repo.GetByName(ctxA, "test-tenant-scoped")
+		require.NoError(t, err)
+		assert.Equal(t, bindingA.ID, fetchedA.ID)
+
+		// GetByName under Tenant B should return bindingB
+		fetchedB, err := repo.GetByName(ctxB, "test-tenant-scoped")
+		require.NoError(t, err)
+		assert.Equal(t, bindingB.ID, fetchedB.ID)
+
+		// List under Tenant A should contain bindingA but NOT bindingB
+		listA, err := repo.List(ctxA)
+		require.NoError(t, err)
+		foundA := false
+		foundBInA := false
+		for _, b := range listA {
+			if b.ID == bindingA.ID {
+				foundA = true
+			}
+			if b.ID == bindingB.ID {
+				foundBInA = true
+			}
+		}
+		assert.True(t, foundA)
+		assert.False(t, foundBInA)
+
+		// Clean up
+		_ = repo.Delete(ctxA, bindingA.ID)
+		_ = repo.Delete(ctxB, bindingB.ID)
 	})
 
 	t.Run("Delete LLM Binding", func(t *testing.T) {

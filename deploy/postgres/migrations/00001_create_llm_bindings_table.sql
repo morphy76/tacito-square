@@ -2,7 +2,8 @@
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS llm_bindings (
     id UUID PRIMARY KEY,
-    name VARCHAR(255) UNIQUE NOT NULL,
+    tenant_id VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
     description TEXT,
     provider VARCHAR(50) NOT NULL,
     api_base_url VARCHAR(500) NOT NULL,
@@ -13,9 +14,10 @@ CREATE TABLE IF NOT EXISTS llm_bindings (
     timeout_seconds INTEGER NOT NULL,
     status VARCHAR(50) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    CONSTRAINT unique_llm_bindings_tenant_name UNIQUE (tenant_id, name)
 );
-CREATE INDEX IF NOT EXISTS idx_llm_bindings_name ON llm_bindings(name);
+CREATE INDEX IF NOT EXISTS idx_llm_bindings_tenant_id ON llm_bindings(tenant_id);
 -- +goose StatementEnd
 
 -- +goose Down

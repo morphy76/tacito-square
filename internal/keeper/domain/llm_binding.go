@@ -30,6 +30,7 @@ const (
 // LLMBinding defines the connection configuration for an integrated LLM provider.
 type LLMBinding struct {
 	ID                 uuid.UUID     `json:"id"`
+	TenantID           string        `json:"tenant_id"`
 	Name               string        `json:"name"`
 	Description        string        `json:"description"`
 	Provider           Provider      `json:"provider"`
@@ -48,6 +49,9 @@ type LLMBinding struct {
 func (b LLMBinding) Validate() error {
 	if b.ID == uuid.Nil {
 		return errors.New("id is required")
+	}
+	if b.TenantID == "" {
+		return errors.New("tenant id is required")
 	}
 	if b.Name == "" {
 		return errors.New("name is required")

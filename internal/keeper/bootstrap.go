@@ -52,6 +52,7 @@ func NewServer(pool *pgxpool.Pool) *gin.Engine {
 		promptHandler := httpAdapter.NewPromptHandler(promptRepo)
 
 		v1 := r.Group("/api/v1")
+		v1.Use(httpAdapter.TenantResolutionMiddleware(httpAdapter.NewHeaderTenantResolver()))
 		{
 			v1.POST("/llm-bindings", handler.Create)
 			v1.GET("/llm-bindings", handler.List)

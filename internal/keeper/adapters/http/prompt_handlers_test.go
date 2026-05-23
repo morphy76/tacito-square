@@ -110,6 +110,7 @@ func TestPromptHandlers_CreateTemplate(t *testing.T) {
 		handler := NewPromptHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.POST("/api/v1/prompts", handler.CreateTemplate)
 
 		payload := map[string]interface{}{
@@ -146,6 +147,7 @@ func TestPromptHandlers_UpdateTemplate(t *testing.T) {
 		handler := NewPromptHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.PUT("/api/v1/prompts/:id", handler.UpdateTemplate)
 
 		id := uuid.New()
@@ -195,6 +197,7 @@ func TestPromptHandlers_Collections(t *testing.T) {
 		handler := NewPromptHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.POST("/api/v1/prompt-collections", handler.CreateCollection)
 
 		tID := uuid.New()
@@ -221,6 +224,7 @@ func TestPromptHandlers_Collections(t *testing.T) {
 		handler := NewPromptHandler(repo)
 
 		r := gin.New()
+		r.Use(testTenantMiddleware())
 		r.GET("/api/v1/prompt-collections/:id/resolve", handler.ResolveCollection)
 
 		id := uuid.New()
