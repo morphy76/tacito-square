@@ -51,7 +51,7 @@
 |----|-------|--------|-----------|------|
 | SPEC-FR-M3.1 | LLM Provider Bindings & CRUD API | IMPLEMENTED | keeper | [SPEC-FR-M3.1](functional/M3/SPEC-FR-M3.1.md) |
 | SPEC-FR-M3.2 | MCP Servers & CRUD API | IMPLEMENTED | keeper | [SPEC-FR-M3.2](functional/M3/SPEC-FR-M3.2.md) |
-| SPEC-FR-M3.3 | Skill Collections & CRUD API | ACCEPTED | keeper | [SPEC-FR-M3.3](functional/M3/SPEC-FR-M3.3.md) |
+| SPEC-FR-M3.3 | Skill Collections & CRUD API | IMPLEMENTED | keeper | [SPEC-FR-M3.3](functional/M3/SPEC-FR-M3.3.md) |
 | SPEC-FR-M3.4 | Prompt Collections & CRUD API | ACCEPTED | keeper | [SPEC-FR-M3.4](functional/M3/SPEC-FR-M3.4.md) |
 | SPEC-FR-M3.5 | Agent Domain Model & CRUD API | DRAFT | keeper | [SPEC-FR-M3.5](functional/M3/SPEC-FR-M3.5.md) |
 | SPEC-FR-M3.6 | Community Domain Model & CRUD API | DRAFT | keeper | [SPEC-FR-M3.6](functional/M3/SPEC-FR-M3.6.md) |

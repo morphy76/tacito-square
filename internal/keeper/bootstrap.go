@@ -45,6 +45,9 @@ func NewServer(pool *pgxpool.Pool) *gin.Engine {
 		mcpRepo := postgres.NewMCPServerRepository(pool)
 		mcpHandler := httpAdapter.NewMCPServerHandler(mcpRepo)
 
+		skillRepo := postgres.NewSkillRepository(pool)
+		skillHandler := httpAdapter.NewSkillHandler(skillRepo)
+
 		v1 := r.Group("/api/v1")
 		{
 			v1.POST("/llm-bindings", handler.Create)
@@ -58,6 +61,15 @@ func NewServer(pool *pgxpool.Pool) *gin.Engine {
 			v1.GET("/mcp-servers/:id", mcpHandler.GetByID)
 			v1.PUT("/mcp-servers/:id", mcpHandler.Update)
 			v1.DELETE("/mcp-servers/:id", mcpHandler.Delete)
+
+			v1.POST("/skills", skillHandler.Create)
+			v1.GET("/skills", skillHandler.List)
+			v1.GET("/skills/:id", skillHandler.GetByID)
+			v1.PUT("/skills/:id", skillHandler.Update)
+			v1.DELETE("/skills/:id", skillHandler.Delete)
+
+			v1.POST("/agents/:agent_id/skills/:skill_id", skillHandler.AttachSkillToAgent)
+			v1.DELETE("/agents/:agent_id/skills/:skill_id", skillHandler.DetachSkillFromAgent)
 		}
 	}
 

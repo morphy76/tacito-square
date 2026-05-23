@@ -5,3 +5,6 @@
 - Gateway agent for user interaction streaming reasoning and answers outbound and receiving inbound. This agent can act as a central hub for managing user interactions, allowing for real-time streaming of reasoning processes and answers. It can handle incoming requests from users, process them using the appropriate agents or tools, and then stream the results back to the users in a timely manner. This can enhance the user experience by providing faster responses and enabling more dynamic interactions with the system.
 - E2E automated functional tests to validate the entire system, including the UI, the API, and the K8s operator. These tests should be written in a way that they can be run as part of the CI/CD pipeline and should be able to be run locally by developers. They should also be able to be run in a Docker container and should be able to be run on a Kubernetes cluster. The tests should be written in a way that they can be run in parallel and should be able to be run in a non-blocking manner. The tests should be written in a way that they can be run in a parallel manner and should be able to be run in a non-blocking manner.
 - MCP discovery when mcp added to agent to limit the agent to certain tools
+- Skillsets to aggregate multiple skills
+- Online skillsets, e.g. from github
+- how RAG and websearch fit into the picture

@@ -26,3 +26,18 @@ type MCPServerRepository interface {
 	Update(ctx context.Context, server *domain.MCPServer) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
+
+// SkillRepository defines the persistent storage operations for Skill Collections.
+type SkillRepository interface {
+	Create(ctx context.Context, skill *domain.Skill) error
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.Skill, error)
+	GetByName(ctx context.Context, name string) (*domain.Skill, error)
+	List(ctx context.Context) ([]*domain.Skill, error)
+	Update(ctx context.Context, skill *domain.Skill) error
+	Delete(ctx context.Context, id uuid.UUID) error
+
+	// Agent-Skill associations
+	AttachSkillToAgent(ctx context.Context, agentID uuid.UUID, skillID uuid.UUID) error
+	DetachSkillFromAgent(ctx context.Context, agentID uuid.UUID, skillID uuid.UUID) error
+	ListSkillsByAgent(ctx context.Context, agentID uuid.UUID) ([]*domain.Skill, error)
+}

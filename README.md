@@ -80,6 +80,15 @@ The Keeper component exposes a REST API for configuration management, lifecycle 
 *   `PUT /api/v1/mcp-servers/:id` — Update configuration properties of an existing MCP server profile.
 *   `DELETE /api/v1/mcp-servers/:id` — Unregister an MCP server profile.
 
+### Skill Collections (`/api/v1/skills` & `/api/v1/agents`)
+*   `POST /api/v1/skills` — Create a new Skill Collection.
+*   `GET /api/v1/skills` — List all configured Skill Collections.
+*   `GET /api/v1/skills/:id` — Retrieve details of a specific Skill Collection by UUID.
+*   `PUT /api/v1/skills/:id` — Update configuration properties of an existing Skill Collection.
+*   `DELETE /api/v1/skills/:id` — Remove a Skill Collection.
+*   `POST /api/v1/agents/:agent_id/skills/:skill_id` — Attach a Skill Collection to an Agent.
+*   `DELETE /api/v1/agents/:agent_id/skills/:skill_id` — Detach a Skill Collection from an Agent.
+
 ## Technology Stack
 
 | Layer | Technology |
