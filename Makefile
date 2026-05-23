@@ -21,6 +21,7 @@ GOLINT         := $(shell which golangci-lint 2>/dev/null || echo "$(shell go en
 NERDCTL_ADDR   := /var/run/docker/containerd/containerd.sock
 
 .PHONY: all build test test-integration test-operator test-e2e test-bench test-race test-contract lint generate \
+        escape-analysis escape-agent escape-keeper escape-operator escape-bff \
         docker-build docker-push \
         docker-load docker-load-agent docker-load-keeper docker-load-operator docker-load-bff \
         helm-template helm-install helm-uninstall \
@@ -79,6 +80,26 @@ lint: ## Run linter
 
 generate: ## Run code generation (mocks, CRDs, etc.)
 	$(GO) generate ./...
+
+## —— Escape Analysis ——————————————————————————————————————
+
+escape-analysis: escape-agent escape-keeper escape-operator escape-bff ## Run escape analysis for all components
+
+escape-agent: ## Run Go escape analysis for the agent component
+	@echo "=== Escape Analysis: agent ==="
+	$(GO) build -gcflags="-m" ./cmd/agent/... ./internal/agent/... 2>&1 | grep -E "^(\./)?(cmd|internal|pkg)/" || true
+
+escape-keeper: ## Run Go escape analysis for the keeper component
+	@echo "=== Escape Analysis: keeper ==="
+	$(GO) build -gcflags="-m" ./cmd/keeper/... ./internal/keeper/... 2>&1 | grep -E "^(\./)?(cmd|internal|pkg)/" || true
+
+escape-operator: ## Run Go escape analysis for the operator component
+	@echo "=== Escape Analysis: operator ==="
+	$(GO) build -gcflags="-m" ./cmd/operator/... ./internal/operator/... 2>&1 | grep -E "^(\./)?(cmd|internal|pkg)/" || true
+
+escape-bff: ## Run Go escape analysis for the bff component
+	@echo "=== Escape Analysis: bff ==="
+	$(GO) build -gcflags="-m" ./cmd/bff/... ./internal/bff/... 2>&1 | grep -E "^(\./)?(cmd|internal|pkg)/" || true
 
 ## —— Docker —————————————————————————————————————————————
 
