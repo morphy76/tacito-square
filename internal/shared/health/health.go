@@ -8,8 +8,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog"
 )
 
 // Checker is a named dependency health check function.
@@ -22,13 +25,19 @@ type Checker struct {
 type Probe struct {
 	checkers []Checker
 	timeout  time.Duration
+	logger   zerolog.Logger
+
+	mu             sync.Mutex
+	previousFailed map[string]bool
 }
 
 // NewProbe creates a new health probe with the given dependency checkers.
 func NewProbe(timeout time.Duration, checkers ...Checker) *Probe {
 	return &Probe{
-		checkers: checkers,
-		timeout:  timeout,
+		checkers:       checkers,
+		timeout:        timeout,
+		logger:         zerolog.New(os.Stdout).With().Timestamp().Logger(),
+		previousFailed: make(map[string]bool),
 	}
 }
 
@@ -66,12 +75,35 @@ func (p *Probe) ReadyzHandler(w http.ResponseWriter, r *http.Request) {
 		go func(idx int, c Checker) {
 			defer wg.Done()
 			err := c.Check(ctx)
+
+			p.mu.Lock()
+			wasFailed := p.previousFailed[c.Name]
 			if err != nil {
 				results[idx] = CheckResult{Name: c.Name, Status: "unhealthy", Error: err.Error()}
 				allHealthy = false
+
+				// Log only on transition to failed (no noisy logging)
+				if !wasFailed {
+					p.previousFailed[c.Name] = true
+					p.logger.Error().
+						Str("component", "health").
+						Str("dependency", c.Name).
+						Err(err).
+						Msg("Dependency transitioned to UNHEALTHY")
+				}
 			} else {
 				results[idx] = CheckResult{Name: c.Name, Status: "healthy"}
+
+				// Log exactly once on transition back to success
+				if wasFailed {
+					p.previousFailed[c.Name] = false
+					p.logger.Info().
+						Str("component", "health").
+						Str("dependency", c.Name).
+						Msg("Dependency recovered to HEALTHY")
+				}
 			}
+			p.mu.Unlock()
 		}(i, checker)
 	}
 
@@ -91,6 +123,7 @@ func (p *Probe) ReadyzHandler(w http.ResponseWriter, r *http.Request) {
 		Checks: results,
 	})
 }
+
 
 // --- Common dependency checkers ---
 

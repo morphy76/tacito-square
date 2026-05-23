@@ -23,7 +23,7 @@ spec:
           env:
             - name: TS_KEEPER_LOG_LEVEL
               value: {{ .Values.keeper.config.logLevel | quote }}
-            - name: TS_KEEPER_DB_URL
+            - name: TS_KEEPER_DATABASE_URL
               value: {{ .Values.keeper.config.db.url | quote }}
             - name: TS_KEEPER_DB_USERNAME
               value: {{ .Values.keeper.config.db.username | quote }}

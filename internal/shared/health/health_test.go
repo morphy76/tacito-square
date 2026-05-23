@@ -114,3 +114,32 @@ func TestHTTPChecker_UnhealthyEndpoint(t *testing.T) {
 
 	assert.Error(t, err)
 }
+
+func TestProbe_TransitionStateTracking(t *testing.T) {
+	isHealthy := false
+	probe := NewProbe(time.Second, Checker{
+		Name: "test-dep",
+		Check: func(ctx context.Context) error {
+			if !isHealthy {
+				return fmt.Errorf("still failing")
+			}
+			return nil
+		},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+
+	// 1. Initial Failure
+	w1 := httptest.NewRecorder()
+	probe.ReadyzHandler(w1, req)
+	assert.Equal(t, http.StatusServiceUnavailable, w1.Code)
+	assert.True(t, probe.previousFailed["test-dep"], "should mark test-dep as failed")
+
+	// 2. Recovery transition
+	isHealthy = true
+	w2 := httptest.NewRecorder()
+	probe.ReadyzHandler(w2, req)
+	assert.Equal(t, http.StatusOK, w2.Code)
+	assert.False(t, probe.previousFailed["test-dep"], "should clear test-dep failed mark after recovery")
+}
+

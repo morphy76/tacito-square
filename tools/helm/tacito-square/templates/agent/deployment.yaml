@@ -41,7 +41,7 @@ spec:
               value: {{ .Values.agent.config.s3.bucket | quote }}
             - name: TS_AGENT_S3_REGION
               value: {{ .Values.agent.config.s3.region | quote }}
-            - name: TS_AGENT_CA_CERT_PATH
+            - name: TS_AGENT_TLS_CA_CERT_PATH
               value: {{ .Values.agent.config.tls.caCertPath | quote }}
           livenessProbe:
             httpGet:

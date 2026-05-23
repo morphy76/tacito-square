@@ -34,7 +34,7 @@ spec:
               value: {{ .Values.bff.config.oidc.issuer | quote }}
             - name: TS_BFF_OIDC_CLIENT_ID
               value: {{ .Values.bff.config.oidc.clientId | quote }}
-            - name: TS_BFF_CA_CERT_PATH
+            - name: TS_BFF_TLS_CA_CERT_PATH
               value: {{ .Values.bff.config.tls.caCertPath | quote }}
           livenessProbe:
             httpGet:

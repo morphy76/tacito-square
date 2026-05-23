@@ -84,11 +84,24 @@ func main() {
 	var pool *pgxpool.Pool
 	if dbURL != "" {
 		var err error
-		logger.Info().Msg("connecting to postgres")
 		cfg, err := pgxpool.ParseConfig(dbURL)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("failed to parse database url")
 		}
+
+		// Override connection credentials from standard env vars if set (Helm chart compatibility)
+		if dbUser := os.Getenv("TS_KEEPER_DB_USERNAME"); dbUser != "" {
+			cfg.ConnConfig.User = dbUser
+		} else if dbUser := os.Getenv("TS_DATABASE_USERNAME"); dbUser != "" {
+			cfg.ConnConfig.User = dbUser
+		}
+
+		if dbPassword := os.Getenv("TS_KEEPER_DB_PASSWORD"); dbPassword != "" {
+			cfg.ConnConfig.Password = dbPassword
+		} else if dbPassword := os.Getenv("TS_DATABASE_PASSWORD"); dbPassword != "" {
+			cfg.ConnConfig.Password = dbPassword
+		}
+
 		cfg.ConnConfig.Tracer = observability.NewPgxQueryTracer()
 
 		pool, err = pgxpool.NewWithConfig(ctx, cfg)

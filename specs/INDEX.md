@@ -71,7 +71,7 @@
 | BUG-M3.6 | Synchronous Blocking Side-Effects in Agent-Community Assignment | OPEN | HIGH | [BUG-M3.6](tasks/M3.BUG6/BUG-M3.6.md) |
 | BUG-M3.7 | Health Probes Missing NATS and Redis Dependency Checks | OPEN | MEDIUM | [BUG-M3.7](tasks/M3.BUG7/BUG-M3.7.md) |
 | BUG-M3.8 | Stack Dependencies & Migration Framework Deviations | OPEN | MEDIUM | [BUG-M3.8](tasks/M3.BUG8/BUG-M3.8.md) |
-| BUG-M3.9 | Misaligned Environment Variable Bindings for Keeper Deployment in Helm Chart | OPEN | HIGH | [BUG-M3.9](tasks/M3.BUG9/BUG-M3.9.md) |
+| BUG-M3.9 | Misaligned Environment Variable Bindings for Keeper Deployment in Helm Chart | CLOSED | HIGH | [BUG-M3.9](tasks/M3.BUG9/BUG-M3.9.md) |
 
 ### M4: Operator Core
 

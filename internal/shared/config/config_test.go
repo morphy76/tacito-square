@@ -30,3 +30,19 @@ func TestLoadFromFile_InvalidPath(t *testing.T) {
 	_, err := LoadFromFile("TS_TEST", "/nonexistent/config.yaml")
 	assert.Error(t, err)
 }
+
+func TestLoad_CustomEnvironmentBindings(t *testing.T) {
+	os.Setenv("TS_KEEPER_DB_URL", "postgres://test-url")
+	os.Setenv("TS_KEEPER_CA_CERT_PATH", "/etc/ssl/ca.crt")
+	defer func() {
+		os.Unsetenv("TS_KEEPER_DB_URL")
+		os.Unsetenv("TS_KEEPER_CA_CERT_PATH")
+	}()
+
+	v, err := Load("TS_KEEPER")
+	require.NoError(t, err)
+
+	assert.Equal(t, "postgres://test-url", v.GetString("database.url"))
+	assert.Equal(t, "/etc/ssl/ca.crt", v.GetString("tls.caCertPath"))
+}
+

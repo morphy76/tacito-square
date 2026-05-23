@@ -28,7 +28,7 @@ spec:
               value: {{ .Values.keeper.config.logLevel | quote }}
             - name: TS_KEEPER_PORT
               value: {{ .Values.keeper.config.port | toString | quote }}
-            - name: TS_KEEPER_DB_URL
+            - name: TS_KEEPER_DATABASE_URL
               value: {{ .Values.keeper.config.db.url | quote }}
             - name: TS_KEEPER_DB_USERNAME
               value: {{ .Values.keeper.config.db.username | quote }}
@@ -53,7 +53,7 @@ spec:
               value: {{ .Values.keeper.config.s3.bucket | quote }}
             - name: TS_KEEPER_S3_REGION
               value: {{ .Values.keeper.config.s3.region | quote }}
-            - name: TS_KEEPER_CA_CERT_PATH
+            - name: TS_KEEPER_TLS_CA_CERT_PATH
               value: {{ .Values.keeper.config.tls.caCertPath | quote }}
           livenessProbe:
             httpGet:
@@ -69,3 +69,14 @@ spec:
             periodSeconds: 10
           resources:
             {{- toYaml .Values.keeper.resources | nindent 12 }}
+          volumeMounts:
+            - name: ca-cert
+              mountPath: /etc/ssl/tacito
+              readOnly: true
+      volumes:
+        - name: ca-cert
+          configMap:
+            name: {{ .Values.global.caTrustBundle.configMapName }}
+            items:
+              - key: {{ .Values.global.caTrustBundle.key }}
+                path: ca.crt

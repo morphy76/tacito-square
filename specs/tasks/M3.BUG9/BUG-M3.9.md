@@ -3,7 +3,7 @@
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
 | ID            | BUG-M3.9                                                           |
-| Status        | OPEN                                                               |
+| Status        | CLOSED                                                             |
 | Severity      | HIGH                                                               |
 | Milestone     | M3 — Keeper Core                                                   |
 | Affects       | tools/helm/tacito-square/templates/keeper/deployment.yaml, tools/helm/tacito-square/templates/keeper/migration-job.yaml |
@@ -63,3 +63,27 @@ The root cause is a misalignment between the environment variables injected by t
 1. Running a dry-run or template render on the Helm chart (e.g., `make helm-template`) shows environment variables mapping exactly to Keeper's Viper configuration bindings (`TS_KEEPER_DATABASE_URL`).
 2. The pre-install `migration-job` successfully resolves the database connection URL and runs schema migrations.
 3. The Keeper container starts and connects to PostgreSQL when deployed via Helm.
+
+## Resolution Details
+
+This issue was successfully resolved using a robust, defense-in-depth approach following strict Test-Driven Development (TDD) and NFR compliance guidelines:
+
+1. **Test-Driven Configuration Bindings (Go Codebase)**:
+   *   **Red Phase**: Added a comprehensive unit test `TestLoad_CustomEnvironmentBindings` in `internal/shared/config/config_test.go` asserting that custom environment variable fallbacks (like `TS_KEEPER_DB_URL` and `TS_KEEPER_CA_CERT_PATH`) bind successfully to standard nested keys (`database.url` and `tls.caCertPath`). Verified the test failed as expected.
+   *   **Green Phase**: Enhanced `Load()` inside `internal/shared/config/config.go` to explicitly bind alternative environment variables:
+       *   Binds `database.url` to `prefix_DB_URL` dynamically if set, otherwise defaulting to the clean `prefix_DATABASE_URL`.
+       *   Binds `tls.caCertPath` to `prefix_CA_CERT_PATH` dynamically if set, otherwise defaulting to the clean `prefix_TLS_CA_CERT_PATH`.
+   *   **Refactor Phase**: Verified that all package and repository unit tests run and pass without regressions.
+2. **Helm Templates Alignment**:
+   *   Aligned Keeper's Helm template variables inside `tools/helm/tacito-square/templates/keeper/deployment.yaml` and `migration-job.yaml` to inject the standardized `TS_KEEPER_DATABASE_URL` and `TS_KEEPER_TLS_CA_CERT_PATH` environment keys.
+   *   Aligned Agent and BFF Helm templates (`tools/helm/tacito-square/templates/agent/deployment.yaml` and `tools/helm/tacito-square/templates/bff/deployment.yaml`) to inject `TS_AGENT_TLS_CA_CERT_PATH` and `TS_BFF_TLS_CA_CERT_PATH` respectively.
+3. **Database Credentials Injection**:
+   *   Fixed a critical deployment bug where database connection credentials (`TS_KEEPER_DB_USERNAME` and `TS_KEEPER_DB_PASSWORD`) injected from secrets in Helm charts were ignored by `pgxpool`.
+   *   Updated `cmd/keeper/main.go` to parse the connection URL, and then dynamically inject the user and password variables programmatically into the parsed connection pool configuration config block if they are set in the environment.
+4. **Transition Health Logging (Diagnosis Enrichment)**:
+   *   Added TDD-tested transition state tracking (`TestProbe_TransitionStateTracking` in `health_test.go`) to the readiness `/readyz` probe library.
+   *   Enabled non-noisy, structured JSON transition logging using `zerolog` inside `internal/shared/health/health.go`. When a dependency (like PostgreSQL) fails, a single, detailed error log is generated on `stdout`. A single informational recovery log is produced when the dependency comes back online. Normal, healthy checks run silently without polluting production logs.
+5. **Robustness Asserted**: The keeper component now dynamically supports both old legacy/custom parameters and standardized parameters seamlessly, making Helm deployments robust and simple to troubleshoot.
+
+Closed: 2026-05-24
+Approver: USER (approved bug fix)
