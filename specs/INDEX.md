@@ -56,7 +56,7 @@
 | SPEC-FR-M3.4 | Prompt Collections & CRUD API | IMPLEMENTED | keeper | [SPEC-FR-M3.4](functional/M3/SPEC-FR-M3.4.md) |
 | SPEC-FR-M3.5 | Agent Domain Model & CRUD API | IMPLEMENTED | keeper | [SPEC-FR-M3.5](functional/M3/SPEC-FR-M3.5.md) |
 | SPEC-FR-M3.6 | Community Domain Model & CRUD API | IMPLEMENTED | keeper | [SPEC-FR-M3.6](functional/M3/SPEC-FR-M3.6.md) |
-| SPEC-FR-M3.7 | Agent-Community Assignment | DRAFT | keeper | [SPEC-FR-M3.7](functional/M3/SPEC-FR-M3.7.md) |
+| SPEC-FR-M3.7 | Agent-Community Assignment | ACCEPTED | keeper | [SPEC-FR-M3.7](functional/M3/SPEC-FR-M3.7.md) |
 | SPEC-FR-M3.8 | PostgreSQL Persistence & Migrations | DRAFT | keeper | [SPEC-FR-M3.8](functional/M3/SPEC-FR-M3.8.md) |
 | SPEC-FR-M3.9 | OIDC/JWT Authentication | DRAFT | keeper, shared | [SPEC-FR-M3.9](functional/M3/SPEC-FR-M3.9.md) |
 | SPEC-FR-M3.10 | Agent CRD Submission | DRAFT | keeper | [SPEC-FR-M3.10](functional/M3/SPEC-FR-M3.10.md) |
@@ -170,3 +170,4 @@
 | SPEC-FR-M3.4 | 2 | Domain/Persistence & HTTP API Boundaries | [tasks/M3.4/](tasks/M3.4/) |
 | SPEC-FR-M3.5 | 2 | Domain/Persistence & HTTP API Boundaries | [tasks/M3.5/](tasks/M3.5/) |
 | SPEC-FR-M3.6 | 3 | Domain/Persistence & HTTP API Boundaries | [tasks/M3.6/](tasks/M3.6/) |
+| SPEC-FR-M3.7 | 3 | Domain, HTTP API Boundaries & Observability | [tasks/M3.7/](tasks/M3.7/) |

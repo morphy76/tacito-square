@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M3.7                                |
-| Status        | DRAFT                                       |
+| Status        | ACCEPTED                                    |
 | Milestone     | M3                                          |
 | Component     | keeper                                      |
 | Depends On    | SPEC-FR-M3.5, SPEC-FR-M3.6                  |
