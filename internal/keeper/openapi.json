@@ -31,6 +31,10 @@
     {
       "name": "agent-config/agents",
       "description": "Bounded context: Agent Configuration \u00b7 Templates. Manages agent templates used to deploy autonomous units at runtime."
+    },
+    {
+      "name": "community/communities",
+      "description": "Bounded context: Community \u00b7 Logical Boundaries. Manages logical networking and isolation domains for agents."
     }
   ],
   "paths": {
@@ -1628,6 +1632,247 @@
           }
         }
       }
+    },
+    "/communities": {
+      "post": {
+        "summary": "Create a new Community logical boundary",
+        "operationId": "createCommunity",
+        "tags": [
+          "community/communities"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCommunityRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successfully created Community",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Community"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List all Communities",
+        "operationId": "listCommunities",
+        "tags": [
+          "community/communities"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of Communities",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Community"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/communities/{id}": {
+      "get": {
+        "summary": "Retrieve a specific Community by ID",
+        "operationId": "getCommunity",
+        "tags": [
+          "community/communities"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Community",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Community details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Community"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Community not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a Community by ID",
+        "operationId": "updateCommunity",
+        "tags": [
+          "community/communities"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Community",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCommunityRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully updated Community",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Community"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Community not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a Community by ID",
+        "operationId": "deleteCommunity",
+        "tags": [
+          "community/communities"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Community",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully deleted Community"
+          },
+          "404": {
+            "description": "Community not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2608,6 +2853,125 @@
               "defined",
               "assigned",
               "active",
+              "terminated"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "community_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "CreateCommunityRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "topology"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "sales-agents-net"
+          },
+          "description": {
+            "type": "string"
+          },
+          "topology": {
+            "type": "string",
+            "enum": [
+              "hub-spoke"
+            ]
+          },
+          "configuration": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "UpdateCommunityRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "topology"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "sales-agents-net"
+          },
+          "description": {
+            "type": "string"
+          },
+          "topology": {
+            "type": "string",
+            "enum": [
+              "hub-spoke"
+            ]
+          },
+          "configuration": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "active",
+              "suspended",
+              "terminated"
+            ]
+          }
+        }
+      },
+      "Community": {
+        "type": "object",
+        "required": [
+          "id",
+          "tenant_id",
+          "name",
+          "topology",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "topology": {
+            "type": "string",
+            "enum": [
+              "hub-spoke"
+            ]
+          },
+          "configuration": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "active",
+              "suspended",
               "terminated"
             ]
           },

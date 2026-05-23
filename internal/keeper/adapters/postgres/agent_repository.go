@@ -65,11 +65,11 @@ func (r *AgentRepository) Create(ctx context.Context, a *domain.Agent) error {
 	}
 
 	query := `INSERT INTO agents (
-		id, tenant_id, name, description, brain, short_term_memory, long_term_memory, prompt_template, mcp_clients, status, created_at, updated_at
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
+		id, tenant_id, name, description, brain, short_term_memory, long_term_memory, prompt_template, mcp_clients, status, community_id, created_at, updated_at
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`
 
 	_, err = tx.Exec(ctx, query,
-		a.ID, a.TenantID, a.Name, a.Description, brainJSON, shortTermJSON, longTermJSON, promptTemplate, mcpClientsJSON, a.Status, a.CreatedAt, a.UpdatedAt,
+		a.ID, a.TenantID, a.Name, a.Description, brainJSON, shortTermJSON, longTermJSON, promptTemplate, mcpClientsJSON, a.Status, a.CommunityID, a.CreatedAt, a.UpdatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("insert agent: %w", err)
@@ -93,7 +93,7 @@ func (r *AgentRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Ag
 	}
 
 	query := `SELECT 
-		id, tenant_id, name, description, brain, short_term_memory, long_term_memory, prompt_template, mcp_clients, status, created_at, updated_at
+		id, tenant_id, name, description, brain, short_term_memory, long_term_memory, prompt_template, mcp_clients, status, community_id, created_at, updated_at
 	FROM agents WHERE id = $1 AND tenant_id = $2`
 
 	var a domain.Agent
@@ -104,7 +104,7 @@ func (r *AgentRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Ag
 	var promptTemplate *uuid.UUID
 
 	err := r.pool.QueryRow(ctx, query, id, ten.FullName()).Scan(
-		&a.ID, &a.TenantID, &a.Name, &a.Description, &brainBytes, &shortBytes, &longBytes, &promptTemplate, &mcpBytes, &a.Status, &a.CreatedAt, &a.UpdatedAt,
+		&a.ID, &a.TenantID, &a.Name, &a.Description, &brainBytes, &shortBytes, &longBytes, &promptTemplate, &mcpBytes, &a.Status, &a.CommunityID, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -147,7 +147,7 @@ func (r *AgentRepository) GetByName(ctx context.Context, name string) (*domain.A
 	}
 
 	query := `SELECT 
-		id, tenant_id, name, description, brain, short_term_memory, long_term_memory, prompt_template, mcp_clients, status, created_at, updated_at
+		id, tenant_id, name, description, brain, short_term_memory, long_term_memory, prompt_template, mcp_clients, status, community_id, created_at, updated_at
 	FROM agents WHERE name = $1 AND tenant_id = $2`
 
 	var a domain.Agent
@@ -158,7 +158,7 @@ func (r *AgentRepository) GetByName(ctx context.Context, name string) (*domain.A
 	var promptTemplate *uuid.UUID
 
 	err := r.pool.QueryRow(ctx, query, name, ten.FullName()).Scan(
-		&a.ID, &a.TenantID, &a.Name, &a.Description, &brainBytes, &shortBytes, &longBytes, &promptTemplate, &mcpBytes, &a.Status, &a.CreatedAt, &a.UpdatedAt,
+		&a.ID, &a.TenantID, &a.Name, &a.Description, &brainBytes, &shortBytes, &longBytes, &promptTemplate, &mcpBytes, &a.Status, &a.CommunityID, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -201,7 +201,7 @@ func (r *AgentRepository) List(ctx context.Context) ([]*domain.Agent, error) {
 	}
 
 	query := `SELECT 
-		id, tenant_id, name, description, brain, short_term_memory, long_term_memory, prompt_template, mcp_clients, status, created_at, updated_at
+		id, tenant_id, name, description, brain, short_term_memory, long_term_memory, prompt_template, mcp_clients, status, community_id, created_at, updated_at
 	FROM agents WHERE tenant_id = $1 ORDER BY name ASC`
 
 	rows, err := r.pool.Query(ctx, query, ten.FullName())
@@ -220,7 +220,7 @@ func (r *AgentRepository) List(ctx context.Context) ([]*domain.Agent, error) {
 		var promptTemplate *uuid.UUID
 
 		err := rows.Scan(
-			&a.ID, &a.TenantID, &a.Name, &a.Description, &brainBytes, &shortBytes, &longBytes, &promptTemplate, &mcpBytes, &a.Status, &a.CreatedAt, &a.UpdatedAt,
+			&a.ID, &a.TenantID, &a.Name, &a.Description, &brainBytes, &shortBytes, &longBytes, &promptTemplate, &mcpBytes, &a.Status, &a.CommunityID, &a.CreatedAt, &a.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan agent: %w", err)
@@ -294,12 +294,12 @@ func (r *AgentRepository) Update(ctx context.Context, a *domain.Agent) error {
 	}
 
 	query := `UPDATE agents SET 
-		name = $1, description = $2, brain = $3, short_term_memory = $4, long_term_memory = $5, prompt_template = $6, mcp_clients = $7, status = $8, updated_at = $9
-	WHERE id = $10 AND tenant_id = $11`
+		name = $1, description = $2, brain = $3, short_term_memory = $4, long_term_memory = $5, prompt_template = $6, mcp_clients = $7, status = $8, community_id = $9, updated_at = $10
+	WHERE id = $11 AND tenant_id = $12`
 
 	a.UpdatedAt = time.Now().UTC()
 	_, err = tx.Exec(ctx, query,
-		a.Name, a.Description, brainJSON, shortTermJSON, longTermJSON, promptTemplate, mcpClientsJSON, a.Status, a.UpdatedAt, a.ID, a.TenantID,
+		a.Name, a.Description, brainJSON, shortTermJSON, longTermJSON, promptTemplate, mcpClientsJSON, a.Status, a.CommunityID, a.UpdatedAt, a.ID, a.TenantID,
 	)
 	if err != nil {
 		return fmt.Errorf("update agent: %w", err)

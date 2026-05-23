@@ -58,6 +58,7 @@ type Agent struct {
 	PromptTemplate  uuid.UUID             `json:"prompt_template"`
 	MCPClients      []MCPClientConfig     `json:"mcp_clients"`
 	Status          AgentStatus           `json:"status"`
+	CommunityID     *uuid.UUID            `json:"community_id"`
 	CreatedAt       time.Time             `json:"created_at"`
 	UpdatedAt       time.Time             `json:"updated_at"`
 }

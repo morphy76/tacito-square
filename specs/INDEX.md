@@ -55,7 +55,7 @@
 | SPEC-FR-M3.3 | Skill Collections & CRUD API | IMPLEMENTED | keeper | [SPEC-FR-M3.3](functional/M3/SPEC-FR-M3.3.md) |
 | SPEC-FR-M3.4 | Prompt Collections & CRUD API | IMPLEMENTED | keeper | [SPEC-FR-M3.4](functional/M3/SPEC-FR-M3.4.md) |
 | SPEC-FR-M3.5 | Agent Domain Model & CRUD API | IMPLEMENTED | keeper | [SPEC-FR-M3.5](functional/M3/SPEC-FR-M3.5.md) |
-| SPEC-FR-M3.6 | Community Domain Model & CRUD API | ACCEPTED | keeper | [SPEC-FR-M3.6](functional/M3/SPEC-FR-M3.6.md) |
+| SPEC-FR-M3.6 | Community Domain Model & CRUD API | IMPLEMENTED | keeper | [SPEC-FR-M3.6](functional/M3/SPEC-FR-M3.6.md) |
 | SPEC-FR-M3.7 | Agent-Community Assignment | DRAFT | keeper | [SPEC-FR-M3.7](functional/M3/SPEC-FR-M3.7.md) |
 | SPEC-FR-M3.8 | PostgreSQL Persistence & Migrations | DRAFT | keeper | [SPEC-FR-M3.8](functional/M3/SPEC-FR-M3.8.md) |
 | SPEC-FR-M3.9 | OIDC/JWT Authentication | DRAFT | keeper, shared | [SPEC-FR-M3.9](functional/M3/SPEC-FR-M3.9.md) |

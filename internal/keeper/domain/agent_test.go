@@ -149,6 +149,15 @@ func TestAgent_Validation(t *testing.T) {
 			}(),
 			wantErr: "mcp client server id is required",
 		},
+		{
+			name: "Valid Agent with Community ID",
+			agent: func() Agent {
+				a := validAgent
+				cid := uuid.New()
+				a.CommunityID = &cid
+				return a
+			}(),
+		},
 	}
 
 	for _, tt := range tests {

@@ -54,6 +54,9 @@ func NewServer(pool *pgxpool.Pool) *gin.Engine {
 		agentRepo := postgres.NewAgentRepository(pool)
 		agentHandler := httpAdapter.NewAgentHandler(agentRepo)
 
+		communityRepo := postgres.NewCommunityRepository(pool)
+		communityHandler := httpAdapter.NewCommunityHandler(communityRepo)
+
 		v1 := r.Group("/api/v1")
 		v1.Use(httpAdapter.TenantResolutionMiddleware(httpAdapter.NewHeaderTenantResolver()))
 		{
@@ -96,6 +99,12 @@ func NewServer(pool *pgxpool.Pool) *gin.Engine {
 			v1.GET("/agents/:id", agentHandler.GetByID)
 			v1.PUT("/agents/:id", agentHandler.Update)
 			v1.DELETE("/agents/:id", agentHandler.Delete)
+
+			v1.POST("/communities", communityHandler.Create)
+			v1.GET("/communities", communityHandler.List)
+			v1.GET("/communities/:id", communityHandler.GetByID)
+			v1.PUT("/communities/:id", communityHandler.Update)
+			v1.DELETE("/communities/:id", communityHandler.Delete)
 		}
 	}
 

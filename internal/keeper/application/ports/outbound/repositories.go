@@ -73,4 +73,14 @@ type AgentRepository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
+// CommunityRepository defines the persistent storage operations for Community configurations.
+type CommunityRepository interface {
+	Create(ctx context.Context, community *domain.Community) error
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.Community, error)
+	GetByName(ctx context.Context, name string) (*domain.Community, error)
+	List(ctx context.Context) ([]*domain.Community, error)
+	Update(ctx context.Context, community *domain.Community) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
 
