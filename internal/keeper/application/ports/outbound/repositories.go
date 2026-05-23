@@ -41,3 +41,25 @@ type SkillRepository interface {
 	DetachSkillFromAgent(ctx context.Context, agentID uuid.UUID, skillID uuid.UUID) error
 	ListSkillsByAgent(ctx context.Context, agentID uuid.UUID) ([]*domain.Skill, error)
 }
+
+// PromptRepository defines the persistent storage operations for Prompt Templates and Prompt Collections.
+type PromptRepository interface {
+	// PromptTemplate CRUD
+	CreateTemplate(ctx context.Context, template *domain.PromptTemplate) error
+	GetTemplateByID(ctx context.Context, id uuid.UUID) (*domain.PromptTemplate, error)
+	GetLatestTemplateByName(ctx context.Context, name string) (*domain.PromptTemplate, error)
+	ListTemplates(ctx context.Context) ([]*domain.PromptTemplate, error)
+	ListTemplateVersions(ctx context.Context, name string) ([]*domain.PromptTemplate, error)
+	DeleteTemplate(ctx context.Context, id uuid.UUID) error
+
+	// PromptCollection CRUD
+	CreateCollection(ctx context.Context, collection *domain.PromptCollection) error
+	GetCollectionByID(ctx context.Context, id uuid.UUID) (*domain.PromptCollection, error)
+	ListCollections(ctx context.Context) ([]*domain.PromptCollection, error)
+	UpdateCollection(ctx context.Context, collection *domain.PromptCollection) error
+	DeleteCollection(ctx context.Context, id uuid.UUID) error
+
+	// Resolution helper
+	ResolveCollectionPrompts(ctx context.Context, collectionID uuid.UUID) ([]*domain.PromptTemplate, error)
+}
+

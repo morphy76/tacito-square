@@ -48,6 +48,9 @@ func NewServer(pool *pgxpool.Pool) *gin.Engine {
 		skillRepo := postgres.NewSkillRepository(pool)
 		skillHandler := httpAdapter.NewSkillHandler(skillRepo)
 
+		promptRepo := postgres.NewPromptRepository(pool)
+		promptHandler := httpAdapter.NewPromptHandler(promptRepo)
+
 		v1 := r.Group("/api/v1")
 		{
 			v1.POST("/llm-bindings", handler.Create)
@@ -70,6 +73,19 @@ func NewServer(pool *pgxpool.Pool) *gin.Engine {
 
 			v1.POST("/agents/:agent_id/skills/:skill_id", skillHandler.AttachSkillToAgent)
 			v1.DELETE("/agents/:agent_id/skills/:skill_id", skillHandler.DetachSkillFromAgent)
+
+			v1.POST("/prompts", promptHandler.CreateTemplate)
+			v1.GET("/prompts", promptHandler.ListTemplates)
+			v1.GET("/prompts/:id", promptHandler.GetTemplateByID)
+			v1.PUT("/prompts/:id", promptHandler.UpdateTemplate)
+			v1.DELETE("/prompts/:id", promptHandler.DeleteTemplate)
+
+			v1.POST("/prompt-collections", promptHandler.CreateCollection)
+			v1.GET("/prompt-collections", promptHandler.ListCollections)
+			v1.GET("/prompt-collections/:id", promptHandler.GetCollectionByID)
+			v1.PUT("/prompt-collections/:id", promptHandler.UpdateCollection)
+			v1.DELETE("/prompt-collections/:id", promptHandler.DeleteCollection)
+			v1.GET("/prompt-collections/:id/resolve", promptHandler.ResolveCollection)
 		}
 	}
 

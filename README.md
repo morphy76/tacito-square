@@ -89,6 +89,19 @@ The Keeper component exposes a REST API for configuration management, lifecycle 
 *   `POST /api/v1/agents/:agent_id/skills/:skill_id` — Attach a Skill Collection to an Agent.
 *   `DELETE /api/v1/agents/:agent_id/skills/:skill_id` — Detach a Skill Collection from an Agent.
 
+### Prompt Collections (`/api/v1/prompts` & `/api/v1/prompt-collections`)
+*   `POST /api/v1/prompts` — Create a new Prompt Template (starts at version 1).
+*   `GET /api/v1/prompts` — List unique Prompt Templates (highest version of each name).
+*   `GET /api/v1/prompts/:id` — Retrieve a specific Prompt Template version details by UUID.
+*   `PUT /api/v1/prompts/:id` — Update/revision a Prompt Template (automatically creates a new immutable version in history).
+*   `DELETE /api/v1/prompts/:id` — Delete a specific Prompt Template version by UUID.
+*   `POST /api/v1/prompt-collections` — Create a new Prompt Collection.
+*   `GET /api/v1/prompt-collections` — List all configured Prompt Collections.
+*   `GET /api/v1/prompt-collections/:id` — Retrieve details of a specific Prompt Collection by UUID.
+*   `PUT /api/v1/prompt-collections/:id` — Update Prompt Collection properties and template assignments.
+*   `DELETE /api/v1/prompt-collections/:id` — Remove a Prompt Collection.
+*   `GET /api/v1/prompt-collections/:id/resolve` — Resolve all assigned prompts to their latest active version.
+
 ## Technology Stack
 
 | Layer | Technology |
