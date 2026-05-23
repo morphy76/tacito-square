@@ -86,6 +86,9 @@ func (h *CommunityHandler) Create(c *gin.Context) {
 // GetByID handles GET /api/v1/communities/:id
 func (h *CommunityHandler) GetByID(c *gin.Context) {
 	idStr := c.Param("id")
+	if idStr == "" {
+		idStr = c.Param("community_id")
+	}
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid uuid"})
@@ -114,6 +117,9 @@ func (h *CommunityHandler) List(c *gin.Context) {
 // Update handles PUT /api/v1/communities/:id
 func (h *CommunityHandler) Update(c *gin.Context) {
 	idStr := c.Param("id")
+	if idStr == "" {
+		idStr = c.Param("community_id")
+	}
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid uuid"})
@@ -169,6 +175,9 @@ func (h *CommunityHandler) Update(c *gin.Context) {
 // Delete handles DELETE /api/v1/communities/:id
 func (h *CommunityHandler) Delete(c *gin.Context) {
 	idStr := c.Param("id")
+	if idStr == "" {
+		idStr = c.Param("community_id")
+	}
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid uuid"})

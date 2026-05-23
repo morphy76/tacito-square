@@ -61,6 +61,16 @@ func (m *MockAgentRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return args.Error(0)
 }
 
+func (m *MockAgentRepository) AssignToCommunity(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error {
+	args := m.Called(ctx, agentID, communityID)
+	return args.Error(0)
+}
+
+func (m *MockAgentRepository) UnassignFromCommunity(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error {
+	args := m.Called(ctx, agentID, communityID)
+	return args.Error(0)
+}
+
 func TestAgentHandlers_Create(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

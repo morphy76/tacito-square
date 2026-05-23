@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	httpAdapter "github.com/morphy76/tacito-square/internal/keeper/adapters/http"
 	"github.com/morphy76/tacito-square/internal/keeper/adapters/postgres"
+	"github.com/morphy76/tacito-square/internal/keeper/domain"
 	"github.com/morphy76/tacito-square/internal/shared/health"
 	"github.com/morphy76/tacito-square/internal/shared/observability"
 )
@@ -25,6 +26,7 @@ func NewServer(pool *pgxpool.Pool) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(observability.MetricsMiddleware())
+	r.Use(observability.LoggingMiddleware())
 
 	var checkers []health.Checker
 	if pool != nil {
@@ -64,6 +66,8 @@ func NewServer(pool *pgxpool.Pool) *gin.Engine {
 
 	communityRepo := postgres.NewCommunityRepository(pool)
 	communityHandler := httpAdapter.NewCommunityHandler(communityRepo)
+
+	assignmentHandler := httpAdapter.NewAssignmentHandler(agentRepo, &noOpCRDCoordinator{})
 
 	v1 := r.Group("/api/v1")
 	v1.Use(httpAdapter.TenantResolutionMiddleware(httpAdapter.NewHeaderTenantResolver()))
@@ -111,10 +115,24 @@ func NewServer(pool *pgxpool.Pool) *gin.Engine {
 
 		v1.POST("/communities", communityHandler.Create)
 		v1.GET("/communities", communityHandler.List)
-		v1.GET("/communities/:id", communityHandler.GetByID)
-		v1.PUT("/communities/:id", communityHandler.Update)
-		v1.DELETE("/communities/:id", communityHandler.Delete)
+		v1.GET("/communities/:community_id", communityHandler.GetByID)
+		v1.PUT("/communities/:community_id", communityHandler.Update)
+		v1.DELETE("/communities/:community_id", communityHandler.Delete)
+
+		v1.POST("/communities/:community_id/agents/:agent_id", assignmentHandler.Assign)
+		v1.DELETE("/communities/:community_id/agents/:agent_id", assignmentHandler.Unassign)
 	}
 
 	return r
 }
+
+type noOpCRDCoordinator struct{}
+
+func (n *noOpCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *domain.Agent) error {
+	return nil
+}
+
+func (n *noOpCRDCoordinator) TeardownAgentCRD(ctx context.Context, agent *domain.Agent) error {
+	return nil
+}
+

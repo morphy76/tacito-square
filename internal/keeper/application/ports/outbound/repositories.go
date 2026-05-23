@@ -71,6 +71,9 @@ type AgentRepository interface {
 	List(ctx context.Context) ([]*domain.Agent, error)
 	Update(ctx context.Context, agent *domain.Agent) error
 	Delete(ctx context.Context, id uuid.UUID) error
+
+	AssignToCommunity(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error
+	UnassignFromCommunity(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error
 }
 
 // CommunityRepository defines the persistent storage operations for Community configurations.

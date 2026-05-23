@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | TASK-M3.7.3                                 |
-| Status        | DRAFT                                       |
+| Status        | CLOSED                                      |
 | Spec          | SPEC-FR-M3.7                                |
 | Depends On    | TASK-M3.7.2                                 |
 

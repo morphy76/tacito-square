@@ -155,8 +155,30 @@ func TestAgent_Validation(t *testing.T) {
 				a := validAgent
 				cid := uuid.New()
 				a.CommunityID = &cid
+				a.Status = AgentStatusAssigned
 				return a
 			}(),
+		},
+		{
+			name: "Assigned status with missing Community ID",
+			agent: func() Agent {
+				a := validAgent
+				a.Status = AgentStatusAssigned
+				a.CommunityID = nil
+				return a
+			}(),
+			wantErr: "unassigned agent must not have assigned status",
+		},
+		{
+			name: "Defined status with Community ID",
+			agent: func() Agent {
+				a := validAgent
+				cid := uuid.New()
+				a.CommunityID = &cid
+				a.Status = AgentStatusDefined
+				return a
+			}(),
+			wantErr: "assigned agent must not have defined status",
 		},
 	}
 

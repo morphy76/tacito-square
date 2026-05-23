@@ -77,6 +77,12 @@ func (a Agent) Validate() error {
 	if a.Status != AgentStatusDefined && a.Status != AgentStatusAssigned && a.Status != AgentStatusActive && a.Status != AgentStatusTerminated {
 		return errors.New("invalid agent status")
 	}
+	if a.CommunityID != nil && a.Status == AgentStatusDefined {
+		return errors.New("assigned agent must not have defined status")
+	}
+	if a.CommunityID == nil && a.Status == AgentStatusAssigned {
+		return errors.New("unassigned agent must not have assigned status")
+	}
 
 	// Brain validations
 	if a.Brain.Model == "" {

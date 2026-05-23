@@ -366,3 +366,102 @@ func (r *AgentRepository) saveSkills(ctx context.Context, tx pgx.Tx, agentID uui
 	}
 	return nil
 }
+
+// AssignToCommunity binds an Agent template to a Community within a transaction-safe context.
+func (r *AgentRepository) AssignToCommunity(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return errors.New("tenant resolution failed")
+	}
+
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// 1. Verify community exists and belongs to the tenant, and is active/created
+	var commStatus string
+	err = tx.QueryRow(ctx, `SELECT status FROM communities WHERE id = $1 AND tenant_id = $2`, communityID, ten.FullName()).Scan(&commStatus)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("community not found: %s", communityID)
+		}
+		return fmt.Errorf("check community: %w", err)
+	}
+	if commStatus != "active" && commStatus != "created" {
+		return fmt.Errorf("community status is %s, must be active or created", commStatus)
+	}
+
+	// 2. Verify agent exists, belongs to tenant, and is not already assigned
+	var currentCommID *uuid.UUID
+	var agentStatus string
+	err = tx.QueryRow(ctx, `SELECT community_id, status FROM agents WHERE id = $1 AND tenant_id = $2 FOR UPDATE`, agentID, ten.FullName()).Scan(&currentCommID, &agentStatus)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("agent not found: %s", agentID)
+		}
+		return fmt.Errorf("check agent: %w", err)
+	}
+
+	if currentCommID != nil {
+		return fmt.Errorf("agent already assigned to community: %s", currentCommID)
+	}
+
+	// 3. Update agent assignment
+	updatedAt := time.Now().UTC()
+	_, err = tx.Exec(ctx, `UPDATE agents SET community_id = $1, status = $2, updated_at = $3 WHERE id = $4 AND tenant_id = $5`,
+		communityID, string(domain.AgentStatusAssigned), updatedAt, agentID, ten.FullName())
+	if err != nil {
+		return fmt.Errorf("update agent assignment: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+// UnassignFromCommunity removes an Agent template assignment from a Community.
+func (r *AgentRepository) UnassignFromCommunity(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return errors.New("tenant resolution failed")
+	}
+
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Verify agent exists, belongs to tenant, and community_id matches
+	var currentCommID *uuid.UUID
+	var agentStatus string
+	err = tx.QueryRow(ctx, `SELECT community_id, status FROM agents WHERE id = $1 AND tenant_id = $2 FOR UPDATE`, agentID, ten.FullName()).Scan(&currentCommID, &agentStatus)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("agent not found: %s", agentID)
+		}
+		return fmt.Errorf("check agent: %w", err)
+	}
+
+	if currentCommID == nil || *currentCommID != communityID {
+		return fmt.Errorf("agent is not assigned to community: %s", communityID)
+	}
+
+	// Update agent to clear assignment
+	updatedAt := time.Now().UTC()
+	_, err = tx.Exec(ctx, `UPDATE agents SET community_id = NULL, status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4`,
+		string(domain.AgentStatusDefined), updatedAt, agentID, ten.FullName())
+	if err != nil {
+		return fmt.Errorf("clear agent assignment: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
+	}
+
+	return nil
+}

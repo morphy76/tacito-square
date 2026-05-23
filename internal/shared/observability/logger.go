@@ -5,7 +5,9 @@ package observability
 import (
 	"io"
 	"os"
+	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -59,4 +61,36 @@ func WithClaims(logger zerolog.Logger, claims map[string]interface{}) zerolog.Lo
 		}
 	}
 	return ctx.Logger()
+}
+
+// LoggingMiddleware returns a Gin middleware that logs every request in structured JSON,
+// enriched with the active OpenTelemetry trace and span contexts when available.
+func LoggingMiddleware() gin.HandlerFunc {
+	logger := NewLogger("info", os.Stdout)
+
+	return func(c *gin.Context) {
+		start := time.Now()
+		c.Next()
+		duration := time.Since(start)
+
+		path := c.FullPath()
+		if path == "" {
+			path = c.Request.URL.Path
+		}
+
+		// Skip health probes and metrics to avoid noisy logs in production
+		if path == "/metrics" || path == "/healthz" || path == "/readyz" {
+			return
+		}
+
+		spanCtx := trace.SpanContextFromContext(c.Request.Context())
+		reqLogger := WithTraceID(logger, spanCtx)
+
+		reqLogger.Info().
+			Str("method", c.Request.Method).
+			Str("path", path).
+			Int("status", c.Writer.Status()).
+			Dur("duration_ms", duration).
+			Msg("HTTP request processed")
+	}
 }
