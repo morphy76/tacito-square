@@ -24,10 +24,18 @@ spec:
               containerPort: {{ .Values.bff.service.port }}
               protocol: TCP
           env:
-            {{- range $key, $val := .Values.bff.env }}
-            - name: {{ $key }}
-              value: {{ $val | quote }}
-            {{- end }}
+            - name: TS_BFF_LOG_LEVEL
+              value: {{ .Values.bff.config.logLevel | quote }}
+            - name: TS_BFF_PORT
+              value: {{ .Values.bff.config.port | toString | quote }}
+            - name: TS_BFF_KEEPER_URL
+              value: {{ .Values.bff.config.keeperUrl | quote }}
+            - name: TS_BFF_OIDC_ISSUER
+              value: {{ .Values.bff.config.oidc.issuer | quote }}
+            - name: TS_BFF_OIDC_CLIENT_ID
+              value: {{ .Values.bff.config.oidc.clientId | quote }}
+            - name: TS_BFF_CA_CERT_PATH
+              value: {{ .Values.bff.config.tls.caCertPath | quote }}
           livenessProbe:
             httpGet:
               path: /healthz

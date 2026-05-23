@@ -30,24 +30,28 @@ keeper:
     limits:
       cpu: 500m
       memory: 256Mi
-  env:
-    TS_KEEPER_LOG_LEVEL: info
-    TS_KEEPER_PORT: "8080"
-    # Infrastructure bindings (defaults assume infra release = tacito-infra)
-    TS_KEEPER_DB_HOST: "tacito-infra-postgresql"
-    TS_KEEPER_DB_PORT: "5432"
-    TS_KEEPER_DB_NAME: tacito
-    TS_KEEPER_DB_USER: tacito
-    TS_KEEPER_DB_SSLMODE: "require"
-    TS_KEEPER_NATS_URL: "nats://tacito-infra-nats:4222"
-    TS_KEEPER_REDIS_URL: "rediss://tacito-infra-redis:6379"
-    TS_KEEPER_OTEL_ENDPOINT: "tacito-infra-otel-collector:4317"
-    TS_KEEPER_OIDC_ISSUER: "https://tacito-infra-keycloak-http:8443/realms/tacito"
-    TS_KEEPER_OIDC_CLIENT_ID: tacito-keeper
-    TS_KEEPER_S3_ENDPOINT: "https://tacito-infra-minio:9000"
-    TS_KEEPER_S3_BUCKET: tacito
-    TS_KEEPER_S3_REGION: us-east-1
-    TS_KEEPER_CA_CERT_PATH: "/etc/ssl/tacito/ca.crt"
+  config:
+    logLevel: info
+    port: 8080
+    db:
+      url: "postgres://tacito-infra-postgresql:5432/tacito?sslmode=require"
+      username: tacito
+      password: ""
+    nats:
+      url: "nats://tacito-infra-nats:4222"
+    redis:
+      url: "rediss://tacito-infra-redis:6379"
+    otel:
+      endpoint: "tacito-infra-otel-collector:4317"
+    oidc:
+      issuer: "https://tacito-infra-keycloak-http:8443/realms/tacito"
+      clientId: tacito-keeper
+    s3:
+      endpoint: "https://tacito-infra-minio:9000"
+      bucket: tacito
+      region: us-east-1
+    tls:
+      caCertPath: "/etc/ssl/tacito/ca.crt"
   service:
     type: ClusterIP
     port: 8080
@@ -67,17 +71,23 @@ agent:
     limits:
       cpu: 500m
       memory: 512Mi
-  env:
-    TS_AGENT_LOG_LEVEL: info
-    TS_AGENT_PORT: "8081"
-    TS_AGENT_NATS_URL: "nats://tacito-infra-nats:4222"
-    TS_AGENT_REDIS_URL: "rediss://tacito-infra-redis:6379"
-    TS_AGENT_QDRANT_URL: "http://tacito-infra-qdrant:6334"
-    TS_AGENT_OTEL_ENDPOINT: "tacito-infra-otel-collector:4317"
-    TS_AGENT_S3_ENDPOINT: "https://tacito-infra-minio:9000"
-    TS_AGENT_S3_BUCKET: tacito
-    TS_AGENT_S3_REGION: us-east-1
-    TS_AGENT_CA_CERT_PATH: "/etc/ssl/tacito/ca.crt"
+  config:
+    logLevel: info
+    port: 8081
+    nats:
+      url: "nats://tacito-infra-nats:4222"
+    redis:
+      url: "rediss://tacito-infra-redis:6379"
+    qdrant:
+      url: "http://tacito-infra-qdrant:6334"
+    otel:
+      endpoint: "tacito-infra-otel-collector:4317"
+    s3:
+      endpoint: "https://tacito-infra-minio:9000"
+      bucket: tacito
+      region: us-east-1
+    tls:
+      caCertPath: "/etc/ssl/tacito/ca.crt"
 
 # --- Operator ---
 operator:
@@ -98,13 +108,15 @@ bff:
     name: tacito-square/bff
     tag: "0.1.0"
     pullPolicy: IfNotPresent
-  env:
-    TS_BFF_LOG_LEVEL: info
-    TS_BFF_PORT: "8083"
-    TS_BFF_KEEPER_URL: "http://tacito-square-keeper:8080"
-    TS_BFF_OIDC_ISSUER: "https://tacito-infra-keycloak-http:8443/realms/tacito"
-    TS_BFF_OIDC_CLIENT_ID: tacito-ui
-    TS_BFF_CA_CERT_PATH: "/etc/ssl/tacito/ca.crt"
+  config:
+    logLevel: info
+    port: 8083
+    keeperUrl: "http://tacito-square-keeper:8080"
+    oidc:
+      issuer: "https://tacito-infra-keycloak-http:8443/realms/tacito"
+      clientId: tacito-ui
+    tls:
+      caCertPath: "/etc/ssl/tacito/ca.crt"
   service:
     type: ClusterIP
     port: 8083

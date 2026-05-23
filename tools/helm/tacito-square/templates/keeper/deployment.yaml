@@ -24,10 +24,37 @@ spec:
               containerPort: {{ .Values.keeper.service.port }}
               protocol: TCP
           env:
-            {{- range $key, $val := .Values.keeper.env }}
-            - name: {{ $key }}
-              value: {{ $val | quote }}
-            {{- end }}
+            - name: TS_KEEPER_LOG_LEVEL
+              value: {{ .Values.keeper.config.logLevel | quote }}
+            - name: TS_KEEPER_PORT
+              value: {{ .Values.keeper.config.port | toString | quote }}
+            - name: TS_KEEPER_DB_URL
+              value: {{ .Values.keeper.config.db.url | quote }}
+            - name: TS_KEEPER_DB_USERNAME
+              value: {{ .Values.keeper.config.db.username | quote }}
+            - name: TS_KEEPER_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tacito-square.fullname" . }}-keeper-db
+                  key: password
+            - name: TS_KEEPER_NATS_URL
+              value: {{ .Values.keeper.config.nats.url | quote }}
+            - name: TS_KEEPER_REDIS_URL
+              value: {{ .Values.keeper.config.redis.url | quote }}
+            - name: TS_KEEPER_OTEL_ENDPOINT
+              value: {{ .Values.keeper.config.otel.endpoint | quote }}
+            - name: TS_KEEPER_OIDC_ISSUER
+              value: {{ .Values.keeper.config.oidc.issuer | quote }}
+            - name: TS_KEEPER_OIDC_CLIENT_ID
+              value: {{ .Values.keeper.config.oidc.clientId | quote }}
+            - name: TS_KEEPER_S3_ENDPOINT
+              value: {{ .Values.keeper.config.s3.endpoint | quote }}
+            - name: TS_KEEPER_S3_BUCKET
+              value: {{ .Values.keeper.config.s3.bucket | quote }}
+            - name: TS_KEEPER_S3_REGION
+              value: {{ .Values.keeper.config.s3.region | quote }}
+            - name: TS_KEEPER_CA_CERT_PATH
+              value: {{ .Values.keeper.config.tls.caCertPath | quote }}
           livenessProbe:
             httpGet:
               path: /healthz
