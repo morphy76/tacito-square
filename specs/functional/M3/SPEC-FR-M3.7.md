@@ -6,29 +6,66 @@
 | Status        | DRAFT                                       |
 | Milestone     | M3                                          |
 | Component     | keeper                                      |
-| Depends On    | SPEC-FR-M3.5, SPEC-FR-M3.6                 |
+| Depends On    | SPEC-FR-M3.5, SPEC-FR-M3.6                  |
 | Supersedes    | none                                        |
 
 ## Context
 
-Agents exist as definitions but their runnable instances are always bound to a community. This spec covers the assignment of agent definitions to communities, which triggers CRD creation and ultimately agent pod instantiation by the operator.
+Agents are defined as templates, but their runnable containerized instances in the cluster are bound to a specific **Community** (the logical messaging and isolation boundary). This specification covers the assignment and unassignment lifecycle of agent definitions to communities, which triggers CRD creation/deletion and ultimately coordinates pod orchestration via the operator.
+
+> [!NOTE]
+> **Runtime Existence**: At runtime, a community does not physically exist in the cluster (e.g. NATS streaming namespacing or cluster resources) until the first agent within it is deployed. These early notes lay the groundwork; this specification will be fully drilled down and finalized in the next design phase.
+
+---
 
 ## Specification
 
-1. The system MUST expose an assignment endpoint: `POST /api/v1/communities/{community_id}/agents/{agent_id}`.
-2. An agent definition MAY be assigned to multiple communities (each assignment creates a separate runnable instance).
-3. Assignment MUST validate that both the agent definition and community exist and are in valid states.
-4. Assignment MUST trigger the creation of a TacitoAgent CRD (via SPEC-FR-M3.10).
-5. Unassignment (`DELETE /api/v1/communities/{community_id}/agents/{agent_id}`) MUST trigger CRD deletion.
+### 1. The One-Community Constraint
+- An agent template belongs to **exactly one** community at any given time.
+- If an agent template is already assigned to a community, attempting to assign it to a different community **MUST fail with a 409 Conflict** error. The user/system must explicitly unassign the agent first.
+
+### 2. Assignment API Endpoint
+- **Path**: `POST /api/v1/communities/:community_id/agents/:agent_id`
+- **Validation**:
+  - Both the Community and the Agent MUST exist and belong to the authenticated tenant.
+  - The community's status MUST be `active` or `created`.
+  - The agent's current `community_id` MUST be null.
+- **Action**:
+  - Set the Agent's `community_id` in the database to `community_id`.
+  - Update the Agent's status to `assigned`.
+  - Trigger the submission of the `TacitoAgent` CRD to Kubernetes (per `SPEC-FR-M3.10`).
+
+### 3. Unassignment API Endpoint
+- **Path**: `DELETE /api/v1/communities/:community_id/agents/:agent_id`
+- **Validation**:
+  - The agent's `community_id` MUST currently match the `:community_id` in the route parameter.
+- **Action**:
+  - **Graceful Termination Sequence**: Unassigning the agent triggers a teardown of the corresponding `TacitoAgent` CRD. The deployed container must terminate gracefully:
+    1. Terminate current active conversation threads without accepting any new incoming messages.
+    2. Fall back to a configurable hard timeout (e.g., 30 seconds), after which the container is forcibly terminated.
+  - Set the Agent's `community_id` to `NULL`.
+  - Update the Agent's status back to `defined`.
+
+---
 
 ## Acceptance Criteria
 
-To be defined during spec review.
+1. **Clean State Management**:
+   - Assigning a valid unassigned agent to a valid community successfully updates `community_id` in the DB and transitions its status to `assigned`.
+   - Re-assigning an already assigned agent directly returns `409 Conflict`.
+
+2. **Security & Multi-Tenancy**:
+   - Attempting to assign an agent of `Tenant A` to a community of `Tenant B` must fail with `404 Not Found` (to prevent leaking the existence of other tenants' entities).
+
+3. **CRD Triggers**:
+   - Calling the assignment endpoints invokes the CRD coordinator to create/delete custom resources.
+
+---
 
 ## Test Plan
 
-To be defined during spec review.
-
-## Files Affected
-
-To be defined during spec review.
+### 1. Integration Tests
+- **Assignment Success**: Verify status and community ID updates in GORM repository.
+- **Assignment Guard**: Try assigning an already assigned agent and assert a 409 Conflict response.
+- **Unassignment Lifecycle**: Unassign an agent, check that `community_id` becomes `NULL` and status is set back to `defined`.
+- **Tenant Validation**: Attempt cross-tenant assignments and assert failures.
