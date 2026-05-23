@@ -1,7 +1,9 @@
 package keeper
 
 import (
+	"context"
 	_ "embed"
+	"errors"
 	"net/http"
 	"time"
 
@@ -27,6 +29,13 @@ func NewServer(pool *pgxpool.Pool) *gin.Engine {
 	var checkers []health.Checker
 	if pool != nil {
 		checkers = append(checkers, health.PingChecker("postgres", pool.Ping))
+	} else {
+		checkers = append(checkers, health.Checker{
+			Name: "postgres",
+			Check: func(ctx context.Context) error {
+				return errors.New("database connection pool is not initialized")
+			},
+		})
 	}
 
 	probe := health.NewProbe(5*time.Second, checkers...)
@@ -38,74 +47,73 @@ func NewServer(pool *pgxpool.Pool) *gin.Engine {
 	})
 	r.GET("/metrics", observability.MetricsHandler())
 
-	if pool != nil {
-		repo := postgres.NewLLMBindingRepository(pool)
-		handler := httpAdapter.NewLLMBindingHandler(repo)
+	repo := postgres.NewLLMBindingRepository(pool)
+	handler := httpAdapter.NewLLMBindingHandler(repo)
 
-		mcpRepo := postgres.NewMCPServerRepository(pool)
-		mcpHandler := httpAdapter.NewMCPServerHandler(mcpRepo)
+	mcpRepo := postgres.NewMCPServerRepository(pool)
+	mcpHandler := httpAdapter.NewMCPServerHandler(mcpRepo)
 
-		skillRepo := postgres.NewSkillRepository(pool)
-		skillHandler := httpAdapter.NewSkillHandler(skillRepo)
+	skillRepo := postgres.NewSkillRepository(pool)
+	skillHandler := httpAdapter.NewSkillHandler(skillRepo)
 
-		promptRepo := postgres.NewPromptRepository(pool)
-		promptHandler := httpAdapter.NewPromptHandler(promptRepo)
+	promptRepo := postgres.NewPromptRepository(pool)
+	promptHandler := httpAdapter.NewPromptHandler(promptRepo)
 
-		agentRepo := postgres.NewAgentRepository(pool)
-		agentHandler := httpAdapter.NewAgentHandler(agentRepo)
+	agentRepo := postgres.NewAgentRepository(pool)
+	agentHandler := httpAdapter.NewAgentHandler(agentRepo)
 
-		communityRepo := postgres.NewCommunityRepository(pool)
-		communityHandler := httpAdapter.NewCommunityHandler(communityRepo)
+	communityRepo := postgres.NewCommunityRepository(pool)
+	communityHandler := httpAdapter.NewCommunityHandler(communityRepo)
 
-		v1 := r.Group("/api/v1")
-		v1.Use(httpAdapter.TenantResolutionMiddleware(httpAdapter.NewHeaderTenantResolver()))
-		{
-			v1.POST("/llm-bindings", handler.Create)
-			v1.GET("/llm-bindings", handler.List)
-			v1.GET("/llm-bindings/:id", handler.GetByID)
-			v1.PUT("/llm-bindings/:id", handler.Update)
-			v1.DELETE("/llm-bindings/:id", handler.Delete)
+	v1 := r.Group("/api/v1")
+	v1.Use(httpAdapter.TenantResolutionMiddleware(httpAdapter.NewHeaderTenantResolver()))
+	v1.Use(httpAdapter.DatabaseAvailabilityMiddleware(pool))
+	{
+		v1.POST("/llm-bindings", handler.Create)
+		v1.GET("/llm-bindings", handler.List)
+		v1.GET("/llm-bindings/:id", handler.GetByID)
+		v1.PUT("/llm-bindings/:id", handler.Update)
+		v1.DELETE("/llm-bindings/:id", handler.Delete)
 
-			v1.POST("/mcp-servers", mcpHandler.Create)
-			v1.GET("/mcp-servers", mcpHandler.List)
-			v1.GET("/mcp-servers/:id", mcpHandler.GetByID)
-			v1.PUT("/mcp-servers/:id", mcpHandler.Update)
-			v1.DELETE("/mcp-servers/:id", mcpHandler.Delete)
+		v1.POST("/mcp-servers", mcpHandler.Create)
+		v1.GET("/mcp-servers", mcpHandler.List)
+		v1.GET("/mcp-servers/:id", mcpHandler.GetByID)
+		v1.PUT("/mcp-servers/:id", mcpHandler.Update)
+		v1.DELETE("/mcp-servers/:id", mcpHandler.Delete)
 
-			v1.POST("/skills", skillHandler.Create)
-			v1.GET("/skills", skillHandler.List)
-			v1.GET("/skills/:id", skillHandler.GetByID)
-			v1.PUT("/skills/:id", skillHandler.Update)
-			v1.DELETE("/skills/:id", skillHandler.Delete)
+		v1.POST("/skills", skillHandler.Create)
+		v1.GET("/skills", skillHandler.List)
+		v1.GET("/skills/:id", skillHandler.GetByID)
+		v1.PUT("/skills/:id", skillHandler.Update)
+		v1.DELETE("/skills/:id", skillHandler.Delete)
 
-			v1.POST("/agents/:agent_id/skills/:skill_id", skillHandler.AttachSkillToAgent)
-			v1.DELETE("/agents/:agent_id/skills/:skill_id", skillHandler.DetachSkillFromAgent)
+		v1.POST("/agents/:agent_id/skills/:skill_id", skillHandler.AttachSkillToAgent)
+		v1.DELETE("/agents/:agent_id/skills/:skill_id", skillHandler.DetachSkillFromAgent)
 
-			v1.POST("/prompts", promptHandler.CreateTemplate)
-			v1.GET("/prompts", promptHandler.ListTemplates)
-			v1.GET("/prompts/:id", promptHandler.GetTemplateByID)
-			v1.PUT("/prompts/:id", promptHandler.UpdateTemplate)
-			v1.DELETE("/prompts/:id", promptHandler.DeleteTemplate)
+		v1.POST("/prompts", promptHandler.CreateTemplate)
+		v1.GET("/prompts", promptHandler.ListTemplates)
+		v1.GET("/prompts/:id", promptHandler.GetTemplateByID)
+		v1.PUT("/prompts/:id", promptHandler.UpdateTemplate)
+		v1.DELETE("/prompts/:id", promptHandler.DeleteTemplate)
 
-			v1.POST("/prompt-collections", promptHandler.CreateCollection)
-			v1.GET("/prompt-collections", promptHandler.ListCollections)
-			v1.GET("/prompt-collections/:id", promptHandler.GetCollectionByID)
-			v1.PUT("/prompt-collections/:id", promptHandler.UpdateCollection)
-			v1.DELETE("/prompt-collections/:id", promptHandler.DeleteCollection)
-			v1.GET("/prompt-collections/:id/resolve", promptHandler.ResolveCollection)
+		v1.POST("/prompt-collections", promptHandler.CreateCollection)
+		v1.GET("/prompt-collections", promptHandler.ListCollections)
+		v1.GET("/prompt-collections/:id", promptHandler.GetCollectionByID)
+		v1.PUT("/prompt-collections/:id", promptHandler.UpdateCollection)
+		v1.DELETE("/prompt-collections/:id", promptHandler.DeleteCollection)
+		v1.GET("/prompt-collections/:id/resolve", promptHandler.ResolveCollection)
 
-			v1.POST("/agents", agentHandler.Create)
-			v1.GET("/agents", agentHandler.List)
-			v1.GET("/agents/:id", agentHandler.GetByID)
-			v1.PUT("/agents/:id", agentHandler.Update)
-			v1.DELETE("/agents/:id", agentHandler.Delete)
+		v1.POST("/agents", agentHandler.Create)
+		v1.GET("/agents", agentHandler.List)
+		v1.GET("/agents/:agent_id", agentHandler.GetByID)
+		v1.PUT("/agents/:agent_id", agentHandler.Update)
+		v1.DELETE("/agents/:agent_id", agentHandler.Delete)
 
-			v1.POST("/communities", communityHandler.Create)
-			v1.GET("/communities", communityHandler.List)
-			v1.GET("/communities/:id", communityHandler.GetByID)
-			v1.PUT("/communities/:id", communityHandler.Update)
-			v1.DELETE("/communities/:id", communityHandler.Delete)
-		}
+		v1.POST("/communities", communityHandler.Create)
+		v1.GET("/communities", communityHandler.List)
+		v1.GET("/communities/:id", communityHandler.GetByID)
+		v1.PUT("/communities/:id", communityHandler.Update)
+		v1.DELETE("/communities/:id", communityHandler.Delete)
 	}
 
 	return r

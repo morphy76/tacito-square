@@ -66,7 +66,7 @@
 | ID | Title | Status | Severity | File |
 |----|-------|--------|----------|------|
 | BUG-M3.1 | Supporting Entity Models Lack Tenant Segregation | CLOSED | HIGH | [BUG-M3.1](tasks/M3.BUG1/BUG-M3.1.md) |
-| BUG-M3.2 | Silent Route Registration Failure due to PostgreSQL Coupling in Keeper Bootstrap | OPEN | HIGH | [BUG-M3.2](tasks/M3.BUG2/BUG-M3.2.md) |
+| BUG-M3.2 | Silent Route Registration Failure due to PostgreSQL Coupling in Keeper Bootstrap | CLOSED | HIGH | [BUG-M3.2](tasks/M3.BUG2/BUG-M3.2.md) |
 
 ### M4: Operator Core
 

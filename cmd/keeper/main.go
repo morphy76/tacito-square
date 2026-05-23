@@ -67,7 +67,13 @@ func main() {
 	if dbURL != "" {
 		var err error
 		logger.Info().Msg("connecting to postgres")
-		pool, err = pgxpool.New(ctx, dbURL)
+		cfg, err := pgxpool.ParseConfig(dbURL)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("failed to parse database url")
+		}
+		cfg.ConnConfig.Tracer = observability.NewPgxQueryTracer()
+
+		pool, err = pgxpool.NewWithConfig(ctx, cfg)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("failed to connect to postgres")
 		}

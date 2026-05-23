@@ -31,19 +31,19 @@ func TestHealthz_Returns200(t *testing.T) {
 	assert.Equal(t, "alive", body["status"])
 }
 
-func TestReadyz_Returns200(t *testing.T) {
+func TestReadyz_Returns503_WhenDatabaseUnavailable(t *testing.T) {
 	srv := NewServer(nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
 	w := httptest.NewRecorder()
 	srv.ServeHTTP(w, req)
 
-	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
 
 	var body map[string]interface{}
 	err := json.Unmarshal(w.Body.Bytes(), &body)
 	require.NoError(t, err)
-	assert.Equal(t, "ready", body["status"])
+	assert.Equal(t, "not_ready", body["status"])
 }
 
 func TestOpenAPI_Returns200AndValidJSON(t *testing.T) {
@@ -91,4 +91,22 @@ func TestMetrics_Returns200AndPrometheusFormat(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Body.String(), "go_goroutines")
+}
+
+func TestEndpoints_DatabaseUnavailable_Returns503(t *testing.T) {
+	srv := NewServer(nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/llm-bindings", nil)
+	req.Header.Set("X-Tenant-ID", "tenant-1")
+	req.Header.Set("X-Subscription-ID", "sub-1")
+
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+
+	var body map[string]string
+	err := json.Unmarshal(w.Body.Bytes(), &body)
+	require.NoError(t, err)
+	assert.Equal(t, "Database service unavailable", body["error"])
 }

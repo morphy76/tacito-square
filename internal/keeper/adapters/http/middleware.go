@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/morphy76/tacito-square/internal/shared/tenant"
 )
 
@@ -47,6 +48,18 @@ func TenantResolutionMiddleware(resolver TenantResolver) gin.HandlerFunc {
 		ctx := tenant.ContextWithTenant(c.Request.Context(), resolvedTenant)
 		c.Request = c.Request.WithContext(ctx)
 
+		c.Next()
+	}
+}
+
+// DatabaseAvailabilityMiddleware returns a Gin middleware that checks database availability.
+// If the database pool is nil, it aborts with 503 Service Unavailable.
+func DatabaseAvailabilityMiddleware(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if pool == nil {
+			c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"error": "Database service unavailable"})
+			return
+		}
 		c.Next()
 	}
 }

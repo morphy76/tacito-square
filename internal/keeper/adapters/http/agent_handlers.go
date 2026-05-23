@@ -169,6 +169,9 @@ func (h *AgentHandler) Create(c *gin.Context) {
 // GetByID handles GET /api/v1/agents/:id
 func (h *AgentHandler) GetByID(c *gin.Context) {
 	idStr := c.Param("id")
+	if idStr == "" {
+		idStr = c.Param("agent_id")
+	}
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid uuid"})
@@ -197,6 +200,9 @@ func (h *AgentHandler) List(c *gin.Context) {
 // Update handles PUT /api/v1/agents/:id
 func (h *AgentHandler) Update(c *gin.Context) {
 	idStr := c.Param("id")
+	if idStr == "" {
+		idStr = c.Param("agent_id")
+	}
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid uuid"})
@@ -303,6 +309,9 @@ func (h *AgentHandler) Update(c *gin.Context) {
 // Delete handles DELETE /api/v1/agents/:id
 func (h *AgentHandler) Delete(c *gin.Context) {
 	idStr := c.Param("id")
+	if idStr == "" {
+		idStr = c.Param("agent_id")
+	}
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid uuid"})

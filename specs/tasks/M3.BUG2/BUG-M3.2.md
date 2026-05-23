@@ -3,7 +3,7 @@
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
 | ID            | BUG-M3.2                                                           |
-| Status        | OPEN                                                               |
+| Status        | CLOSED                                                             |
 | Severity      | HIGH                                                               |
 | Milestone     | M3 — Keeper Core                                                   |
 | Affects       | TASK-M3.1.2, TASK-M3.2.2, TASK-M3.3.2, TASK-M3.4.2                 |
@@ -67,3 +67,17 @@ If the PostgreSQL database is unavailable or unconfigured (such as during enviro
 3. Decouple `bootstrap.go` from concrete `*pgxpool.Pool` repository constructors, using abstract repository ports or registering handlers with proper dependency checks.
 4. Unit and integration tests can verify routing and middleware behavior (e.g. `TestNewServer_ReturnsGinEngine`) without needing a live PostgreSQL database connection pool.
 5. `/readyz` properly returns `503` when the PostgreSQL database checker fails, but the API endpoints still exist in the router.
+
+## Resolution Details
+
+The bug is fully resolved via a comprehensive TDD approach:
+1. **Database Availability Middleware**: Implemented `DatabaseAvailabilityMiddleware(pool)` inside `internal/keeper/adapters/http/middleware.go` which performs a pointer-level comparison `pool == nil`. If the pool is down or unconfigured at startup, requests to `/api/v1` are gracefully aborted with `503 Service Unavailable` and standard JSON `{"error": "Database service unavailable"}`.
+2. **Unconditional Route Registration**: Refactored `internal/keeper/bootstrap.go` to unconditionally register all `/api/v1` routes and instantiate handlers/repositories, eliminating route omission and standardizing REST semantics.
+3. **Wildcard Routing Conflict Resolution**: Fixed a latent routing wildcard tree conflict in Gin by harmonizing the agents wildcard parameter name to `:agent_id` across both CRUD and sub-routes (skills). Added safe, backward-compatible parameter fallback handling (`c.Param("id")` and `c.Param("agent_id")`) in `internal/keeper/adapters/http/agent_handlers.go` to ensure no breakages in client behaviors.
+4. **Lightweight OTel Database Tracing**: Created `PgxQueryTracer` in `internal/shared/observability/db_tracing.go` which implements standard pgx query tracing. Connected to the database using `pgxpool.NewWithConfig` inside `cmd/keeper/main.go` to automatically attach the query tracer and record OpenTelemetry client spans (`db.query`) with semantic SQL statement attributes.
+5. **Dependency-Aware Health Probe**: Updated `NewServer` in `internal/keeper/bootstrap.go` to comply with `SPEC-NFR-HEALTH`. When the database connection pool is `nil` at startup, a custom failing `"postgres"` checker is dynamically registered, causing `/readyz` to return `503 Service Unavailable` with `not_ready` status.
+6. **Automated Verification**: Added `TestEndpoints_DatabaseUnavailable_Returns503` asserting unconditional route registration and correct 503 response code handling. Updated `TestReadyz_Returns503_WhenDatabaseUnavailable` verifying active 503 return from readiness probes under unmet DB configurations. All tests pass cleanly.
+
+Closed: 2026-05-23
+Approver: USER (approved implementation_plan.md)
+
