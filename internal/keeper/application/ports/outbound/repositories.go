@@ -16,3 +16,13 @@ type LLMBindingRepository interface {
 	Update(ctx context.Context, binding *domain.LLMBinding) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
+
+// MCPServerRepository defines the persistent storage operations for MCP Server configurations.
+type MCPServerRepository interface {
+	Create(ctx context.Context, server *domain.MCPServer) error
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.MCPServer, error)
+	GetByName(ctx context.Context, name string) (*domain.MCPServer, error)
+	List(ctx context.Context) ([]*domain.MCPServer, error)
+	Update(ctx context.Context, server *domain.MCPServer) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}

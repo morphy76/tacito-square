@@ -73,6 +73,13 @@ The Keeper component exposes a REST API for configuration management, lifecycle 
 *   `PUT /api/v1/llm-bindings/:id` — Update configuration properties of an existing LLM provider binding.
 *   `DELETE /api/v1/llm-bindings/:id` — Remove an LLM provider binding.
 
+### Model Context Protocol (MCP) Servers (`/api/v1/mcp-servers`)
+*   `POST /api/v1/mcp-servers` — Register a new MCP server profile (supporting `stdio` or `sse` transport).
+*   `GET /api/v1/mcp-servers` — List all registered MCP server profiles.
+*   `GET /api/v1/mcp-servers/:id` — Retrieve details of a specific MCP server profile by UUID.
+*   `PUT /api/v1/mcp-servers/:id` — Update configuration properties of an existing MCP server profile.
+*   `DELETE /api/v1/mcp-servers/:id` — Unregister an MCP server profile.
+
 ## Technology Stack
 
 | Layer | Technology |

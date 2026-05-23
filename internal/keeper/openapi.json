@@ -237,6 +237,232 @@
           }
         }
       }
+    },
+    "/mcp-servers": {
+      "post": {
+        "summary": "Register a new MCP server profile",
+        "operationId": "createMCPServer",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMCPServerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successfully registered MCP server profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MCPServer"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List registered MCP server profiles",
+        "operationId": "listMCPServers",
+        "responses": {
+          "200": {
+            "description": "List of MCP server profiles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MCPServer"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mcp-servers/{id}": {
+      "get": {
+        "summary": "Retrieve a specific MCP server profile by ID",
+        "operationId": "getMCPServer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the MCP server configuration",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "MCP server configuration details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MCPServer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "MCP server profile not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update an MCP server profile by ID",
+        "operationId": "updateMCPServer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the MCP server configuration",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMCPServerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully updated MCP server profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MCPServer"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "MCP server profile not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Unregister an MCP server profile by ID",
+        "operationId": "deleteMCPServer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the MCP server configuration",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully deleted MCP server profile"
+          },
+          "404": {
+            "description": "MCP server profile not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -407,6 +633,165 @@
           },
           "timeout_seconds": {
             "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "suspended", "inactive"]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateMCPServerRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "transport"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "sqlite-mcp"
+          },
+          "description": {
+            "type": "string",
+            "example": "Local SQLite MCP server"
+          },
+          "transport": {
+            "type": "string",
+            "enum": ["stdio", "sse"],
+            "example": "stdio"
+          },
+          "command": {
+            "type": "string",
+            "example": "mcp-sqlite"
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": ["--db", "test.db"]
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "example": {"DEBUG": "true"}
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://mcp.github.com/events"
+          },
+          "auth_secret_ref": {
+            "type": "string",
+            "example": "github-secret"
+          }
+        }
+      },
+      "UpdateMCPServerRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "transport"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "sqlite-mcp"
+          },
+          "description": {
+            "type": "string",
+            "example": "Local SQLite MCP server"
+          },
+          "transport": {
+            "type": "string",
+            "enum": ["stdio", "sse"],
+            "example": "stdio"
+          },
+          "command": {
+            "type": "string",
+            "example": "mcp-sqlite"
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": ["--db", "test.db"]
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "example": {"DEBUG": "true"}
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://mcp.github.com/events"
+          },
+          "auth_secret_ref": {
+            "type": "string",
+            "example": "github-secret"
+          }
+        }
+      },
+      "MCPServer": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "transport",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "transport": {
+            "type": "string",
+            "enum": ["stdio", "sse"]
+          },
+          "command": {
+            "type": "string"
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "auth_secret_ref": {
+            "type": "string"
           },
           "status": {
             "type": "string",

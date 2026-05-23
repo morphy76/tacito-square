@@ -42,6 +42,9 @@ func NewServer(pool *pgxpool.Pool) *gin.Engine {
 		repo := postgres.NewLLMBindingRepository(pool)
 		handler := httpAdapter.NewLLMBindingHandler(repo)
 
+		mcpRepo := postgres.NewMCPServerRepository(pool)
+		mcpHandler := httpAdapter.NewMCPServerHandler(mcpRepo)
+
 		v1 := r.Group("/api/v1")
 		{
 			v1.POST("/llm-bindings", handler.Create)
@@ -49,6 +52,12 @@ func NewServer(pool *pgxpool.Pool) *gin.Engine {
 			v1.GET("/llm-bindings/:id", handler.GetByID)
 			v1.PUT("/llm-bindings/:id", handler.Update)
 			v1.DELETE("/llm-bindings/:id", handler.Delete)
+
+			v1.POST("/mcp-servers", mcpHandler.Create)
+			v1.GET("/mcp-servers", mcpHandler.List)
+			v1.GET("/mcp-servers/:id", mcpHandler.GetByID)
+			v1.PUT("/mcp-servers/:id", mcpHandler.Update)
+			v1.DELETE("/mcp-servers/:id", mcpHandler.Delete)
 		}
 	}
 
