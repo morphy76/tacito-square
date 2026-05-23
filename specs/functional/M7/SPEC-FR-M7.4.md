@@ -6,7 +6,7 @@
 | Status        | DRAFT                                       |
 | Milestone     | M7                                          |
 | Component     | bff                                         |
-| Depends On    | SPEC-FR-M7.1, SPEC-FR-M3.5                 |
+| Depends On    | SPEC-FR-M7.1, SPEC-FR-M3.9                 |
 | Supersedes    | none                                        |
 
 ## Context

@@ -6,12 +6,12 @@
 | Status        | DRAFT                                       |
 | Milestone     | M8                                          |
 | Component     | keeper                                      |
-| Depends On    | SPEC-FR-M3.4                                |
+| Depends On    | SPEC-FR-M3.8, SPEC-FR-M3.3                |
 | Supersedes    | none                                        |
 
 ## Context
 
-Skills are bundles of MCP tools that can be attached to agents. Managed by keeper, resolved at agent spawn time.
+Skills are bundles of MCP tools that can be attached to agents. Building upon the foundational skill model defined in SPEC-FR-M3.3, this specification implements advanced authorization controls and performance-optimized caching for runtime tool resolution.
 
 ## Specification
 

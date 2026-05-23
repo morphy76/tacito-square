@@ -19,4 +19,4 @@ Login via Keycloak → browse communities → spawn agent → interact with agen
 | SPEC-FR-M7.1 | BFF API Bridge Layer | bff | SPEC-FR-M2.6 |
 | SPEC-FR-M7.2 | Configurator UI | ui | SPEC-FR-M7.1 |
 | SPEC-FR-M7.3 | Auditor UI | ui | SPEC-FR-M7.1 |
-| SPEC-FR-M7.4 | OIDC Login Flow (Keycloak) | bff | SPEC-FR-M7.1, SPEC-FR-M3.5 |
+| SPEC-FR-M7.4 | OIDC Login Flow (Keycloak) | bff | SPEC-FR-M7.1, SPEC-FR-M3.9 |

@@ -6,12 +6,12 @@
 | Status        | DRAFT                                       |
 | Milestone     | M8                                          |
 | Component     | keeper                                      |
-| Depends On    | SPEC-FR-M3.4                                |
+| Depends On    | SPEC-FR-M3.8, SPEC-FR-M3.4                 |
 | Supersedes    | none                                        |
 
 ## Context
 
-Prompts define agent personas and instructions. They must be versioned and manageable via API, resolved at agent spawn time.
+Prompts define agent personas and instructions. Building upon the foundational prompt template and collection models defined in SPEC-FR-M3.4, this specification introduces advanced versioning, Redis caching, and route protection to support secure enterprise governance.
 
 ## Specification
 

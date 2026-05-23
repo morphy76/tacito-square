@@ -6,7 +6,7 @@
 | Status        | DRAFT                                       |
 | Milestone     | M6                                          |
 | Component     | keeper, agent                               |
-| Depends On    | SPEC-FR-M6.1, SPEC-FR-M3.6                 |
+| Depends On    | SPEC-FR-M6.1, SPEC-FR-M3.10                 |
 | Supersedes    | none                                        |
 
 ## Context

@@ -1,4 +1,4 @@
-# SPEC-FR-M3.6: Agent CRD Submission
+# SPEC-FR-M3.6: Community Domain Model & CRUD API
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
@@ -6,20 +6,19 @@
 | Status        | DRAFT                                       |
 | Milestone     | M3                                          |
 | Component     | keeper                                      |
-| Depends On    | SPEC-FR-M3.3, SPEC-FR-M4.1                 |
+| Depends On    | SPEC-FR-M2.3                                |
 | Supersedes    | none                                        |
 
 ## Context
 
-When an agent is assigned to a community, keeper constructs and submits a TacitoAgent CRD to the K8s API. The operator (M4) will then reconcile this CRD into a running agent pod.
+Communities are the organizational unit for agents. A community groups one or more agents under a topology (initially hub-spoke) and provides isolation boundaries. Keeper needs a domain model and CRUD API for community management.
 
 ## Specification
 
-1. The system MUST construct a `TacitoAgent` CR (apiVersion: `tacito.square.io/v1alpha1`) from the agent definition and community configuration.
-2. The system MUST use `client-go` to submit the CR to the K8s API server.
-3. The CR spec MUST include: agent name, LLM config, system prompt, community reference, resource limits.
-4. The system MUST handle submission failures gracefully (conflict, validation, connectivity) with retries and exponential backoff (per SPEC-NFR-CLOUD).
-5. The system MUST update the agent-community assignment status based on CRD submission result.
+1. The system MUST define a `Community` aggregate in the keeper domain layer with fields: name (unique), description, topology (enum: hub-spoke), configuration, status (created, active, suspended, terminated).
+2. The system MUST expose CRUD REST endpoints at `GET/POST /api/v1/communities` and `GET/PUT/DELETE /api/v1/communities/{id}`.
+3. The domain layer MUST NOT import adapter or application packages (per SPEC-NFR-HEXAGONAL).
+4. Communities MUST be the unit of isolation — agents in different communities SHOULD NOT communicate unless explicitly federated.
 
 ## Acceptance Criteria
 

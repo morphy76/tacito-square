@@ -49,12 +49,16 @@
 
 | ID | Title | Status | Component | File |
 |----|-------|--------|-----------|------|
-| SPEC-FR-M3.1 | Agent Domain Model & CRUD API | DRAFT | keeper | [SPEC-FR-M3.1](functional/M3/SPEC-FR-M3.1.md) |
-| SPEC-FR-M3.2 | Community Domain Model & CRUD API | DRAFT | keeper | [SPEC-FR-M3.2](functional/M3/SPEC-FR-M3.2.md) |
-| SPEC-FR-M3.3 | Agent-Community Assignment | DRAFT | keeper | [SPEC-FR-M3.3](functional/M3/SPEC-FR-M3.3.md) |
-| SPEC-FR-M3.4 | PostgreSQL Persistence & Migrations | DRAFT | keeper | [SPEC-FR-M3.4](functional/M3/SPEC-FR-M3.4.md) |
-| SPEC-FR-M3.5 | OIDC/JWT Authentication | DRAFT | keeper, shared | [SPEC-FR-M3.5](functional/M3/SPEC-FR-M3.5.md) |
-| SPEC-FR-M3.6 | Agent CRD Submission | DRAFT | keeper | [SPEC-FR-M3.6](functional/M3/SPEC-FR-M3.6.md) |
+| SPEC-FR-M3.1 | LLM Provider Bindings & CRUD API | DRAFT | keeper | [SPEC-FR-M3.1](functional/M3/SPEC-FR-M3.1.md) |
+| SPEC-FR-M3.2 | MCP Servers & CRUD API | DRAFT | keeper | [SPEC-FR-M3.2](functional/M3/SPEC-FR-M3.2.md) |
+| SPEC-FR-M3.3 | Skill Collections & CRUD API | DRAFT | keeper | [SPEC-FR-M3.3](functional/M3/SPEC-FR-M3.3.md) |
+| SPEC-FR-M3.4 | Prompt Collections & CRUD API | DRAFT | keeper | [SPEC-FR-M3.4](functional/M3/SPEC-FR-M3.4.md) |
+| SPEC-FR-M3.5 | Agent Domain Model & CRUD API | DRAFT | keeper | [SPEC-FR-M3.5](functional/M3/SPEC-FR-M3.5.md) |
+| SPEC-FR-M3.6 | Community Domain Model & CRUD API | DRAFT | keeper | [SPEC-FR-M3.6](functional/M3/SPEC-FR-M3.6.md) |
+| SPEC-FR-M3.7 | Agent-Community Assignment | DRAFT | keeper | [SPEC-FR-M3.7](functional/M3/SPEC-FR-M3.7.md) |
+| SPEC-FR-M3.8 | PostgreSQL Persistence & Migrations | DRAFT | keeper | [SPEC-FR-M3.8](functional/M3/SPEC-FR-M3.8.md) |
+| SPEC-FR-M3.9 | OIDC/JWT Authentication | DRAFT | keeper, shared | [SPEC-FR-M3.9](functional/M3/SPEC-FR-M3.9.md) |
+| SPEC-FR-M3.10 | Agent CRD Submission | DRAFT | keeper | [SPEC-FR-M3.10](functional/M3/SPEC-FR-M3.10.md) |
 
 ### M4: Operator Core
 
@@ -127,7 +131,7 @@
 |-----------|-------|--------|-------|------|
 | M1 | Infrastructure Helm Chart | ✔️ IMPLEMENTED | 2 | [M1](milestones/M1-infrastructure.md) |
 | M2 | Application Helm Chart & Component Scaffolding | ⬜ PLANNED | 11 | [M2](milestones/M2-packaging.md) |
-| M3 | Keeper Core | ⬜ PLANNED | 6 | [M3](milestones/M3-keeper-core.md) |
+| M3 | Keeper Core | ⬜ PLANNED | 10 | [M3](milestones/M3-keeper-core.md) |
 | M4 | Operator Core | ⬜ PLANNED | 4 | [M4](milestones/M4-operator-core.md) |
 | M5 | Agent Core | ⬜ PLANNED | 6 | [M5](milestones/M5-agent-core.md) |
 | M6 | Communities & Messaging | ⬜ PLANNED | 7 | [M6](milestones/M6-communities.md) |

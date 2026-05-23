@@ -6,7 +6,7 @@
 | Status        | DRAFT                                       |
 | Milestone     | M8                                          |
 | Component     | keeper, shared                              |
-| Depends On    | SPEC-FR-M3.5                                |
+| Depends On    | SPEC-FR-M3.9                                |
 | Supersedes    | none                                        |
 
 ## Context

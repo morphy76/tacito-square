@@ -16,9 +16,13 @@ Authenticated API calls → create community → create agent → assign agent t
 
 | Spec ID | Title | Component | Depends On |
 |---------|-------|-----------|------------|
-| SPEC-FR-M3.1 | Agent Domain Model & CRUD API | keeper | SPEC-FR-M2.3 |
-| SPEC-FR-M3.2 | Community Domain Model & CRUD API | keeper | SPEC-FR-M2.3 |
-| SPEC-FR-M3.3 | Agent-Community Assignment | keeper | SPEC-FR-M3.1, SPEC-FR-M3.2 |
-| SPEC-FR-M3.4 | PostgreSQL Persistence & Migrations | keeper | SPEC-FR-M3.1, SPEC-FR-M3.2 |
-| SPEC-FR-M3.5 | OIDC/JWT Authentication | keeper, shared | SPEC-FR-M2.2 |
-| SPEC-FR-M3.6 | Agent CRD Submission | keeper | SPEC-FR-M3.3, SPEC-FR-M4.1 |
+| SPEC-FR-M3.1 | LLM Provider Bindings & CRUD API | keeper | SPEC-FR-M2.3 |
+| SPEC-FR-M3.2 | MCP Servers & CRUD API | keeper | SPEC-FR-M2.3 |
+| SPEC-FR-M3.3 | Skill Collections & CRUD API | keeper | SPEC-FR-M2.3, SPEC-FR-M3.2 |
+| SPEC-FR-M3.4 | Prompt Collections & CRUD API | keeper | SPEC-FR-M2.3 |
+| SPEC-FR-M3.5 | Agent Domain Model & CRUD API | keeper | SPEC-FR-M2.3, SPEC-FR-M3.1, SPEC-FR-M3.2, SPEC-FR-M3.3, SPEC-FR-M3.4 |
+| SPEC-FR-M3.6 | Community Domain Model & CRUD API | keeper | SPEC-FR-M2.3 |
+| SPEC-FR-M3.7 | Agent-Community Assignment | keeper | SPEC-FR-M3.5, SPEC-FR-M3.6 |
+| SPEC-FR-M3.8 | PostgreSQL Persistence & Migrations | keeper | SPEC-FR-M3.1, SPEC-FR-M3.2, SPEC-FR-M3.3, SPEC-FR-M3.4, SPEC-FR-M3.5, SPEC-FR-M3.6, SPEC-FR-M3.7 |
+| SPEC-FR-M3.9 | OIDC/JWT Authentication | keeper, shared | SPEC-FR-M2.2 |
+| SPEC-FR-M3.10 | Agent CRD Submission | keeper | SPEC-FR-M3.7, SPEC-FR-M4.1 |
