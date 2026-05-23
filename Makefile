@@ -6,7 +6,7 @@ KEEPER_VERSION  := $(shell cat VERSION.keeper 2>/dev/null || echo "0.0.1")
 OPERATOR_VERSION := $(shell cat VERSION.operator 2>/dev/null || echo "0.0.1")
 BFF_VERSION     := $(shell cat VERSION.bff 2>/dev/null || echo "0.0.1")
 
-REGISTRY       ?= tacito-square
+REGISTRY           ?= 
 HELM_RELEASE       ?= ts
 HELM_CHART         := tools/helm/tacito-square
 HELM_INFRA_RELEASE ?= ts-infra
@@ -106,36 +106,36 @@ escape-bff: ## Run Go escape analysis for the bff component
 docker-build: docker-build-agent docker-build-keeper docker-build-operator docker-build-bff ## Build all Docker images
 
 docker-build-agent: ## Build agent Docker image
-	docker build -f tools/docker/Dockerfile.agent -t $(REGISTRY)/agent:$(AGENT_VERSION) .
+	docker build -f tools/docker/Dockerfile.agent -t $(REGISTRY)tacito-square/agent:$(AGENT_VERSION) .
 
 docker-build-keeper: ## Build keeper Docker image
-	docker build -f tools/docker/Dockerfile.keeper -t $(REGISTRY)/keeper:$(KEEPER_VERSION) .
+	docker build -f tools/docker/Dockerfile.keeper -t $(REGISTRY)tacito-square/keeper:$(KEEPER_VERSION) .
 
 docker-build-operator: ## Build operator Docker image
-	docker build -f tools/docker/Dockerfile.operator -t $(REGISTRY)/operator:$(OPERATOR_VERSION) .
+	docker build -f tools/docker/Dockerfile.operator -t $(REGISTRY)tacito-square/operator:$(OPERATOR_VERSION) .
 
 docker-build-bff: ## Build bff Docker image
-	docker build -f tools/docker/Dockerfile.bff -t $(REGISTRY)/bff:$(BFF_VERSION) .
+	docker build -f tools/docker/Dockerfile.bff -t $(REGISTRY)tacito-square/bff:$(BFF_VERSION) .
 
 docker-push: ## Push all Docker images
-	docker push $(REGISTRY)/agent:$(AGENT_VERSION)
-	docker push $(REGISTRY)/keeper:$(KEEPER_VERSION)
-	docker push $(REGISTRY)/operator:$(OPERATOR_VERSION)
-	docker push $(REGISTRY)/bff:$(BFF_VERSION)
+	docker push $(REGISTRY)tacito-square/agent:$(AGENT_VERSION)
+	docker push $(REGISTRY)tacito-square/keeper:$(KEEPER_VERSION)
+	docker push $(REGISTRY)tacito-square/operator:$(OPERATOR_VERSION)
+	docker push $(REGISTRY)tacito-square/bff:$(BFF_VERSION)
 
 docker-load: docker-load-agent docker-load-keeper docker-load-operator docker-load-bff ## Load all images into Rancher Desktop containerd (k8s.io namespace)
 
 docker-load-agent: ## Load agent image into Rancher Desktop containerd
-	docker save $(REGISTRY)/agent:$(AGENT_VERSION) | rdctl shell -- nerdctl --address $(NERDCTL_ADDR) -n k8s.io load
+	docker save $(REGISTRY)tacito-square/agent:$(AGENT_VERSION) | rdctl shell -- nerdctl --address $(NERDCTL_ADDR) -n k8s.io load
 
 docker-load-keeper: ## Load keeper image into Rancher Desktop containerd
-	docker save $(REGISTRY)/keeper:$(KEEPER_VERSION) | rdctl shell -- nerdctl --address $(NERDCTL_ADDR) -n k8s.io load
+	docker save $(REGISTRY)tacito-square/keeper:$(KEEPER_VERSION) | rdctl shell -- nerdctl --address $(NERDCTL_ADDR) -n k8s.io load
 
 docker-load-operator: ## Load operator image into Rancher Desktop containerd
-	docker save $(REGISTRY)/operator:$(OPERATOR_VERSION) | rdctl shell -- nerdctl --address $(NERDCTL_ADDR) -n k8s.io load
+	docker save $(REGISTRY)tacito-square/operator:$(OPERATOR_VERSION) | rdctl shell -- nerdctl --address $(NERDCTL_ADDR) -n k8s.io load
 
 docker-load-bff: ## Load bff image into Rancher Desktop containerd
-	docker save $(REGISTRY)/bff:$(BFF_VERSION) | rdctl shell -- nerdctl --address $(NERDCTL_ADDR) -n k8s.io load
+	docker save $(REGISTRY)tacito-square/bff:$(BFF_VERSION) | rdctl shell -- nerdctl --address $(NERDCTL_ADDR) -n k8s.io load
 
 ## —— Helm (app) —————————————————————————————————————————
 
