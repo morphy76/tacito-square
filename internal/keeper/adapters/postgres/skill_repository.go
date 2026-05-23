@@ -313,8 +313,8 @@ func (r *SkillRepository) ListSkillsByAgent(ctx context.Context, agentID uuid.UU
 	query := `SELECT 
 		s.id, s.tenant_id, s.name, s.description, s.allowed_tools, s.denied_tools, s.status, s.created_at, s.updated_at
 	FROM skills s
-	JOIN agent_skills as ON s.id = as.skill_id
-	WHERE as.agent_id = $1 AND s.tenant_id = $2
+	JOIN agent_skills ags ON s.id = ags.skill_id
+	WHERE ags.agent_id = $1 AND s.tenant_id = $2
 	ORDER BY s.name ASC`
 
 	rows, err := r.pool.Query(ctx, query, agentID, ten.FullName())

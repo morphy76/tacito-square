@@ -1,3 +1,5 @@
+//go:build integration
+
 package postgres
 
 import (
@@ -121,10 +123,41 @@ func TestSkillRepository_Lifecycle(t *testing.T) {
 	})
 
 	t.Run("Agent-Skill Association", func(t *testing.T) {
+		agentRepo := NewAgentRepository(pool)
 		agentID := uuid.New()
+		agent := &domain.Agent{
+			ID:          agentID,
+			Name:        "test-agent-skill-assoc",
+			Description: "Test agent for skill association",
+			Brain: domain.BrainConfig{
+				Model:             "gpt-4o",
+				Temperature:       0.7,
+				MaxTokens:         2048,
+				Endpoint:          "https://api.openai.com/v1",
+				CredentialsSecret: "my-secret-key",
+			},
+			ShortTermMemory: domain.ShortTermMemoryConfig{
+				KeyNamespace: "test:short",
+				TTLSeconds:   3600,
+			},
+			LongTermMemory: domain.LongTermMemoryConfig{
+				CollectionName:  "test-long",
+				VectorDimension: 1536,
+			},
+			Skills:         []uuid.UUID{},
+			MCPClients:     []domain.MCPClientConfig{},
+			Status:         domain.AgentStatusDefined,
+			CreatedAt:      time.Now().UTC(),
+			UpdatedAt:      time.Now().UTC(),
+		}
+		err := agentRepo.Create(ctx, agent)
+		require.NoError(t, err)
+		defer func() {
+			_ = agentRepo.Delete(ctx, agentID)
+		}()
 
 		// Attach
-		err := repo.AttachSkillToAgent(ctx, agentID, skill.ID)
+		err = repo.AttachSkillToAgent(ctx, agentID, skill.ID)
 		require.NoError(t, err)
 
 		// List by agent
@@ -220,7 +253,38 @@ func TestSkillRepository_Lifecycle(t *testing.T) {
 		assert.False(t, foundBInA)
 
 		// Agent-Skill association isolation
+		agentRepo := NewAgentRepository(pool)
 		agentID := uuid.New()
+		agentB := &domain.Agent{
+			ID:          agentID,
+			Name:        "test-tenant-b-agent",
+			Description: "Tenant B Agent",
+			Brain: domain.BrainConfig{
+				Model:             "gpt-4o",
+				Temperature:       0.7,
+				MaxTokens:         2048,
+				Endpoint:          "https://api.openai.com/v1",
+				CredentialsSecret: "my-secret-key",
+			},
+			ShortTermMemory: domain.ShortTermMemoryConfig{
+				KeyNamespace: "test:short",
+				TTLSeconds:   3600,
+			},
+			LongTermMemory: domain.LongTermMemoryConfig{
+				CollectionName:  "test-long",
+				VectorDimension: 1536,
+			},
+			Skills:         []uuid.UUID{},
+			MCPClients:     []domain.MCPClientConfig{},
+			Status:         domain.AgentStatusDefined,
+			CreatedAt:      time.Now().UTC(),
+			UpdatedAt:      time.Now().UTC(),
+		}
+		err = agentRepo.Create(ctxB, agentB)
+		require.NoError(t, err)
+		defer func() {
+			_ = agentRepo.Delete(ctxB, agentID)
+		}()
 
 		// Detach under Tenant B for Tenant A's skill should have no effect
 		err = repo.AttachSkillToAgent(ctxB, agentID, skillA.ID) // should fail/do nothing because skillA is not in Tenant B
