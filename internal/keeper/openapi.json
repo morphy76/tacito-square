@@ -27,6 +27,10 @@
     {
       "name": "agent-config/prompt-engineering",
       "description": "Bounded context: Agent Configuration \u00b7 Prompt Engineering. Manages versioned prompt templates and the collections that group them."
+    },
+    {
+      "name": "agent-config/agents",
+      "description": "Bounded context: Agent Configuration \u00b7 Templates. Manages agent templates used to deploy autonomous units at runtime."
     }
   ],
   "paths": {
@@ -1383,6 +1387,247 @@
           "agent-config/prompt-engineering"
         ]
       }
+    },
+    "/agents": {
+      "post": {
+        "summary": "Create a new agent template definition",
+        "operationId": "createAgent",
+        "tags": [
+          "agent-config/agents"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAgentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successfully created Agent template",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Agent"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List all agent templates",
+        "operationId": "listAgents",
+        "tags": [
+          "agent-config/agents"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of agent templates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Agent"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agents/{id}": {
+      "get": {
+        "summary": "Retrieve a specific agent template by ID",
+        "operationId": "getAgent",
+        "tags": [
+          "agent-config/agents"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the agent template",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent template details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Agent"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent template not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update an agent template by ID",
+        "operationId": "updateAgent",
+        "tags": [
+          "agent-config/agents"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the agent template",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAgentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully updated Agent template",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Agent"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent template not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete an agent template by ID",
+        "operationId": "deleteAgent",
+        "tags": [
+          "agent-config/agents"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the agent template",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully deleted Agent template"
+          },
+          "404": {
+            "description": "Agent template not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2130,6 +2375,249 @@
           "error": {
             "type": "string",
             "example": "name is required"
+          }
+        }
+      },
+      "BrainConfig": {
+        "type": "object",
+        "required": [
+          "model"
+        ],
+        "properties": {
+          "model": {
+            "type": "string",
+            "example": "gpt-4o"
+          },
+          "temperature": {
+            "type": "number",
+            "example": 0.7
+          },
+          "max_tokens": {
+            "type": "integer",
+            "example": 2048
+          },
+          "endpoint": {
+            "type": "string",
+            "example": "https://api.openai.com/v1"
+          },
+          "credentials_secret": {
+            "type": "string",
+            "example": "openai-secret-key"
+          }
+        }
+      },
+      "ShortTermMemoryConfig": {
+        "type": "object",
+        "required": [
+          "ttl_seconds"
+        ],
+        "properties": {
+          "key_namespace": {
+            "type": "string",
+            "example": "agent:qa:short"
+          },
+          "ttl_seconds": {
+            "type": "integer",
+            "example": 3600
+          }
+        }
+      },
+      "LongTermMemoryConfig": {
+        "type": "object",
+        "required": [
+          "collection_name",
+          "vector_dimension"
+        ],
+        "properties": {
+          "collection_name": {
+            "type": "string",
+            "example": "agent-qa-long"
+          },
+          "vector_dimension": {
+            "type": "integer",
+            "example": 1536
+          }
+        }
+      },
+      "MCPClientConfig": {
+        "type": "object",
+        "required": [
+          "server_id"
+        ],
+        "properties": {
+          "server_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "custom_env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "custom_args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CreateAgentRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "brain",
+          "short_term_memory",
+          "long_term_memory"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "qa-agent"
+          },
+          "description": {
+            "type": "string",
+            "example": "QA Testing Agent template"
+          },
+          "brain": {
+            "$ref": "#/components/schemas/BrainConfig"
+          },
+          "short_term_memory": {
+            "$ref": "#/components/schemas/ShortTermMemoryConfig"
+          },
+          "long_term_memory": {
+            "$ref": "#/components/schemas/LongTermMemoryConfig"
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "prompt_template": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mcp_clients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MCPClientConfig"
+            }
+          }
+        }
+      },
+      "UpdateAgentRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "brain",
+          "short_term_memory",
+          "long_term_memory"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "qa-agent"
+          },
+          "description": {
+            "type": "string",
+            "example": "QA Testing Agent template"
+          },
+          "brain": {
+            "$ref": "#/components/schemas/BrainConfig"
+          },
+          "short_term_memory": {
+            "$ref": "#/components/schemas/ShortTermMemoryConfig"
+          },
+          "long_term_memory": {
+            "$ref": "#/components/schemas/LongTermMemoryConfig"
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "prompt_template": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mcp_clients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MCPClientConfig"
+            }
+          }
+        }
+      },
+      "Agent": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "brain",
+          "short_term_memory",
+          "long_term_memory",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "brain": {
+            "$ref": "#/components/schemas/BrainConfig"
+          },
+          "short_term_memory": {
+            "$ref": "#/components/schemas/ShortTermMemoryConfig"
+          },
+          "long_term_memory": {
+            "$ref": "#/components/schemas/LongTermMemoryConfig"
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "prompt_template": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mcp_clients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MCPClientConfig"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "defined",
+              "assigned",
+              "active",
+              "terminated"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       }

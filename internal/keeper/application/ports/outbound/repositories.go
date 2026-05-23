@@ -63,3 +63,14 @@ type PromptRepository interface {
 	ResolveCollectionPrompts(ctx context.Context, collectionID uuid.UUID) ([]*domain.PromptTemplate, error)
 }
 
+// AgentRepository defines the persistent storage operations for Agent templates.
+type AgentRepository interface {
+	Create(ctx context.Context, agent *domain.Agent) error
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.Agent, error)
+	GetByName(ctx context.Context, name string) (*domain.Agent, error)
+	List(ctx context.Context) ([]*domain.Agent, error)
+	Update(ctx context.Context, agent *domain.Agent) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+

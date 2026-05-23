@@ -51,6 +51,9 @@ func NewServer(pool *pgxpool.Pool) *gin.Engine {
 		promptRepo := postgres.NewPromptRepository(pool)
 		promptHandler := httpAdapter.NewPromptHandler(promptRepo)
 
+		agentRepo := postgres.NewAgentRepository(pool)
+		agentHandler := httpAdapter.NewAgentHandler(agentRepo)
+
 		v1 := r.Group("/api/v1")
 		v1.Use(httpAdapter.TenantResolutionMiddleware(httpAdapter.NewHeaderTenantResolver()))
 		{
@@ -87,6 +90,12 @@ func NewServer(pool *pgxpool.Pool) *gin.Engine {
 			v1.PUT("/prompt-collections/:id", promptHandler.UpdateCollection)
 			v1.DELETE("/prompt-collections/:id", promptHandler.DeleteCollection)
 			v1.GET("/prompt-collections/:id/resolve", promptHandler.ResolveCollection)
+
+			v1.POST("/agents", agentHandler.Create)
+			v1.GET("/agents", agentHandler.List)
+			v1.GET("/agents/:id", agentHandler.GetByID)
+			v1.PUT("/agents/:id", agentHandler.Update)
+			v1.DELETE("/agents/:id", agentHandler.Delete)
 		}
 	}
 
