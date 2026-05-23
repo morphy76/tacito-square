@@ -49,10 +49,10 @@
 
 | ID | Title | Status | Component | File |
 |----|-------|--------|-----------|------|
-| SPEC-FR-M3.1 | LLM Provider Bindings & CRUD API | DRAFT | keeper | [SPEC-FR-M3.1](functional/M3/SPEC-FR-M3.1.md) |
-| SPEC-FR-M3.2 | MCP Servers & CRUD API | DRAFT | keeper | [SPEC-FR-M3.2](functional/M3/SPEC-FR-M3.2.md) |
-| SPEC-FR-M3.3 | Skill Collections & CRUD API | DRAFT | keeper | [SPEC-FR-M3.3](functional/M3/SPEC-FR-M3.3.md) |
-| SPEC-FR-M3.4 | Prompt Collections & CRUD API | DRAFT | keeper | [SPEC-FR-M3.4](functional/M3/SPEC-FR-M3.4.md) |
+| SPEC-FR-M3.1 | LLM Provider Bindings & CRUD API | ACCEPTED | keeper | [SPEC-FR-M3.1](functional/M3/SPEC-FR-M3.1.md) |
+| SPEC-FR-M3.2 | MCP Servers & CRUD API | ACCEPTED | keeper | [SPEC-FR-M3.2](functional/M3/SPEC-FR-M3.2.md) |
+| SPEC-FR-M3.3 | Skill Collections & CRUD API | ACCEPTED | keeper | [SPEC-FR-M3.3](functional/M3/SPEC-FR-M3.3.md) |
+| SPEC-FR-M3.4 | Prompt Collections & CRUD API | ACCEPTED | keeper | [SPEC-FR-M3.4](functional/M3/SPEC-FR-M3.4.md) |
 | SPEC-FR-M3.5 | Agent Domain Model & CRUD API | DRAFT | keeper | [SPEC-FR-M3.5](functional/M3/SPEC-FR-M3.5.md) |
 | SPEC-FR-M3.6 | Community Domain Model & CRUD API | DRAFT | keeper | [SPEC-FR-M3.6](functional/M3/SPEC-FR-M3.6.md) |
 | SPEC-FR-M3.7 | Agent-Community Assignment | DRAFT | keeper | [SPEC-FR-M3.7](functional/M3/SPEC-FR-M3.7.md) |
@@ -156,4 +156,8 @@
 | SPEC-FR-M2.9 | 4 | RED → GREEN → REFACTOR | [tasks/M2.9/](tasks/M2.9/) |
 | SPEC-FR-M2.10 | 3 | RED → GREEN → REFACTOR | [tasks/M2.10/](tasks/M2.10/) |
 | SPEC-FR-M2.11 | 3 | RED → GREEN → REFACTOR | [tasks/M2.11/](tasks/M2.11/) |
+| SPEC-FR-M3.1 | 2 | Domain/Persistence & HTTP API Boundaries | [tasks/M3.1/](tasks/M3.1/) |
+| SPEC-FR-M3.2 | 2 | Domain/Persistence & HTTP API Boundaries | [tasks/M3.2/](tasks/M3.2/) |
+| SPEC-FR-M3.3 | 2 | Domain/Persistence & HTTP API Boundaries | [tasks/M3.3/](tasks/M3.3/) |
+| SPEC-FR-M3.4 | 2 | Domain/Persistence & HTTP API Boundaries | [tasks/M3.4/](tasks/M3.4/) |
 
