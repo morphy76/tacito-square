@@ -1,6 +1,9 @@
 # Known TODOs
 
-add spec in m3 for bug fix having supporting entities not supporting the multitenancy non functional requirement
+- add spec in m3 for bug fix having supporting entities not supporting the multitenancy non functional requirement
+- domain tags per openapi
+- checks in liveness and readiness probes to check for the presence of the required entities in the cluster
+- bind keeper and postgres
 
 # Brainstorming
 
