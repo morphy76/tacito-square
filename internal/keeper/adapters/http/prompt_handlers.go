@@ -3,13 +3,17 @@ package http
 import (
 	"errors"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/keeper/domain"
+	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/morphy76/tacito-square/internal/shared/tenant"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // PromptHandler implements the HTTP controllers for Prompts and Collections.
@@ -53,15 +57,22 @@ type UpdateCollectionRequest struct {
 
 // CreateTemplate handles POST /api/v1/prompts
 func (h *PromptHandler) CreateTemplate(c *gin.Context) {
-	var req CreatePromptTemplateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.create_prompt_template", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
 		return
 	}
 
-	ten := tenant.FromContext(c.Request.Context())
-	if ten == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+	var req CreatePromptTemplateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -86,16 +97,35 @@ func (h *PromptHandler) CreateTemplate(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.CreateTemplate(c.Request.Context(), pt); err != nil {
+	if err := h.repo.CreateTemplate(ctx, pt); err != nil {
+		reqLogger.Error().Err(err).Msg("failed to create prompt template")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	reqLogger.Info().
+		Str("tenant_id", ten.FullName()).
+		Str("prompt_template_id", pt.ID.String()).
+		Msg("Prompt template created successfully")
 
 	c.JSON(http.StatusCreated, pt)
 }
 
 // GetTemplateByID handles GET /api/v1/prompts/:id
 func (h *PromptHandler) GetTemplateByID(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.get_prompt_template", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -103,7 +133,7 @@ func (h *PromptHandler) GetTemplateByID(c *gin.Context) {
 		return
 	}
 
-	pt, err := h.repo.GetTemplateByID(c.Request.Context(), id)
+	pt, err := h.repo.GetTemplateByID(ctx, id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -114,8 +144,22 @@ func (h *PromptHandler) GetTemplateByID(c *gin.Context) {
 
 // ListTemplates handles GET /api/v1/prompts
 func (h *PromptHandler) ListTemplates(c *gin.Context) {
-	templates, err := h.repo.ListTemplates(c.Request.Context())
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.list_prompt_templates", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	templates, err := h.repo.ListTemplates(ctx)
 	if err != nil {
+		reqLogger.Error().Err(err).Msg("failed to list prompt templates")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -124,6 +168,19 @@ func (h *PromptHandler) ListTemplates(c *gin.Context) {
 
 // UpdateTemplate handles PUT /api/v1/prompts/:id
 func (h *PromptHandler) UpdateTemplate(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.update_prompt_template", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -137,19 +194,13 @@ func (h *PromptHandler) UpdateTemplate(c *gin.Context) {
 		return
 	}
 
-	ten := tenant.FromContext(c.Request.Context())
-	if ten == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
-		return
-	}
-
-	existing, err := h.repo.GetTemplateByID(c.Request.Context(), id)
+	existing, err := h.repo.GetTemplateByID(ctx, id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
 
-	latest, err := h.repo.GetLatestTemplateByName(c.Request.Context(), existing.Name)
+	latest, err := h.repo.GetLatestTemplateByName(ctx, existing.Name)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -172,16 +223,35 @@ func (h *PromptHandler) UpdateTemplate(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.CreateTemplate(c.Request.Context(), newPT); err != nil {
+	if err := h.repo.CreateTemplate(ctx, newPT); err != nil {
+		reqLogger.Error().Err(err).Msg("failed to update prompt template version")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	reqLogger.Info().
+		Str("tenant_id", ten.FullName()).
+		Str("prompt_template_id", newPT.ID.String()).
+		Msg("Prompt template updated successfully")
 
 	c.JSON(http.StatusOK, newPT)
 }
 
 // DeleteTemplate handles DELETE /api/v1/prompts/:id
 func (h *PromptHandler) DeleteTemplate(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.delete_prompt_template", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -189,25 +259,38 @@ func (h *PromptHandler) DeleteTemplate(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.DeleteTemplate(c.Request.Context(), id); err != nil {
+	if err := h.repo.DeleteTemplate(ctx, id); err != nil {
+		reqLogger.Error().Err(err).Msg("failed to delete prompt template")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	reqLogger.Info().
+		Str("tenant_id", ten.FullName()).
+		Str("prompt_template_id", id.String()).
+		Msg("Prompt template deleted successfully")
 
 	c.Status(http.StatusNoContent)
 }
 
 // CreateCollection handles POST /api/v1/prompt-collections
 func (h *PromptHandler) CreateCollection(c *gin.Context) {
-	var req CreateCollectionRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.create_prompt_collection", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
 		return
 	}
 
-	ten := tenant.FromContext(c.Request.Context())
-	if ten == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+	var req CreateCollectionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -236,16 +319,35 @@ func (h *PromptHandler) CreateCollection(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.CreateCollection(c.Request.Context(), col); err != nil {
+	if err := h.repo.CreateCollection(ctx, col); err != nil {
+		reqLogger.Error().Err(err).Msg("failed to create prompt collection")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	reqLogger.Info().
+		Str("tenant_id", ten.FullName()).
+		Str("prompt_collection_id", col.ID.String()).
+		Msg("Prompt collection template created successfully")
 
 	c.JSON(http.StatusCreated, col)
 }
 
 // GetCollectionByID handles GET /api/v1/prompt-collections/:id
 func (h *PromptHandler) GetCollectionByID(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.get_prompt_collection", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -253,7 +355,7 @@ func (h *PromptHandler) GetCollectionByID(c *gin.Context) {
 		return
 	}
 
-	col, err := h.repo.GetCollectionByID(c.Request.Context(), id)
+	col, err := h.repo.GetCollectionByID(ctx, id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -264,8 +366,22 @@ func (h *PromptHandler) GetCollectionByID(c *gin.Context) {
 
 // ListCollections handles GET /api/v1/prompt-collections
 func (h *PromptHandler) ListCollections(c *gin.Context) {
-	collections, err := h.repo.ListCollections(c.Request.Context())
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.list_prompt_collections", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	collections, err := h.repo.ListCollections(ctx)
 	if err != nil {
+		reqLogger.Error().Err(err).Msg("failed to list prompt collections")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -274,6 +390,19 @@ func (h *PromptHandler) ListCollections(c *gin.Context) {
 
 // UpdateCollection handles PUT /api/v1/prompt-collections/:id
 func (h *PromptHandler) UpdateCollection(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.update_prompt_collection", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -287,7 +416,7 @@ func (h *PromptHandler) UpdateCollection(c *gin.Context) {
 		return
 	}
 
-	existing, err := h.repo.GetCollectionByID(c.Request.Context(), id)
+	existing, err := h.repo.GetCollectionByID(ctx, id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -303,12 +432,6 @@ func (h *PromptHandler) UpdateCollection(c *gin.Context) {
 		templateUUIDs = append(templateUUIDs, id)
 	}
 
-	ten := tenant.FromContext(c.Request.Context())
-	if ten == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
-		return
-	}
-
 	existing.TenantID = ten.FullName()
 	existing.Name = req.Name
 	existing.Description = req.Description
@@ -320,16 +443,35 @@ func (h *PromptHandler) UpdateCollection(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.UpdateCollection(c.Request.Context(), existing); err != nil {
+	if err := h.repo.UpdateCollection(ctx, existing); err != nil {
+		reqLogger.Error().Err(err).Msg("failed to update prompt collection")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	reqLogger.Info().
+		Str("tenant_id", ten.FullName()).
+		Str("prompt_collection_id", existing.ID.String()).
+		Msg("Prompt collection template updated successfully")
 
 	c.JSON(http.StatusOK, existing)
 }
 
 // DeleteCollection handles DELETE /api/v1/prompt-collections/:id
 func (h *PromptHandler) DeleteCollection(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.delete_prompt_collection", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -337,20 +479,39 @@ func (h *PromptHandler) DeleteCollection(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.DeleteCollection(c.Request.Context(), id); err != nil {
+	if err := h.repo.DeleteCollection(ctx, id); err != nil {
 		if errors.Is(err, errors.New("not found")) {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
+		reqLogger.Error().Err(err).Msg("failed to delete prompt collection")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	reqLogger.Info().
+		Str("tenant_id", ten.FullName()).
+		Str("prompt_collection_id", id.String()).
+		Msg("Prompt collection template deleted successfully")
 
 	c.Status(http.StatusNoContent)
 }
 
 // ResolveCollection handles GET /api/v1/prompt-collections/:id/resolve
 func (h *PromptHandler) ResolveCollection(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.resolve_prompt_collection", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -358,8 +519,9 @@ func (h *PromptHandler) ResolveCollection(c *gin.Context) {
 		return
 	}
 
-	resolved, err := h.repo.ResolveCollectionPrompts(c.Request.Context(), id)
+	resolved, err := h.repo.ResolveCollectionPrompts(ctx, id)
 	if err != nil {
+		reqLogger.Error().Err(err).Msg("failed to resolve prompt collection")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

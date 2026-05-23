@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,4 +24,23 @@ func TestMetricsMiddleware_InstrumentsRequests(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestRegisterDBPoolStats_NilPool_NoPanic(t *testing.T) {
+	assert.NotPanics(t, func() {
+		RegisterDBPoolStats(nil)
+	})
+}
+
+func TestDBPoolCollector_NilPool_NoPanic(t *testing.T) {
+	collector := NewDBPoolCollector(nil)
+	descs := make(chan *prometheus.Desc, 10)
+	assert.NotPanics(t, func() {
+		collector.Describe(descs)
+	})
+
+	metrics := make(chan prometheus.Metric, 10)
+	assert.NotPanics(t, func() {
+		collector.Collect(metrics)
+	})
 }

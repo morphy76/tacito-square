@@ -36,6 +36,24 @@ func main() {
 	// 2. Initialize structured logging
 	logger := observability.NewLogger(logLevel, os.Stdout)
 
+	// CLI subcommand: execute migrations and exit
+	if len(os.Args) > 1 && os.Args[1] == "migrate" {
+		dbURL := v.GetString("database.url")
+		if dbURL == "" {
+			dbURL = os.Getenv("TS_DATABASE_URL")
+		}
+		if dbURL == "" {
+			logger.Fatal().Msg("database url is required for migrations")
+		}
+
+		ctx := context.Background()
+		err := keeper.RunMigrations(ctx, dbURL, "", logger)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("migrations failed")
+		}
+		os.Exit(0)
+	}
+
 	logger.Info().
 		Str("component", "keeper").
 		Str("version", Version).

@@ -3,13 +3,17 @@ package http
 import (
 	"errors"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/keeper/domain"
+	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/morphy76/tacito-square/internal/shared/tenant"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // MCPServerHandler implements the HTTP controllers for MCP servers CRUD operations.
@@ -48,15 +52,22 @@ type UpdateMCPServerRequest struct {
 
 // Create handles POST /api/v1/mcp-servers
 func (h *MCPServerHandler) Create(c *gin.Context) {
-	var req CreateMCPServerRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.create_mcp_server", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
 		return
 	}
 
-	ten := tenant.FromContext(c.Request.Context())
-	if ten == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+	var req CreateMCPServerRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -81,16 +92,35 @@ func (h *MCPServerHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.Create(c.Request.Context(), server); err != nil {
+	if err := h.repo.Create(ctx, server); err != nil {
+		reqLogger.Error().Err(err).Msg("failed to create mcp server")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	reqLogger.Info().
+		Str("tenant_id", ten.FullName()).
+		Str("mcp_server_id", server.ID.String()).
+		Msg("MCP server template created successfully")
 
 	c.JSON(http.StatusCreated, server)
 }
 
 // GetByID handles GET /api/v1/mcp-servers/:id
 func (h *MCPServerHandler) GetByID(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.get_mcp_server", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -98,7 +128,7 @@ func (h *MCPServerHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	server, err := h.repo.GetByID(c.Request.Context(), id)
+	server, err := h.repo.GetByID(ctx, id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -109,8 +139,22 @@ func (h *MCPServerHandler) GetByID(c *gin.Context) {
 
 // List handles GET /api/v1/mcp-servers
 func (h *MCPServerHandler) List(c *gin.Context) {
-	servers, err := h.repo.List(c.Request.Context())
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.list_mcp_servers", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	servers, err := h.repo.List(ctx)
 	if err != nil {
+		reqLogger.Error().Err(err).Msg("failed to list mcp servers")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -119,6 +163,19 @@ func (h *MCPServerHandler) List(c *gin.Context) {
 
 // Update handles PUT /api/v1/mcp-servers/:id
 func (h *MCPServerHandler) Update(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.update_mcp_server", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -132,15 +189,9 @@ func (h *MCPServerHandler) Update(c *gin.Context) {
 		return
 	}
 
-	existing, err := h.repo.GetByID(c.Request.Context(), id)
+	existing, err := h.repo.GetByID(ctx, id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		return
-	}
-
-	ten := tenant.FromContext(c.Request.Context())
-	if ten == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
 		return
 	}
 
@@ -160,16 +211,35 @@ func (h *MCPServerHandler) Update(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.Update(c.Request.Context(), existing); err != nil {
+	if err := h.repo.Update(ctx, existing); err != nil {
+		reqLogger.Error().Err(err).Msg("failed to update mcp server")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	reqLogger.Info().
+		Str("tenant_id", ten.FullName()).
+		Str("mcp_server_id", existing.ID.String()).
+		Msg("MCP server template updated successfully")
 
 	c.JSON(http.StatusOK, existing)
 }
 
 // Delete handles DELETE /api/v1/mcp-servers/:id
 func (h *MCPServerHandler) Delete(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.delete_mcp_server", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -177,14 +247,20 @@ func (h *MCPServerHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.Delete(c.Request.Context(), id); err != nil {
+	if err := h.repo.Delete(ctx, id); err != nil {
 		if errors.Is(err, errors.New("not found")) {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
+		reqLogger.Error().Err(err).Msg("failed to delete mcp server")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	reqLogger.Info().
+		Str("tenant_id", ten.FullName()).
+		Str("mcp_server_id", id.String()).
+		Msg("MCP server template deleted successfully")
 
 	c.Status(http.StatusNoContent)
 }

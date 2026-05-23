@@ -3,13 +3,17 @@ package http
 import (
 	"errors"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/keeper/domain"
+	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/morphy76/tacito-square/internal/shared/tenant"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // AgentHandler implements the HTTP controllers for Agent templates CRUD operations.
@@ -70,15 +74,22 @@ type UpdateAgentRequest struct {
 
 // Create handles POST /api/v1/agents
 func (h *AgentHandler) Create(c *gin.Context) {
-	var req CreateAgentRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.create_agent", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
 		return
 	}
 
-	ten := tenant.FromContext(c.Request.Context())
-	if ten == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+	var req CreateAgentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -158,16 +169,35 @@ func (h *AgentHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.Create(c.Request.Context(), agent); err != nil {
+	if err := h.repo.Create(ctx, agent); err != nil {
+		reqLogger.Error().Err(err).Msg("failed to create agent")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	reqLogger.Info().
+		Str("tenant_id", ten.FullName()).
+		Str("agent_id", agent.ID.String()).
+		Msg("Agent template created successfully")
 
 	c.JSON(http.StatusCreated, agent)
 }
 
 // GetByID handles GET /api/v1/agents/:id
 func (h *AgentHandler) GetByID(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.get_agent", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
 	idStr := c.Param("id")
 	if idStr == "" {
 		idStr = c.Param("agent_id")
@@ -178,7 +208,7 @@ func (h *AgentHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	agent, err := h.repo.GetByID(c.Request.Context(), id)
+	agent, err := h.repo.GetByID(ctx, id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -189,8 +219,22 @@ func (h *AgentHandler) GetByID(c *gin.Context) {
 
 // List handles GET /api/v1/agents
 func (h *AgentHandler) List(c *gin.Context) {
-	agents, err := h.repo.List(c.Request.Context())
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.list_agents", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	agents, err := h.repo.List(ctx)
 	if err != nil {
+		reqLogger.Error().Err(err).Msg("failed to list agents")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -199,6 +243,19 @@ func (h *AgentHandler) List(c *gin.Context) {
 
 // Update handles PUT /api/v1/agents/:id
 func (h *AgentHandler) Update(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.update_agent", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
 	idStr := c.Param("id")
 	if idStr == "" {
 		idStr = c.Param("agent_id")
@@ -215,7 +272,7 @@ func (h *AgentHandler) Update(c *gin.Context) {
 		return
 	}
 
-	existing, err := h.repo.GetByID(c.Request.Context(), id)
+	existing, err := h.repo.GetByID(ctx, id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -264,12 +321,6 @@ func (h *AgentHandler) Update(c *gin.Context) {
 		})
 	}
 
-	ten := tenant.FromContext(c.Request.Context())
-	if ten == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
-		return
-	}
-
 	existing.TenantID = ten.FullName()
 	existing.Name = req.Name
 	existing.Description = req.Description
@@ -298,16 +349,35 @@ func (h *AgentHandler) Update(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.Update(c.Request.Context(), existing); err != nil {
+	if err := h.repo.Update(ctx, existing); err != nil {
+		reqLogger.Error().Err(err).Msg("failed to update agent")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	reqLogger.Info().
+		Str("tenant_id", ten.FullName()).
+		Str("agent_id", existing.ID.String()).
+		Msg("Agent template updated successfully")
 
 	c.JSON(http.StatusOK, existing)
 }
 
 // Delete handles DELETE /api/v1/agents/:id
 func (h *AgentHandler) Delete(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.delete_agent", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
 	idStr := c.Param("id")
 	if idStr == "" {
 		idStr = c.Param("agent_id")
@@ -318,14 +388,20 @@ func (h *AgentHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.Delete(c.Request.Context(), id); err != nil {
+	if err := h.repo.Delete(ctx, id); err != nil {
 		if errors.Is(err, errors.New("not found")) {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
+		reqLogger.Error().Err(err).Msg("failed to delete agent")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	reqLogger.Info().
+		Str("tenant_id", ten.FullName()).
+		Str("agent_id", id.String()).
+		Msg("Agent template deleted successfully")
 
 	c.Status(http.StatusNoContent)
 }

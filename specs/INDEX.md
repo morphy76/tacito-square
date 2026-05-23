@@ -58,8 +58,6 @@
 | SPEC-FR-M3.6 | Community Domain Model & CRUD API | IMPLEMENTED | keeper | [SPEC-FR-M3.6](functional/M3/SPEC-FR-M3.6.md) |
 | SPEC-FR-M3.7 | Agent-Community Assignment | IMPLEMENTED | keeper | [SPEC-FR-M3.7](functional/M3/SPEC-FR-M3.7.md) |
 | SPEC-FR-M3.8 | PostgreSQL Persistence & Migrations | ACCEPTED | keeper | [SPEC-FR-M3.8](functional/M3/SPEC-FR-M3.8.md) |
-| SPEC-FR-M3.9 | OIDC/JWT Authentication | DRAFT | keeper, shared | [SPEC-FR-M3.9](functional/M3/SPEC-FR-M3.9.md) |
-| SPEC-FR-M3.10 | Agent CRD Submission | DRAFT | keeper | [SPEC-FR-M3.10](functional/M3/SPEC-FR-M3.10.md) |
 
 ### M3: Bugs
 
@@ -76,6 +74,8 @@
 | SPEC-FR-M4.2 | AgentCommunity CRD Definition | DRAFT | operator | [SPEC-FR-M4.2](functional/M4/SPEC-FR-M4.2.md) |
 | SPEC-FR-M4.3 | Reconciliation Controller | DRAFT | operator | [SPEC-FR-M4.3](functional/M4/SPEC-FR-M4.3.md) |
 | SPEC-FR-M4.4 | Zero-Scaling Support | DRAFT | operator | [SPEC-FR-M4.4](functional/M4/SPEC-FR-M4.4.md) |
+| SPEC-FR-M4.5 | OIDC/JWT Authentication | DRAFT | keeper, shared | [SPEC-FR-M4.5](functional/M4/SPEC-FR-M4.5.md) |
+| SPEC-FR-M4.6 | Agent CRD Submission | DRAFT | keeper | [SPEC-FR-M4.6](functional/M4/SPEC-FR-M4.6.md) |
 
 ### M5: Agent Core
 
@@ -139,8 +139,8 @@
 |-----------|-------|--------|-------|------|
 | M1 | Infrastructure Helm Chart | ✔️ IMPLEMENTED | 2 | [M1](milestones/M1-infrastructure.md) |
 | M2 | Application Helm Chart & Component Scaffolding | ✔️ IMPLEMENTED | 11 | [M2](milestones/M2-packaging.md) |
-| M3 | Keeper Core | ⬜ PLANNED | 10 | [M3](milestones/M3-keeper-core.md) |
-| M4 | Operator Core | ⬜ PLANNED | 4 | [M4](milestones/M4-operator-core.md) |
+| M3 | Keeper Core | ⬜ PLANNED | 8 | [M3](milestones/M3-keeper-core.md) |
+| M4 | Operator Core | ⬜ PLANNED | 6 | [M4](milestones/M4-operator-core.md) |
 | M5 | Agent Core | ⬜ PLANNED | 6 | [M5](milestones/M5-agent-core.md) |
 | M6 | Communities & Messaging | ⬜ PLANNED | 7 | [M6](milestones/M6-communities.md) |
 | M7 | BFF & UIs | ⬜ PLANNED | 4 | [M7](milestones/M7-bff-uis.md) |

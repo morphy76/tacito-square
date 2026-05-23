@@ -1,10 +1,10 @@
-# SPEC-FR-M3.10: Agent CRD Submission
+# SPEC-FR-M4.6: Agent CRD Submission
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
-| ID            | SPEC-FR-M3.10                               |
+| ID            | SPEC-FR-M4.6                                |
 | Status        | DRAFT                                       |
-| Milestone     | M3                                          |
+| Milestone     | M4                                          |
 | Component     | keeper                                      |
 | Depends On    | SPEC-FR-M3.7, SPEC-FR-M4.1                 |
 | Supersedes    | none                                        |

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -66,4 +67,65 @@ func MetricsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		h.ServeHTTP(c.Writer, c.Request)
 	}
+}
+
+// RegisterDBPoolStats registers database connection pool metrics for the given pool.
+func RegisterDBPoolStats(pool *pgxpool.Pool) {
+	if pool == nil {
+		return
+	}
+	prometheus.MustRegister(NewDBPoolCollector(pool))
+}
+
+type dbPoolCollector struct {
+	pool          *pgxpool.Pool
+	acquiredConns *prometheus.Desc
+	idleConns     *prometheus.Desc
+	totalConns    *prometheus.Desc
+	maxConns      *prometheus.Desc
+}
+
+// NewDBPoolCollector creates a new custom Prometheus collector for the database connection pool.
+func NewDBPoolCollector(pool *pgxpool.Pool) prometheus.Collector {
+	return &dbPoolCollector{
+		pool: pool,
+		acquiredConns: prometheus.NewDesc(
+			"db_pool_acquired_connections",
+			"Number of currently acquired/active connections in the database pool.",
+			nil, nil,
+		),
+		idleConns: prometheus.NewDesc(
+			"db_pool_idle_connections",
+			"Number of currently idle connections in the database pool.",
+			nil, nil,
+		),
+		totalConns: prometheus.NewDesc(
+			"db_pool_total_connections",
+			"Total number of connections currently in the database pool.",
+			nil, nil,
+		),
+		maxConns: prometheus.NewDesc(
+			"db_pool_max_connections",
+			"Maximum number of connections allowed in the database pool.",
+			nil, nil,
+		),
+	}
+}
+
+func (c *dbPoolCollector) Describe(ch chan<- *prometheus.Desc) {
+	ch <- c.acquiredConns
+	ch <- c.idleConns
+	ch <- c.totalConns
+	ch <- c.maxConns
+}
+
+func (c *dbPoolCollector) Collect(ch chan<- prometheus.Metric) {
+	if c.pool == nil {
+		return
+	}
+	stats := c.pool.Stat()
+	ch <- prometheus.MustNewConstMetric(c.acquiredConns, prometheus.GaugeValue, float64(stats.AcquiredConns()))
+	ch <- prometheus.MustNewConstMetric(c.idleConns, prometheus.GaugeValue, float64(stats.IdleConns()))
+	ch <- prometheus.MustNewConstMetric(c.totalConns, prometheus.GaugeValue, float64(stats.TotalConns()))
+	ch <- prometheus.MustNewConstMetric(c.maxConns, prometheus.GaugeValue, float64(stats.MaxConns()))
 }

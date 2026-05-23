@@ -20,3 +20,5 @@ Operator watches TacitoAgent and TacitoCommunity CRDs and instantiates/destroys 
 | SPEC-FR-M4.2 | AgentCommunity CRD Definition | operator | SPEC-FR-M4.1 |
 | SPEC-FR-M4.3 | Reconciliation Controller | operator | SPEC-FR-M4.1 |
 | SPEC-FR-M4.4 | Zero-Scaling Support | operator | SPEC-FR-M4.3 |
+| SPEC-FR-M4.5 | OIDC/JWT Authentication | keeper, shared | SPEC-FR-M2.2 |
+| SPEC-FR-M4.6 | Agent CRD Submission | keeper | SPEC-FR-M3.7, SPEC-FR-M4.1 |

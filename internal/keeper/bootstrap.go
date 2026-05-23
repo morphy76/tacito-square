@@ -28,6 +28,9 @@ func NewServer(pool *pgxpool.Pool) *gin.Engine {
 	r.Use(observability.MetricsMiddleware())
 	r.Use(observability.LoggingMiddleware())
 
+	// Register database connection pool statistics
+	observability.RegisterDBPoolStats(pool)
+
 	var checkers []health.Checker
 	if pool != nil {
 		checkers = append(checkers, health.PingChecker("postgres", pool.Ping))

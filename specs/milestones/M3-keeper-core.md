@@ -24,5 +24,3 @@ Authenticated API calls → create community → create agent → assign agent t
 | SPEC-FR-M3.6 | Community Domain Model & CRUD API | keeper | SPEC-FR-M2.3 |
 | SPEC-FR-M3.7 | Agent-Community Assignment | keeper | SPEC-FR-M3.5, SPEC-FR-M3.6 |
 | SPEC-FR-M3.8 | PostgreSQL Persistence & Migrations | keeper | SPEC-FR-M3.1, SPEC-FR-M3.2, SPEC-FR-M3.3, SPEC-FR-M3.4, SPEC-FR-M3.5, SPEC-FR-M3.6, SPEC-FR-M3.7 |
-| SPEC-FR-M3.9 | OIDC/JWT Authentication | keeper, shared | SPEC-FR-M2.2 |
-| SPEC-FR-M3.10 | Agent CRD Submission | keeper | SPEC-FR-M3.7, SPEC-FR-M4.1 |

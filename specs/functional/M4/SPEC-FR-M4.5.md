@@ -1,10 +1,10 @@
-# SPEC-FR-M3.9: OIDC/JWT Authentication
+# SPEC-FR-M4.5: OIDC/JWT Authentication
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
-| ID            | SPEC-FR-M3.9                                |
+| ID            | SPEC-FR-M4.5                                |
 | Status        | DRAFT                                       |
-| Milestone     | M3                                          |
+| Milestone     | M4                                          |
 | Component     | keeper, shared                              |
 | Depends On    | SPEC-FR-M2.2                                |
 | Supersedes    | none                                        |
