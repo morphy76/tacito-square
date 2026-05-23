@@ -13,7 +13,7 @@
 | SPEC-NFR-LOG | Structured Logging (zerolog) | ACCEPTED | [SPEC-NFR-LOG](nonfunctional/SPEC-NFR-LOG.md) |
 | SPEC-NFR-HTTP | HTTP Framework (Gin) | ACCEPTED | [SPEC-NFR-HTTP](nonfunctional/SPEC-NFR-HTTP.md) |
 | SPEC-NFR-HEALTH | Dependency-Aware Health Probes | ACCEPTED | [SPEC-NFR-HEALTH](nonfunctional/SPEC-NFR-HEALTH.md) |
-| SPEC-NFR-METRICS | Prometheus Metrics Endpoints | ACCEPTED | [SPEC-NFR-METRICS](nonfunctional/SPEC-NFR-METRICS.md) |
+| SPEC-NFR-OBSERVABILITY | Observability (Metrics, Tracing, and Correlation) | ACCEPTED | [SPEC-NFR-OBSERVABILITY](nonfunctional/SPEC-NFR-OBSERVABILITY.md) |
 | SPEC-NFR-OPENAPI | Live OpenAPI Spec Endpoints | ACCEPTED | [SPEC-NFR-OPENAPI](nonfunctional/SPEC-NFR-OPENAPI.md) |
 | SPEC-NFR-HPA | Horizontal Pod Autoscaling | ACCEPTED | [SPEC-NFR-HPA](nonfunctional/SPEC-NFR-HPA.md) |
 | SPEC-NFR-CACHE | Redis Infrastructure Cache | ACCEPTED | [SPEC-NFR-CACHE](nonfunctional/SPEC-NFR-CACHE.md) |

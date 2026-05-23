@@ -18,7 +18,7 @@ External agent federation via A2A protocol. Prometheus dashboards, validated Ope
 |---------|-------|-----------|------------|
 | SPEC-FR-M9.1 | A2A HTTP Gateway | keeper | SPEC-FR-M6.5 |
 | SPEC-FR-M9.2 | External Agent Registry | keeper | SPEC-FR-M9.1 |
-| SPEC-FR-M9.3 | Prometheus Metrics Integration | all | SPEC-NFR-METRICS |
+| SPEC-FR-M9.3 | Prometheus Metrics Integration | all | SPEC-NFR-OBSERVABILITY |
 | SPEC-FR-M9.4 | OpenAPI Contract Validation | all | SPEC-NFR-OPENAPI |
 | SPEC-FR-M9.5 | E2E & Benchmark Tests | test | all M1-M8 |
 | SPEC-FR-M9.6 | Production Helm & Hardening | deploy | SPEC-FR-M2.1 |

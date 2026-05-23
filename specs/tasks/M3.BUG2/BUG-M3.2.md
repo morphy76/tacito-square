@@ -7,7 +7,7 @@
 | Severity      | HIGH                                                               |
 | Milestone     | M3 — Keeper Core                                                   |
 | Affects       | TASK-M3.1.2, TASK-M3.2.2, TASK-M3.3.2, TASK-M3.4.2                 |
-| Violates      | SPEC-NFR-HEXAGONAL §6, SPEC-NFR-HTTP §4, SPEC-NFR-HEALTH §1, §3    |
+| Violates      | SPEC-NFR-HEXAGONAL §6, SPEC-NFR-HTTP §4, SPEC-NFR-HEALTH §1, §3, SPEC-NFR-OBSERVABILITY |
 | Discovered    | Post-implementation review against specs/nonfunctional requirements |
 
 ## Problem Statement
@@ -37,6 +37,7 @@ If the PostgreSQL database is unavailable or unconfigured (such as during enviro
    - **SPEC-NFR-HEXAGONAL**: Exposing API routes dynamically based on external database connectivity violates the predictability of the service API. Additionally, the bootstrapping code is tightly coupled to concrete postgres repository instantiations rather than abstracting repository interfaces or maintaining decoupled dependency injection.
    - **SPEC-NFR-HTTP**: Dynamic route registration conflicts with centralized route registration principles.
    - **SPEC-NFR-HEALTH**: An unavailable database must be reflected in the `/readyz` probe reporting 503, but the application's actual routing layout must remain deterministic and stable.
+   - **SPEC-NFR-OBSERVABILITY**: If routes under `/api/v1` are not registered when the database is down or unconfigured at startup, the system's Prometheus metrics instrumentation and OpenTelemetry distributed tracing spans cannot be generated or correlated for client requests to those endpoints, severely breaking the unified observability framework.
 
 ## Affected Aggregates and Files
 
@@ -51,12 +52,13 @@ If the PostgreSQL database is unavailable or unconfigured (such as during enviro
 2. **Broken Health Probe Contract**: Under `SPEC-NFR-HEALTH`, the application is supposed to start up, register its routes, and report the database status dynamically via `/readyz`. With the current implementation, if the DB fails to connect at startup, the app might crash (due to `logger.Fatal().Err(err).Msg("failed to connect to postgres")` in `cmd/keeper/main.go`) or start with missing routes.
 3. **Impaired Testability**: Integration and unit tests that do not provision a full PostgreSQL instance cannot test the routing structure, middleware bindings, or request validation of the HTTP layer.
 
-## Expected Behaviour (per SPEC-NFR-HEXAGONAL, SPEC-NFR-HTTP & SPEC-NFR-HEALTH)
+## Expected Behaviour (per SPEC-NFR-HEXAGONAL, SPEC-NFR-HTTP, SPEC-NFR-HEALTH & SPEC-NFR-OBSERVABILITY)
 
 1. The HTTP routing table for all `/api/v1` endpoints MUST be registered unconditionally during `NewServer` bootstrapping, regardless of the database connection state.
 2. If the PostgreSQL pool is uninitialized or disconnected when an API request is received, the system MUST return a structured JSON error with `503 Service Unavailable` or `500 Internal Server Error`, rather than a `404 Not Found`.
 3. The bootstrap function (`NewServer`) should decouple from concrete repository instantiation, allowing either mock/test repositories or safely injecting repository dependencies (satisfying hexagonal architecture).
 4. The database connection check must be evaluated dynamically in the `/readyz` health check (per `SPEC-NFR-HEALTH`), allowing the service to run and report status rather than crashing immediately at startup or starting in a partially-registered state.
+5. In accordance with `SPEC-NFR-OBSERVABILITY`, Prometheus metrics endpoints and OpenTelemetry distributed trace spans/context propagation MUST remain fully active and register traces/metrics (e.g. tracking and logging dependency errors and 503/500 failures) even when components run without immediate database connectivity.
 
 ## Acceptance Criteria
 

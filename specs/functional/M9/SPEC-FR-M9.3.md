@@ -6,7 +6,7 @@
 | Status        | DRAFT                                       |
 | Milestone     | M9                                          |
 | Component     | all                                         |
-| Depends On    | SPEC-NFR-METRICS                            |
+| Depends On    | SPEC-NFR-OBSERVABILITY                      |
 | Supersedes    | none                                        |
 
 ## Context
