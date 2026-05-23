@@ -9,4 +9,5 @@
 - Online skillsets, e.g. from github
 - how RAG and websearch fit into the picture
 - Roles and functional ownership, in particular within the tenant and quota-bound (platform QoS)
-- 
+- postman collection for keeper
+
