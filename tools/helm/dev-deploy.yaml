@@ -1,0 +1,12 @@
+keeper:
+  image:
+    pullPolicy: Always
+  config:
+    db:
+      url: "postgres://ts-infra-postgresql:5432/tacito?sslmode=require"
+      username: "tacito"
+      password: "tacito-dev"
+operator:
+  enabled: false
+bff:
+  enabled: false

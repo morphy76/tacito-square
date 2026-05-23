@@ -78,7 +78,6 @@ When the Keeper and Operator spawn agents, they receive configurations defined u
 | Key                       | Default          | Description                                |
 | ------------------------- | ---------------- | ------------------------------------------ |
 | `global.imageRegistry`    | `""`             | Fallback container registry                |
-| `global.infraReleaseName` | `tacito-infra`   | Default prefix for infrastructure services |
 
 ### Keeper Settings
 

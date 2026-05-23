@@ -7,8 +7,6 @@
 global:
   imageRegistry: ""
   imagePullSecrets: []
-  # Infrastructure release name — used to derive default service hostnames.
-  infraReleaseName: "tacito-infra"
   # CA trust bundle — ConfigMap created by the infra chart TLS generator.
   # Mount this in application pods to trust infrastructure service certificates.
   caTrustBundle:

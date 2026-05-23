@@ -12,6 +12,7 @@ HELM_CHART         := tools/helm/tacito-square
 HELM_INFRA_RELEASE ?= ts-infra
 HELM_INFRA_CHART   := tools/helm/tacito-square-infra
 NAMESPACE          ?= tacito
+HELM_DEV_VALUES    := tools/helm/dev-values.yaml
 
 GO             := go
 GOTEST         := $(GO) test
@@ -104,7 +105,7 @@ helm-template: ## Render application Helm templates locally
 	helm template $(HELM_RELEASE) $(HELM_CHART) --namespace $(NAMESPACE)
 
 helm-install: ## Install/upgrade application Helm release
-	helm upgrade --install $(HELM_RELEASE) $(HELM_CHART) --namespace $(NAMESPACE) --create-namespace --wait
+	helm upgrade --install $(HELM_RELEASE) $(HELM_CHART) --namespace $(NAMESPACE) --create-namespace --values $(HELM_DEV_VALUES) --wait
 
 helm-uninstall: ## Uninstall application Helm release
 	helm uninstall $(HELM_RELEASE) --namespace $(NAMESPACE)
