@@ -136,6 +136,8 @@ keycloak:
       value: "admin"
     - name: KC_BOOTSTRAP_ADMIN_PASSWORD
       value: "admin-dev"
+    # - name: KC_LOG_LEVEL
+    #   value: "DEBUG"
   extraVolumes: |
     - name: keycloak-tls
       secret:
@@ -150,6 +152,8 @@ keycloak:
     - name: keycloak-realm
       mountPath: /opt/keycloak/data/import
       readOnly: true
+  http:
+    internalScheme: HTTPS
 
 # ── MinIO (S3-compatible) ───────────────────────────────
 minio:
