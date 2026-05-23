@@ -56,6 +56,23 @@
 | **Operator** | Kubebuilder CRD controller — Agent & AgentCommunity resources | `tacito-square/operator` |
 | **BFF** | Backend-for-frontend — auth, aggregation, API translation | `tacito-square/bff` |
 
+## Keeper API Endpoints
+
+The Keeper component exposes a REST API for configuration management, lifecycle actions, and system observability.
+
+### Observability & Specification
+*   `GET /openapi.json` — Returns the live OpenAPI 3.0.3 contract specification.
+*   `GET /metrics` — Exposes technical performance and request metrics in standard Prometheus exposition format.
+*   `GET /healthz` — Liveness probe (returns `200 OK` if the process is running).
+*   `GET /readyz` — Readiness probe (performs parallel liveness/reachability checks on downstream dependencies like PostgreSQL).
+
+### LLM Provider Bindings (`/api/v1/llm-bindings`)
+*   `POST /api/v1/llm-bindings` — Create a new LLM provider binding.
+*   `GET /api/v1/llm-bindings` — List all configured LLM provider bindings.
+*   `GET /api/v1/llm-bindings/:id` — Retrieve details of a specific LLM provider binding by UUID.
+*   `PUT /api/v1/llm-bindings/:id` — Update configuration properties of an existing LLM provider binding.
+*   `DELETE /api/v1/llm-bindings/:id` — Remove an LLM provider binding.
+
 ## Technology Stack
 
 | Layer | Technology |

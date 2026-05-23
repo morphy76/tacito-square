@@ -1,9 +1,9 @@
 # Binaries
 bin/
-agent
-keeper
-operator
-bff
+/agent
+/keeper
+/operator
+/bff
 
 # IDE
 .idea/
