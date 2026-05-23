@@ -35,6 +35,7 @@ keeper:
       url: "postgres://tacito-infra-postgresql:5432/tacito?sslmode=require"
       username: tacito
       password: ""
+      migrate: true
     nats:
       url: "nats://tacito-infra-nats:4222"
     redis:

@@ -6,6 +6,9 @@ keeper:
       url: "postgres://ts-infra-postgresql:5432/tacito?sslmode=require"
       username: "tacito"
       password: "tacito-dev"
+      migrate: false
+    otel:
+      endpoint: "ts-infra-otel-collector:4317"
 operator:
   enabled: false
 bff:

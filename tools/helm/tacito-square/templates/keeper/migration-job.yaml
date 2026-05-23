@@ -1,3 +1,4 @@
+{{- if .Values.keeper.config.db.migrate -}}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -33,3 +34,4 @@ spec:
                   key: password
             - name: TS_KEEPER_MIGRATIONS_DIR
               value: "/app/deploy/postgres/migrations"  # Standard location inside the packaged container image
+{{- end }}
