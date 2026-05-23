@@ -18,8 +18,11 @@ GO             := go
 GOTEST         := $(GO) test
 GOLINT         := $(shell which golangci-lint 2>/dev/null || echo "$(shell go env GOPATH 2>/dev/null)/bin/golangci-lint")
 
+NERDCTL_ADDR   := /var/run/docker/containerd/containerd.sock
+
 .PHONY: all build test test-integration test-operator test-e2e test-bench test-race test-contract lint generate \
         docker-build docker-push \
+        docker-load docker-load-agent docker-load-keeper docker-load-operator docker-load-bff \
         helm-template helm-install helm-uninstall \
         helm-infra-deps helm-infra-lint helm-infra-template helm-infra-install helm-infra-uninstall \
         ci clean help
@@ -98,6 +101,20 @@ docker-push: ## Push all Docker images
 	docker push $(REGISTRY)/keeper:$(KEEPER_VERSION)
 	docker push $(REGISTRY)/operator:$(OPERATOR_VERSION)
 	docker push $(REGISTRY)/bff:$(BFF_VERSION)
+
+docker-load: docker-load-agent docker-load-keeper docker-load-operator docker-load-bff ## Load all images into Rancher Desktop containerd (k8s.io namespace)
+
+docker-load-agent: ## Load agent image into Rancher Desktop containerd
+	docker save $(REGISTRY)/agent:$(AGENT_VERSION) | rdctl shell -- nerdctl --address $(NERDCTL_ADDR) -n k8s.io load
+
+docker-load-keeper: ## Load keeper image into Rancher Desktop containerd
+	docker save $(REGISTRY)/keeper:$(KEEPER_VERSION) | rdctl shell -- nerdctl --address $(NERDCTL_ADDR) -n k8s.io load
+
+docker-load-operator: ## Load operator image into Rancher Desktop containerd
+	docker save $(REGISTRY)/operator:$(OPERATOR_VERSION) | rdctl shell -- nerdctl --address $(NERDCTL_ADDR) -n k8s.io load
+
+docker-load-bff: ## Load bff image into Rancher Desktop containerd
+	docker save $(REGISTRY)/bff:$(BFF_VERSION) | rdctl shell -- nerdctl --address $(NERDCTL_ADDR) -n k8s.io load
 
 ## —— Helm (app) —————————————————————————————————————————
 

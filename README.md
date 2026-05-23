@@ -165,6 +165,19 @@ make docker-build-agent
 make docker-build-keeper
 ```
 
+> **Rancher Desktop (local dev):** Images built with `docker build` are not automatically visible to the Kubernetes cluster. After building, load them into the containerd `k8s.io` namespace:
+>
+> ```bash
+> # Load all images
+> make docker-load
+>
+> # Load a specific component
+> make docker-load-keeper
+> make docker-load-agent
+> ```
+>
+> This pipes each image through `rdctl shell -- nerdctl -n k8s.io load`.
+
 ### Version Management
 
 Each component has an **independent semantic version** tracked in `VERSION.*` files:
@@ -196,7 +209,11 @@ kind create cluster --config deploy/dev/kind-config.yaml
 make helm-infra-deps
 make helm-infra-install
 
-# Step 2: Install Tacito Square application components
+# Step 2: Build images and load them into the cluster (Rancher Desktop: required; Kind: use kind load instead)
+make docker-build
+make docker-load          # Rancher Desktop only
+
+# Step 3: Install Tacito Square application components
 make helm-install
 
 # Uninstall both
