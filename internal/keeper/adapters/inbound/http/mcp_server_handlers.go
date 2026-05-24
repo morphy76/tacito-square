@@ -158,6 +158,9 @@ func (h *MCPServerHandler) List(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	if servers == nil {
+		servers = make([]*model.MCPServer, 0)
+	}
 	c.JSON(http.StatusOK, servers)
 }
 

@@ -210,6 +210,25 @@ func TestCommunityHandlers_List(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, resp.Code)
 	})
+
+	t.Run("List Communities Returns Empty Array When Nil", func(t *testing.T) {
+		repo := new(MockCommunityUseCase)
+		handler := NewCommunityHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.GET("/api/v1/communities", handler.List)
+
+		repo.On("List", mock.Anything).Return(([]*model.Community)(nil), nil)
+
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/communities", nil)
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
+		assert.Equal(t, "[]", resp.Body.String())
+	})
 }
 
 func TestCommunityHandlers_Update(t *testing.T) {

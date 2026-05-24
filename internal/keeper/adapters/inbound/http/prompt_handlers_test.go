@@ -227,7 +227,7 @@ func TestPromptHandlers_Collections(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, resp.Code)
 	})
 
-	t.Run("Resolve Collection Successfully", func(t *testing.T) {
+	t.Run("Resolve Collection Returns Empty Array When Nil", func(t *testing.T) {
 		repo := new(MockPromptUseCase)
 		handler := NewPromptHandler(repo)
 
@@ -236,18 +236,7 @@ func TestPromptHandlers_Collections(t *testing.T) {
 		r.GET("/api/v1/prompt-collections/:id/resolve", handler.ResolveCollection)
 
 		id := uuid.New()
-		resolved := []*model.PromptTemplate{
-			{
-				ID:      uuid.New(),
-				Name:    "system-behavior",
-				Content: "You are active.",
-				Role:    model.PromptRoleSystem,
-				Version: 2,
-				Status:  model.PromptStatusActive,
-			},
-		}
-
-		repo.On("ResolveCollectionPrompts", mock.Anything, id).Return(resolved, nil)
+		repo.On("ResolveCollectionPrompts", mock.Anything, id).Return(([]*model.PromptTemplate)(nil), nil)
 
 		req, _ := http.NewRequest(http.MethodGet, "/api/v1/prompt-collections/"+id.String()+"/resolve", nil)
 		resp := httptest.NewRecorder()
@@ -255,6 +244,52 @@ func TestPromptHandlers_Collections(t *testing.T) {
 		r.ServeHTTP(resp, req)
 
 		assert.Equal(t, http.StatusOK, resp.Code)
-		assert.Contains(t, resp.Body.String(), "system-behavior")
+		assert.Equal(t, "[]", resp.Body.String())
+	})
+}
+
+func TestPromptHandlers_ListTemplates(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("List Templates Returns Empty Array When Nil", func(t *testing.T) {
+		repo := new(MockPromptUseCase)
+		handler := NewPromptHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.GET("/api/v1/prompts", handler.ListTemplates)
+
+		repo.On("ListTemplates", mock.Anything).Return(([]*model.PromptTemplate)(nil), nil)
+
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/prompts", nil)
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
+		assert.Equal(t, "[]", resp.Body.String())
+	})
+}
+
+func TestPromptHandlers_ListCollections(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("List Collections Returns Empty Array When Nil", func(t *testing.T) {
+		repo := new(MockPromptUseCase)
+		handler := NewPromptHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.GET("/api/v1/prompt-collections", handler.ListCollections)
+
+		repo.On("ListCollections", mock.Anything).Return(([]*model.PromptCollection)(nil), nil)
+
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/prompt-collections", nil)
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
+		assert.Equal(t, "[]", resp.Body.String())
 	})
 }

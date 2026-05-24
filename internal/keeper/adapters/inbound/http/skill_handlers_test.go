@@ -200,6 +200,25 @@ func TestSkillHandlers_List(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, resp.Code)
 	})
+
+	t.Run("List Skills Returns Empty Array When Nil", func(t *testing.T) {
+		repo := new(MockSkillUseCase)
+		handler := NewSkillHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.GET("/api/v1/skills", handler.List)
+
+		repo.On("List", mock.Anything).Return(([]*model.Skill)(nil), nil)
+
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/skills", nil)
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
+		assert.Equal(t, "[]", resp.Body.String())
+	})
 }
 
 func TestSkillHandlers_Update(t *testing.T) {

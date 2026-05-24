@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M3.8                                |
-| Status        | IN_PROGRESS                                 |
+| Status        | IMPLEMENTED                                 |
 | Milestone     | M3                                          |
 | Component     | keeper                                      |
 | Depends On    | SPEC-FR-M3.1, SPEC-FR-M3.2, SPEC-FR-M3.3, SPEC-FR-M3.4, SPEC-FR-M3.5, SPEC-FR-M3.6, SPEC-FR-M3.7 |

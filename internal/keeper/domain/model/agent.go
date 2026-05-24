@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"net/url"
 	"time"
 
 	"github.com/google/uuid"
@@ -93,6 +94,15 @@ func (a Agent) Validate() error {
 	}
 	if a.Brain.MaxTokens <= 0 {
 		return errors.New("brain max tokens must be positive")
+	}
+	if a.Brain.Endpoint == "" {
+		return errors.New("brain endpoint is required")
+	}
+	if _, err := url.ParseRequestURI(a.Brain.Endpoint); err != nil {
+		return errors.New("brain endpoint must be a valid URL")
+	}
+	if a.Brain.CredentialsSecret == "" {
+		return errors.New("brain credentials secret is required")
 	}
 
 	// ShortTermMemory validations

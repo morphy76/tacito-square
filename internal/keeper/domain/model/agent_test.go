@@ -87,6 +87,33 @@ func TestAgent_Validation(t *testing.T) {
 			wantErr: "brain model is required",
 		},
 		{
+			name: "Missing brain endpoint",
+			agent: func() Agent {
+				a := validAgent
+				a.Brain.Endpoint = ""
+				return a
+			}(),
+			wantErr: "brain endpoint is required",
+		},
+		{
+			name: "Invalid brain endpoint URL",
+			agent: func() Agent {
+				a := validAgent
+				a.Brain.Endpoint = "not-a-valid-url"
+				return a
+			}(),
+			wantErr: "brain endpoint must be a valid URL",
+		},
+		{
+			name: "Missing brain credentials secret",
+			agent: func() Agent {
+				a := validAgent
+				a.Brain.CredentialsSecret = ""
+				return a
+			}(),
+			wantErr: "brain credentials secret is required",
+		},
+		{
 			name: "Invalid brain temperature too low",
 			agent: func() Agent {
 				a := validAgent

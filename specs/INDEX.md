@@ -58,7 +58,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | SPEC-FR-M3.5 | Agent Domain Model & CRUD API | IMPLEMENTED | keeper | [SPEC-FR-M3.5](functional/M3/SPEC-FR-M3.5.md) |
 | SPEC-FR-M3.6 | Community Domain Model & CRUD API | IMPLEMENTED | keeper | [SPEC-FR-M3.6](functional/M3/SPEC-FR-M3.6.md) |
 | SPEC-FR-M3.7 | Agent-Community Assignment | IMPLEMENTED | keeper | [SPEC-FR-M3.7](functional/M3/SPEC-FR-M3.7.md) |
-| SPEC-FR-M3.8 | PostgreSQL Persistence & Migrations | IN_PROGRESS | keeper | [SPEC-FR-M3.8](functional/M3/SPEC-FR-M3.8.md) |
+| SPEC-FR-M3.8 | PostgreSQL Persistence & Migrations | IMPLEMENTED | keeper | [SPEC-FR-M3.8](functional/M3/SPEC-FR-M3.8.md) |
 
 ### M3: Bugs
 
@@ -69,13 +69,13 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | BUG-M3.3 | Hexagonal Architecture Violations (Missing Application Service Layer & Flat Bounded Contexts) | CLOSED | HIGH | [BUG-M3.3](tasks/M3.BUG3/BUG-M3.3.md) |
 | BUG-M3.4 | Broken Observability Context Propagation & Domain Metric Gaps | CLOSED | HIGH | [BUG-M3.4](tasks/M3.BUG4/BUG-M3.4.md) |
 | BUG-M3.5 | Missing OpenAPI Contract Tests | OPEN | MEDIUM | [BUG-M3.5](tasks/M3.BUG5/BUG-M3.5.md) |
-| BUG-M3.6 | Synchronous Blocking Side-Effects in Agent-Community Assignment | OPEN | HIGH | [BUG-M3.6](tasks/M3.BUG6/BUG-M3.6.md) |
-| BUG-M3.7 | Health Probes Missing NATS and Redis Dependency Checks | OPEN | MEDIUM | [BUG-M3.7](tasks/M3.BUG7/BUG-M3.7.md) |
+| BUG-M3.6 | Synchronous Blocking Side-Effects in Agent-Community Assignment | CLOSED | HIGH | [BUG-M3.6](tasks/M3.BUG6/BUG-M3.6.md) |
+| BUG-M3.7 | Health Probes Missing NATS and Redis Dependency Checks | CLOSED | MEDIUM | [BUG-M3.7](tasks/M3.BUG7/BUG-M3.7.md) |
 | BUG-M3.8 | Stack Dependencies & Migration Framework Deviations | OPEN | MEDIUM | [BUG-M3.8](tasks/M3.BUG8/BUG-M3.8.md) |
 | BUG-M3.9 | Misaligned Environment Variable Bindings for Keeper Deployment in Helm Chart | CLOSED | HIGH | [BUG-M3.9](tasks/M3.BUG9/BUG-M3.9.md) |
 | BUG-M3.10 | Inconsistent Logging of Trace ID and Tenant Context Across Keeper Entities | OPEN | HIGH | [BUG-M3.10](tasks/M3.BUG10/BUG-M3.10.md) |
-| BUG-M3.11 | Inconsistent REST API Semantics and Null Empty Collections in List Endpoints | OPEN | MEDIUM | [BUG-M3.11](tasks/M3.BUG11/BUG-M3.11.md) |
-| BUG-M3.12 | Agent Definition Lacks Strict Enforcement of Brain Requirement | OPEN | HIGH | [BUG-M3.12](tasks/M3.BUG12/BUG-M3.12.md) |
+| BUG-M3.11 | Inconsistent REST API Semantics and Null Empty Collections in List Endpoints | CLOSED | MEDIUM | [BUG-M3.11](tasks/M3.BUG11/BUG-M3.11.md) |
+| BUG-M3.12 | Agent Definition Lacks Strict Enforcement of Brain Requirement | CLOSED | HIGH | [BUG-M3.12](tasks/M3.BUG12/BUG-M3.12.md) |
 
 
 ### M4: Operator Core

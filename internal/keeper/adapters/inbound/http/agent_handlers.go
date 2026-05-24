@@ -30,8 +30,8 @@ type CreateBrainRequest struct {
 	Model             string   `json:"model" binding:"required"`
 	Temperature       *float64 `json:"temperature" binding:"omitempty,gte=0.0,lte=2.0"`
 	MaxTokens         int      `json:"max_tokens" binding:"omitempty,gt=0"`
-	Endpoint          string   `json:"endpoint"`
-	CredentialsSecret string   `json:"credentials_secret"`
+	Endpoint          string   `json:"endpoint" binding:"required,url"`
+	CredentialsSecret string   `json:"credentials_secret" binding:"required"`
 }
 
 type CreateShortTermRequest struct {
@@ -237,6 +237,9 @@ func (h *AgentHandler) List(c *gin.Context) {
 		reqLogger.Error().Err(err).Msg("failed to list agents")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+	if agents == nil {
+		agents = make([]*model.Agent, 0)
 	}
 	c.JSON(http.StatusOK, agents)
 }

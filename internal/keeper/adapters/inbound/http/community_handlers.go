@@ -156,6 +156,9 @@ func (h *CommunityHandler) List(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	if comms == nil {
+		comms = make([]*model.Community, 0)
+	}
 	c.JSON(http.StatusOK, comms)
 }
 

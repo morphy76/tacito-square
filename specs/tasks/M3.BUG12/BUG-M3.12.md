@@ -3,7 +3,7 @@
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
 | ID            | BUG-M3.12                                                          |
-| Status        | OPEN                                                               |
+| Status        | CLOSED                                                             |
 | Severity      | HIGH                                                               |
 | Milestone     | M3 — Keeper Core                                                   |
 | Affects       | internal/keeper/domain/agent.go, internal/keeper/adapters/http/agent_handlers.go |

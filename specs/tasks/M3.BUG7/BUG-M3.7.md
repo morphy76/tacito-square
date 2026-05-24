@@ -3,7 +3,7 @@
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
 | ID            | BUG-M3.7                                                           |
-| Status        | OPEN                                                               |
+| Status        | CLOSED                                                             |
 | Severity      | MEDIUM                                                             |
 | Milestone     | M3 — Keeper Core                                                   |
 | Affects       | internal/keeper/bootstrap.go, internal/shared/health/health.go     |

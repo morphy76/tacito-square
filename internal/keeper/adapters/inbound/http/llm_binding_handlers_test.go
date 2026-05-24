@@ -230,6 +230,25 @@ func TestLLMBindingHandlers_List(t *testing.T) {
 		assert.Len(t, respBody, 1)
 		assert.Equal(t, "openai-gpt4o", respBody[0]["name"])
 	})
+
+	t.Run("List LLM Bindings Returns Empty Array When Nil", func(t *testing.T) {
+		repo := new(MockLLMBindingUseCase)
+		handler := NewLLMBindingHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.GET("/api/v1/llm-bindings", handler.List)
+
+		repo.On("List", mock.Anything).Return(([]*model.LLMBinding)(nil), nil)
+
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/llm-bindings", nil)
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
+		assert.Equal(t, "[]", resp.Body.String())
+	})
 }
 
 func TestLLMBindingHandlers_Update(t *testing.T) {

@@ -153,6 +153,45 @@ func TestAgentHandlers_Create(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, resp.Code)
 		assert.Contains(t, resp.Body.String(), "error")
 	})
+
+	t.Run("Create Agent Validation Failure (Invalid brain config)", func(t *testing.T) {
+		repo := new(MockAgentRepository)
+		handler := NewAgentHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.POST("/api/v1/agents", handler.Create)
+
+		payload := map[string]interface{}{
+			"name":        "qa-agent",
+			"description": "Agent for QA tests",
+			"brain": map[string]interface{}{
+				"model":              "gpt-4o",
+				"temperature":        0.7,
+				"max_tokens":          2048,
+				"endpoint":           "not-a-valid-url", // Invalid URL
+				"credentials_secret": "",                // Blank
+			},
+			"short_term_memory": map[string]interface{}{
+				"key_namespace": "qa:short",
+				"ttl_seconds":   3600,
+			},
+			"long_term_memory": map[string]interface{}{
+				"collection_name":  "qa-long",
+				"vector_dimension": 1536,
+			},
+		}
+
+		body, _ := json.Marshal(payload)
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/agents", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusBadRequest, resp.Code)
+		assert.Contains(t, resp.Body.String(), "error")
+	})
 }
 
 func TestAgentHandlers_GetByID(t *testing.T) {
@@ -232,6 +271,25 @@ func TestAgentHandlers_List(t *testing.T) {
 		r.ServeHTTP(resp, req)
 
 		assert.Equal(t, http.StatusOK, resp.Code)
+	})
+
+	t.Run("List Agents Returns Empty Array When Nil", func(t *testing.T) {
+		repo := new(MockAgentRepository)
+		handler := NewAgentHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.GET("/api/v1/agents", handler.List)
+
+		repo.On("List", mock.Anything).Return(([]*model.Agent)(nil), nil)
+
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/agents", nil)
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
+		assert.Equal(t, "[]", resp.Body.String())
 	})
 }
 

@@ -163,6 +163,9 @@ func (h *PromptHandler) ListTemplates(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	if templates == nil {
+		templates = make([]*model.PromptTemplate, 0)
+	}
 	c.JSON(http.StatusOK, templates)
 }
 
@@ -385,6 +388,9 @@ func (h *PromptHandler) ListCollections(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	if collections == nil {
+		collections = make([]*model.PromptCollection, 0)
+	}
 	c.JSON(http.StatusOK, collections)
 }
 
@@ -525,6 +531,8 @@ func (h *PromptHandler) ResolveCollection(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
+	if resolved == nil {
+		resolved = make([]*model.PromptTemplate, 0)
+	}
 	c.JSON(http.StatusOK, resolved)
 }

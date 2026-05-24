@@ -28,6 +28,7 @@ Once the task is approved and set to `IN_PROGRESS`, you must strictly follow the
 1.  Write unit, or contract tests **before** creating or modifying any business logic or implementation code.
 2.  Verify that your new tests compile successfully but **fail (RED)** when executed against the existing codebase.
 3.  Do not proceed to the Green phase until you have witnessed a clean, expected test failure.
+4. Think twice before changing existing unit tests because potential regressions, changing an existing unit test is usually related to a change in a specification.
 
 ### B. GREEN Phase (Implement Minimum Code)
 1.  Write the absolute **minimum amount of code** required to make the failing tests compile and pass successfully (GREEN).

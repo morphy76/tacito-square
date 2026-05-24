@@ -173,6 +173,9 @@ func (h *LLMBindingHandler) List(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	if bindings == nil {
+		bindings = make([]*model.LLMBinding, 0)
+	}
 	c.JSON(http.StatusOK, bindings)
 }
 

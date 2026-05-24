@@ -72,4 +72,22 @@ func TestTenantResolutionMiddleware(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
 		assert.Contains(t, w.Body.String(), "tenantId must follow domain URL syntax")
 	})
+
+	t.Run("Whitespace-only Tenant ID", func(t *testing.T) {
+		resolver := NewHeaderTenantResolver()
+		r := gin.New()
+		r.Use(TenantResolutionMiddleware(resolver))
+
+		r.GET("/test", func(c *gin.Context) {
+			c.Status(http.StatusOK)
+		})
+
+		req := httptest.NewRequest(http.MethodGet, "/test", nil)
+		req.Header.Set("X-Tenant-ID", "   ")
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+		assert.Contains(t, w.Body.String(), "tenantId must follow domain URL syntax")
+	})
 }

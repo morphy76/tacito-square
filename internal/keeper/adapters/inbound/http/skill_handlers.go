@@ -159,6 +159,9 @@ func (h *SkillHandler) List(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	if skills == nil {
+		skills = make([]*model.Skill, 0)
+	}
 	c.JSON(http.StatusOK, skills)
 }
 
