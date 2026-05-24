@@ -2,6 +2,7 @@ package observability
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"go.opentelemetry.io/otel"
@@ -9,6 +10,10 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
+
+type dbStartTimeKeyType struct{}
+
+var dbStartTimeKey = dbStartTimeKeyType{}
 
 // PgxQueryTracer implements the pgx.QueryTracer interface to trace PostgreSQL queries.
 type PgxQueryTracer struct {
@@ -29,7 +34,9 @@ func (t *PgxQueryTracer) TraceQueryStart(ctx context.Context, conn *pgx.Conn, da
 		attribute.String("db.system", "postgresql"),
 		attribute.String("db.statement", data.SQL),
 	)
-	return ctx
+
+	// Inject the starting time into the context for query latency metric measurements
+	return context.WithValue(ctx, dbStartTimeKey, time.Now())
 }
 
 // TraceQueryEnd is called at the end of Query, QueryRow, and Exec calls.
@@ -37,10 +44,21 @@ func (t *PgxQueryTracer) TraceQueryEnd(ctx context.Context, conn *pgx.Conn, data
 	span := trace.SpanFromContext(ctx)
 	defer span.End()
 
+	// 1. Set OpenTelemetry span status and errors
 	if data.Err != nil {
 		span.RecordError(data.Err)
 		span.SetStatus(codes.Error, data.Err.Error())
 	} else {
 		span.SetStatus(codes.Ok, "")
+	}
+
+	// 2. Measure and record database query duration metrics
+	if startTime, ok := ctx.Value(dbStartTimeKey).(time.Time); ok {
+		duration := time.Since(startTime).Seconds()
+		status := "success"
+		if data.Err != nil {
+			status = "failure"
+		}
+		OutboundDependencyDuration.WithLabelValues("postgresql", "query", status).Observe(duration)
 	}
 }
