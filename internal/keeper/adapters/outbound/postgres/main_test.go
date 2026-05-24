@@ -4,15 +4,14 @@ package postgres
 
 import (
 	"context"
-	"io/ioutil"
+	"database/sql"
 	"log"
 	"os"
 	"path/filepath"
-	"sort"
-	"strings"
 	"testing"
 
-	"github.com/jackc/pgx/v5"
+	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/pressly/goose/v3"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
@@ -62,66 +61,30 @@ func runTests(m *testing.M) int {
 
 	// Inject the database connection URL into environment variable so tests pick it up
 	os.Setenv("TS_DATABASE_URL", connStr)
+	os.Setenv("TS_KEEPER_DATABASE_URL", connStr)
+	os.Setenv("TS_KEEPER_MIGRATIONS_DIR", filepath.Join("..", "..", "..", "..", "..", "deploy", "postgres", "migrations"))
 
 	// Run all package tests
 	return m.Run()
 }
 
 func applyMigrations(ctx context.Context, connStr string) {
-	log.Println("Applying database migrations...")
+	log.Println("Applying database migrations via goose...")
 
-	// Connect using pgx directly to run migrations
-	conn, err := pgx.Connect(ctx, connStr)
+	db, err := sql.Open("pgx", connStr)
 	if err != nil {
 		log.Fatalf("Unable to connect to database for migrations: %v", err)
 	}
-	defer conn.Close(ctx)
+	defer db.Close()
+
+	if err := goose.SetDialect("postgres"); err != nil {
+		log.Fatalf("Failed to set goose dialect: %v", err)
+	}
 
 	// Migrations are defined in deploy/postgres/migrations relative to the repository root.
-	// Since main_test.go is inside internal/keeper/adapters/outbound/postgres,
-	// the path to deploy/postgres/migrations is ../../../../../deploy/postgres/migrations.
 	migrationsDir := filepath.Join("..", "..", "..", "..", "..", "deploy", "postgres", "migrations")
-
-	files, err := ioutil.ReadDir(migrationsDir)
-	if err != nil {
-		log.Fatalf("Failed to read migrations directory: %v", err)
-	}
-
-	var filenames []string
-	for _, f := range files {
-		if strings.HasSuffix(f.Name(), ".sql") {
-			filenames = append(filenames, f.Name())
-		}
-	}
-	sort.Strings(filenames)
-
-	for _, fname := range filenames {
-		path := filepath.Join(migrationsDir, fname)
-		contentBytes, err := ioutil.ReadFile(path)
-		if err != nil {
-			log.Fatalf("Failed to read migration file %s: %v", fname, err)
-		}
-		content := string(contentBytes)
-
-		// Parse the UP migration SQL block (before "-- +goose Down" comment)
-		var upSql string
-		downIndex := strings.Index(content, "-- +goose Down")
-		if downIndex != -1 {
-			upSql = content[:downIndex]
-		} else {
-			upSql = content
-		}
-
-		// Clean up goose directive lines
-		upSql = strings.ReplaceAll(upSql, "-- +goose Up", "")
-		upSql = strings.ReplaceAll(upSql, "-- +goose StatementBegin", "")
-		upSql = strings.ReplaceAll(upSql, "-- +goose StatementEnd", "")
-
-		log.Printf("Executing migration: %s\n", fname)
-		_, err = conn.Exec(ctx, upSql)
-		if err != nil {
-			log.Fatalf("Migration %s failed: %v\nSQL:\n%s", fname, err, upSql)
-		}
+	if err := goose.Up(db, migrationsDir); err != nil {
+		log.Fatalf("Goose migrations failed: %v", err)
 	}
 
 	log.Println("All database migrations applied successfully.")

@@ -3,7 +3,7 @@
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
 | ID            | BUG-M3.8                                                           |
-| Status        | OPEN                                                               |
+| Status        | IMPLEMENTED                                                        |
 | Severity      | MEDIUM                                                             |
 | Milestone     | M3 — Keeper Core                                                   |
 | Affects       | go.mod, internal/keeper/migrations.go                              |
