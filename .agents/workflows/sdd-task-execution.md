@@ -1,3 +1,7 @@
+---
+description: 
+---
+
 # SDD Workflow: Task Execution (TDD Lifecycle)
 
 This workflow defines the step-by-step process for planning, decomposing, executing, and refactoring a system change using **Test-Driven Development (TDD)** within defined logical boundaries, fully aligned with the [Project Constitution](file:///Users/R.Pasquini/Projects/side/tacito-square/specs/constitution.md) and tracked via the master [Specs Index](file:///Users/R.Pasquini/Projects/side/tacito-square/specs/INDEX.md).
