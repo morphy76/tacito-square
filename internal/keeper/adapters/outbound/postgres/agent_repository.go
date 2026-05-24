@@ -52,37 +52,29 @@ func (r *AgentRepository) Create(ctx context.Context, a *model.Agent) error {
 		return fmt.Errorf("marshal mcp clients config: %w", err)
 	}
 
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
 	// Check if prompt_template is nil uuid
 	var promptTemplate interface{}
 	if a.PromptTemplate != uuid.Nil {
 		promptTemplate = a.PromptTemplate
 	}
 
-	query := `INSERT INTO agents (
-		id, tenant_id, name, description, brain, short_term_memory, long_term_memory, prompt_template, mcp_clients, status, community_id, created_at, updated_at
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`
+	return ExecuteInTxOrPool(ctx, r.pool, func(tx pgx.Tx) error {
+		query := `INSERT INTO agents (
+			id, tenant_id, name, description, brain, short_term_memory, long_term_memory, prompt_template, mcp_clients, status, community_id, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`
 
-	_, err = tx.Exec(ctx, query,
-		a.ID, a.TenantID, a.Name, a.Description, brainJSON, shortTermJSON, longTermJSON, promptTemplate, mcpClientsJSON, a.Status, a.CommunityID, a.CreatedAt, a.UpdatedAt,
-	)
-	if err != nil {
-		return fmt.Errorf("insert agent: %w", err)
-	}
+		_, err = tx.Exec(ctx, query,
+			a.ID, a.TenantID, a.Name, a.Description, brainJSON, shortTermJSON, longTermJSON, promptTemplate, mcpClientsJSON, a.Status, a.CommunityID, a.CreatedAt, a.UpdatedAt,
+		)
+		if err != nil {
+			return fmt.Errorf("insert agent: %w", err)
+		}
 
-	if err := r.saveSkills(ctx, tx, a.ID, a.Skills); err != nil {
-		return err
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit transaction: %w", err)
-	}
-	return nil
+		if err := r.saveSkills(ctx, tx, a.ID, a.Skills); err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
 // GetByID retrieves an Agent template by its ID, loading its associated Skill collection UUIDs.
@@ -103,7 +95,8 @@ func (r *AgentRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Age
 	var mcpBytes []byte
 	var promptTemplate *uuid.UUID
 
-	err := r.pool.QueryRow(ctx, query, id, ten.FullName()).Scan(
+	exec := GetExecutor(ctx, r.pool)
+	err := exec.QueryRow(ctx, query, id, ten.FullName()).Scan(
 		&a.ID, &a.TenantID, &a.Name, &a.Description, &brainBytes, &shortBytes, &longBytes, &promptTemplate, &mcpBytes, &a.Status, &a.CommunityID, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
@@ -157,7 +150,8 @@ func (r *AgentRepository) GetByName(ctx context.Context, name string) (*model.Ag
 	var mcpBytes []byte
 	var promptTemplate *uuid.UUID
 
-	err := r.pool.QueryRow(ctx, query, name, ten.FullName()).Scan(
+	exec := GetExecutor(ctx, r.pool)
+	err := exec.QueryRow(ctx, query, name, ten.FullName()).Scan(
 		&a.ID, &a.TenantID, &a.Name, &a.Description, &brainBytes, &shortBytes, &longBytes, &promptTemplate, &mcpBytes, &a.Status, &a.CommunityID, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
@@ -204,7 +198,8 @@ func (r *AgentRepository) List(ctx context.Context) ([]*model.Agent, error) {
 		id, tenant_id, name, description, brain, short_term_memory, long_term_memory, prompt_template, mcp_clients, status, community_id, created_at, updated_at
 	FROM agents WHERE tenant_id = $1 ORDER BY name ASC`
 
-	rows, err := r.pool.Query(ctx, query, ten.FullName())
+	exec := GetExecutor(ctx, r.pool)
+	rows, err := exec.Query(ctx, query, ten.FullName())
 	if err != nil {
 		return nil, fmt.Errorf("list agents: %w", err)
 	}
@@ -282,37 +277,29 @@ func (r *AgentRepository) Update(ctx context.Context, a *model.Agent) error {
 		return fmt.Errorf("marshal mcp clients config: %w", err)
 	}
 
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
 	var promptTemplate interface{}
 	if a.PromptTemplate != uuid.Nil {
 		promptTemplate = a.PromptTemplate
 	}
 
-	query := `UPDATE agents SET 
-		name = $1, description = $2, brain = $3, short_term_memory = $4, long_term_memory = $5, prompt_template = $6, mcp_clients = $7, status = $8, community_id = $9, updated_at = $10
-	WHERE id = $11 AND tenant_id = $12`
+	return ExecuteInTxOrPool(ctx, r.pool, func(tx pgx.Tx) error {
+		query := `UPDATE agents SET 
+			name = $1, description = $2, brain = $3, short_term_memory = $4, long_term_memory = $5, prompt_template = $6, mcp_clients = $7, status = $8, community_id = $9, updated_at = $10
+		WHERE id = $11 AND tenant_id = $12`
 
-	a.UpdatedAt = time.Now().UTC()
-	_, err = tx.Exec(ctx, query,
-		a.Name, a.Description, brainJSON, shortTermJSON, longTermJSON, promptTemplate, mcpClientsJSON, a.Status, a.CommunityID, a.UpdatedAt, a.ID, a.TenantID,
-	)
-	if err != nil {
-		return fmt.Errorf("update agent: %w", err)
-	}
+		a.UpdatedAt = time.Now().UTC()
+		_, err = tx.Exec(ctx, query,
+			a.Name, a.Description, brainJSON, shortTermJSON, longTermJSON, promptTemplate, mcpClientsJSON, a.Status, a.CommunityID, a.UpdatedAt, a.ID, a.TenantID,
+		)
+		if err != nil {
+			return fmt.Errorf("update agent: %w", err)
+		}
 
-	if err := r.saveSkills(ctx, tx, a.ID, a.Skills); err != nil {
-		return err
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit transaction: %w", err)
-	}
-	return nil
+		if err := r.saveSkills(ctx, tx, a.ID, a.Skills); err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
 // Delete removes an Agent template from persistent storage.
@@ -324,7 +311,8 @@ func (r *AgentRepository) Delete(ctx context.Context, id uuid.UUID) error {
 
 	// agent_skills fk CASCADE constraint handles the associated skill mapping deletion.
 	query := `DELETE FROM agents WHERE id = $1 AND tenant_id = $2`
-	_, err := r.pool.Exec(ctx, query, id, ten.FullName())
+	exec := GetExecutor(ctx, r.pool)
+	_, err := exec.Exec(ctx, query, id, ten.FullName())
 	if err != nil {
 		return fmt.Errorf("delete agent: %w", err)
 	}
@@ -335,7 +323,8 @@ func (r *AgentRepository) Delete(ctx context.Context, id uuid.UUID) error {
 
 func (r *AgentRepository) loadSkills(ctx context.Context, agentID uuid.UUID) ([]uuid.UUID, error) {
 	query := `SELECT skill_id FROM agent_skills WHERE agent_id = $1`
-	rows, err := r.pool.Query(ctx, query, agentID)
+	exec := GetExecutor(ctx, r.pool)
+	rows, err := exec.Query(ctx, query, agentID)
 	if err != nil {
 		return nil, err
 	}
@@ -352,14 +341,14 @@ func (r *AgentRepository) loadSkills(ctx context.Context, agentID uuid.UUID) ([]
 	return skills, nil
 }
 
-func (r *AgentRepository) saveSkills(ctx context.Context, tx pgx.Tx, agentID uuid.UUID, skillIDs []uuid.UUID) error {
-	_, err := tx.Exec(ctx, `DELETE FROM agent_skills WHERE agent_id = $1`, agentID)
+func (r *AgentRepository) saveSkills(ctx context.Context, exec PgxExecutor, agentID uuid.UUID, skillIDs []uuid.UUID) error {
+	_, err := exec.Exec(ctx, `DELETE FROM agent_skills WHERE agent_id = $1`, agentID)
 	if err != nil {
 		return fmt.Errorf("delete old agent skills: %w", err)
 	}
 
 	for _, skillID := range skillIDs {
-		_, err := tx.Exec(ctx, `INSERT INTO agent_skills (agent_id, skill_id) VALUES ($1, $2)`, agentID, skillID)
+		_, err = exec.Exec(ctx, `INSERT INTO agent_skills (agent_id, skill_id) VALUES ($1, $2)`, agentID, skillID)
 		if err != nil {
 			return fmt.Errorf("insert agent skill: %w", err)
 		}
@@ -374,53 +363,45 @@ func (r *AgentRepository) AssignToCommunity(ctx context.Context, agentID uuid.UU
 		return errors.New("tenant resolution failed")
 	}
 
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
-	// 1. Verify community exists and belongs to the tenant, and is active/created
-	var commStatus string
-	err = tx.QueryRow(ctx, `SELECT status FROM communities WHERE id = $1 AND tenant_id = $2`, communityID, ten.FullName()).Scan(&commStatus)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("community not found: %s", communityID)
+	return ExecuteInTxOrPool(ctx, r.pool, func(tx pgx.Tx) error {
+		// 1. Verify community exists and belongs to the tenant, and is active/created
+		var commStatus string
+		err := tx.QueryRow(ctx, `SELECT status FROM communities WHERE id = $1 AND tenant_id = $2`, communityID, ten.FullName()).Scan(&commStatus)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return fmt.Errorf("community not found: %s", communityID)
+			}
+			return fmt.Errorf("check community: %w", err)
 		}
-		return fmt.Errorf("check community: %w", err)
-	}
-	if commStatus != "active" && commStatus != "created" {
-		return fmt.Errorf("community status is %s, must be active or created", commStatus)
-	}
-
-	// 2. Verify agent exists, belongs to tenant, and is not already assigned
-	var currentCommID *uuid.UUID
-	var agentStatus string
-	err = tx.QueryRow(ctx, `SELECT community_id, status FROM agents WHERE id = $1 AND tenant_id = $2 FOR UPDATE`, agentID, ten.FullName()).Scan(&currentCommID, &agentStatus)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("agent not found: %s", agentID)
+		if commStatus != "active" && commStatus != "created" {
+			return fmt.Errorf("community status is %s, must be active or created", commStatus)
 		}
-		return fmt.Errorf("check agent: %w", err)
-	}
 
-	if currentCommID != nil {
-		return fmt.Errorf("agent already assigned to community: %s", currentCommID)
-	}
+		// 2. Verify agent exists, belongs to tenant, and is not already assigned
+		var currentCommID *uuid.UUID
+		var agentStatus string
+		err = tx.QueryRow(ctx, `SELECT community_id, status FROM agents WHERE id = $1 AND tenant_id = $2 FOR UPDATE`, agentID, ten.FullName()).Scan(&currentCommID, &agentStatus)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return fmt.Errorf("agent not found: %s", agentID)
+			}
+			return fmt.Errorf("check agent: %w", err)
+		}
 
-	// 3. Update agent assignment
-	updatedAt := time.Now().UTC()
-	_, err = tx.Exec(ctx, `UPDATE agents SET community_id = $1, status = $2, updated_at = $3 WHERE id = $4 AND tenant_id = $5`,
-		communityID, string(model.AgentStatusAssigned), updatedAt, agentID, ten.FullName())
-	if err != nil {
-		return fmt.Errorf("update agent assignment: %w", err)
-	}
+		if currentCommID != nil {
+			return fmt.Errorf("agent already assigned to community: %s", currentCommID)
+		}
 
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit transaction: %w", err)
-	}
+		// 3. Update agent assignment
+		updatedAt := time.Now().UTC()
+		_, err = tx.Exec(ctx, `UPDATE agents SET community_id = $1, status = $2, updated_at = $3 WHERE id = $4 AND tenant_id = $5`,
+			communityID, string(model.AgentStatusAssigned), updatedAt, agentID, ten.FullName())
+		if err != nil {
+			return fmt.Errorf("update agent assignment: %w", err)
+		}
 
-	return nil
+		return nil
+	})
 }
 
 // UnassignFromCommunity removes an Agent template assignment from a Community.
@@ -430,38 +411,30 @@ func (r *AgentRepository) UnassignFromCommunity(ctx context.Context, agentID uui
 		return errors.New("tenant resolution failed")
 	}
 
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
-	// Verify agent exists, belongs to tenant, and community_id matches
-	var currentCommID *uuid.UUID
-	var agentStatus string
-	err = tx.QueryRow(ctx, `SELECT community_id, status FROM agents WHERE id = $1 AND tenant_id = $2 FOR UPDATE`, agentID, ten.FullName()).Scan(&currentCommID, &agentStatus)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("agent not found: %s", agentID)
+	return ExecuteInTxOrPool(ctx, r.pool, func(tx pgx.Tx) error {
+		// Verify agent exists, belongs to tenant, and community_id matches
+		var currentCommID *uuid.UUID
+		var agentStatus string
+		err := tx.QueryRow(ctx, `SELECT community_id, status FROM agents WHERE id = $1 AND tenant_id = $2 FOR UPDATE`, agentID, ten.FullName()).Scan(&currentCommID, &agentStatus)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return fmt.Errorf("agent not found: %s", agentID)
+			}
+			return fmt.Errorf("check agent: %w", err)
 		}
-		return fmt.Errorf("check agent: %w", err)
-	}
 
-	if currentCommID == nil || *currentCommID != communityID {
-		return fmt.Errorf("agent is not assigned to community: %s", communityID)
-	}
+		if currentCommID == nil || *currentCommID != communityID {
+			return fmt.Errorf("agent is not assigned to community: %s", communityID)
+		}
 
-	// Update agent to clear assignment
-	updatedAt := time.Now().UTC()
-	_, err = tx.Exec(ctx, `UPDATE agents SET community_id = NULL, status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4`,
-		string(model.AgentStatusDefined), updatedAt, agentID, ten.FullName())
-	if err != nil {
-		return fmt.Errorf("clear agent assignment: %w", err)
-	}
+		// Update agent to clear assignment
+		updatedAt := time.Now().UTC()
+		_, err = tx.Exec(ctx, `UPDATE agents SET community_id = NULL, status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4`,
+			string(model.AgentStatusDefined), updatedAt, agentID, ten.FullName())
+		if err != nil {
+			return fmt.Errorf("clear agent assignment: %w", err)
+		}
 
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit transaction: %w", err)
-	}
-
-	return nil
+		return nil
+	})
 }

@@ -78,9 +78,9 @@ func applyMigrations(ctx context.Context, connStr string) {
 	defer conn.Close(ctx)
 
 	// Migrations are defined in deploy/postgres/migrations relative to the repository root.
-	// Since main_test.go is inside internal/keeper/adapters/postgres,
-	// the path to deploy/postgres/migrations is ../../../../deploy/postgres/migrations.
-	migrationsDir := filepath.Join("..", "..", "..", "..", "deploy", "postgres", "migrations")
+	// Since main_test.go is inside internal/keeper/adapters/outbound/postgres,
+	// the path to deploy/postgres/migrations is ../../../../../deploy/postgres/migrations.
+	migrationsDir := filepath.Join("..", "..", "..", "..", "..", "deploy", "postgres", "migrations")
 
 	files, err := ioutil.ReadDir(migrationsDir)
 	if err != nil {

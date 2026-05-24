@@ -25,7 +25,7 @@ Before writing any code, decompose your work into structured task files. In acco
 Once the task is approved and set to `IN_PROGRESS`, you must strictly follow the operational TDD cycle. This directly implements Principle P2 (**TDD**) of the [Project Constitution](file:///Users/R.Pasquini/Projects/side/tacito-square/specs/constitution.md) ("Tests are written FIRST. Implementation follows. No exception"):
 
 ### A. RED Phase (Write Tests First)
-1.  Write unit, integration, or contract tests **before** creating or modifying any business logic or implementation code.
+1.  Write unit, or contract tests **before** creating or modifying any business logic or implementation code.
 2.  Verify that your new tests compile successfully but **fail (RED)** when executed against the existing codebase.
 3.  Do not proceed to the Green phase until you have witnessed a clean, expected test failure.
 
@@ -41,7 +41,15 @@ Once the task is approved and set to `IN_PROGRESS`, you must strictly follow the
 
 ---
 
-## Step 3: Present for Task Completion Approval
+## Step 3: Integration tests using testcontainers
+Once the task is complete, if an infrastructural dependency is involved:
+1.  Write integration tests, strongly decoupled from unit tests by tags and, if needed, leveraging testcontainers
+2.  Verify that your new integration tests compile successfully 
+3.  Verify that the entire test suite passes successfully.
+
+---
+
+## Step 4: Present for Task Completion Approval
 Once the task is complete:
 1.  Update the task file status to `IMPLEMENTED` in accordance with the transition states diagram in Section 3 of the [Project Constitution](file:///Users/R.Pasquini/Projects/side/tacito-square/specs/constitution.md).
 2.  **Index Status Transition (IMPLEMENTED)**: Open the master [Specs Index](file:///Users/R.Pasquini/Projects/side/tacito-square/specs/INDEX.md) and update the status of the **parent functional specification (FR)** to `IMPLEMENTED` inside the milestone specification table.
