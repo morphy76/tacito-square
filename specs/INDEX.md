@@ -58,7 +58,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | SPEC-FR-M3.5 | Agent Domain Model & CRUD API | IMPLEMENTED | keeper | [SPEC-FR-M3.5](functional/M3/SPEC-FR-M3.5.md) |
 | SPEC-FR-M3.6 | Community Domain Model & CRUD API | IMPLEMENTED | keeper | [SPEC-FR-M3.6](functional/M3/SPEC-FR-M3.6.md) |
 | SPEC-FR-M3.7 | Agent-Community Assignment | IMPLEMENTED | keeper | [SPEC-FR-M3.7](functional/M3/SPEC-FR-M3.7.md) |
-| SPEC-FR-M3.8 | PostgreSQL Persistence & Migrations | ACCEPTED | keeper | [SPEC-FR-M3.8](functional/M3/SPEC-FR-M3.8.md) |
+| SPEC-FR-M3.8 | PostgreSQL Persistence & Migrations | IN_PROGRESS | keeper | [SPEC-FR-M3.8](functional/M3/SPEC-FR-M3.8.md) |
 
 ### M3: Bugs
 
@@ -183,4 +183,4 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | SPEC-FR-M3.5 | 2 | Domain/Persistence & HTTP API Boundaries | [tasks/M3.5/](tasks/M3.5/) |
 | SPEC-FR-M3.6 | 3 | Domain/Persistence & HTTP API Boundaries | [tasks/M3.6/](tasks/M3.6/) |
 | SPEC-FR-M3.7 | 3 | Domain, HTTP API Boundaries & Observability | [tasks/M3.7/](tasks/M3.7/) |
-| SPEC-FR-M3.8 | 4 | Domain, HTTP API Boundaries, Observability & Helm | [tasks/M3.8/](tasks/M3.8/) |
+| SPEC-FR-M3.8 | 8 | Domain, HTTP API Boundaries, Observability & Helm | [tasks/M3.8/](tasks/M3.8/) |
