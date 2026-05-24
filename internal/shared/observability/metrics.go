@@ -29,12 +29,71 @@ var (
 		},
 		[]string{"path", "method", "status"},
 	)
+
+	// ActiveThreads collects the number of active processing threads.
+	ActiveThreads = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "active_threads",
+			Help: "Number of active processing threads.",
+		},
+	)
+
+	// AgentStatus collects the count of active agents by status.
+	AgentStatus = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "agent_status",
+			Help: "Number of active agents by status.",
+		},
+		[]string{"status"},
+	)
+
+	// PendingHITLCallbacks collects the number of pending HITL callbacks.
+	PendingHITLCallbacks = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "pending_hitl_callbacks",
+			Help: "Number of pending HITL callbacks.",
+		},
+	)
+
+	// CommunityQuotaUtilization collects community quota utilization.
+	CommunityQuotaUtilization = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "community_quota_utilization",
+			Help: "Quota utilization per community.",
+		},
+		[]string{"community_id"},
+	)
+
+	// AgentQuotaUtilization collects agent quota utilization.
+	AgentQuotaUtilization = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "agent_quota_utilization",
+			Help: "Quota utilization per agent.",
+		},
+		[]string{"agent_id"},
+	)
+
+	// OutboundDependencyDuration collects request durations to external services.
+	OutboundDependencyDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "outbound_dependency_duration_seconds",
+			Help:    "Duration of outbound request to external dependencies in seconds.",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"dependency", "operation", "status"},
+	)
 )
 
 func init() {
 	// Register the technical metrics
 	prometheus.MustRegister(HTTPRequestDuration)
 	prometheus.MustRegister(HTTPRequestsTotal)
+	prometheus.MustRegister(ActiveThreads)
+	prometheus.MustRegister(AgentStatus)
+	prometheus.MustRegister(PendingHITLCallbacks)
+	prometheus.MustRegister(CommunityQuotaUtilization)
+	prometheus.MustRegister(AgentQuotaUtilization)
+	prometheus.MustRegister(OutboundDependencyDuration)
 }
 
 // MetricsMiddleware auto-instruments HTTP metrics for all routes.

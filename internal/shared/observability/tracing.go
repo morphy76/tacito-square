@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
@@ -56,4 +57,30 @@ func InitTracer(ctx context.Context, serviceName, serviceVersion, otelEndpoint s
 // Tracer returns a named tracer from the global provider.
 func Tracer(name string) trace.Tracer {
 	return otel.Tracer(name)
+}
+
+// TracingMiddleware returns a Gin middleware that extracts OTel trace context from incoming HTTP headers
+// and sets it in the request context, starting a server span.
+func TracingMiddleware(serviceName string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Extract incoming trace parent context using global TextMapPropagator
+		propagator := otel.GetTextMapPropagator()
+		ctx := propagator.Extract(c.Request.Context(), propagation.HeaderCarrier(c.Request.Header))
+
+		// Start a new server span using extracted context
+		tracer := otel.Tracer(serviceName)
+		ctx, span := tracer.Start(ctx, c.Request.Method+" "+c.FullPath(), trace.WithSpanKind(trace.SpanKindServer))
+		defer span.End()
+
+		// Pass trace context down to Gin request context
+		c.Request = c.Request.WithContext(ctx)
+
+		c.Next()
+
+		// Record span status based on status code
+		status := c.Writer.Status()
+		if status >= 500 {
+			span.RecordError(fmt.Errorf("HTTP request failed with status: %d", status))
+		}
+	}
 }

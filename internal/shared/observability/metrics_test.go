@@ -44,3 +44,12 @@ func TestDBPoolCollector_NilPool_NoPanic(t *testing.T) {
 		collector.Collect(metrics)
 	})
 }
+
+func TestCustomPrometheusMetrics_Registration(t *testing.T) {
+	assert.NotNil(t, ActiveThreads)
+	assert.NotNil(t, AgentStatus)
+	assert.NotNil(t, PendingHITLCallbacks)
+	assert.NotNil(t, CommunityQuotaUtilization)
+	assert.NotNil(t, AgentQuotaUtilization)
+	assert.NotNil(t, OutboundDependencyDuration)
+}

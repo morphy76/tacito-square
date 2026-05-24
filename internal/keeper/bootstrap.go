@@ -26,6 +26,7 @@ func NewServer(pool *pgxpool.Pool) *gin.Engine {
 
 	r := gin.New()
 	r.Use(gin.Recovery())
+	r.Use(observability.TracingMiddleware("keeper"))
 	r.Use(observability.MetricsMiddleware())
 	r.Use(observability.LoggingMiddleware())
 
