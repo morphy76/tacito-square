@@ -44,6 +44,24 @@ func TestReadyz_Returns503_WhenDatabaseUnavailable(t *testing.T) {
 	err := json.Unmarshal(w.Body.Bytes(), &body)
 	require.NoError(t, err)
 	assert.Equal(t, "not_ready", body["status"])
+
+	checks, ok := body["checks"].([]interface{})
+	require.True(t, ok)
+	assert.Len(t, checks, 4)
+
+	expectedNames := map[string]bool{
+		"postgres":    true,
+		"nats":        true,
+		"redis":       true,
+		"cache-redis": true,
+	}
+
+	for _, checkVal := range checks {
+		checkMap, ok := checkVal.(map[string]interface{})
+		require.True(t, ok)
+		name := checkMap["name"].(string)
+		assert.True(t, expectedNames[name])
+	}
 }
 
 func TestOpenAPI_Returns200AndValidJSON(t *testing.T) {

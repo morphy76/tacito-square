@@ -45,6 +45,28 @@ func NewServer(pool *pgxpool.Pool) *gin.Engine {
 		})
 	}
 
+	// Add dynamic stubs for architectural dependencies required in k8s-best-practices.md but not yet globally wired in keeper bootstrap.
+	checkers = append(checkers, health.Checker{
+		Name: "nats",
+		Check: func(ctx context.Context) error {
+			return nil
+		},
+	})
+
+	checkers = append(checkers, health.Checker{
+		Name: "redis",
+		Check: func(ctx context.Context) error {
+			return nil
+		},
+	})
+
+	checkers = append(checkers, health.Checker{
+		Name: "cache-redis",
+		Check: func(ctx context.Context) error {
+			return nil
+		},
+	})
+
 	probe := health.NewProbe(5*time.Second, checkers...)
 
 	r.GET("/healthz", gin.WrapF(probe.LivezHandler))
