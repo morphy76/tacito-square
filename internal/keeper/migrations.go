@@ -9,11 +9,12 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
 )
 
 // RunMigrations runs database migrations using raw pgx connections.
-func RunMigrations(ctx context.Context, dbURL string, migrationsDir string, logger zerolog.Logger) error {
+func RunMigrations(ctx context.Context, cfg *pgxpool.Config, migrationsDir string, logger zerolog.Logger) error {
 	if migrationsDir == "" {
 		migrationsDir = os.Getenv("TS_KEEPER_MIGRATIONS_DIR")
 		if migrationsDir == "" {
@@ -23,8 +24,15 @@ func RunMigrations(ctx context.Context, dbURL string, migrationsDir string, logg
 
 	logger.Info().Str("dir", migrationsDir).Msg("starting database migrations")
 
-	conn, err := pgx.Connect(ctx, dbURL)
+	conn, err := pgx.ConnectConfig(ctx, cfg.ConnConfig)
 	if err != nil {
+		if strings.Contains(err.Error(), "server refused TLS connection") {
+			logger.Warn().
+				Msg("DATABASE CONNECTION DIAGNOSIS: The PostgreSQL server refused the TLS connection request. " +
+					"This typically means that SSL/TLS is disabled on the server (e.g. 'ssl = off' in postgresql.conf). " +
+					"To bypass this in development, modify your connection URL by setting 'sslmode=prefer' or 'sslmode=disable' (e.g., TS_KEEPER_DATABASE_URL=\"postgres://...sslmode=disable\"). " +
+					"In production, verify that the PostgreSQL server has TLS enabled and correct certificates are loaded.")
+		}
 		return fmt.Errorf("unable to connect to database: %w", err)
 	}
 	defer conn.Close(ctx)

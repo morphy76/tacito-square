@@ -1,6 +1,7 @@
 package health
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -141,5 +143,31 @@ func TestProbe_TransitionStateTracking(t *testing.T) {
 	probe.ReadyzHandler(w2, req)
 	assert.Equal(t, http.StatusOK, w2.Code)
 	assert.False(t, probe.previousFailed["test-dep"], "should clear test-dep failed mark after recovery")
+}
+
+func TestReadyzHandler_PostgresTLSErrorDiagnosis(t *testing.T) {
+	var buf bytes.Buffer
+	logger := zerolog.New(&buf).With().Timestamp().Logger()
+
+	probe := NewProbe(time.Second, Checker{
+		Name: "postgres",
+		Check: func(ctx context.Context) error {
+			return fmt.Errorf("failed to connect to user=tacito database=tacito: tls error: server refused TLS connection")
+		},
+	})
+	probe.logger = logger
+
+	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	w := httptest.NewRecorder()
+
+	probe.ReadyzHandler(w, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+	
+	// Assert the transition log contains the unhealthy message AND the database diagnostic warning
+	logOutput := buf.String()
+	assert.Contains(t, logOutput, "Dependency transitioned to UNHEALTHY")
+	assert.Contains(t, logOutput, "DATABASE CONNECTION DIAGNOSIS")
+	assert.Contains(t, logOutput, "sslmode=prefer")
 }
 

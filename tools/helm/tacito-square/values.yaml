@@ -10,7 +10,7 @@ global:
   # CA trust bundle — ConfigMap created by the infra chart TLS generator.
   # Mount this in application pods to trust infrastructure service certificates.
   caTrustBundle:
-    configMapName: "tacito-infra-ca-bundle"
+    configMapName: "ts-infra-tacito-square-infra-ca-bundle"
     key: "ca.crt"
 
 # --- Keeper ---
@@ -32,7 +32,7 @@ keeper:
     logLevel: info
     port: 8080
     db:
-      url: "postgres://tacito-infra-postgresql:5432/tacito?sslmode=require"
+      url: "postgres://tacito-infra-postgresql:5432/tacito?sslmode=require&sslrootcert=/etc/ssl/tacito/ca.crt"
       username: tacito
       password: ""
       migrate: true

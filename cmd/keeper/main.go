@@ -38,16 +38,29 @@ func main() {
 
 	// CLI subcommand: execute migrations and exit
 	if len(os.Args) > 1 && os.Args[1] == "migrate" {
+		var err error
 		dbURL := v.GetString("database.url")
-		if dbURL == "" {
-			dbURL = os.Getenv("TS_DATABASE_URL")
-		}
 		if dbURL == "" {
 			logger.Fatal().Msg("database url is required for migrations")
 		}
+		cfg, err := pgxpool.ParseConfig(dbURL)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("failed to parse database url")
+		}
+
+		// Override connection credentials from standard env vars if set (Helm chart compatibility)
+		if dbUser := v.GetString("db.username"); dbUser != "" {
+			cfg.ConnConfig.User = dbUser
+		}
+
+		if dbPassword := v.GetString("db.password"); dbPassword != "" {
+			cfg.ConnConfig.Password = dbPassword
+		}
+
+		cfg.ConnConfig.Tracer = observability.NewPgxQueryTracer()
 
 		ctx := context.Background()
-		err := keeper.RunMigrations(ctx, dbURL, "", logger)
+		err = keeper.RunMigrations(ctx, cfg, "", logger)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("migrations failed")
 		}
@@ -77,9 +90,6 @@ func main() {
 
 	// 5. Initialize PostgreSQL connection pool
 	dbURL := v.GetString("database.url")
-	if dbURL == "" {
-		dbURL = os.Getenv("TS_DATABASE_URL")
-	}
 
 	var pool *pgxpool.Pool
 	if dbURL != "" {
@@ -90,15 +100,11 @@ func main() {
 		}
 
 		// Override connection credentials from standard env vars if set (Helm chart compatibility)
-		if dbUser := os.Getenv("TS_KEEPER_DB_USERNAME"); dbUser != "" {
-			cfg.ConnConfig.User = dbUser
-		} else if dbUser := os.Getenv("TS_DATABASE_USERNAME"); dbUser != "" {
+		if dbUser := v.GetString("db.username"); dbUser != "" {
 			cfg.ConnConfig.User = dbUser
 		}
 
-		if dbPassword := os.Getenv("TS_KEEPER_DB_PASSWORD"); dbPassword != "" {
-			cfg.ConnConfig.Password = dbPassword
-		} else if dbPassword := os.Getenv("TS_DATABASE_PASSWORD"); dbPassword != "" {
+		if dbPassword := v.GetString("db.password"); dbPassword != "" {
 			cfg.ConnConfig.Password = dbPassword
 		}
 

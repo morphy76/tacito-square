@@ -7,5 +7,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -mod=vendor -ldflags="-s -w" -o /bin/keepe
 # Runtime stage
 FROM gcr.io/distroless/base-nossl-debian13:nonroot
 COPY --from=builder /bin/keeper /keeper
+COPY --from=builder /src/deploy /app/deploy
 USER nonroot:nonroot
 ENTRYPOINT ["/keeper"]

@@ -30,6 +30,12 @@
 | SPEC-FR-M1.1 | Infrastructure Helm Chart | IMPLEMENTED | deploy | [SPEC-FR-M1.1](functional/M1/SPEC-FR-M1.1.md) |
 | SPEC-FR-M1.2 | Makefile Infrastructure Targets | IMPLEMENTED | build | [SPEC-FR-M1.2](functional/M1/SPEC-FR-M1.2.md) |
 
+### M1: Bugs
+
+| ID | Title | Status | Severity | File |
+|----|-------|--------|----------|------|
+| BUG-M1.1 | PostgreSQL Server Does Not Support or Accept SSL Connections | OPEN | HIGH | [BUG-M1.1](tasks/M1.BUG1/BUG-M1.1.md) |
+
 ### M2: Application Helm Chart & Component Scaffolding
 
 | ID | Title | Status | Component | File |
@@ -72,6 +78,8 @@
 | BUG-M3.7 | Health Probes Missing NATS and Redis Dependency Checks | OPEN | MEDIUM | [BUG-M3.7](tasks/M3.BUG7/BUG-M3.7.md) |
 | BUG-M3.8 | Stack Dependencies & Migration Framework Deviations | OPEN | MEDIUM | [BUG-M3.8](tasks/M3.BUG8/BUG-M3.8.md) |
 | BUG-M3.9 | Misaligned Environment Variable Bindings for Keeper Deployment in Helm Chart | CLOSED | HIGH | [BUG-M3.9](tasks/M3.BUG9/BUG-M3.9.md) |
+| BUG-M3.10 | Inconsistent Logging of Trace ID and Tenant Context Across Keeper Entities | OPEN | HIGH | [BUG-M3.10](tasks/M3.BUG10/BUG-M3.10.md) |
+| BUG-M3.11 | Inconsistent REST API Semantics and Null Empty Collections in List Endpoints | OPEN | MEDIUM | [BUG-M3.11](tasks/M3.BUG11/BUG-M3.11.md) |
 
 ### M4: Operator Core
 
