@@ -49,7 +49,7 @@ func (h *CommunityHandler) Create(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
@@ -107,7 +107,7 @@ func (h *CommunityHandler) GetByID(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
@@ -141,7 +141,7 @@ func (h *CommunityHandler) List(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
@@ -168,7 +168,7 @@ func (h *CommunityHandler) Update(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
@@ -239,7 +239,7 @@ func (h *CommunityHandler) Delete(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {

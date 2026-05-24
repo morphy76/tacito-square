@@ -3,7 +3,7 @@
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
 | ID            | BUG-M3.10                                                          |
-| Status        | OPEN                                                               |
+| Status        | CLOSED                                                             |
 | Severity      | HIGH                                                               |
 | Milestone     | M3 — Keeper Core                                                   |
 | Affects       | internal/keeper/adapters/http/*, internal/shared/observability/*  |

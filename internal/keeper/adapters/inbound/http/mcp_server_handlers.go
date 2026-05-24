@@ -56,7 +56,7 @@ func (h *MCPServerHandler) Create(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
@@ -112,7 +112,7 @@ func (h *MCPServerHandler) GetByID(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
@@ -143,7 +143,7 @@ func (h *MCPServerHandler) List(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
@@ -170,7 +170,7 @@ func (h *MCPServerHandler) Update(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
@@ -234,7 +234,7 @@ func (h *MCPServerHandler) Delete(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {

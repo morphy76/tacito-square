@@ -32,7 +32,7 @@ func (h *AssignmentHandler) Assign(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
@@ -90,7 +90,7 @@ func (h *AssignmentHandler) Unassign(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {

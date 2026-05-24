@@ -61,7 +61,7 @@ func (h *PromptHandler) CreateTemplate(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
@@ -117,7 +117,7 @@ func (h *PromptHandler) GetTemplateByID(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
@@ -148,7 +148,7 @@ func (h *PromptHandler) ListTemplates(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
@@ -175,7 +175,7 @@ func (h *PromptHandler) UpdateTemplate(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
@@ -246,7 +246,7 @@ func (h *PromptHandler) DeleteTemplate(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
@@ -282,7 +282,7 @@ func (h *PromptHandler) CreateCollection(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
@@ -342,7 +342,7 @@ func (h *PromptHandler) GetCollectionByID(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
@@ -373,7 +373,7 @@ func (h *PromptHandler) ListCollections(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
@@ -400,7 +400,7 @@ func (h *PromptHandler) UpdateCollection(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
@@ -469,7 +469,7 @@ func (h *PromptHandler) DeleteCollection(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
@@ -509,7 +509,7 @@ func (h *PromptHandler) ResolveCollection(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {

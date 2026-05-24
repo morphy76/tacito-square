@@ -2,9 +2,11 @@ package observability
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"testing"
 
+	"github.com/morphy76/tacito-square/internal/shared/tenant"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/trace"
@@ -106,4 +108,34 @@ func TestWithClaims_AddsConfiguredClaims(t *testing.T) {
 	assert.Equal(t, "user@example.com", entry["email"])
 	assert.Equal(t, "acme", entry["org"])
 	assert.Nil(t, entry["iat"]) // not in LogClaimsKeys
+}
+
+func TestWithContext_EnrichesLogs(t *testing.T) {
+	var buf bytes.Buffer
+	logger := NewLogger("info", &buf)
+
+	ten, err := tenant.New("acme.com", "sub-1")
+	require.NoError(t, err)
+
+	ctx := tenant.ContextWithTenant(context.Background(), ten)
+
+	traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+	spanCtx := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: traceID,
+		SpanID:  spanID,
+	})
+	ctx = trace.ContextWithSpanContext(ctx, spanCtx)
+
+	enriched := WithContext(logger, ctx)
+	enriched.Info().Msg("context enriched log")
+
+	var entry map[string]interface{}
+	err = json.Unmarshal(buf.Bytes(), &entry)
+	require.NoError(t, err)
+
+	assert.Equal(t, "4bf92f3577b34da6a3ce929d0e0e4736", entry["trace_id"])
+	assert.Equal(t, "00f067aa0ba902b7", entry["span_id"])
+	assert.Equal(t, "acme.com-sub-1", entry["tenant_id"])
+	assert.Equal(t, "context enriched log", entry["message"])
 }

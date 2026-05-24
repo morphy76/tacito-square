@@ -78,7 +78,7 @@ func (h *AgentHandler) Create(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
@@ -189,7 +189,7 @@ func (h *AgentHandler) GetByID(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
@@ -223,7 +223,7 @@ func (h *AgentHandler) List(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
@@ -250,7 +250,7 @@ func (h *AgentHandler) Update(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
@@ -372,7 +372,7 @@ func (h *AgentHandler) Delete(c *gin.Context) {
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
-	reqLogger := observability.WithTraceID(logger, span.SpanContext())
+	reqLogger := observability.WithContext(logger, ctx)
 
 	ten := tenant.FromContext(ctx)
 	if ten == nil {

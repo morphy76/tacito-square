@@ -3,11 +3,13 @@
 package observability
 
 import (
+	"context"
 	"io"
 	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/morphy76/tacito-square/internal/shared/tenant"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -51,6 +53,24 @@ func WithTraceID(logger zerolog.Logger, spanCtx trace.SpanContext) zerolog.Logge
 	return logger
 }
 
+// WithContext returns a sub-logger enriched with both trace and tenant context fields from context.Context.
+func WithContext(logger zerolog.Logger, ctx context.Context) zerolog.Logger {
+	spanCtx := trace.SpanContextFromContext(ctx)
+	if spanCtx.HasTraceID() {
+		logger = logger.With().
+			Str("trace_id", spanCtx.TraceID().String()).
+			Str("span_id", spanCtx.SpanID().String()).
+			Logger()
+	}
+
+	if ten := tenant.FromContext(ctx); ten != nil {
+		logger = logger.With().
+			Str("tenant_id", ten.FullName()).
+			Logger()
+	}
+	return logger
+}
+
 // WithClaims returns a sub-logger enriched with the configured token claims.
 // Only claims whose keys match LogClaimsKeys are included.
 func WithClaims(logger zerolog.Logger, claims map[string]interface{}) zerolog.Logger {
@@ -83,8 +103,7 @@ func LoggingMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		spanCtx := trace.SpanContextFromContext(c.Request.Context())
-		reqLogger := WithTraceID(logger, spanCtx)
+		reqLogger := WithContext(logger, c.Request.Context())
 
 		reqLogger.Info().
 			Str("method", c.Request.Method).
