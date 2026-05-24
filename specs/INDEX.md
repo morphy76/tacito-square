@@ -2,24 +2,19 @@
 
 > Single source of truth for all specs. Generated from `specs/` directory.
 
-## Non-Functional Requirement Specs
+## Non-Functional Requirements & Agent Rules
 
-| ID | Title | Status | File |
-|----|-------|--------|------|
-| SPEC-NFR-HEXAGONAL | Hexagonal Architecture with DDD | ACCEPTED | [SPEC-NFR-HEXAGONAL](nonfunctional/SPEC-NFR-HEXAGONAL.md) |
-| SPEC-NFR-CLOUD | Cloud-First Patterns | ACCEPTED | [SPEC-NFR-CLOUD](nonfunctional/SPEC-NFR-CLOUD.md) |
-| SPEC-NFR-REACTIVE | Reactive Programming | ACCEPTED | [SPEC-NFR-REACTIVE](nonfunctional/SPEC-NFR-REACTIVE.md) |
-| SPEC-NFR-STACK | Technology Stack | ACCEPTED | [SPEC-NFR-STACK](nonfunctional/SPEC-NFR-STACK.md) |
-| SPEC-NFR-LOG | Structured Logging (zerolog) | ACCEPTED | [SPEC-NFR-LOG](nonfunctional/SPEC-NFR-LOG.md) |
-| SPEC-NFR-HTTP | HTTP Framework (Gin) | ACCEPTED | [SPEC-NFR-HTTP](nonfunctional/SPEC-NFR-HTTP.md) |
-| SPEC-NFR-HEALTH | Dependency-Aware Health Probes | ACCEPTED | [SPEC-NFR-HEALTH](nonfunctional/SPEC-NFR-HEALTH.md) |
-| SPEC-NFR-OBSERVABILITY | Observability (Metrics, Tracing, and Correlation) | ACCEPTED | [SPEC-NFR-OBSERVABILITY](nonfunctional/SPEC-NFR-OBSERVABILITY.md) |
-| SPEC-NFR-OPENAPI | Live OpenAPI Spec Endpoints | ACCEPTED | [SPEC-NFR-OPENAPI](nonfunctional/SPEC-NFR-OPENAPI.md) |
-| SPEC-NFR-HPA | Horizontal Pod Autoscaling | ACCEPTED | [SPEC-NFR-HPA](nonfunctional/SPEC-NFR-HPA.md) |
-| SPEC-NFR-CACHE | Redis Infrastructure Cache | ACCEPTED | [SPEC-NFR-CACHE](nonfunctional/SPEC-NFR-CACHE.md) |
-| SPEC-NFR-BUILDING | Build System | ACCEPTED | [SPEC-NFR-BUILDING](nonfunctional/SPEC-NFR-BUILDING.md) |
-| SPEC-NFR-VERSIONING | Component Versioning & Lifecycle | ACCEPTED | [SPEC-NFR-VERSIONING](nonfunctional/SPEC-NFR-VERSIONING.md) |
-| SPEC-NFR-MULTITENANCY | Multitenancy Architecture | ACCEPTED | [SPEC-NFR-MULTITENANCY](nonfunctional/SPEC-NFR-MULTITENANCY.md) |
+Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agents/rules/` and are actively enforced during development:
+
+| Rule | Title & Description | Target Glob | Superseded Specs |
+|------|---------------------|-------------|------------------|
+| [spec_driven_development](file:///Users/R.Pasquini/Projects/side/tacito-square/.agents/rules/spec_driven_development.md) | **Spec-Driven & Test-Driven (TDD) Guidelines**: Enforces strict "no code without functional spec" rule, task tracking, and Red/Green/Refactor loops. | `**/*.{go,ts,md}` | — |
+| [cloud_first](file:///Users/R.Pasquini/Projects/side/tacito-square/.agents/rules/cloud_first.md) | **Cloud-First & Multitenancy Guidelines**: Ephemeral design, circuit breakers, retries, statelessness, multitenancy resolution, API-first and contract-based isolation. | `**/*.{go,ts}` | `SPEC-NFR-CLOUD`, `SPEC-NFR-MULTITENANCY`, `SPEC-NFR-OPENAPI` |
+| [k8s_best_practices](file:///Users/R.Pasquini/Projects/side/tacito-square/.agents/rules/k8s_best_practices.md) | **Kubernetes Best Practices**: Horizontal Pod Autoscaling (HPA) templates, dependency-aware health probes, and distroless container images. | `**/*.{go,ts,yaml,Dockerfile}` | `SPEC-NFR-HPA`, `SPEC-NFR-HEALTH`, `SPEC-NFR-STACK` (Docker base) |
+| [observability](file:///Users/R.Pasquini/Projects/side/tacito-square/.agents/rules/observability.md) | **Observability Standards**: Prometheus metric endpoints, OpenTelemetry traces, and zerolog/winston structured JSON logging. | `**/*.{go,ts}` | `SPEC-NFR-OBSERVABILITY`, `SPEC-NFR-LOG` |
+| [code_architecture](file:///Users/R.Pasquini/Projects/side/tacito-square/.agents/rules/code_architecture.md) | **Code Architecture Guidelines**: Hexagonal (Ports & Adapters) domain boundaries and reactive Go concurrency primitives. | `**/*.{go,ts}` | `SPEC-NFR-HEXAGONAL`, `SPEC-NFR-REACTIVE` |
+| [nonfunctional](file:///Users/R.Pasquini/Projects/side/tacito-square/.agents/rules/nonfunctional.md) | **General NFR & Stack Constraints**: Approved library locks, monorepo Makefiles, SemVer component release lifecycles, and Gin conventions. | `*` | `SPEC-NFR-STACK`, `SPEC-NFR-BUILDING`, `SPEC-NFR-VERSIONING`, `SPEC-NFR-HTTP` |
+
 
 ## Functional Requirement Specs
 
@@ -80,6 +75,8 @@
 | BUG-M3.9 | Misaligned Environment Variable Bindings for Keeper Deployment in Helm Chart | CLOSED | HIGH | [BUG-M3.9](tasks/M3.BUG9/BUG-M3.9.md) |
 | BUG-M3.10 | Inconsistent Logging of Trace ID and Tenant Context Across Keeper Entities | OPEN | HIGH | [BUG-M3.10](tasks/M3.BUG10/BUG-M3.10.md) |
 | BUG-M3.11 | Inconsistent REST API Semantics and Null Empty Collections in List Endpoints | OPEN | MEDIUM | [BUG-M3.11](tasks/M3.BUG11/BUG-M3.11.md) |
+| BUG-M3.12 | Agent Definition Lacks Strict Enforcement of Brain Requirement | OPEN | HIGH | [BUG-M3.12](tasks/M3.BUG12/BUG-M3.12.md) |
+
 
 ### M4: Operator Core
 

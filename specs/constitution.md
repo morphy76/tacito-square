@@ -36,26 +36,16 @@ all while remaining accountable, observable, and scalable.
 
 ### Specs catalog
 
-- Non functional (NFR): specs/nonfunctional/, once verified, no need to update them, except for major changes. Prescribe the architecture, technologies, patterns to follow.
+- Non functional (NFR): Codified as Agent Rules under `.agents/rules/` (e.g., cloud-first, code architecture, observability, K8s, and stack constraints). They prescribe the architecture, technologies, patterns, and system guidelines to follow.
 - Functional (FR): specs/functional/<FR-XX.Y>.md, specs related to the features to be implemented.
 - Tasks: specs/tasks/<FR-ID>/<TASK-XX.Y>.md, specs related to the tasks to be achieved. A task is related to a single FR.
 
 ### Rules
 
-1. **No code without a spec.** Every feature, adapter, or NFR change requires a spec document.
-2. **No code without a task.** Every task is derived from a spec.
-3. **No task can be started without review and approval** from the spec owner.
-4. **No task can be completed without review and approval** from the spec owner.
-5. **Specs are atomic.** One spec = one testable capability. No compound specs.
-6. **Specs are immutable once accepted.** To change behavior, write a superseding spec.
-7. **Organize tasks according to boundaries:** by component, by package, by subdomain.
-8. **Do not organize tasks by TDD phases:** TDD phases are operational, not organizational.
-9. **Tasks MUST be linked to a single spec:** each task must be linked to a single FR spec.
-10. **Dependencies between specs MUST be tracked:** a spec can depend on other specs (FR or NFR). Use `Depends On:` field.
-11. **Superseding specs MUST be tracked:** a spec can supersede a previous spec. Use `Supersedes:` field.
-12. **NFR specs are the foundation:** they are written once and updated only when necessary.
-13. **FR specs are the building blocks:** they are written for each feature and are used to derive tasks.
-14. **Milestones track groups of specs.** A milestone has its own lifecycle depending on the state of its required functional specs (see Section 5).
+All development workflows, task management, and testing lifecycles are codified and actively enforced by the Agent Rules. In particular:
+- Refer to [.agents/rules/spec_driven_development.md](file:///Users/R.Pasquini/Projects/side/tacito-square/.agents/rules/spec_driven_development.md) for strict Spec-Driven & Test-Driven (TDD) compliance and task organization rules.
+- Refer to all other `.agents/rules/*.md` files for architectural, infrastructural, and non-functional rules.
+
 
 ## 4. Spec Document Format
 
