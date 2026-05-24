@@ -71,7 +71,7 @@ test-race: ## Run all tests with race detector
 	$(GOTEST) -race -count=1 ./...
 
 test-contract: ## Run contract tests (OpenAPI compatibility)
-	$(GOTEST) ./test/contract/... -count=1 -v
+	$(GOTEST) ./test/contract/... -tags=integration -count=1 -v
 
 ## —— Quality ————————————————————————————————————————————
 

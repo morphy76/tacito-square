@@ -3,7 +3,7 @@
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
 | ID            | BUG-M3.5                                                           |
-| Status        | OPEN                                                               |
+| Status        | IMPLEMENTED                                                        |
 | Severity      | MEDIUM                                                             |
 | Milestone     | M3 — Keeper Core                                                   |
 | Affects       | Makefile, test/contract/                                          |
@@ -43,8 +43,9 @@ While the live endpoint `/openapi.json` is implemented in `bootstrap.go` and ser
 3. If the live endpoints, tags, fields, or parameters deviate from the static contract, the test must fail.
 4. The CI pipeline must run `make test-contract` as part of the validation phase.
 
-## Acceptance Criteria
+1. Running `make test-contract` (or running integration tests) successfully executes a Go contract test suite.
+2. Bidirectional Path/Method Parity: The contract test detects any divergence in paths or HTTP methods between the live Gin router and `api/openapi/openapi.json` (asserts no more, no less).
+3. Bidirectional Schema/Model Parity: The contract test uses Go reflection to assert that every model property defined in the `openapi.json` schema exactly maps to a field in its corresponding Go structure (asserts no more, no less).
+4. CI fails if there is any contract mismatch.
 
-1. Running `make test-contract` successfully executes a Go unit/integration test suite.
-2. The contract test detects any divergence in paths, methods, or request/response structures between the live router and `api/openapi/openapi.json`.
-3. CI fails if there is any API contract mismatch.
+
