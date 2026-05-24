@@ -1,4 +1,4 @@
-package outbound
+package inbound
 
 import (
 	"context"
@@ -7,81 +7,73 @@ import (
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
 )
 
-// LLMBindingRepository defines the persistent storage operations for LLM Provider Bindings.
-type LLMBindingRepository interface {
+// LLMBindingUseCase defines the driving operations for managing LLM Provider Bindings.
+type LLMBindingUseCase interface {
 	Create(ctx context.Context, binding *model.LLMBinding) error
 	GetByID(ctx context.Context, id uuid.UUID) (*model.LLMBinding, error)
-	GetByName(ctx context.Context, name string) (*model.LLMBinding, error)
 	List(ctx context.Context) ([]*model.LLMBinding, error)
 	Update(ctx context.Context, binding *model.LLMBinding) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
-// MCPServerRepository defines the persistent storage operations for MCP Server configurations.
-type MCPServerRepository interface {
+// MCPServerUseCase defines the driving operations for managing MCP Server configurations.
+type MCPServerUseCase interface {
 	Create(ctx context.Context, server *model.MCPServer) error
 	GetByID(ctx context.Context, id uuid.UUID) (*model.MCPServer, error)
-	GetByName(ctx context.Context, name string) (*model.MCPServer, error)
 	List(ctx context.Context) ([]*model.MCPServer, error)
 	Update(ctx context.Context, server *model.MCPServer) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
-// SkillRepository defines the persistent storage operations for Skill Collections.
-type SkillRepository interface {
+// SkillUseCase defines the driving operations for managing Skill Collections and associations.
+type SkillUseCase interface {
 	Create(ctx context.Context, skill *model.Skill) error
 	GetByID(ctx context.Context, id uuid.UUID) (*model.Skill, error)
-	GetByName(ctx context.Context, name string) (*model.Skill, error)
 	List(ctx context.Context) ([]*model.Skill, error)
 	Update(ctx context.Context, skill *model.Skill) error
 	Delete(ctx context.Context, id uuid.UUID) error
 
-	// Agent-Skill associations
 	AttachSkillToAgent(ctx context.Context, agentID uuid.UUID, skillID uuid.UUID) error
 	DetachSkillFromAgent(ctx context.Context, agentID uuid.UUID, skillID uuid.UUID) error
-	ListSkillsByAgent(ctx context.Context, agentID uuid.UUID) ([]*model.Skill, error)
 }
 
-// PromptRepository defines the persistent storage operations for Prompt Templates and Prompt Collections.
-type PromptRepository interface {
-	// PromptTemplate CRUD
+// PromptUseCase defines the driving operations for managing Prompts and resolution.
+type PromptUseCase interface {
 	CreateTemplate(ctx context.Context, template *model.PromptTemplate) error
 	GetTemplateByID(ctx context.Context, id uuid.UUID) (*model.PromptTemplate, error)
 	GetLatestTemplateByName(ctx context.Context, name string) (*model.PromptTemplate, error)
 	ListTemplates(ctx context.Context) ([]*model.PromptTemplate, error)
-	ListTemplateVersions(ctx context.Context, name string) ([]*model.PromptTemplate, error)
 	DeleteTemplate(ctx context.Context, id uuid.UUID) error
 
-	// PromptCollection CRUD
 	CreateCollection(ctx context.Context, collection *model.PromptCollection) error
 	GetCollectionByID(ctx context.Context, id uuid.UUID) (*model.PromptCollection, error)
 	ListCollections(ctx context.Context) ([]*model.PromptCollection, error)
 	UpdateCollection(ctx context.Context, collection *model.PromptCollection) error
 	DeleteCollection(ctx context.Context, id uuid.UUID) error
-
-	// Resolution helper
-	ResolveCollectionPrompts(ctx context.Context, collectionID uuid.UUID) ([]*model.PromptTemplate, error)
+	ResolveCollection(ctx context.Context, id uuid.UUID) ([]*model.PromptTemplate, error)
+	ResolveCollectionPrompts(ctx context.Context, id uuid.UUID) ([]*model.PromptTemplate, error)
 }
 
-// AgentRepository defines the persistent storage operations for Agent templates.
-type AgentRepository interface {
+// AgentUseCase defines the driving operations for Agent configurations.
+type AgentUseCase interface {
 	Create(ctx context.Context, agent *model.Agent) error
 	GetByID(ctx context.Context, id uuid.UUID) (*model.Agent, error)
-	GetByName(ctx context.Context, name string) (*model.Agent, error)
 	List(ctx context.Context) ([]*model.Agent, error)
 	Update(ctx context.Context, agent *model.Agent) error
 	Delete(ctx context.Context, id uuid.UUID) error
-
-	AssignToCommunity(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error
-	UnassignFromCommunity(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error
 }
 
-// CommunityRepository defines the persistent storage operations for Community configurations.
-type CommunityRepository interface {
+// CommunityUseCase defines the driving operations for Community configurations.
+type CommunityUseCase interface {
 	Create(ctx context.Context, community *model.Community) error
 	GetByID(ctx context.Context, id uuid.UUID) (*model.Community, error)
-	GetByName(ctx context.Context, name string) (*model.Community, error)
 	List(ctx context.Context) ([]*model.Community, error)
 	Update(ctx context.Context, community *model.Community) error
 	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// AssignmentUseCase defines the driving operations for Agent-Community assignments.
+type AssignmentUseCase interface {
+	Assign(ctx context.Context, communityID uuid.UUID, agentID uuid.UUID) error
+	Unassign(ctx context.Context, communityID uuid.UUID, agentID uuid.UUID) error
 }

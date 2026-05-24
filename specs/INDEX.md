@@ -66,7 +66,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 |----|-------|--------|----------|------|
 | BUG-M3.1 | Supporting Entity Models Lack Tenant Segregation | CLOSED | HIGH | [BUG-M3.1](tasks/M3.BUG1/BUG-M3.1.md) |
 | BUG-M3.2 | Silent Route Registration Failure due to PostgreSQL Coupling in Keeper Bootstrap | CLOSED | HIGH | [BUG-M3.2](tasks/M3.BUG2/BUG-M3.2.md) |
-| BUG-M3.3 | Hexagonal Architecture Violations (Missing Application Service Layer & Flat Bounded Contexts) | OPEN | HIGH | [BUG-M3.3](tasks/M3.BUG3/BUG-M3.3.md) |
+| BUG-M3.3 | Hexagonal Architecture Violations (Missing Application Service Layer & Flat Bounded Contexts) | CLOSED | HIGH | [BUG-M3.3](tasks/M3.BUG3/BUG-M3.3.md) |
 | BUG-M3.4 | Broken Observability Context Propagation & Domain Metric Gaps | OPEN | HIGH | [BUG-M3.4](tasks/M3.BUG4/BUG-M3.4.md) |
 | BUG-M3.5 | Missing OpenAPI Contract Tests | OPEN | MEDIUM | [BUG-M3.5](tasks/M3.BUG5/BUG-M3.5.md) |
 | BUG-M3.6 | Synchronous Blocking Side-Effects in Agent-Community Assignment | OPEN | HIGH | [BUG-M3.6](tasks/M3.BUG6/BUG-M3.6.md) |

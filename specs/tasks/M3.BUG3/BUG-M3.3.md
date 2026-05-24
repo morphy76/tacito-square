@@ -3,7 +3,7 @@
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
 | ID            | BUG-M3.3                                                           |
-| Status        | OPEN                                                               |
+| Status        | CLOSED                                                             |
 | Severity      | HIGH                                                               |
 | Milestone     | M3 — Keeper Core                                                   |
 | Affects       | internal/keeper/application, internal/keeper/adapters, internal/keeper/domain |

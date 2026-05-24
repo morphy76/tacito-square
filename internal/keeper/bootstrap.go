@@ -9,9 +9,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
-	httpAdapter "github.com/morphy76/tacito-square/internal/keeper/adapters/http"
-	"github.com/morphy76/tacito-square/internal/keeper/adapters/postgres"
-	"github.com/morphy76/tacito-square/internal/keeper/domain"
+	httpAdapter "github.com/morphy76/tacito-square/internal/keeper/adapters/inbound/http"
+	"github.com/morphy76/tacito-square/internal/keeper/adapters/outbound/postgres"
+	"github.com/morphy76/tacito-square/internal/keeper/application/service"
+	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
 	"github.com/morphy76/tacito-square/internal/shared/health"
 	"github.com/morphy76/tacito-square/internal/shared/observability"
 )
@@ -52,25 +53,30 @@ func NewServer(pool *pgxpool.Pool) *gin.Engine {
 	})
 	r.GET("/metrics", observability.MetricsHandler())
 
+	// Outbound Repositories
 	repo := postgres.NewLLMBindingRepository(pool)
-	handler := httpAdapter.NewLLMBindingHandler(repo)
-
 	mcpRepo := postgres.NewMCPServerRepository(pool)
-	mcpHandler := httpAdapter.NewMCPServerHandler(mcpRepo)
-
 	skillRepo := postgres.NewSkillRepository(pool)
-	skillHandler := httpAdapter.NewSkillHandler(skillRepo)
-
 	promptRepo := postgres.NewPromptRepository(pool)
-	promptHandler := httpAdapter.NewPromptHandler(promptRepo)
-
 	agentRepo := postgres.NewAgentRepository(pool)
-	agentHandler := httpAdapter.NewAgentHandler(agentRepo)
-
 	communityRepo := postgres.NewCommunityRepository(pool)
-	communityHandler := httpAdapter.NewCommunityHandler(communityRepo)
 
-	assignmentHandler := httpAdapter.NewAssignmentHandler(agentRepo, &noOpCRDCoordinator{})
+	// Application Services (orchestrators)
+	llmService := service.NewLLMBindingService(repo)
+	mcpService := service.NewMCPServerService(mcpRepo)
+	skillService := service.NewSkillService(skillRepo)
+	promptService := service.NewPromptService(promptRepo)
+	agentService := service.NewAgentService(agentRepo, &noOpCRDCoordinator{})
+	communityService := service.NewCommunityService(communityRepo)
+
+	// Inbound Handlers (Gin adapters depending strictly on inboundports / services)
+	handler := httpAdapter.NewLLMBindingHandler(llmService)
+	mcpHandler := httpAdapter.NewMCPServerHandler(mcpService)
+	skillHandler := httpAdapter.NewSkillHandler(skillService)
+	promptHandler := httpAdapter.NewPromptHandler(promptService)
+	agentHandler := httpAdapter.NewAgentHandler(agentService)
+	communityHandler := httpAdapter.NewCommunityHandler(communityService)
+	assignmentHandler := httpAdapter.NewAssignmentHandler(agentService)
 
 	v1 := r.Group("/api/v1")
 	v1.Use(httpAdapter.TenantResolutionMiddleware(httpAdapter.NewHeaderTenantResolver()))
@@ -131,11 +137,10 @@ func NewServer(pool *pgxpool.Pool) *gin.Engine {
 
 type noOpCRDCoordinator struct{}
 
-func (n *noOpCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *domain.Agent) error {
+func (n *noOpCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Agent) error {
 	return nil
 }
 
-func (n *noOpCRDCoordinator) TeardownAgentCRD(ctx context.Context, agent *domain.Agent) error {
+func (n *noOpCRDCoordinator) TeardownAgentCRD(ctx context.Context, agent *model.Agent) error {
 	return nil
 }
-
