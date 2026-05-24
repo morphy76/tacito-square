@@ -13,7 +13,12 @@ CREATE TABLE IF NOT EXISTS agents (
     status VARCHAR(50) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    CONSTRAINT unique_agents_tenant_name UNIQUE (tenant_id, name)
+    CONSTRAINT unique_agents_tenant_name UNIQUE (tenant_id, name),
+    CONSTRAINT check_agent_brain CHECK (
+        (brain->>'model') IS NOT NULL AND (brain->>'model') <> '' AND
+        (brain->>'endpoint') IS NOT NULL AND (brain->>'endpoint') <> '' AND
+        (brain->>'credentials_secret') IS NOT NULL AND (brain->>'credentials_secret') <> ''
+    )
 );
 CREATE INDEX IF NOT EXISTS idx_agents_tenant_id ON agents(tenant_id);
 
