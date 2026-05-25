@@ -44,7 +44,7 @@ The operator needs a CustomResourceDefinition (CRD) for `TacitoAgent` resources 
      *(Note: Full HPA metrics autoscaling reconciliation loops are postponed, but the CRD structure must support it natively).*
 
 5. **CRD Generation & Helm Registration**:
-   * CRD Go structs and validation markers MUST be defined under `internal/operator/api/v1alpha1`.
+   * CRD Go structs and validation markers MUST be defined under `pkg/kubernetes/apis/tacito/v1alpha1` (shared with the Keeper component).
    * The manifest MUST be generated using `controller-gen` (part of Kubebuilder tools).
    * The generated CRD YAML file MUST be stored and installed via the Helm application chart under `tools/helm/tacito-square/templates/agent/crds/` or using the standard Helm `crds/` directory.
 
@@ -76,9 +76,9 @@ The operator needs a CustomResourceDefinition (CRD) for `TacitoAgent` resources 
 ## Files Affected
 
 * `go.mod` (Register new dependencies: `sigs.k8s.io/controller-runtime` and `k8s.io/apimachinery`)
-* `internal/operator/api/v1alpha1/groupversion_info.go` [NEW]
-* `internal/operator/api/v1alpha1/tacitoagent_types.go` [NEW]
-* `internal/operator/api/v1alpha1/zz_generated.deepcopy.go` [NEW]
+* `pkg/kubernetes/apis/tacito/v1alpha1/groupversion_info.go` [NEW]
+* `pkg/kubernetes/apis/tacito/v1alpha1/tacitoagent_types.go` [NEW]
+* `pkg/kubernetes/apis/tacito/v1alpha1/zz_generated.deepcopy.go` [NEW]
 * `tools/helm/tacito-square/crds/tacitoagents.yaml` [NEW]
 * `internal/operator/bootstrap.go` (Enhance `/readyz` probe to check Kube client)
 
