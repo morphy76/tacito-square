@@ -188,3 +188,6 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | SPEC-FR-M3.6 | 3 | Domain/Persistence & HTTP API Boundaries | [tasks/M3.6/](tasks/M3.6/) |
 | SPEC-FR-M3.7 | 3 | Domain, HTTP API Boundaries & Observability | [tasks/M3.7/](tasks/M3.7/) |
 | SPEC-FR-M3.8 | 8 | Domain, HTTP API Boundaries, Observability & Helm | [tasks/M3.8/](tasks/M3.8/) |
+| SPEC-FR-M4.1 | 3 | RED → GREEN → REFACTOR | [tasks/M4.1/](tasks/M4.1/) |
+| SPEC-FR-M4.3 | 3 | RED → GREEN → REFACTOR | [tasks/M4.3/](tasks/M4.3/) |
+| SPEC-FR-M4.6 | 3 | RED → GREEN → REFACTOR | [tasks/M4.6/](tasks/M4.6/) |
