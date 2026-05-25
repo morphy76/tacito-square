@@ -91,6 +91,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | SPEC-FR-M4.4 | Zero-Scaling Support | DRAFT | operator | [SPEC-FR-M4.4](functional/M4/SPEC-FR-M4.4.md) |
 | SPEC-FR-M4.5 | OIDC/JWT Authentication | DRAFT | keeper, shared | [SPEC-FR-M4.5](functional/M4/SPEC-FR-M4.5.md) |
 | SPEC-FR-M4.6 | Agent CRD Submission | DRAFT | keeper | [SPEC-FR-M4.6](functional/M4/SPEC-FR-M4.6.md) |
+| SPEC-FR-M4.7 | Agent & Community Lifecycle Management REST API | DRAFT | keeper, operator | [SPEC-FR-M4.7](functional/M4/SPEC-FR-M4.7.md) |
 
 ### M5: Agent Core
 
