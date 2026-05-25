@@ -3,7 +3,7 @@
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
 | ID            | BUG-M3.13                                                          |
-| Status        | OPEN                                                               |
+| Status        | IMPLEMENTED                                                        |
 | Severity      | MEDIUM                                                             |
 | Milestone     | M3 — Keeper Core                                                   |
 | Affects       | `internal/keeper/domain/model/*`, `internal/keeper/adapters/*`      |

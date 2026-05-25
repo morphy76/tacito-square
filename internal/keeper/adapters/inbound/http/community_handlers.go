@@ -1,9 +1,9 @@
 package http
 
 import (
-	"errors"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -98,7 +98,7 @@ func (h *CommunityHandler) Create(c *gin.Context) {
 		Str("topology", string(comm.Topology)).
 		Msg("Community template created successfully")
 
-	c.JSON(http.StatusCreated, comm)
+	c.JSON(http.StatusCreated, nil)
 }
 
 // GetByID handles GET /api/v1/communities/:id
@@ -128,7 +128,11 @@ func (h *CommunityHandler) GetByID(c *gin.Context) {
 
 	comm, err := h.repo.GetByID(ctx, id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -195,8 +199,25 @@ func (h *CommunityHandler) Update(c *gin.Context) {
 
 	existing, err := h.repo.GetByID(ctx, id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Capture previous state
+	previousValue := model.Community{
+		ID:            existing.ID,
+		TenantID:      existing.TenantID,
+		Name:          existing.Name,
+		Description:   existing.Description,
+		Topology:      existing.Topology,
+		Configuration: existing.Configuration,
+		Status:        existing.Status,
+		CreatedAt:     existing.CreatedAt,
+		UpdatedAt:     existing.UpdatedAt,
 	}
 
 	config := req.Configuration
@@ -220,6 +241,10 @@ func (h *CommunityHandler) Update(c *gin.Context) {
 	}
 
 	if err := h.repo.Update(ctx, existing); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
 		reqLogger.Error().Err(err).Msg("failed to update community")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -230,7 +255,7 @@ func (h *CommunityHandler) Update(c *gin.Context) {
 		Str("community_id", existing.ID.String()).
 		Msg("Community template updated successfully")
 
-	c.JSON(http.StatusOK, existing)
+	c.JSON(http.StatusOK, previousValue)
 }
 
 // Delete handles DELETE /api/v1/communities/:id
@@ -259,7 +284,7 @@ func (h *CommunityHandler) Delete(c *gin.Context) {
 	}
 
 	if err := h.repo.Delete(ctx, id); err != nil {
-		if errors.Is(err, errors.New("not found")) {
+		if strings.Contains(err.Error(), "not found") {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}

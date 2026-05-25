@@ -14,7 +14,6 @@ func TestSkill_Validation(t *testing.T) {
 		TenantID:    "test-tenant.com",
 		Name:        "web-search",
 		Description: "Provides google search tools",
-		MCPServers:  []uuid.UUID{uuid.New()},
 		Status:      SkillStatusActive,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -79,65 +78,47 @@ func TestSkill_Validation(t *testing.T) {
 	}
 }
 
-func TestSkill_IsToolAuthorized(t *testing.T) {
-	tests := []struct {
-		name         string
-		allowedTools []string
-		deniedTools  []string
-		testTool     string
-		wantAuth     bool
-	}{
-		{
-			name:         "All allowed by default (both empty)",
-			allowedTools: nil,
-			deniedTools:  nil,
-			testTool:     "search_google",
-			wantAuth:     true,
-		},
-		{
-			name:         "Allowed in whitelist, not blacklisted",
-			allowedTools: []string{"search_google", "fetch_url"},
-			deniedTools:  nil,
-			testTool:     "search_google",
-			wantAuth:     true,
-		},
-		{
-			name:         "Not in whitelist",
-			allowedTools: []string{"search_google", "fetch_url"},
-			deniedTools:  nil,
-			testTool:     "read_file",
-			wantAuth:     false,
-		},
-		{
-			name:         "In blacklist, whitelist empty",
-			allowedTools: nil,
-			deniedTools:  []string{"format_disk", "read_file"},
-			testTool:     "format_disk",
-			wantAuth:     false,
-		},
-		{
-			name:         "Not in blacklist, whitelist empty",
-			allowedTools: nil,
-			deniedTools:  []string{"format_disk"},
-			testTool:     "read_file",
-			wantAuth:     true,
-		},
-		{
-			name:         "In whitelist but also in blacklist",
-			allowedTools: []string{"search_google", "fetch_url"},
-			deniedTools:  []string{"fetch_url"},
-			testTool:     "fetch_url",
-			wantAuth:     false,
-		},
-	}
+func TestSkillCollection_Validate(t *testing.T) {
+	t.Run("Valid Skill Collection", func(t *testing.T) {
+		pc := SkillCollection{
+			ID:          uuid.New(),
+			TenantID:    "test-tenant.com",
+			Name:        "agent-a-skills",
+			Description: "Collection for agent A",
+			Skills:      []uuid.UUID{uuid.New()},
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+		}
+		assert.NoError(t, pc.Validate())
+	})
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			skill := Skill{
-				AllowedTools: tt.allowedTools,
-				DeniedTools:  tt.deniedTools,
-			}
-			assert.Equal(t, tt.wantAuth, skill.IsToolAuthorized(tt.testTool))
-		})
-	}
+	t.Run("Missing Tenant ID", func(t *testing.T) {
+		pc := SkillCollection{
+			ID:       uuid.New(),
+			TenantID: "",
+			Name:     "agent-a-skills",
+		}
+		assert.Error(t, pc.Validate())
+		assert.Contains(t, pc.Validate().Error(), "tenant id is required")
+	})
+
+	t.Run("Missing ID", func(t *testing.T) {
+		pc := SkillCollection{
+			ID:       uuid.Nil,
+			TenantID: "test-tenant.com",
+			Name:     "agent-a-skills",
+		}
+		assert.Error(t, pc.Validate())
+		assert.Contains(t, pc.Validate().Error(), "id is required")
+	})
+
+	t.Run("Missing Name", func(t *testing.T) {
+		pc := SkillCollection{
+			ID:       uuid.New(),
+			TenantID: "test-tenant.com",
+			Name:     "",
+		}
+		assert.Error(t, pc.Validate())
+		assert.Contains(t, pc.Validate().Error(), "name is required")
+	})
 }

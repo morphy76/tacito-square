@@ -24,12 +24,12 @@ func (s *PromptService) GetTemplateByID(ctx context.Context, id uuid.UUID) (*mod
 	return s.repo.GetTemplateByID(ctx, id)
 }
 
-func (s *PromptService) GetLatestTemplateByName(ctx context.Context, name string) (*model.PromptTemplate, error) {
-	return s.repo.GetLatestTemplateByName(ctx, name)
-}
-
 func (s *PromptService) ListTemplates(ctx context.Context) ([]*model.PromptTemplate, error) {
 	return s.repo.ListTemplates(ctx)
+}
+
+func (s *PromptService) UpdateTemplate(ctx context.Context, template *model.PromptTemplate) error {
+	return s.repo.UpdateTemplate(ctx, template)
 }
 
 func (s *PromptService) DeleteTemplate(ctx context.Context, id uuid.UUID) error {
@@ -54,10 +54,6 @@ func (s *PromptService) UpdateCollection(ctx context.Context, collection *model.
 
 func (s *PromptService) DeleteCollection(ctx context.Context, id uuid.UUID) error {
 	return s.repo.DeleteCollection(ctx, id)
-}
-
-func (s *PromptService) ResolveCollection(ctx context.Context, id uuid.UUID) ([]*model.PromptTemplate, error) {
-	return s.repo.ResolveCollectionPrompts(ctx, id)
 }
 
 func (s *PromptService) ResolveCollectionPrompts(ctx context.Context, id uuid.UUID) ([]*model.PromptTemplate, error) {

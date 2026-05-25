@@ -1,9 +1,9 @@
 package http
 
 import (
-	"errors"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -103,7 +103,7 @@ func (h *MCPServerHandler) Create(c *gin.Context) {
 		Str("mcp_server_id", server.ID.String()).
 		Msg("MCP server template created successfully")
 
-	c.JSON(http.StatusCreated, server)
+	c.JSON(http.StatusCreated, nil)
 }
 
 // GetByID handles GET /api/v1/mcp-servers/:id
@@ -130,7 +130,11 @@ func (h *MCPServerHandler) GetByID(c *gin.Context) {
 
 	server, err := h.repo.GetByID(ctx, id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -194,8 +198,29 @@ func (h *MCPServerHandler) Update(c *gin.Context) {
 
 	existing, err := h.repo.GetByID(ctx, id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Capture previous state
+	previousValue := model.MCPServer{
+		ID:            existing.ID,
+		TenantID:      existing.TenantID,
+		Name:          existing.Name,
+		Description:   existing.Description,
+		Transport:     existing.Transport,
+		Command:       existing.Command,
+		Args:          append([]string(nil), existing.Args...),
+		Env:           existing.Env, // map
+		URL:           existing.URL,
+		AuthSecretRef: existing.AuthSecretRef,
+		Status:        existing.Status,
+		CreatedAt:     existing.CreatedAt,
+		UpdatedAt:     existing.UpdatedAt,
 	}
 
 	existing.TenantID = ten.FullName()
@@ -215,6 +240,10 @@ func (h *MCPServerHandler) Update(c *gin.Context) {
 	}
 
 	if err := h.repo.Update(ctx, existing); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
 		reqLogger.Error().Err(err).Msg("failed to update mcp server")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -225,7 +254,7 @@ func (h *MCPServerHandler) Update(c *gin.Context) {
 		Str("mcp_server_id", existing.ID.String()).
 		Msg("MCP server template updated successfully")
 
-	c.JSON(http.StatusOK, existing)
+	c.JSON(http.StatusOK, previousValue)
 }
 
 // Delete handles DELETE /api/v1/mcp-servers/:id
@@ -251,7 +280,7 @@ func (h *MCPServerHandler) Delete(c *gin.Context) {
 	}
 
 	if err := h.repo.Delete(ctx, id); err != nil {
-		if errors.Is(err, errors.New("not found")) {
+		if strings.Contains(err.Error(), "not found") {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}

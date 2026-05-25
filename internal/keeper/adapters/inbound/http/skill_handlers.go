@@ -1,9 +1,9 @@
 package http
 
 import (
-	"errors"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -16,7 +16,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// SkillHandler implements the HTTP controllers for Skills CRUD and relational operations.
+// SkillHandler implements the HTTP controllers for Skills CRUD, Skill Collections, and relational operations.
 type SkillHandler struct {
 	repo inbound.SkillUseCase
 }
@@ -28,20 +28,28 @@ func NewSkillHandler(repo inbound.SkillUseCase) *SkillHandler {
 
 // CreateSkillRequest defines the request payload for creating a Skill.
 type CreateSkillRequest struct {
-	Name         string   `json:"name" binding:"required"`
-	Description  string   `json:"description"`
-	MCPServers   []string `json:"mcp_servers"`
-	AllowedTools []string `json:"allowed_tools"`
-	DeniedTools  []string `json:"denied_tools"`
+	Name        string `json:"name" binding:"required"`
+	Description string `json:"description"`
 }
 
 // UpdateSkillRequest defines the request payload for updating a Skill.
 type UpdateSkillRequest struct {
-	Name         string   `json:"name" binding:"required"`
-	Description  string   `json:"description"`
-	MCPServers   []string `json:"mcp_servers"`
-	AllowedTools []string `json:"allowed_tools"`
-	DeniedTools  []string `json:"denied_tools"`
+	Name        string `json:"name" binding:"required"`
+	Description string `json:"description"`
+}
+
+// CreateSkillCollectionRequest defines the payload for creating a Skill Collection.
+type CreateSkillCollectionRequest struct {
+	Name        string   `json:"name" binding:"required"`
+	Description string   `json:"description"`
+	Skills      []string `json:"skills"`
+}
+
+// UpdateSkillCollectionRequest defines the payload for updating a Skill Collection.
+type UpdateSkillCollectionRequest struct {
+	Name        string   `json:"name" binding:"required"`
+	Description string   `json:"description"`
+	Skills      []string `json:"skills"`
 }
 
 // Create handles POST /api/v1/skills
@@ -65,27 +73,14 @@ func (h *SkillHandler) Create(c *gin.Context) {
 		return
 	}
 
-	var mcpUUIDs []uuid.UUID
-	for _, idStr := range req.MCPServers {
-		id, err := uuid.Parse(idStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid mcp_server id: " + idStr})
-			return
-		}
-		mcpUUIDs = append(mcpUUIDs, id)
-	}
-
 	skill := &model.Skill{
-		ID:           uuid.New(),
-		TenantID:     ten.FullName(),
-		Name:         req.Name,
-		Description:  req.Description,
-		MCPServers:   mcpUUIDs,
-		AllowedTools: req.AllowedTools,
-		DeniedTools:  req.DeniedTools,
-		Status:       model.SkillStatusActive,
-		CreatedAt:    time.Now().UTC(),
-		UpdatedAt:    time.Now().UTC(),
+		ID:          uuid.New(),
+		TenantID:    ten.FullName(),
+		Name:        req.Name,
+		Description: req.Description,
+		Status:      model.SkillStatusActive,
+		CreatedAt:   time.Now().UTC(),
+		UpdatedAt:   time.Now().UTC(),
 	}
 
 	if err := skill.Validate(); err != nil {
@@ -102,9 +97,9 @@ func (h *SkillHandler) Create(c *gin.Context) {
 	reqLogger.Info().
 		Str("tenant_id", ten.FullName()).
 		Str("skill_id", skill.ID.String()).
-		Msg("Skill template created successfully")
+		Msg("Skill created successfully")
 
-	c.JSON(http.StatusCreated, skill)
+	c.JSON(http.StatusCreated, nil)
 }
 
 // GetByID handles GET /api/v1/skills/:id
@@ -131,7 +126,11 @@ func (h *SkillHandler) GetByID(c *gin.Context) {
 
 	skill, err := h.repo.GetByID(ctx, id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -195,26 +194,20 @@ func (h *SkillHandler) Update(c *gin.Context) {
 
 	existing, err := h.repo.GetByID(ctx, id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	var mcpUUIDs []uuid.UUID
-	for _, idStr := range req.MCPServers {
-		id, err := uuid.Parse(idStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid mcp_server id: " + idStr})
-			return
-		}
-		mcpUUIDs = append(mcpUUIDs, id)
-	}
+	// Capture previous state
+	previousValue := *existing
 
 	existing.TenantID = ten.FullName()
 	existing.Name = req.Name
 	existing.Description = req.Description
-	existing.MCPServers = mcpUUIDs
-	existing.AllowedTools = req.AllowedTools
-	existing.DeniedTools = req.DeniedTools
 	existing.UpdatedAt = time.Now().UTC()
 
 	if err := existing.Validate(); err != nil {
@@ -223,6 +216,10 @@ func (h *SkillHandler) Update(c *gin.Context) {
 	}
 
 	if err := h.repo.Update(ctx, existing); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
 		reqLogger.Error().Err(err).Msg("failed to update skill")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -231,9 +228,9 @@ func (h *SkillHandler) Update(c *gin.Context) {
 	reqLogger.Info().
 		Str("tenant_id", ten.FullName()).
 		Str("skill_id", existing.ID.String()).
-		Msg("Skill template updated successfully")
+		Msg("Skill updated successfully")
 
-	c.JSON(http.StatusOK, existing)
+	c.JSON(http.StatusOK, previousValue)
 }
 
 // Delete handles DELETE /api/v1/skills/:id
@@ -259,7 +256,7 @@ func (h *SkillHandler) Delete(c *gin.Context) {
 	}
 
 	if err := h.repo.Delete(ctx, id); err != nil {
-		if errors.Is(err, errors.New("not found")) {
+		if strings.Contains(err.Error(), "not found") {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
@@ -271,7 +268,7 @@ func (h *SkillHandler) Delete(c *gin.Context) {
 	reqLogger.Info().
 		Str("tenant_id", ten.FullName()).
 		Str("skill_id", id.String()).
-		Msg("Skill template deleted successfully")
+		Msg("Skill deleted successfully")
 
 	c.Status(http.StatusNoContent)
 }
@@ -306,6 +303,10 @@ func (h *SkillHandler) AttachSkillToAgent(c *gin.Context) {
 	}
 
 	if err := h.repo.AttachSkillToAgent(ctx, agentID, skillID); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
 		reqLogger.Error().Err(err).Msg("failed to attach skill to agent")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -350,6 +351,10 @@ func (h *SkillHandler) DetachSkillFromAgent(c *gin.Context) {
 	}
 
 	if err := h.repo.DetachSkillFromAgent(ctx, agentID, skillID); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
 		reqLogger.Error().Err(err).Msg("failed to detach skill from agent")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -362,4 +367,288 @@ func (h *SkillHandler) DetachSkillFromAgent(c *gin.Context) {
 		Msg("Skill successfully detached from agent")
 
 	c.Status(http.StatusNoContent)
+}
+
+// CreateCollection handles POST /api/v1/skill-collections
+func (h *SkillHandler) CreateCollection(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.create_skill_collection", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithContext(logger, ctx)
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	var req CreateSkillCollectionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var skillUUIDs []uuid.UUID
+	for _, idStr := range req.Skills {
+		id, err := uuid.Parse(idStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid skill id: " + idStr})
+			return
+		}
+		skillUUIDs = append(skillUUIDs, id)
+	}
+
+	col := &model.SkillCollection{
+		ID:          uuid.New(),
+		TenantID:    ten.FullName(),
+		Name:        req.Name,
+		Description: req.Description,
+		Skills:      skillUUIDs,
+		CreatedAt:   time.Now().UTC(),
+		UpdatedAt:   time.Now().UTC(),
+	}
+
+	if err := col.Validate(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.repo.CreateCollection(ctx, col); err != nil {
+		reqLogger.Error().Err(err).Msg("failed to create skill collection")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	reqLogger.Info().
+		Str("tenant_id", ten.FullName()).
+		Str("skill_collection_id", col.ID.String()).
+		Msg("Skill collection created successfully")
+
+	c.JSON(http.StatusCreated, nil)
+}
+
+// GetCollectionByID handles GET /api/v1/skill-collections/:id
+func (h *SkillHandler) GetCollectionByID(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.get_skill_collection", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithContext(logger, ctx)
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid uuid"})
+		return
+	}
+
+	col, err := h.repo.GetCollectionByID(ctx, id)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, col)
+}
+
+// ListCollections handles GET /api/v1/skill-collections
+func (h *SkillHandler) ListCollections(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.list_skill_collections", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithContext(logger, ctx)
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	collections, err := h.repo.ListCollections(ctx)
+	if err != nil {
+		reqLogger.Error().Err(err).Msg("failed to list skill collections")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if collections == nil {
+		collections = make([]*model.SkillCollection, 0)
+	}
+	c.JSON(http.StatusOK, collections)
+}
+
+// UpdateCollection handles PUT /api/v1/skill-collections/:id
+func (h *SkillHandler) UpdateCollection(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.update_skill_collection", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithContext(logger, ctx)
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid uuid"})
+		return
+	}
+
+	var req UpdateSkillCollectionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	existing, err := h.repo.GetCollectionByID(ctx, id)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Capture previous state
+	previousValue := model.SkillCollection{
+		ID:          existing.ID,
+		TenantID:    existing.TenantID,
+		Name:        existing.Name,
+		Description: existing.Description,
+		Skills:      append([]uuid.UUID(nil), existing.Skills...),
+		CreatedAt:   existing.CreatedAt,
+		UpdatedAt:   existing.UpdatedAt,
+	}
+
+	var skillUUIDs []uuid.UUID
+	for _, idStr := range req.Skills {
+		id, err := uuid.Parse(idStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid skill id: " + idStr})
+			return
+		}
+		skillUUIDs = append(skillUUIDs, id)
+	}
+
+	existing.TenantID = ten.FullName()
+	existing.Name = req.Name
+	existing.Description = req.Description
+	existing.Skills = skillUUIDs
+	existing.UpdatedAt = time.Now().UTC()
+
+	if err := existing.Validate(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.repo.UpdateCollection(ctx, existing); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		reqLogger.Error().Err(err).Msg("failed to update skill collection")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	reqLogger.Info().
+		Str("tenant_id", ten.FullName()).
+		Str("skill_collection_id", existing.ID.String()).
+		Msg("Skill collection updated successfully")
+
+	c.JSON(http.StatusOK, previousValue)
+}
+
+// DeleteCollection handles DELETE /api/v1/skill-collections/:id
+func (h *SkillHandler) DeleteCollection(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.delete_skill_collection", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithContext(logger, ctx)
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid uuid"})
+		return
+	}
+
+	if err := h.repo.DeleteCollection(ctx, id); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		reqLogger.Error().Err(err).Msg("failed to delete skill collection")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	reqLogger.Info().
+		Str("tenant_id", ten.FullName()).
+		Str("skill_collection_id", id.String()).
+		Msg("Skill collection deleted successfully")
+
+	c.Status(http.StatusNoContent)
+}
+
+// ResolveCollection handles GET /api/v1/skill-collections/:id/resolve
+func (h *SkillHandler) ResolveCollection(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.resolve_skill_collection", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithContext(logger, ctx)
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid uuid"})
+		return
+	}
+
+	resolved, err := h.repo.ResolveCollectionSkills(ctx, id)
+	if err != nil {
+		reqLogger.Error().Err(err).Msg("failed to resolve skill collection")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if resolved == nil {
+		resolved = make([]*model.Skill, 0)
+	}
+	c.JSON(http.StatusOK, resolved)
 }

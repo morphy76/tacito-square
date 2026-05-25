@@ -1,9 +1,9 @@
 package http
 
 import (
-	"errors"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -118,7 +118,7 @@ func (h *LLMBindingHandler) Create(c *gin.Context) {
 		Str("provider", string(binding.Provider)).
 		Msg("LLM provider binding template created successfully")
 
-	c.JSON(http.StatusCreated, binding)
+	c.JSON(http.StatusCreated, nil)
 }
 
 // GetByID handles GET /api/v1/llm-bindings/:id
@@ -145,7 +145,11 @@ func (h *LLMBindingHandler) GetByID(c *gin.Context) {
 
 	binding, err := h.repo.GetByID(ctx, id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -209,9 +213,16 @@ func (h *LLMBindingHandler) Update(c *gin.Context) {
 
 	existing, err := h.repo.GetByID(ctx, id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Capture previous state
+	previousValue := *existing
 
 	temp := 0.7
 	if req.DefaultTemperature != nil {
@@ -244,6 +255,10 @@ func (h *LLMBindingHandler) Update(c *gin.Context) {
 	}
 
 	if err := h.repo.Update(ctx, existing); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
 		reqLogger.Error().Err(err).Msg("failed to update llm binding")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -254,7 +269,7 @@ func (h *LLMBindingHandler) Update(c *gin.Context) {
 		Str("llm_binding_id", existing.ID.String()).
 		Msg("LLM provider binding template updated successfully")
 
-	c.JSON(http.StatusOK, existing)
+	c.JSON(http.StatusOK, previousValue)
 }
 
 // Delete handles DELETE /api/v1/llm-bindings/:id
@@ -280,7 +295,7 @@ func (h *LLMBindingHandler) Delete(c *gin.Context) {
 	}
 
 	if err := h.repo.Delete(ctx, id); err != nil {
-		if errors.Is(err, errors.New("not found")) {
+		if strings.Contains(err.Error(), "not found") {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}

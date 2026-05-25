@@ -15,8 +15,6 @@ func TestPromptTemplate_Validate(t *testing.T) {
 			TenantID:  "test-tenant.com",
 			Name:      "system-behavior",
 			Content:   "You are a helpful assistant.",
-			Role:      PromptRoleSystem,
-			Version:   1,
 			Status:    PromptStatusActive,
 			CreatedAt: time.Now(),
 		}
@@ -25,12 +23,10 @@ func TestPromptTemplate_Validate(t *testing.T) {
 
 	t.Run("Missing Tenant ID", func(t *testing.T) {
 		pt := PromptTemplate{
-			ID:        uuid.New(),
-			TenantID:  "",
-			Name:      "system-behavior",
-			Role:      PromptRoleSystem,
-			Version:   1,
-			Status:    PromptStatusActive,
+			ID:       uuid.New(),
+			TenantID: "",
+			Name:     "system-behavior",
+			Status:   PromptStatusActive,
 		}
 		assert.Error(t, pt.Validate())
 		assert.Contains(t, pt.Validate().Error(), "tenant id is required")
@@ -41,8 +37,6 @@ func TestPromptTemplate_Validate(t *testing.T) {
 			ID:       uuid.Nil,
 			TenantID: "test-tenant.com",
 			Name:     "system-behavior",
-			Role:     PromptRoleSystem,
-			Version:  1,
 			Status:   PromptStatusActive,
 		}
 		assert.Error(t, pt.Validate())
@@ -54,25 +48,10 @@ func TestPromptTemplate_Validate(t *testing.T) {
 			ID:       uuid.New(),
 			TenantID: "test-tenant.com",
 			Name:     "",
-			Role:     PromptRoleSystem,
-			Version:  1,
 			Status:   PromptStatusActive,
 		}
 		assert.Error(t, pt.Validate())
 		assert.Contains(t, pt.Validate().Error(), "name is required")
-	})
-
-	t.Run("Invalid Role", func(t *testing.T) {
-		pt := PromptTemplate{
-			ID:       uuid.New(),
-			TenantID: "test-tenant.com",
-			Name:     "system-behavior",
-			Role:     "invalid-role",
-			Version:  1,
-			Status:   PromptStatusActive,
-		}
-		assert.Error(t, pt.Validate())
-		assert.Contains(t, pt.Validate().Error(), "invalid role")
 	})
 
 	t.Run("Invalid Status", func(t *testing.T) {
@@ -80,25 +59,10 @@ func TestPromptTemplate_Validate(t *testing.T) {
 			ID:       uuid.New(),
 			TenantID: "test-tenant.com",
 			Name:     "system-behavior",
-			Role:     PromptRoleSystem,
-			Version:  1,
 			Status:   "invalid-status",
 		}
 		assert.Error(t, pt.Validate())
 		assert.Contains(t, pt.Validate().Error(), "invalid status")
-	})
-
-	t.Run("Invalid Version", func(t *testing.T) {
-		pt := PromptTemplate{
-			ID:       uuid.New(),
-			TenantID: "test-tenant.com",
-			Name:     "system-behavior",
-			Role:     PromptRoleSystem,
-			Version:  0,
-			Status:   PromptStatusActive,
-		}
-		assert.Error(t, pt.Validate())
-		assert.Contains(t, pt.Validate().Error(), "version must be greater than zero")
 	})
 }
 

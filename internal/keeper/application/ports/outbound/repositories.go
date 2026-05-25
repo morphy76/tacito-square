@@ -27,7 +27,7 @@ type MCPServerRepository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
-// SkillRepository defines the persistent storage operations for Skill Collections.
+// SkillRepository defines the persistent storage operations for Skills and Skill Collections.
 type SkillRepository interface {
 	Create(ctx context.Context, skill *model.Skill) error
 	GetByID(ctx context.Context, id uuid.UUID) (*model.Skill, error)
@@ -40,6 +40,16 @@ type SkillRepository interface {
 	AttachSkillToAgent(ctx context.Context, agentID uuid.UUID, skillID uuid.UUID) error
 	DetachSkillFromAgent(ctx context.Context, agentID uuid.UUID, skillID uuid.UUID) error
 	ListSkillsByAgent(ctx context.Context, agentID uuid.UUID) ([]*model.Skill, error)
+
+	// SkillCollection CRUD
+	CreateCollection(ctx context.Context, collection *model.SkillCollection) error
+	GetCollectionByID(ctx context.Context, id uuid.UUID) (*model.SkillCollection, error)
+	ListCollections(ctx context.Context) ([]*model.SkillCollection, error)
+	UpdateCollection(ctx context.Context, collection *model.SkillCollection) error
+	DeleteCollection(ctx context.Context, id uuid.UUID) error
+
+	// Resolution helper
+	ResolveCollectionSkills(ctx context.Context, collectionID uuid.UUID) ([]*model.Skill, error)
 }
 
 // PromptRepository defines the persistent storage operations for Prompt Templates and Prompt Collections.
@@ -47,9 +57,8 @@ type PromptRepository interface {
 	// PromptTemplate CRUD
 	CreateTemplate(ctx context.Context, template *model.PromptTemplate) error
 	GetTemplateByID(ctx context.Context, id uuid.UUID) (*model.PromptTemplate, error)
-	GetLatestTemplateByName(ctx context.Context, name string) (*model.PromptTemplate, error)
 	ListTemplates(ctx context.Context) ([]*model.PromptTemplate, error)
-	ListTemplateVersions(ctx context.Context, name string) ([]*model.PromptTemplate, error)
+	UpdateTemplate(ctx context.Context, template *model.PromptTemplate) error
 	DeleteTemplate(ctx context.Context, id uuid.UUID) error
 
 	// PromptCollection CRUD

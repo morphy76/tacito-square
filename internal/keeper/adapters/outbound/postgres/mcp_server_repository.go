@@ -209,12 +209,15 @@ func (r *MCPServerRepository) Update(ctx context.Context, s *model.MCPServer) er
 	WHERE id = $11 AND tenant_id = $12`
 
 	s.UpdatedAt = time.Now().UTC()
-	_, err = r.pool.Exec(ctx, query,
+	cmdTag, err := r.pool.Exec(ctx, query,
 		s.Name, s.Description, s.Transport, s.Command, argsJSON, envJSON,
 		s.URL, s.AuthSecretRef, s.Status, s.UpdatedAt, s.ID, s.TenantID,
 	)
 	if err != nil {
 		return fmt.Errorf("update mcp server: %w", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("mcp server not found: %s", s.ID)
 	}
 	return nil
 }
@@ -227,9 +230,12 @@ func (r *MCPServerRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 
 	query := `DELETE FROM mcp_servers WHERE id = $1 AND tenant_id = $2`
-	_, err := r.pool.Exec(ctx, query, id, ten.FullName())
+	cmdTag, err := r.pool.Exec(ctx, query, id, ten.FullName())
 	if err != nil {
 		return fmt.Errorf("delete mcp server: %w", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("mcp server not found: %s", id)
 	}
 	return nil
 }

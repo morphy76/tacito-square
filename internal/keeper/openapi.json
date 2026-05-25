@@ -884,6 +884,283 @@
         }
       }
     },
+    "/skill-collections": {
+      "post": {
+        "summary": "Create a new Skill Collection",
+        "operationId": "createSkillCollection",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSkillCollectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successfully created Skill Collection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCollection"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config/skills"
+        ]
+      },
+      "get": {
+        "summary": "List all configured Skill Collections",
+        "operationId": "listSkillCollections",
+        "responses": {
+          "200": {
+            "description": "List of Skill Collections",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SkillCollection"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config/skills"
+        ]
+      }
+    },
+    "/skill-collections/{id}": {
+      "get": {
+        "summary": "Retrieve details of a specific Skill Collection by UUID",
+        "operationId": "getSkillCollection",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Skill Collection",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Skill Collection details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCollection"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Skill Collection not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config/skills"
+        ]
+      },
+      "put": {
+        "summary": "Update Skill Collection properties",
+        "operationId": "updateSkillCollection",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Skill Collection",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSkillCollectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully updated Skill Collection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCollection"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Skill Collection not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config/skills"
+        ]
+      },
+      "delete": {
+        "summary": "Delete a Skill Collection by UUID",
+        "operationId": "deleteSkillCollection",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Skill Collection",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully deleted Skill Collection"
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config/skills"
+        ]
+      }
+    },
+    "/skill-collections/{id}/resolve": {
+      "get": {
+        "summary": "Resolve collection skills",
+        "operationId": "resolveCollectionSkills",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Skill Collection",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resolved Skills",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Skill"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config/skills"
+        ]
+      }
+    },
     "/prompts": {
       "post": {
         "summary": "Create a new Prompt Template version 1",
@@ -2448,35 +2725,6 @@
           "description": {
             "type": "string",
             "example": "Google search and URL extraction tools"
-          },
-          "mcp_servers": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "example": [
-              "550e8400-e29b-41d4-a716-446655440000"
-            ]
-          },
-          "allowed_tools": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "example": [
-              "search_google",
-              "fetch_url"
-            ]
-          },
-          "denied_tools": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "example": [
-              "format_disk"
-            ]
           }
         }
       },
@@ -2493,35 +2741,6 @@
           "description": {
             "type": "string",
             "example": "Google search and URL extraction tools"
-          },
-          "mcp_servers": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "example": [
-              "550e8400-e29b-41d4-a716-446655440000"
-            ]
-          },
-          "allowed_tools": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "example": [
-              "search_google",
-              "fetch_url"
-            ]
-          },
-          "denied_tools": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "example": [
-              "format_disk"
-            ]
           }
         }
       },
@@ -2545,25 +2764,6 @@
           "description": {
             "type": "string"
           },
-          "mcp_servers": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          "allowed_tools": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "denied_tools": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
           "status": {
             "type": "string",
             "enum": [
@@ -2582,11 +2782,99 @@
           }
         }
       },
+      "CreateSkillCollectionRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "general-skills"
+          },
+          "description": {
+            "type": "string",
+            "example": "General assistant capabilities"
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": [
+              "550e8400-e29b-41d4-a716-446655440000"
+            ]
+          }
+        }
+      },
+      "UpdateSkillCollectionRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "general-skills"
+          },
+          "description": {
+            "type": "string",
+            "example": "General assistant capabilities"
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": [
+              "550e8400-e29b-41d4-a716-446655440000"
+            ]
+          }
+        }
+      },
+      "SkillCollection": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "skills",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "CreatePromptTemplateRequest": {
         "type": "object",
         "required": [
-          "name",
-          "role"
+          "name"
         ],
         "properties": {
           "name": {
@@ -2596,15 +2884,6 @@
           "content": {
             "type": "string",
             "example": "You are a helpful AI assistant."
-          },
-          "role": {
-            "type": "string",
-            "enum": [
-              "system",
-              "user",
-              "assistant"
-            ],
-            "example": "system"
           },
           "status": {
             "type": "string",
@@ -2620,22 +2899,17 @@
       "UpdatePromptTemplateRequest": {
         "type": "object",
         "required": [
-          "role",
+          "name",
           "status"
         ],
         "properties": {
+          "name": {
+            "type": "string",
+            "example": "system-behavior"
+          },
           "content": {
             "type": "string",
             "example": "You are a helpful AI assistant version 2."
-          },
-          "role": {
-            "type": "string",
-            "enum": [
-              "system",
-              "user",
-              "assistant"
-            ],
-            "example": "system"
           },
           "status": {
             "type": "string",
@@ -2654,8 +2928,6 @@
           "id",
           "name",
           "content",
-          "role",
-          "version",
           "status",
           "created_at"
         ],
@@ -2669,17 +2941,6 @@
           },
           "content": {
             "type": "string"
-          },
-          "role": {
-            "type": "string",
-            "enum": [
-              "system",
-              "user",
-              "assistant"
-            ]
-          },
-          "version": {
-            "type": "integer"
           },
           "status": {
             "type": "string",

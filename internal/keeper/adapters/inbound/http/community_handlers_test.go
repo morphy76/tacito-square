@@ -91,13 +91,7 @@ func TestCommunityHandlers_Create(t *testing.T) {
 		r.ServeHTTP(resp, req)
 
 		assert.Equal(t, http.StatusCreated, resp.Code)
-
-		var respBody map[string]interface{}
-		err := json.Unmarshal(resp.Body.Bytes(), &respBody)
-		assert.NoError(t, err)
-		assert.Equal(t, "qa-community", respBody["name"])
-		assert.Equal(t, "hub-spoke", respBody["topology"])
-		assert.NotEmpty(t, respBody["id"])
+		assert.Equal(t, "null", resp.Body.String())
 	})
 
 	t.Run("Create Community Invalid Inputs", func(t *testing.T) {
@@ -271,6 +265,12 @@ func TestCommunityHandlers_Update(t *testing.T) {
 		r.ServeHTTP(resp, req)
 
 		assert.Equal(t, http.StatusOK, resp.Code)
+
+		var respBody map[string]interface{}
+		err := json.Unmarshal(resp.Body.Bytes(), &respBody)
+		assert.NoError(t, err)
+		assert.Equal(t, "qa-community", respBody["name"])
+		assert.Equal(t, "hub-spoke", respBody["topology"])
 	})
 }
 

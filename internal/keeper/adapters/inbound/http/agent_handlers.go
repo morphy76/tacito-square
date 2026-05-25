@@ -1,9 +1,9 @@
 package http
 
 import (
-	"errors"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -180,7 +180,7 @@ func (h *AgentHandler) Create(c *gin.Context) {
 		Str("agent_id", agent.ID.String()).
 		Msg("Agent template created successfully")
 
-	c.JSON(http.StatusCreated, agent)
+	c.JSON(http.StatusCreated, nil)
 }
 
 // GetByID handles GET /api/v1/agents/:id
@@ -210,7 +210,11 @@ func (h *AgentHandler) GetByID(c *gin.Context) {
 
 	agent, err := h.repo.GetByID(ctx, id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -277,8 +281,30 @@ func (h *AgentHandler) Update(c *gin.Context) {
 
 	existing, err := h.repo.GetByID(ctx, id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Capture previous state
+	previousValue := model.Agent{
+		ID:              existing.ID,
+		TenantID:        existing.TenantID,
+		Name:            existing.Name,
+		Description:     existing.Description,
+		Brain:           existing.Brain,
+		ShortTermMemory: existing.ShortTermMemory,
+		LongTermMemory:  existing.LongTermMemory,
+		Skills:          append([]uuid.UUID(nil), existing.Skills...),
+		PromptTemplate:  existing.PromptTemplate,
+		MCPClients:      append([]model.MCPClientConfig(nil), existing.MCPClients...),
+		Status:          existing.Status,
+		CommunityID:     existing.CommunityID,
+		CreatedAt:       existing.CreatedAt,
+		UpdatedAt:       existing.UpdatedAt,
 	}
 
 	temp := 0.7
@@ -353,6 +379,10 @@ func (h *AgentHandler) Update(c *gin.Context) {
 	}
 
 	if err := h.repo.Update(ctx, existing); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
 		reqLogger.Error().Err(err).Msg("failed to update agent")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -363,7 +393,7 @@ func (h *AgentHandler) Update(c *gin.Context) {
 		Str("agent_id", existing.ID.String()).
 		Msg("Agent template updated successfully")
 
-	c.JSON(http.StatusOK, existing)
+	c.JSON(http.StatusOK, previousValue)
 }
 
 // Delete handles DELETE /api/v1/agents/:id
@@ -392,7 +422,7 @@ func (h *AgentHandler) Delete(c *gin.Context) {
 	}
 
 	if err := h.repo.Delete(ctx, id); err != nil {
-		if errors.Is(err, errors.New("not found")) {
+		if strings.Contains(err.Error(), "not found") {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}

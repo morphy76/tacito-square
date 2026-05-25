@@ -90,13 +90,7 @@ func TestMCPServerHandlers_Create(t *testing.T) {
 		r.ServeHTTP(resp, req)
 
 		assert.Equal(t, http.StatusCreated, resp.Code)
-
-		var respBody map[string]interface{}
-		err := json.Unmarshal(resp.Body.Bytes(), &respBody)
-		assert.NoError(t, err)
-		assert.Equal(t, "sqlite-mcp", respBody["name"])
-		assert.Equal(t, "stdio", respBody["transport"])
-		assert.NotEmpty(t, respBody["id"])
+		assert.Equal(t, "null", resp.Body.String())
 	})
 
 	t.Run("Create SSE MCP Server Successfully", func(t *testing.T) {
@@ -124,6 +118,7 @@ func TestMCPServerHandlers_Create(t *testing.T) {
 		r.ServeHTTP(resp, req)
 
 		assert.Equal(t, http.StatusCreated, resp.Code)
+		assert.Equal(t, "null", resp.Body.String())
 	})
 
 	t.Run("Create MCP Server Transport Invariant Failure (SSE missing URL)", func(t *testing.T) {
@@ -243,7 +238,7 @@ func TestMCPServerHandlers_List(t *testing.T) {
 func TestMCPServerHandlers_Update(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	t.Run("Update MCP Server Successfully", func(t *testing.T) {
+	t.Run("Update MCP Server Returns Previous Unmodified State", func(t *testing.T) {
 		repo := new(MockMCPServerUseCase)
 		handler := NewMCPServerHandler(repo)
 
@@ -254,6 +249,7 @@ func TestMCPServerHandlers_Update(t *testing.T) {
 		id := uuid.New()
 		existing := &model.MCPServer{
 			ID:        id,
+			TenantID:  "test-tenant.com",
 			Name:      "sqlite-mcp",
 			Transport: model.TransportStdio,
 			Command:   "sqlite-mcp",
@@ -278,6 +274,12 @@ func TestMCPServerHandlers_Update(t *testing.T) {
 		r.ServeHTTP(resp, req)
 
 		assert.Equal(t, http.StatusOK, resp.Code)
+
+		var respBody map[string]interface{}
+		err := json.Unmarshal(resp.Body.Bytes(), &respBody)
+		assert.NoError(t, err)
+		assert.Equal(t, "sqlite-mcp", respBody["name"])
+		assert.Equal(t, "stdio", respBody["transport"])
 	})
 }
 

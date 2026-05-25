@@ -126,6 +126,13 @@ func NewServer(pool *pgxpool.Pool) *gin.Engine {
 		v1.POST("/agents/:agent_id/skills/:skill_id", skillHandler.AttachSkillToAgent)
 		v1.DELETE("/agents/:agent_id/skills/:skill_id", skillHandler.DetachSkillFromAgent)
 
+		v1.POST("/skill-collections", skillHandler.CreateCollection)
+		v1.GET("/skill-collections", skillHandler.ListCollections)
+		v1.GET("/skill-collections/:id", skillHandler.GetCollectionByID)
+		v1.PUT("/skill-collections/:id", skillHandler.UpdateCollection)
+		v1.DELETE("/skill-collections/:id", skillHandler.DeleteCollection)
+		v1.GET("/skill-collections/:id/resolve", skillHandler.ResolveCollection)
+
 		v1.POST("/prompts", promptHandler.CreateTemplate)
 		v1.GET("/prompts", promptHandler.ListTemplates)
 		v1.GET("/prompts/:id", promptHandler.GetTemplateByID)

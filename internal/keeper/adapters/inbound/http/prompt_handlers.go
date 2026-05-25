@@ -1,9 +1,9 @@
 package http
 
 import (
-	"errors"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -30,14 +30,13 @@ func NewPromptHandler(repo inbound.PromptUseCase) *PromptHandler {
 type CreatePromptTemplateRequest struct {
 	Name    string              `json:"name" binding:"required"`
 	Content string              `json:"content"`
-	Role    model.PromptRole   `json:"role" binding:"required"`
 	Status  model.PromptStatus `json:"status"`
 }
 
-// UpdatePromptTemplateRequest defines the payload for updating/versioning a Prompt Template.
+// UpdatePromptTemplateRequest defines the payload for updating a Prompt Template.
 type UpdatePromptTemplateRequest struct {
+	Name    string              `json:"name" binding:"required"`
 	Content string              `json:"content"`
-	Role    model.PromptRole   `json:"role" binding:"required"`
 	Status  model.PromptStatus `json:"status" binding:"required"`
 }
 
@@ -86,8 +85,6 @@ func (h *PromptHandler) CreateTemplate(c *gin.Context) {
 		TenantID:  ten.FullName(),
 		Name:      req.Name,
 		Content:   req.Content,
-		Role:      req.Role,
-		Version:   1,
 		Status:    status,
 		CreatedAt: time.Now().UTC(),
 	}
@@ -108,7 +105,7 @@ func (h *PromptHandler) CreateTemplate(c *gin.Context) {
 		Str("prompt_template_id", pt.ID.String()).
 		Msg("Prompt template created successfully")
 
-	c.JSON(http.StatusCreated, pt)
+	c.JSON(http.StatusCreated, nil)
 }
 
 // GetTemplateByID handles GET /api/v1/prompts/:id
@@ -135,7 +132,11 @@ func (h *PromptHandler) GetTemplateByID(c *gin.Context) {
 
 	pt, err := h.repo.GetTemplateByID(ctx, id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -199,45 +200,43 @@ func (h *PromptHandler) UpdateTemplate(c *gin.Context) {
 
 	existing, err := h.repo.GetTemplateByID(ctx, id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		return
-	}
-
-	latest, err := h.repo.GetLatestTemplateByName(ctx, existing.Name)
-	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Immutable versioning: create a NEW record with bumped version
-	newPT := &model.PromptTemplate{
-		ID:        uuid.New(),
-		TenantID:  ten.FullName(),
-		Name:      existing.Name,
-		Content:   req.Content,
-		Role:      req.Role,
-		Version:   latest.Version + 1,
-		Status:    req.Status,
-		CreatedAt: time.Now().UTC(),
-	}
+	// Capture the unmodified state to return as the previous value
+	previousValue := *existing
 
-	if err := newPT.Validate(); err != nil {
+	// Update fields
+	existing.Name = req.Name
+	existing.Content = req.Content
+	existing.Status = req.Status
+
+	if err := existing.Validate(); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := h.repo.CreateTemplate(ctx, newPT); err != nil {
-		reqLogger.Error().Err(err).Msg("failed to update prompt template version")
+	if err := h.repo.UpdateTemplate(ctx, existing); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		reqLogger.Error().Err(err).Msg("failed to update prompt template")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	reqLogger.Info().
 		Str("tenant_id", ten.FullName()).
-		Str("prompt_template_id", newPT.ID.String()).
+		Str("prompt_template_id", existing.ID.String()).
 		Msg("Prompt template updated successfully")
 
-	c.JSON(http.StatusOK, newPT)
+	c.JSON(http.StatusOK, previousValue)
 }
 
 // DeleteTemplate handles DELETE /api/v1/prompts/:id
@@ -263,6 +262,10 @@ func (h *PromptHandler) DeleteTemplate(c *gin.Context) {
 	}
 
 	if err := h.repo.DeleteTemplate(ctx, id); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
 		reqLogger.Error().Err(err).Msg("failed to delete prompt template")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -331,9 +334,9 @@ func (h *PromptHandler) CreateCollection(c *gin.Context) {
 	reqLogger.Info().
 		Str("tenant_id", ten.FullName()).
 		Str("prompt_collection_id", col.ID.String()).
-		Msg("Prompt collection template created successfully")
+		Msg("Prompt collection created successfully")
 
-	c.JSON(http.StatusCreated, col)
+	c.JSON(http.StatusCreated, nil)
 }
 
 // GetCollectionByID handles GET /api/v1/prompt-collections/:id
@@ -360,7 +363,11 @@ func (h *PromptHandler) GetCollectionByID(c *gin.Context) {
 
 	col, err := h.repo.GetCollectionByID(ctx, id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -424,8 +431,23 @@ func (h *PromptHandler) UpdateCollection(c *gin.Context) {
 
 	existing, err := h.repo.GetCollectionByID(ctx, id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Capture the unmodified state as the previous value
+	previousValue := model.PromptCollection{
+		ID:          existing.ID,
+		TenantID:    existing.TenantID,
+		Name:        existing.Name,
+		Description: existing.Description,
+		Templates:   append([]uuid.UUID(nil), existing.Templates...),
+		CreatedAt:   existing.CreatedAt,
+		UpdatedAt:   existing.UpdatedAt,
 	}
 
 	var templateUUIDs []uuid.UUID
@@ -450,6 +472,10 @@ func (h *PromptHandler) UpdateCollection(c *gin.Context) {
 	}
 
 	if err := h.repo.UpdateCollection(ctx, existing); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
 		reqLogger.Error().Err(err).Msg("failed to update prompt collection")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -458,9 +484,9 @@ func (h *PromptHandler) UpdateCollection(c *gin.Context) {
 	reqLogger.Info().
 		Str("tenant_id", ten.FullName()).
 		Str("prompt_collection_id", existing.ID.String()).
-		Msg("Prompt collection template updated successfully")
+		Msg("Prompt collection updated successfully")
 
-	c.JSON(http.StatusOK, existing)
+	c.JSON(http.StatusOK, previousValue)
 }
 
 // DeleteCollection handles DELETE /api/v1/prompt-collections/:id
@@ -486,7 +512,7 @@ func (h *PromptHandler) DeleteCollection(c *gin.Context) {
 	}
 
 	if err := h.repo.DeleteCollection(ctx, id); err != nil {
-		if errors.Is(err, errors.New("not found")) {
+		if strings.Contains(err.Error(), "not found") {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
@@ -498,7 +524,7 @@ func (h *PromptHandler) DeleteCollection(c *gin.Context) {
 	reqLogger.Info().
 		Str("tenant_id", ten.FullName()).
 		Str("prompt_collection_id", id.String()).
-		Msg("Prompt collection template deleted successfully")
+		Msg("Prompt collection deleted successfully")
 
 	c.Status(http.StatusNoContent)
 }

@@ -288,11 +288,14 @@ func (r *AgentRepository) Update(ctx context.Context, a *model.Agent) error {
 		WHERE id = $11 AND tenant_id = $12`
 
 		a.UpdatedAt = time.Now().UTC()
-		_, err = tx.Exec(ctx, query,
+		cmdTag, err := tx.Exec(ctx, query,
 			a.Name, a.Description, brainJSON, shortTermJSON, longTermJSON, promptTemplate, mcpClientsJSON, a.Status, a.CommunityID, a.UpdatedAt, a.ID, a.TenantID,
 		)
 		if err != nil {
 			return fmt.Errorf("update agent: %w", err)
+		}
+		if cmdTag.RowsAffected() == 0 {
+			return fmt.Errorf("agent not found: %s", a.ID)
 		}
 
 		if err := r.saveSkills(ctx, tx, a.ID, a.Skills); err != nil {
@@ -312,9 +315,12 @@ func (r *AgentRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	// agent_skills fk CASCADE constraint handles the associated skill mapping deletion.
 	query := `DELETE FROM agents WHERE id = $1 AND tenant_id = $2`
 	exec := GetExecutor(ctx, r.pool)
-	_, err := exec.Exec(ctx, query, id, ten.FullName())
+	cmdTag, err := exec.Exec(ctx, query, id, ten.FullName())
 	if err != nil {
 		return fmt.Errorf("delete agent: %w", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("agent not found: %s", id)
 	}
 	return nil
 }

@@ -25,7 +25,7 @@ type MCPServerUseCase interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
-// SkillUseCase defines the driving operations for managing Skill Collections and associations.
+// SkillUseCase defines the driving operations for managing Skills, Skill Collections, and associations.
 type SkillUseCase interface {
 	Create(ctx context.Context, skill *model.Skill) error
 	GetByID(ctx context.Context, id uuid.UUID) (*model.Skill, error)
@@ -35,14 +35,22 @@ type SkillUseCase interface {
 
 	AttachSkillToAgent(ctx context.Context, agentID uuid.UUID, skillID uuid.UUID) error
 	DetachSkillFromAgent(ctx context.Context, agentID uuid.UUID, skillID uuid.UUID) error
+
+	// SkillCollection CRUD
+	CreateCollection(ctx context.Context, collection *model.SkillCollection) error
+	GetCollectionByID(ctx context.Context, id uuid.UUID) (*model.SkillCollection, error)
+	ListCollections(ctx context.Context) ([]*model.SkillCollection, error)
+	UpdateCollection(ctx context.Context, collection *model.SkillCollection) error
+	DeleteCollection(ctx context.Context, id uuid.UUID) error
+	ResolveCollectionSkills(ctx context.Context, id uuid.UUID) ([]*model.Skill, error)
 }
 
 // PromptUseCase defines the driving operations for managing Prompts and resolution.
 type PromptUseCase interface {
 	CreateTemplate(ctx context.Context, template *model.PromptTemplate) error
 	GetTemplateByID(ctx context.Context, id uuid.UUID) (*model.PromptTemplate, error)
-	GetLatestTemplateByName(ctx context.Context, name string) (*model.PromptTemplate, error)
 	ListTemplates(ctx context.Context) ([]*model.PromptTemplate, error)
+	UpdateTemplate(ctx context.Context, template *model.PromptTemplate) error
 	DeleteTemplate(ctx context.Context, id uuid.UUID) error
 
 	CreateCollection(ctx context.Context, collection *model.PromptCollection) error
@@ -50,7 +58,6 @@ type PromptUseCase interface {
 	ListCollections(ctx context.Context) ([]*model.PromptCollection, error)
 	UpdateCollection(ctx context.Context, collection *model.PromptCollection) error
 	DeleteCollection(ctx context.Context, id uuid.UUID) error
-	ResolveCollection(ctx context.Context, id uuid.UUID) ([]*model.PromptTemplate, error)
 	ResolveCollectionPrompts(ctx context.Context, id uuid.UUID) ([]*model.PromptTemplate, error)
 }
 

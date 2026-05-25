@@ -43,3 +43,27 @@ func (s *SkillService) AttachSkillToAgent(ctx context.Context, agentID uuid.UUID
 func (s *SkillService) DetachSkillFromAgent(ctx context.Context, agentID uuid.UUID, skillID uuid.UUID) error {
 	return s.repo.DetachSkillFromAgent(ctx, agentID, skillID)
 }
+
+func (s *SkillService) CreateCollection(ctx context.Context, collection *model.SkillCollection) error {
+	return s.repo.CreateCollection(ctx, collection)
+}
+
+func (s *SkillService) GetCollectionByID(ctx context.Context, id uuid.UUID) (*model.SkillCollection, error) {
+	return s.repo.GetCollectionByID(ctx, id)
+}
+
+func (s *SkillService) ListCollections(ctx context.Context) ([]*model.SkillCollection, error) {
+	return s.repo.ListCollections(ctx)
+}
+
+func (s *SkillService) UpdateCollection(ctx context.Context, collection *model.SkillCollection) error {
+	return s.repo.UpdateCollection(ctx, collection)
+}
+
+func (s *SkillService) DeleteCollection(ctx context.Context, id uuid.UUID) error {
+	return s.repo.DeleteCollection(ctx, id)
+}
+
+func (s *SkillService) ResolveCollectionSkills(ctx context.Context, id uuid.UUID) ([]*model.Skill, error) {
+	return s.repo.ResolveCollectionSkills(ctx, id)
+}

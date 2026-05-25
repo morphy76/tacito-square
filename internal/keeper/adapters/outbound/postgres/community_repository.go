@@ -168,11 +168,14 @@ func (r *CommunityRepository) Update(ctx context.Context, c *model.Community) er
 	WHERE id = $7 AND tenant_id = $8`
 
 	c.UpdatedAt = time.Now().UTC()
-	_, err = r.pool.Exec(ctx, query,
+	cmdTag, err := r.pool.Exec(ctx, query,
 		c.Name, c.Description, c.Topology, configJSON, c.Status, c.UpdatedAt, c.ID, c.TenantID,
 	)
 	if err != nil {
 		return fmt.Errorf("update community: %w", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("community not found: %s", c.ID)
 	}
 	return nil
 }
@@ -185,9 +188,12 @@ func (r *CommunityRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 
 	query := `DELETE FROM communities WHERE id = $1 AND tenant_id = $2`
-	_, err := r.pool.Exec(ctx, query, id, ten.FullName())
+	cmdTag, err := r.pool.Exec(ctx, query, id, ten.FullName())
 	if err != nil {
 		return fmt.Errorf("delete community: %w", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("community not found: %s", id)
 	}
 	return nil
 }
