@@ -113,7 +113,10 @@ func TestAgentHandlers_Create(t *testing.T) {
 			},
 		}
 
-		repo.On("Create", mock.Anything, mock.AnythingOfType("*model.Agent")).Return(nil)
+		var capturedCtx context.Context
+		repo.On("Create", mock.Anything, mock.AnythingOfType("*model.Agent")).Return(nil).Run(func(args mock.Arguments) {
+			capturedCtx = args.Get(0).(context.Context)
+		})
 
 		body, _ := json.Marshal(payload)
 		req, _ := http.NewRequest(http.MethodPost, "/api/v1/agents", bytes.NewBuffer(body))
@@ -124,6 +127,9 @@ func TestAgentHandlers_Create(t *testing.T) {
 
 		assert.Equal(t, http.StatusCreated, resp.Code)
 		assert.Equal(t, "null", resp.Body.String())
+		if assert.NotNil(t, capturedCtx) {
+			assert.ErrorIs(t, capturedCtx.Err(), context.Canceled)
+		}
 	})
 
 	t.Run("Create Agent Validation Failure (Missing name)", func(t *testing.T) {

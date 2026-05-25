@@ -42,7 +42,10 @@ func TestAssignmentHandlers_Assign(t *testing.T) {
 		commID := uuid.New()
 		agentID := uuid.New()
 
-		usecase.On("Assign", mock.Anything, commID, agentID).Return(nil)
+		var capturedCtx context.Context
+		usecase.On("Assign", mock.Anything, commID, agentID).Return(nil).Run(func(args mock.Arguments) {
+			capturedCtx = args.Get(0).(context.Context)
+		})
 
 		req, _ := http.NewRequest(http.MethodPost, "/api/v1/communities/"+commID.String()+"/agents/"+agentID.String(), nil)
 		resp := httptest.NewRecorder()
@@ -51,6 +54,9 @@ func TestAssignmentHandlers_Assign(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, resp.Code)
 		assert.Contains(t, resp.Body.String(), "assigned")
+		if assert.NotNil(t, capturedCtx) {
+			assert.ErrorIs(t, capturedCtx.Err(), context.Canceled)
+		}
 	})
 
 	t.Run("Assign Already Assigned Agent Returns 409", func(t *testing.T) {

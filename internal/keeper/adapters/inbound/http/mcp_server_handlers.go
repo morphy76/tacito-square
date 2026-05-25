@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"strings"
@@ -52,7 +53,10 @@ type UpdateMCPServerRequest struct {
 
 // Create handles POST /api/v1/mcp-servers
 func (h *MCPServerHandler) Create(c *gin.Context) {
-	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.create_mcp_server", trace.WithSpanKind(trace.SpanKindServer))
+	ctx, cancel := context.WithCancel(c.Request.Context())
+	defer cancel()
+
+	ctx, span := otel.Tracer("keeper").Start(ctx, "http.create_mcp_server", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)

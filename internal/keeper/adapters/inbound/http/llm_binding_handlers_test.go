@@ -93,7 +93,10 @@ func TestLLMBindingHandlers_Create(t *testing.T) {
 			"timeout_seconds":     30,
 		}
 
-		repo.On("Create", mock.Anything, mock.AnythingOfType("*model.LLMBinding")).Return(nil)
+		var capturedCtx context.Context
+		repo.On("Create", mock.Anything, mock.AnythingOfType("*model.LLMBinding")).Return(nil).Run(func(args mock.Arguments) {
+			capturedCtx = args.Get(0).(context.Context)
+		})
 
 		body, _ := json.Marshal(payload)
 		req, _ := http.NewRequest(http.MethodPost, "/api/v1/llm-bindings", bytes.NewBuffer(body))
@@ -104,6 +107,9 @@ func TestLLMBindingHandlers_Create(t *testing.T) {
 
 		assert.Equal(t, http.StatusCreated, resp.Code)
 		assert.Equal(t, "null", resp.Body.String())
+		if assert.NotNil(t, capturedCtx) {
+			assert.ErrorIs(t, capturedCtx.Err(), context.Canceled)
+		}
 	})
 
 	t.Run("Create LLM Binding Validation Failure", func(t *testing.T) {

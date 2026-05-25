@@ -80,7 +80,10 @@ func TestMCPServerHandlers_Create(t *testing.T) {
 			"env":         map[string]string{"DEBUG": "true"},
 		}
 
-		repo.On("Create", mock.Anything, mock.AnythingOfType("*model.MCPServer")).Return(nil)
+		var capturedCtx context.Context
+		repo.On("Create", mock.Anything, mock.AnythingOfType("*model.MCPServer")).Return(nil).Run(func(args mock.Arguments) {
+			capturedCtx = args.Get(0).(context.Context)
+		})
 
 		body, _ := json.Marshal(payload)
 		req, _ := http.NewRequest(http.MethodPost, "/api/v1/mcp-servers", bytes.NewBuffer(body))
@@ -91,6 +94,9 @@ func TestMCPServerHandlers_Create(t *testing.T) {
 
 		assert.Equal(t, http.StatusCreated, resp.Code)
 		assert.Equal(t, "null", resp.Body.String())
+		if assert.NotNil(t, capturedCtx) {
+			assert.ErrorIs(t, capturedCtx.Err(), context.Canceled)
+		}
 	})
 
 	t.Run("Create SSE MCP Server Successfully", func(t *testing.T) {
@@ -108,7 +114,10 @@ func TestMCPServerHandlers_Create(t *testing.T) {
 			"url":         "https://mcp.github.com/events",
 		}
 
-		repo.On("Create", mock.Anything, mock.AnythingOfType("*model.MCPServer")).Return(nil)
+		var capturedCtx context.Context
+		repo.On("Create", mock.Anything, mock.AnythingOfType("*model.MCPServer")).Return(nil).Run(func(args mock.Arguments) {
+			capturedCtx = args.Get(0).(context.Context)
+		})
 
 		body, _ := json.Marshal(payload)
 		req, _ := http.NewRequest(http.MethodPost, "/api/v1/mcp-servers", bytes.NewBuffer(body))
@@ -119,6 +128,9 @@ func TestMCPServerHandlers_Create(t *testing.T) {
 
 		assert.Equal(t, http.StatusCreated, resp.Code)
 		assert.Equal(t, "null", resp.Body.String())
+		if assert.NotNil(t, capturedCtx) {
+			assert.ErrorIs(t, capturedCtx.Err(), context.Canceled)
+		}
 	})
 
 	t.Run("Create MCP Server Transport Invariant Failure (SSE missing URL)", func(t *testing.T) {

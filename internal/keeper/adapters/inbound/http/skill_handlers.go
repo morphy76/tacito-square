@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"strings"
@@ -54,7 +55,10 @@ type UpdateSkillCollectionRequest struct {
 
 // Create handles POST /api/v1/skills
 func (h *SkillHandler) Create(c *gin.Context) {
-	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.create_skill", trace.WithSpanKind(trace.SpanKindServer))
+	ctx, cancel := context.WithCancel(c.Request.Context())
+	defer cancel()
+
+	ctx, span := otel.Tracer("keeper").Start(ctx, "http.create_skill", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
@@ -275,7 +279,10 @@ func (h *SkillHandler) Delete(c *gin.Context) {
 
 // AttachSkillToAgent handles POST /api/v1/agents/:agent_id/skills/:skill_id
 func (h *SkillHandler) AttachSkillToAgent(c *gin.Context) {
-	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.attach_skill_to_agent", trace.WithSpanKind(trace.SpanKindServer))
+	ctx, cancel := context.WithCancel(c.Request.Context())
+	defer cancel()
+
+	ctx, span := otel.Tracer("keeper").Start(ctx, "http.attach_skill_to_agent", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
@@ -371,7 +378,10 @@ func (h *SkillHandler) DetachSkillFromAgent(c *gin.Context) {
 
 // CreateCollection handles POST /api/v1/skill-collections
 func (h *SkillHandler) CreateCollection(c *gin.Context) {
-	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.create_skill_collection", trace.WithSpanKind(trace.SpanKindServer))
+	ctx, cancel := context.WithCancel(c.Request.Context())
+	defer cancel()
+
+	ctx, span := otel.Tracer("keeper").Start(ctx, "http.create_skill_collection", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)

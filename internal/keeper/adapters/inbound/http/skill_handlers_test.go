@@ -134,7 +134,10 @@ func TestSkillHandlers_Create(t *testing.T) {
 			"status":      "active",
 		}
 
-		repo.On("Create", mock.Anything, mock.AnythingOfType("*model.Skill")).Return(nil)
+		var capturedCtx context.Context
+		repo.On("Create", mock.Anything, mock.AnythingOfType("*model.Skill")).Return(nil).Run(func(args mock.Arguments) {
+			capturedCtx = args.Get(0).(context.Context)
+		})
 
 		body, _ := json.Marshal(payload)
 		req, _ := http.NewRequest(http.MethodPost, "/api/v1/skills", bytes.NewBuffer(body))
@@ -145,6 +148,9 @@ func TestSkillHandlers_Create(t *testing.T) {
 
 		assert.Equal(t, http.StatusCreated, resp.Code)
 		assert.Equal(t, "null", resp.Body.String())
+		if assert.NotNil(t, capturedCtx) {
+			assert.ErrorIs(t, capturedCtx.Err(), context.Canceled)
+		}
 	})
 
 	t.Run("Create Skill Validation Failure (Missing name)", func(t *testing.T) {
@@ -334,7 +340,10 @@ func TestSkillHandlers_AgentAssociations(t *testing.T) {
 		agentID := uuid.New()
 		skillID := uuid.New()
 
-		repo.On("AttachSkillToAgent", mock.Anything, agentID, skillID).Return(nil)
+		var capturedCtx context.Context
+		repo.On("AttachSkillToAgent", mock.Anything, agentID, skillID).Return(nil).Run(func(args mock.Arguments) {
+			capturedCtx = args.Get(0).(context.Context)
+		})
 
 		req, _ := http.NewRequest(http.MethodPost, "/api/v1/agents/"+agentID.String()+"/skills/"+skillID.String(), nil)
 		resp := httptest.NewRecorder()
@@ -342,6 +351,9 @@ func TestSkillHandlers_AgentAssociations(t *testing.T) {
 		r.ServeHTTP(resp, req)
 
 		assert.Equal(t, http.StatusOK, resp.Code)
+		if assert.NotNil(t, capturedCtx) {
+			assert.ErrorIs(t, capturedCtx.Err(), context.Canceled)
+		}
 	})
 
 	t.Run("Detach Skill from Agent Successfully", func(t *testing.T) {
@@ -384,7 +396,10 @@ func TestSkillHandlers_Collections(t *testing.T) {
 			"skills":      []string{sID.String()},
 		}
 
-		repo.On("CreateCollection", mock.Anything, mock.AnythingOfType("*model.SkillCollection")).Return(nil)
+		var capturedCtx context.Context
+		repo.On("CreateCollection", mock.Anything, mock.AnythingOfType("*model.SkillCollection")).Return(nil).Run(func(args mock.Arguments) {
+			capturedCtx = args.Get(0).(context.Context)
+		})
 
 		body, _ := json.Marshal(payload)
 		req, _ := http.NewRequest(http.MethodPost, "/api/v1/skill-collections", bytes.NewBuffer(body))
@@ -395,6 +410,9 @@ func TestSkillHandlers_Collections(t *testing.T) {
 
 		assert.Equal(t, http.StatusCreated, resp.Code)
 		assert.Equal(t, "null", resp.Body.String())
+		if assert.NotNil(t, capturedCtx) {
+			assert.ErrorIs(t, capturedCtx.Err(), context.Canceled)
+		}
 	})
 
 	t.Run("Get Collection Found", func(t *testing.T) {

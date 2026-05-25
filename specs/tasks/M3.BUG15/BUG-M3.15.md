@@ -3,7 +3,7 @@
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
 | ID            | BUG-M3.15                                                          |
-| Status        | OPEN                                                               |
+| Status        | IMPLEMENTED                                                        |
 | Severity      | MEDIUM                                                             |
 | Milestone     | M3 — Keeper Core                                                   |
 | Affects       | `internal/keeper/adapters/inbound/http/*`                         |

@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"strings"
@@ -28,7 +29,10 @@ func NewAssignmentHandler(usecase inbound.AssignmentUseCase) *AssignmentHandler 
 
 // Assign handles POST /api/v1/communities/:community_id/agents/:agent_id
 func (h *AssignmentHandler) Assign(c *gin.Context) {
-	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.assign_agent", trace.WithSpanKind(trace.SpanKindServer))
+	ctx, cancel := context.WithCancel(c.Request.Context())
+	defer cancel()
+
+	ctx, span := otel.Tracer("keeper").Start(ctx, "http.assign_agent", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)

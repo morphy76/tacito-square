@@ -78,7 +78,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | BUG-M3.12 | Agent Definition Lacks Strict Enforcement of Brain Requirement | CLOSED | HIGH | [BUG-M3.12](tasks/M3.BUG12/BUG-M3.12.md) |
 | BUG-M3.13 | Inconsistent REST API Behaviors, Prompts, and Skills | IMPLEMENTED | MEDIUM | [BUG-M3.13](tasks/M3.BUG13/BUG-M3.13.md) |
 | BUG-M3.14 | POST REST Calls Missing Location HTTP Header | OPEN | MEDIUM | [BUG-M3.14](tasks/M3.BUG14/BUG-M3.14.md) |
-| BUG-M3.15 | POST REST Calls Lack Cancel Context | OPEN | MEDIUM | [BUG-M3.15](tasks/M3.BUG15/BUG-M3.15.md) |
+| BUG-M3.15 | POST REST Calls Lack Cancel Context | IMPLEMENTED | MEDIUM | [BUG-M3.15](tasks/M3.BUG15/BUG-M3.15.md) |
 
 
 ### M4: Operator Core

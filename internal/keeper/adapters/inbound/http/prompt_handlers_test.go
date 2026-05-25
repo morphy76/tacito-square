@@ -110,7 +110,10 @@ func TestPromptHandlers_CreateTemplate(t *testing.T) {
 			"status":  "active",
 		}
 
-		repo.On("CreateTemplate", mock.Anything, mock.AnythingOfType("*model.PromptTemplate")).Return(nil)
+		var capturedCtx context.Context
+		repo.On("CreateTemplate", mock.Anything, mock.AnythingOfType("*model.PromptTemplate")).Return(nil).Run(func(args mock.Arguments) {
+			capturedCtx = args.Get(0).(context.Context)
+		})
 
 		body, _ := json.Marshal(payload)
 		req, _ := http.NewRequest(http.MethodPost, "/api/v1/prompts", bytes.NewBuffer(body))
@@ -121,6 +124,9 @@ func TestPromptHandlers_CreateTemplate(t *testing.T) {
 
 		assert.Equal(t, http.StatusCreated, resp.Code)
 		assert.Equal(t, "null", resp.Body.String())
+		if assert.NotNil(t, capturedCtx) {
+			assert.ErrorIs(t, capturedCtx.Err(), context.Canceled)
+		}
 	})
 }
 
@@ -189,7 +195,10 @@ func TestPromptHandlers_Collections(t *testing.T) {
 			"templates":   []string{tID.String()},
 		}
 
-		repo.On("CreateCollection", mock.Anything, mock.AnythingOfType("*model.PromptCollection")).Return(nil)
+		var capturedCtx context.Context
+		repo.On("CreateCollection", mock.Anything, mock.AnythingOfType("*model.PromptCollection")).Return(nil).Run(func(args mock.Arguments) {
+			capturedCtx = args.Get(0).(context.Context)
+		})
 
 		body, _ := json.Marshal(payload)
 		req, _ := http.NewRequest(http.MethodPost, "/api/v1/prompt-collections", bytes.NewBuffer(body))
@@ -200,6 +209,9 @@ func TestPromptHandlers_Collections(t *testing.T) {
 
 		assert.Equal(t, http.StatusCreated, resp.Code)
 		assert.Equal(t, "null", resp.Body.String())
+		if assert.NotNil(t, capturedCtx) {
+			assert.ErrorIs(t, capturedCtx.Err(), context.Canceled)
+		}
 	})
 
 	t.Run("Resolve Collection Returns Empty Array When Nil", func(t *testing.T) {
