@@ -11,3 +11,4 @@
 - Roles and functional ownership, in particular within the tenant and quota-bound (platform QoS)
 - postman collection for keeper -> or any test suite
 - hardcoded Version vs VERSION files for component lifecycle
+- BFF & FE rules, best practices, no http session, api tokens in encrypted cookies

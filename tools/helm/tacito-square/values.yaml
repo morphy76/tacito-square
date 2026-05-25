@@ -28,8 +28,20 @@ keeper:
     limits:
       cpu: 500m
       memory: 256Mi
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: http
+    initialDelaySeconds: 1
+    periodSeconds: 1
+  readinessProbe:
+    httpGet:
+      path: /readyz
+      port: http
+    initialDelaySeconds: 1
+    periodSeconds: 1
   config:
-    logLevel: info
+    logLevel: debug
     port: 8080
     db:
       url: "postgres://tacito-infra-postgresql:5432/tacito?sslmode=require&sslrootcert=/etc/ssl/tacito/ca.crt"
