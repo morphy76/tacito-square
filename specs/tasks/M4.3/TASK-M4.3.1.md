@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | TASK-M4.3.1                                 |
-| Status        | PLANNED                                     |
+| Status        | IMPLEMENTED                                 |
 | Spec          | SPEC-FR-M4.3                                |
 | Depends On    | none                                        |
 
