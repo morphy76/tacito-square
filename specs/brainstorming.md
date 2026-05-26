@@ -12,3 +12,4 @@
 - postman collection for keeper -> or any test suite
 - hardcoded Version vs VERSION files for component lifecycle
 - BFF & FE rules, best practices, no http session, api tokens in encrypted cookies
+- coverage of integration and benchmark tests

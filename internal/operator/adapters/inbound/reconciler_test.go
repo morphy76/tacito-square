@@ -11,6 +11,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -28,6 +30,14 @@ func (m *mockReconcileService) Reconcile(ctx context.Context, agent *v1alpha1.Ta
 		return m.reconcileFunc(ctx, agent)
 	}
 	return nil
+}
+
+func (m *mockReconcileService) BuildDeployment(ctx context.Context, agent *v1alpha1.TacitoAgent) (*appsv1.Deployment, error) {
+	return nil, nil
+}
+
+func (m *mockReconcileService) BuildHeadlessService(ctx context.Context, agent *v1alpha1.TacitoAgent) (*corev1.Service, error) {
+	return nil, nil
 }
 
 func TestNewTacitoAgentReconciler(t *testing.T) {
