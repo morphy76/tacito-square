@@ -25,53 +25,130 @@ spec:
           properties:
             spec:
               type: object
+              description: Desired state of the TacitoAgent.
               required:
-                - name
+                - tenantId
+                - agentName
                 - communityRef
+                - llmConfig
               properties:
-                name:
+                tenantId:
                   type: string
-                  description: Human-readable agent name.
+                  minLength: 1
+                  description: Identifier of the tenant owning this agent.
+                agentName:
+                  type: string
+                  minLength: 1
+                  description: Unique name of the agent.
                 communityRef:
                   type: string
-                  description: Reference to the TacitoCommunity this agent belongs to.
+                  minLength: 1
+                  description: Reference to the parent community.
+                llmConfig:
+                  type: object
+                  description: LLM parameters for the agent brain.
+                  required:
+                    - model
+                  properties:
+                    model:
+                      type: string
+                      minLength: 1
+                      description: LLM model identifier (e.g. gpt-4o, gemini-1.5-pro).
+                    temperature:
+                      type: string
+                      pattern: "^[0-9]+(\\.[0-9]+)?$"
+                      default: "0.7"
+                      description: Randomness of LLM output (string-encoded decimal).
+                    maxTokens:
+                      type: integer
+                      minimum: 1
+                      maximum: 8192
+                      default: 2048
+                      description: Maximum number of tokens the LLM can generate.
+                systemPrompt:
+                  type: string
+                  description: Fully synthesized system prompt for the agent.
                 replicas:
                   type: integer
                   minimum: 0
+                  maximum: 10
                   default: 1
-                  description: Number of desired agent pod replicas.
-                image:
-                  type: string
-                  description: Container image for this agent.
-                config:
+                  description: Desired number of agent pod replicas.
+                resources:
                   type: object
                   x-kubernetes-preserve-unknown-fields: true
-                  description: Agent-specific configuration (passed as env/volume).
+                  description: CPU and memory resource requirements.
             status:
               type: object
+              description: Observed state of the TacitoAgent.
               properties:
                 phase:
                   type: string
-                  description: Current lifecycle phase (Pending, Running, Idle, Terminated).
-                readyReplicas:
-                  type: integer
-                  description: Number of ready replicas.
-                lastTransitionTime:
+                  enum:
+                    - Pending
+                    - Running
+                    - Idle
+                    - Terminated
+                  description: Current lifecycle phase of the agent.
+                conditions:
+                  type: array
+                  description: Latest available observations of the agent state.
+                  x-kubernetes-list-type: map
+                  x-kubernetes-list-map-keys:
+                    - type
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                    properties:
+                      type:
+                        type: string
+                        description: Type of condition (e.g. Available, Reconciling, Failed).
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        description: Status of the condition.
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                        description: Last time the condition transitioned.
+                      reason:
+                        type: string
+                        description: Machine-readable reason for the condition.
+                      message:
+                        type: string
+                        description: Human-readable message for the condition.
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                        description: Generation observed when the condition was set.
+                lastHeartbeat:
                   type: string
                   format: date-time
-                  description: Timestamp of last status change.
+                  description: Timestamp of the last agent heartbeat.
+                selector:
+                  type: string
+                  description: Label selector for scaling.
+                replicas:
+                  type: integer
+                  description: Current number of running replicas.
       subresources:
         status: {}
+        scale:
+          specReplicasPath: .spec.replicas
+          statusReplicasPath: .status.replicas
+          labelSelectorPath: .status.selector
       additionalPrinterColumns:
-        - name: Community
-          type: string
-          jsonPath: .spec.communityRef
-        - name: Replicas
-          type: integer
-          jsonPath: .spec.replicas
         - name: Phase
           type: string
           jsonPath: .status.phase
+        - name: Tenant
+          type: string
+          jsonPath: .spec.tenantId
         - name: Age
           type: date
           jsonPath: .metadata.creationTimestamp
