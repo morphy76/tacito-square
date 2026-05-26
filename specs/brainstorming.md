@@ -13,3 +13,5 @@
 - hardcoded Version vs VERSION files for component lifecycle
 - BFF & FE rules, best practices, no http session, api tokens in encrypted cookies
 - coverage of integration and benchmark tests
+- for the agent brain, generate the system prompt from agent, skills, skillsets, prompt and prompt collection.
+  
