@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
 	"github.com/morphy76/tacito-square/internal/shared/observability"
@@ -24,15 +25,22 @@ import (
 
 // K8sCRDCoordinator implements outbound.CRDCoordinator driving ports.
 type K8sCRDCoordinator struct {
-	client    client.Client
-	namespace string
-	natsConn  *nats.Conn
+	client     client.Client
+	namespace  string
+	promptRepo outbound.PromptRepository
+	skillRepo  outbound.SkillRepository
+	natsConn   *nats.Conn
 }
 
 var _ outbound.CRDCoordinator = (*K8sCRDCoordinator)(nil)
 
 // NewK8sCRDCoordinator creates a new K8sCRDCoordinator with a real controller-runtime Client.
-func NewK8sCRDCoordinator(config *rest.Config, nc *nats.Conn) (*K8sCRDCoordinator, error) {
+func NewK8sCRDCoordinator(
+	config *rest.Config,
+	promptRepo outbound.PromptRepository,
+	skillRepo outbound.SkillRepository,
+	nc *nats.Conn,
+) (*K8sCRDCoordinator, error) {
 	scheme := runtime.NewScheme()
 	if err := v1alpha1.AddToScheme(scheme); err != nil {
 		return nil, err
@@ -44,21 +52,31 @@ func NewK8sCRDCoordinator(config *rest.Config, nc *nats.Conn) (*K8sCRDCoordinato
 	}
 
 	return &K8sCRDCoordinator{
-		client:    c,
-		namespace: "tacito",
-		natsConn:  nc,
+		client:     c,
+		namespace:  "tacito",
+		promptRepo: promptRepo,
+		skillRepo:  skillRepo,
+		natsConn:   nc,
 	}, nil
 }
 
 // NewK8sCRDCoordinatorWithClient constructs the coordinator directly using a pre-configured client (convenient for testing).
-func NewK8sCRDCoordinatorWithClient(c client.Client, namespace string, nc *nats.Conn) *K8sCRDCoordinator {
+func NewK8sCRDCoordinatorWithClient(
+	c client.Client,
+	namespace string,
+	promptRepo outbound.PromptRepository,
+	skillRepo outbound.SkillRepository,
+	nc *nats.Conn,
+) *K8sCRDCoordinator {
 	if namespace == "" {
 		namespace = "tacito"
 	}
 	return &K8sCRDCoordinator{
-		client:    c,
-		namespace: namespace,
-		natsConn:  nc,
+		client:     c,
+		namespace:  namespace,
+		promptRepo: promptRepo,
+		skillRepo:  skillRepo,
+		natsConn:   nc,
 	}
 }
 
@@ -112,6 +130,29 @@ func (c *K8sCRDCoordinator) PublishProvisioningEvent(ctx context.Context, subjec
 	logger.Info().Str("subject", subject).Msg("successfully published NATS provisioning event")
 }
 
+// ResolveAndSynthesizeSystemPrompt fetches templates and skills out-of-band and compiles them into a system prompt.
+func (c *K8sCRDCoordinator) ResolveAndSynthesizeSystemPrompt(ctx context.Context, agent *model.Agent) (string, error) {
+	var directives string
+	if agent.PromptTemplate != uuid.Nil {
+		tpl, err := c.promptRepo.GetTemplateByID(ctx, agent.PromptTemplate)
+		if err != nil {
+			return "", fmt.Errorf("fetching prompt template: %w", err)
+		}
+		directives = tpl.Content
+	}
+
+	var skillsList string
+	for _, skillID := range agent.Skills {
+		skill, err := c.skillRepo.GetByID(ctx, skillID)
+		if err != nil {
+			return "", fmt.Errorf("fetching skill: %w", err)
+		}
+		skillsList += fmt.Sprintf("- %s: %s\n", skill.Name, skill.Description)
+	}
+
+	return fmt.Sprintf("Description: %s\n\nDirectives:\n%s\n\nSkills:\n%s", agent.Description, directives, skillsList), nil
+}
+
 // SubmitAgentCRD constructs and registers a TacitoAgent custom resource in the K8s cluster.
 func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Agent) (err error) {
 	c.PublishProvisioningEvent(ctx, "agent.provisioning.started", agent, nil)
@@ -122,6 +163,12 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 			c.PublishProvisioningEvent(ctx, "agent.provisioning.completed", agent, nil)
 		}
 	}()
+
+	// Synthesis out-of-band prompt template & skills list
+	systemPrompt, err := c.ResolveAndSynthesizeSystemPrompt(ctx, agent)
+	if err != nil {
+		return fmt.Errorf("resolving and synthesizing system prompt: %w", err)
+	}
 
 	deadlineCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -160,6 +207,7 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 					TenantID:     agent.TenantID,
 					AgentName:    agent.Name,
 					CommunityRef: communityRef,
+					SystemPrompt: systemPrompt,
 					LLMConfig: v1alpha1.LLMConfig{
 						Model:       agent.Brain.Model,
 						Temperature: temp,
@@ -182,6 +230,7 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 		latest.Spec.TenantID = agent.TenantID
 		latest.Spec.AgentName = agent.Name
 		latest.Spec.CommunityRef = communityRef
+		latest.Spec.SystemPrompt = systemPrompt
 		latest.Spec.LLMConfig.Model = agent.Brain.Model
 		latest.Spec.LLMConfig.Temperature = temp
 		latest.Spec.LLMConfig.MaxTokens = maxTokens

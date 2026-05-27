@@ -95,7 +95,7 @@ func NewServer(pool *pgxpool.Pool, nc *nats.Conn, k8sConfig *rest.Config) *gin.E
 	promptService := service.NewPromptService(promptRepo)
 	var crdCoord outbound.CRDCoordinator = &noOpCRDCoordinator{}
 	if k8sConfig != nil {
-		crdC, err := crd.NewK8sCRDCoordinator(k8sConfig, nc)
+		crdC, err := crd.NewK8sCRDCoordinator(k8sConfig, promptRepo, skillRepo, nc)
 		if err == nil {
 			crdCoord = crdC
 		}

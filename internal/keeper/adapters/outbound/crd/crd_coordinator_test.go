@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	crdadapter "github.com/morphy76/tacito-square/internal/keeper/adapters/outbound/crd"
+	"github.com/morphy76/tacito-square/internal/keeper/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
 	"github.com/morphy76/tacito-square/pkg/kubernetes/apis/tacito/v1alpha1"
 	"github.com/nats-io/nats-server/v2/server"
@@ -31,7 +33,7 @@ func TestSubmitAgentCRD_CreateSuccess(t *testing.T) {
 	require.NoError(t, err)
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil)
 
 	agentID := uuid.New()
 	communityID := uuid.New()
@@ -91,7 +93,7 @@ func TestSubmitAgentCRD_UpdateSuccess(t *testing.T) {
 	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(existing).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil)
 
 	// Mapped model updates name and model
 	agent := &model.Agent{
@@ -160,7 +162,7 @@ func TestSubmitAgentCRD_ConflictResolution(t *testing.T) {
 		}).
 		Build()
 
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil)
 
 	agent := &model.Agent{
 		ID:          agentID,
@@ -219,7 +221,7 @@ func TestSubmitAgentCRD_Timeout(t *testing.T) {
 		}).
 		Build()
 
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil)
 
 	agent := &model.Agent{
 		ID:       agentID,
@@ -250,7 +252,7 @@ func TestTeardownAgentCRD_Success(t *testing.T) {
 	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(existing).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil)
 
 	agent := &model.Agent{
 		ID: agentID,
@@ -291,6 +293,40 @@ func startTestNatsServer(t *testing.T) (*server.Server, *nats.Conn) {
 	return ns, nc
 }
 
+type mockPromptRepository struct {
+	outbound.PromptRepository
+	templates map[uuid.UUID]*model.PromptTemplate
+	getErr    error
+}
+
+func (m *mockPromptRepository) GetTemplateByID(ctx context.Context, id uuid.UUID) (*model.PromptTemplate, error) {
+	if m.getErr != nil {
+		return nil, m.getErr
+	}
+	t, ok := m.templates[id]
+	if !ok {
+		return nil, fmt.Errorf("prompt template not found: %s", id)
+	}
+	return t, nil
+}
+
+type mockSkillRepository struct {
+	outbound.SkillRepository
+	skills map[uuid.UUID]*model.Skill
+	getErr error
+}
+
+func (m *mockSkillRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Skill, error) {
+	if m.getErr != nil {
+		return nil, m.getErr
+	}
+	s, ok := m.skills[id]
+	if !ok {
+		return nil, fmt.Errorf("skill not found: %s", id)
+	}
+	return s, nil
+}
+
 type ProvisioningEvent struct {
 	TenantID    string `json:"tenant_id"`
 	AgentID     string `json:"agent_id"`
@@ -309,7 +345,7 @@ func TestSubmitAgentCRD_NATSProgressionStarted(t *testing.T) {
 	require.NoError(t, err)
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nc)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nc)
 
 	agentID := uuid.New()
 	communityID := uuid.New()
@@ -354,7 +390,7 @@ func TestSubmitAgentCRD_NATSProgressionCompleted(t *testing.T) {
 	require.NoError(t, err)
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nc)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nc)
 
 	agentID := uuid.New()
 	agent := &model.Agent{
@@ -406,7 +442,7 @@ func TestSubmitAgentCRD_NATSProgressionFailed(t *testing.T) {
 		}).
 		Build()
 
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nc)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nc)
 
 	agentID := uuid.New()
 	agent := &model.Agent{
@@ -437,4 +473,155 @@ func TestSubmitAgentCRD_NATSProgressionFailed(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("timed out waiting for agent.provisioning.failed event")
 	}
+}
+
+func TestResolveAndSynthesizeSystemPrompt_Success(t *testing.T) {
+	promptID := uuid.New()
+	skillID1 := uuid.New()
+	skillID2 := uuid.New()
+
+	promptRepo := &mockPromptRepository{
+		templates: map[uuid.UUID]*model.PromptTemplate{
+			promptID: {
+				ID:      promptID,
+				Content: "Always be professional.",
+			},
+		},
+	}
+	skillRepo := &mockSkillRepository{
+		skills: map[uuid.UUID]*model.Skill{
+			skillID1: {
+				ID:          skillID1,
+				Name:        "WebSearch",
+				Description: "Search the web",
+			},
+			skillID2: {
+				ID:          skillID2,
+				Name:        "Calculations",
+				Description: "Perform math operations",
+			},
+		},
+	}
+
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(nil, "tacito", promptRepo, skillRepo, nil)
+
+	agent := &model.Agent{
+		ID:             uuid.New(),
+		Description:    "A helpful AI assistant",
+		PromptTemplate: promptID,
+		Skills:         []uuid.UUID{skillID1, skillID2},
+	}
+
+	synthesized, err := coordinator.ResolveAndSynthesizeSystemPrompt(context.Background(), agent)
+	require.NoError(t, err)
+
+	expected := "Description: A helpful AI assistant\n\nDirectives:\nAlways be professional.\n\nSkills:\n- WebSearch: Search the web\n- Calculations: Perform math operations\n"
+	assert.Equal(t, expected, synthesized)
+}
+
+func TestSubmitAgentCRD_SynthesizedPromptAndTenantMapped(t *testing.T) {
+	scheme := runtime.NewScheme()
+	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	promptID := uuid.New()
+	skillID := uuid.New()
+
+	promptRepo := &mockPromptRepository{
+		templates: map[uuid.UUID]*model.PromptTemplate{
+			promptID: {
+				ID:      promptID,
+				Content: "Be short.",
+			},
+		},
+	}
+	skillRepo := &mockSkillRepository{
+		skills: map[uuid.UUID]*model.Skill{
+			skillID: {
+				ID:          skillID,
+				Name:        "Math",
+				Description: "Solves arithmetic",
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", promptRepo, skillRepo, nil)
+
+	agentID := uuid.New()
+	agent := &model.Agent{
+		ID:             agentID,
+		TenantID:       "tenant-crd-tenant",
+		Name:           "agent-crd",
+		Description:    "Direct assistant",
+		PromptTemplate: promptID,
+		Skills:         []uuid.UUID{skillID},
+		Brain: model.BrainConfig{
+			Model: "gpt-4",
+		},
+	}
+
+	err = coordinator.SubmitAgentCRD(context.Background(), agent)
+	assert.NoError(t, err)
+
+	fetched := &v1alpha1.TacitoAgent{}
+	key := types.NamespacedName{Namespace: "tacito", Name: agentID.String()}
+	err = fakeClient.Get(context.Background(), key, fetched)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "tenant-crd-tenant", fetched.Spec.TenantID)
+	assert.Contains(t, fetched.Spec.SystemPrompt, "Description: Direct assistant")
+	assert.Contains(t, fetched.Spec.SystemPrompt, "Directives:\nBe short.")
+	assert.Contains(t, fetched.Spec.SystemPrompt, "Skills:\n- Math: Solves arithmetic")
+}
+
+func TestResolveAndSynthesizeSystemPrompt_MissingResources(t *testing.T) {
+	promptID := uuid.New()
+	skillID := uuid.New()
+
+	// Missing template
+	promptRepoMissing := &mockPromptRepository{
+		templates: map[uuid.UUID]*model.PromptTemplate{},
+	}
+	skillRepo := &mockSkillRepository{
+		skills: map[uuid.UUID]*model.Skill{
+			skillID: {
+				ID:   skillID,
+				Name: "Math",
+			},
+		},
+	}
+
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(nil, "tacito", promptRepoMissing, skillRepo, nil)
+	agent := &model.Agent{
+		ID:             uuid.New(),
+		PromptTemplate: promptID,
+	}
+
+	_, err := coordinator.ResolveAndSynthesizeSystemPrompt(context.Background(), agent)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "prompt template not found")
+
+	// Missing skill
+	promptRepo := &mockPromptRepository{
+		templates: map[uuid.UUID]*model.PromptTemplate{
+			promptID: {
+				ID: promptID,
+			},
+		},
+	}
+	skillRepoMissing := &mockSkillRepository{
+		skills: map[uuid.UUID]*model.Skill{},
+	}
+
+	coordinator = crdadapter.NewK8sCRDCoordinatorWithClient(nil, "tacito", promptRepo, skillRepoMissing, nil)
+	agent = &model.Agent{
+		ID:             uuid.New(),
+		PromptTemplate: promptID,
+		Skills:         []uuid.UUID{skillID},
+	}
+
+	_, err = coordinator.ResolveAndSynthesizeSystemPrompt(context.Background(), agent)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "skill not found")
 }
