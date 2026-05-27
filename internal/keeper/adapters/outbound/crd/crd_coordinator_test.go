@@ -625,3 +625,84 @@ func TestResolveAndSynthesizeSystemPrompt_MissingResources(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "skill not found")
 }
+
+func TestGetAgentCRDStatus_Existing(t *testing.T) {
+	scheme := runtime.NewScheme()
+	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	agentID := uuid.New()
+	existing := &v1alpha1.TacitoAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      agentID.String(),
+			Namespace: "tacito",
+		},
+		Status: v1alpha1.TacitoAgentStatus{
+			Phase:    v1alpha1.PhaseRunning,
+			Replicas: 2,
+			Conditions: []metav1.Condition{
+				{
+					Type:    "Ready",
+					Status:  metav1.ConditionTrue,
+					Reason:  "PodRunning",
+					Message: "Pod healthy",
+				},
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(existing).Build()
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil)
+
+	status, err := coordinator.GetAgentCRDStatus(context.Background(), agentID)
+	assert.NoError(t, err)
+	require.NotNil(t, status)
+	assert.Equal(t, v1alpha1.PhaseRunning, status.Phase)
+	assert.Equal(t, int32(2), status.Replicas)
+	require.Len(t, status.Conditions, 1)
+	assert.Equal(t, "Ready", status.Conditions[0].Type)
+}
+
+func TestGetAgentCRDStatus_NonExistent(t *testing.T) {
+	scheme := runtime.NewScheme()
+	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil)
+
+	agentID := uuid.New()
+	status, err := coordinator.GetAgentCRDStatus(context.Background(), agentID)
+	assert.NoError(t, err)
+	assert.Nil(t, status)
+}
+
+func TestGetAgentCRDStatus_Timeout(t *testing.T) {
+	scheme := runtime.NewScheme()
+	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+				select {
+				case <-time.After(10 * time.Millisecond):
+					return cl.Get(ctx, key, obj, opts...)
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			},
+		}).
+		Build()
+
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err = coordinator.GetAgentCRDStatus(ctx, uuid.New())
+	assert.Error(t, err)
+	assert.True(t, errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded))
+}
+

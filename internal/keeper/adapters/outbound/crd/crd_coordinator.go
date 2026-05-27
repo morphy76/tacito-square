@@ -261,3 +261,23 @@ func (c *K8sCRDCoordinator) TeardownAgentCRD(ctx context.Context, agent *model.A
 
 	return nil
 }
+
+// GetAgentCRDStatus retrieves the current observed status subresource of a TacitoAgent custom resource.
+func (c *K8sCRDCoordinator) GetAgentCRDStatus(ctx context.Context, agentID uuid.UUID) (*v1alpha1.TacitoAgentStatus, error) {
+	deadlineCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	key := types.NamespacedName{Namespace: c.namespace, Name: agentID.String()}
+	agentCRD := &v1alpha1.TacitoAgent{}
+
+	err := c.client.Get(deadlineCtx, key, agentCRD)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("getting TacitoAgent CRD status: %w", err)
+	}
+
+	return &agentCRD.Status, nil
+}
+

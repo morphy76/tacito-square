@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
 	"github.com/morphy76/tacito-square/internal/shared/tenant"
+	"github.com/morphy76/tacito-square/pkg/kubernetes/apis/tacito/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -86,6 +87,15 @@ func (m *mockCRDCoordinator) TeardownAgentCRD(ctx context.Context, agent *model.
 	close(m.teardownChan) // Signal completion AFTER registering the mock call
 	return nil
 }
+
+func (m *mockCRDCoordinator) GetAgentCRDStatus(ctx context.Context, agentID uuid.UUID) (*v1alpha1.TacitoAgentStatus, error) {
+	args := m.Called(ctx, agentID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*v1alpha1.TacitoAgentStatus), args.Error(1)
+}
+
 
 func TestAgentService_Assign_AsynchronousNonBlocking(t *testing.T) {
 	repo := new(mockAgentRepository)

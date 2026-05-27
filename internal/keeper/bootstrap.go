@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+
 	httpAdapter "github.com/morphy76/tacito-square/internal/keeper/adapters/inbound/http"
 	"github.com/morphy76/tacito-square/internal/keeper/adapters/outbound/crd"
 	"github.com/morphy76/tacito-square/internal/keeper/adapters/outbound/postgres"
@@ -18,6 +20,7 @@ import (
 	"github.com/morphy76/tacito-square/internal/shared/health"
 	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/nats-io/nats.go"
+	"github.com/morphy76/tacito-square/pkg/kubernetes/apis/tacito/v1alpha1"
 	"k8s.io/client-go/rest"
 )
 
@@ -186,3 +189,8 @@ func (n *noOpCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Ag
 func (n *noOpCRDCoordinator) TeardownAgentCRD(ctx context.Context, agent *model.Agent) error {
 	return nil
 }
+
+func (n *noOpCRDCoordinator) GetAgentCRDStatus(ctx context.Context, agentID uuid.UUID) (*v1alpha1.TacitoAgentStatus, error) {
+	return nil, nil
+}
+
