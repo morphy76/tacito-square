@@ -14,6 +14,8 @@ import (
 	"github.com/morphy76/tacito-square/internal/shared/config"
 	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/morphy76/tacito-square/internal/shared/shutdown"
+	"github.com/nats-io/nats.go"
+	k8sconfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 // Version is the application version, set at build time or using fallback.
@@ -122,8 +124,30 @@ func main() {
 		})
 	}
 
+	// 5b. Initialize NATS connection
+	natsURL := v.GetString("nats.url")
+	var nc *nats.Conn
+	if natsURL != "" {
+		var err error
+		nc, err = nats.Connect(natsURL)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("failed to connect to NATS")
+		}
+		mgr.Register("nats-client", func(ctx context.Context) error {
+			logger.Info().Msg("closing NATS connection")
+			nc.Close()
+			return nil
+		})
+	}
+
+	// 5c. Initialize Kubernetes Client Config
+	k8sCfg, err := k8sconfig.GetConfig()
+	if err != nil {
+		logger.Warn().Err(err).Msg("failed to load kubernetes config, crd coordinator will be disabled")
+	}
+
 	// 6. Create HTTP router
-	router := keeper.NewServer(pool)
+	router := keeper.NewServer(pool, nc, k8sCfg)
 
 	srv := &http.Server{
 		Addr:    ":" + port,

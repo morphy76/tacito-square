@@ -2,13 +2,17 @@ package crd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
+	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/morphy76/tacito-square/pkg/kubernetes/apis/tacito/v1alpha1"
+	"github.com/nats-io/nats.go"
+	"github.com/rs/zerolog/log"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -22,12 +26,13 @@ import (
 type K8sCRDCoordinator struct {
 	client    client.Client
 	namespace string
+	natsConn  *nats.Conn
 }
 
 var _ outbound.CRDCoordinator = (*K8sCRDCoordinator)(nil)
 
 // NewK8sCRDCoordinator creates a new K8sCRDCoordinator with a real controller-runtime Client.
-func NewK8sCRDCoordinator(config *rest.Config) (*K8sCRDCoordinator, error) {
+func NewK8sCRDCoordinator(config *rest.Config, nc *nats.Conn) (*K8sCRDCoordinator, error) {
 	scheme := runtime.NewScheme()
 	if err := v1alpha1.AddToScheme(scheme); err != nil {
 		return nil, err
@@ -41,22 +46,83 @@ func NewK8sCRDCoordinator(config *rest.Config) (*K8sCRDCoordinator, error) {
 	return &K8sCRDCoordinator{
 		client:    c,
 		namespace: "tacito",
+		natsConn:  nc,
 	}, nil
 }
 
 // NewK8sCRDCoordinatorWithClient constructs the coordinator directly using a pre-configured client (convenient for testing).
-func NewK8sCRDCoordinatorWithClient(c client.Client, namespace string) *K8sCRDCoordinator {
+func NewK8sCRDCoordinatorWithClient(c client.Client, namespace string, nc *nats.Conn) *K8sCRDCoordinator {
 	if namespace == "" {
 		namespace = "tacito"
 	}
 	return &K8sCRDCoordinator{
 		client:    c,
 		namespace: namespace,
+		natsConn:  nc,
 	}
 }
 
+// ProvisioningEvent represents the structured JSON payload published to NATS.
+type ProvisioningEvent struct {
+	TenantID    string `json:"tenant_id"`
+	AgentID     string `json:"agent_id"`
+	CommunityID string `json:"community_id"`
+	Timestamp   string `json:"timestamp"`
+	Error       string `json:"error,omitempty"`
+}
+
+// PublishProvisioningEvent serializes and broadcasts provisioning transition events onto the NATS event bus.
+func (c *K8sCRDCoordinator) PublishProvisioningEvent(ctx context.Context, subject string, agent *model.Agent, errVal error) {
+	if c.natsConn == nil {
+		return
+	}
+
+	var errMsg string
+	if errVal != nil {
+		errMsg = errVal.Error()
+	}
+
+	var communityID string
+	if agent.CommunityID != nil {
+		communityID = agent.CommunityID.String()
+	}
+
+	event := ProvisioningEvent{
+		TenantID:    agent.TenantID,
+		AgentID:     agent.ID.String(),
+		CommunityID: communityID,
+		Timestamp:   time.Now().UTC().Format(time.RFC3339),
+		Error:       errMsg,
+	}
+
+	data, err := json.Marshal(event)
+	if err != nil {
+		logger := observability.WithContext(log.Logger, ctx)
+		logger.Error().Err(err).Msg("failed to marshal provisioning event")
+		return
+	}
+
+	if err := c.natsConn.Publish(subject, data); err != nil {
+		logger := observability.WithContext(log.Logger, ctx)
+		logger.Error().Err(err).Str("subject", subject).Msg("failed to publish NATS provisioning event")
+		return
+	}
+
+	logger := observability.WithContext(log.Logger, ctx)
+	logger.Info().Str("subject", subject).Msg("successfully published NATS provisioning event")
+}
+
 // SubmitAgentCRD constructs and registers a TacitoAgent custom resource in the K8s cluster.
-func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Agent) error {
+func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Agent) (err error) {
+	c.PublishProvisioningEvent(ctx, "agent.provisioning.started", agent, nil)
+	defer func() {
+		if err != nil {
+			c.PublishProvisioningEvent(ctx, "agent.provisioning.failed", agent, err)
+		} else {
+			c.PublishProvisioningEvent(ctx, "agent.provisioning.completed", agent, nil)
+		}
+	}()
+
 	deadlineCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -81,9 +147,9 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 	key := types.NamespacedName{Namespace: c.namespace, Name: agent.ID.String()}
 	existing := &v1alpha1.TacitoAgent{}
 
-	err := c.client.Get(deadlineCtx, key, existing)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
+	getErr := c.client.Get(deadlineCtx, key, existing)
+	if getErr != nil {
+		if apierrors.IsNotFound(getErr) {
 			// Construct a brand new Custom Resource
 			crdObj := &v1alpha1.TacitoAgent{
 				ObjectMeta: metav1.ObjectMeta{
@@ -99,12 +165,11 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 						Temperature: temp,
 						MaxTokens:   maxTokens,
 					},
-					// SystemPrompt will be resolved out-of-band in TASK-M4.6.2
 				},
 			}
 			return c.client.Create(deadlineCtx, crdObj)
 		}
-		return fmt.Errorf("getting TacitoAgent CRD: %w", err)
+		return fmt.Errorf("getting TacitoAgent CRD: %w", getErr)
 	}
 
 	// 2. Resource exists: fetch and update within a conflict resolution loop

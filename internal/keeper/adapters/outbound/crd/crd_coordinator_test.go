@@ -2,6 +2,7 @@ package crd_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -10,6 +11,8 @@ import (
 	crdadapter "github.com/morphy76/tacito-square/internal/keeper/adapters/outbound/crd"
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
 	"github.com/morphy76/tacito-square/pkg/kubernetes/apis/tacito/v1alpha1"
+	"github.com/nats-io/nats-server/v2/server"
+	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -28,7 +31,7 @@ func TestSubmitAgentCRD_CreateSuccess(t *testing.T) {
 	require.NoError(t, err)
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito")
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil)
 
 	agentID := uuid.New()
 	communityID := uuid.New()
@@ -88,7 +91,7 @@ func TestSubmitAgentCRD_UpdateSuccess(t *testing.T) {
 	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(existing).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito")
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil)
 
 	// Mapped model updates name and model
 	agent := &model.Agent{
@@ -157,7 +160,7 @@ func TestSubmitAgentCRD_ConflictResolution(t *testing.T) {
 		}).
 		Build()
 
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito")
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil)
 
 	agent := &model.Agent{
 		ID:          agentID,
@@ -216,7 +219,7 @@ func TestSubmitAgentCRD_Timeout(t *testing.T) {
 		}).
 		Build()
 
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito")
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil)
 
 	agent := &model.Agent{
 		ID:       agentID,
@@ -247,7 +250,7 @@ func TestTeardownAgentCRD_Success(t *testing.T) {
 	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(existing).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito")
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil)
 
 	agent := &model.Agent{
 		ID: agentID,
@@ -267,4 +270,171 @@ func TestTeardownAgentCRD_Success(t *testing.T) {
 	// Graceful NotFound handling — deleting a non-existent agent returns no error
 	err = coordinator.TeardownAgentCRD(context.Background(), agent)
 	assert.NoError(t, err)
+}
+
+func startTestNatsServer(t *testing.T) (*server.Server, *nats.Conn) {
+	opts := &server.Options{
+		Host: "127.0.0.1",
+		Port: -1,
+	}
+	ns, err := server.NewServer(opts)
+	require.NoError(t, err)
+
+	go ns.Start()
+	if !ns.ReadyForConnections(2 * time.Second) {
+		t.Fatal("NATS server not ready for connections")
+	}
+
+	nc, err := nats.Connect(ns.ClientURL())
+	require.NoError(t, err)
+
+	return ns, nc
+}
+
+type ProvisioningEvent struct {
+	TenantID    string `json:"tenant_id"`
+	AgentID     string `json:"agent_id"`
+	CommunityID string `json:"community_id"`
+	Timestamp   string `json:"timestamp"`
+	Error       string `json:"error,omitempty"`
+}
+
+func TestSubmitAgentCRD_NATSProgressionStarted(t *testing.T) {
+	ns, nc := startTestNatsServer(t)
+	defer ns.Shutdown()
+	defer nc.Close()
+
+	scheme := runtime.NewScheme()
+	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nc)
+
+	agentID := uuid.New()
+	communityID := uuid.New()
+	agent := &model.Agent{
+		ID:          agentID,
+		TenantID:    "tenant-1",
+		Name:        "agent-1",
+		CommunityID: &communityID,
+	}
+
+	// Subscribe to Started event
+	subChan := make(chan *nats.Msg, 10)
+	sub, err := nc.ChanSubscribe("agent.provisioning.started", subChan)
+	require.NoError(t, err)
+	defer sub.Unsubscribe()
+
+	err = coordinator.SubmitAgentCRD(context.Background(), agent)
+	assert.NoError(t, err)
+
+	select {
+	case msg := <-subChan:
+		var event ProvisioningEvent
+		err = json.Unmarshal(msg.Data, &event)
+		require.NoError(t, err)
+		assert.Equal(t, "tenant-1", event.TenantID)
+		assert.Equal(t, agentID.String(), event.AgentID)
+		assert.Equal(t, communityID.String(), event.CommunityID)
+		assert.NotEmpty(t, event.Timestamp)
+		assert.Empty(t, event.Error)
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for agent.provisioning.started event")
+	}
+}
+
+func TestSubmitAgentCRD_NATSProgressionCompleted(t *testing.T) {
+	ns, nc := startTestNatsServer(t)
+	defer ns.Shutdown()
+	defer nc.Close()
+
+	scheme := runtime.NewScheme()
+	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nc)
+
+	agentID := uuid.New()
+	agent := &model.Agent{
+		ID:       agentID,
+		TenantID: "tenant-2",
+		Name:     "agent-2",
+	}
+
+	// Subscribe to Completed event
+	subChan := make(chan *nats.Msg, 10)
+	sub, err := nc.ChanSubscribe("agent.provisioning.completed", subChan)
+	require.NoError(t, err)
+	defer sub.Unsubscribe()
+
+	err = coordinator.SubmitAgentCRD(context.Background(), agent)
+	assert.NoError(t, err)
+
+	select {
+	case msg := <-subChan:
+		var event ProvisioningEvent
+		err = json.Unmarshal(msg.Data, &event)
+		require.NoError(t, err)
+		assert.Equal(t, "tenant-2", event.TenantID)
+		assert.Equal(t, agentID.String(), event.AgentID)
+		assert.Empty(t, event.CommunityID)
+		assert.NotEmpty(t, event.Timestamp)
+		assert.Empty(t, event.Error)
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for agent.provisioning.completed event")
+	}
+}
+
+func TestSubmitAgentCRD_NATSProgressionFailed(t *testing.T) {
+	ns, nc := startTestNatsServer(t)
+	defer ns.Shutdown()
+	defer nc.Close()
+
+	scheme := runtime.NewScheme()
+	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	// Inject error in Create operation to trigger failure
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Create: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+				return errors.New("simulated API server write failure")
+			},
+		}).
+		Build()
+
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nc)
+
+	agentID := uuid.New()
+	agent := &model.Agent{
+		ID:       agentID,
+		TenantID: "tenant-3",
+		Name:     "agent-3",
+	}
+
+	// Subscribe to Failed event
+	subChan := make(chan *nats.Msg, 10)
+	sub, err := nc.ChanSubscribe("agent.provisioning.failed", subChan)
+	require.NoError(t, err)
+	defer sub.Unsubscribe()
+
+	err = coordinator.SubmitAgentCRD(context.Background(), agent)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "simulated API server write failure")
+
+	select {
+	case msg := <-subChan:
+		var event ProvisioningEvent
+		err = json.Unmarshal(msg.Data, &event)
+		require.NoError(t, err)
+		assert.Equal(t, "tenant-3", event.TenantID)
+		assert.Equal(t, agentID.String(), event.AgentID)
+		assert.NotEmpty(t, event.Timestamp)
+		assert.Contains(t, event.Error, "simulated API server write failure")
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for agent.provisioning.failed event")
+	}
 }

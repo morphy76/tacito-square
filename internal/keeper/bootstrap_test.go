@@ -12,12 +12,12 @@ import (
 )
 
 func TestNewServer_ReturnsGinEngine(t *testing.T) {
-	srv := NewServer(nil)
+	srv := NewServer(nil, nil, nil)
 	require.NotNil(t, srv)
 }
 
 func TestHealthz_Returns200(t *testing.T) {
-	srv := NewServer(nil)
+	srv := NewServer(nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	w := httptest.NewRecorder()
@@ -32,7 +32,7 @@ func TestHealthz_Returns200(t *testing.T) {
 }
 
 func TestReadyz_Returns503_WhenDatabaseUnavailable(t *testing.T) {
-	srv := NewServer(nil)
+	srv := NewServer(nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
 	w := httptest.NewRecorder()
@@ -65,7 +65,7 @@ func TestReadyz_Returns503_WhenDatabaseUnavailable(t *testing.T) {
 }
 
 func TestOpenAPI_Returns200AndValidJSON(t *testing.T) {
-	srv := NewServer(nil)
+	srv := NewServer(nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/openapi.json", nil)
 	w := httptest.NewRecorder()
@@ -101,7 +101,7 @@ func TestOpenAPISpec_MatchesCommittedContract(t *testing.T) {
 }
 
 func TestMetrics_Returns200AndPrometheusFormat(t *testing.T) {
-	srv := NewServer(nil)
+	srv := NewServer(nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
 	w := httptest.NewRecorder()
@@ -112,7 +112,7 @@ func TestMetrics_Returns200AndPrometheusFormat(t *testing.T) {
 }
 
 func TestEndpoints_DatabaseUnavailable_Returns503(t *testing.T) {
-	srv := NewServer(nil)
+	srv := NewServer(nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/llm-bindings", nil)
 	req.Header.Set("X-Tenant-ID", "tenant-1")
