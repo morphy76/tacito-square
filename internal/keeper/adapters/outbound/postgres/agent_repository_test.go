@@ -48,8 +48,6 @@ func TestAgentRepository_Lifecycle(t *testing.T) {
 		ID:        uuid.New(),
 		Name:      "test-system-prompt",
 		Content:   "You are an assistant",
-		Role:      model.PromptRoleSystem,
-		Version:   1,
 		Status:    model.PromptStatusActive,
 		CreatedAt: time.Now().UTC(),
 	}
@@ -61,9 +59,6 @@ func TestAgentRepository_Lifecycle(t *testing.T) {
 		ID:           uuid.New(),
 		Name:         "test-basic-skill",
 		Description:  "Prereq skill",
-		MCPServers:   []uuid.UUID{},
-		AllowedTools: []string{"test_tool"},
-		DeniedTools:  []string{},
 		Status:       model.SkillStatusActive,
 		CreatedAt:    time.Now().UTC(),
 		UpdatedAt:    time.Now().UTC(),

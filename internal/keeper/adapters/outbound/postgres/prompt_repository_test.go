@@ -38,64 +38,39 @@ func TestPromptRepository_Lifecycle(t *testing.T) {
 	repo := NewPromptRepository(pool)
 
 	// Create test templates
-	pt1_v1 := &model.PromptTemplate{
+	pt1 := &model.PromptTemplate{
 		ID:        uuid.New(),
 		Name:      "test-greeting",
 		Content:   "Hello {{.Name}}",
-		Role:      model.PromptRoleSystem,
-		Version:   1,
 		Status:    model.PromptStatusActive,
 		CreatedAt: time.Now().UTC(),
 	}
 
-	pt1_v2 := &model.PromptTemplate{
-		ID:        uuid.New(),
-		Name:      "test-greeting",
-		Content:   "Hello and welcome {{.Name}}",
-		Role:      model.PromptRoleSystem,
-		Version:   2,
-		Status:    model.PromptStatusActive,
-		CreatedAt: time.Now().UTC(),
-	}
-
-	pt2_v1 := &model.PromptTemplate{
+	pt2 := &model.PromptTemplate{
 		ID:        uuid.New(),
 		Name:      "test-goodbye",
 		Content:   "Goodbye {{.Name}}",
-		Role:      model.PromptRoleSystem,
-		Version:   1,
 		Status:    model.PromptStatusDraft,
 		CreatedAt: time.Now().UTC(),
 	}
 
 	t.Run("Create Templates", func(t *testing.T) {
-		err := repo.CreateTemplate(ctx, pt1_v1)
+		err := repo.CreateTemplate(ctx, pt1)
 		require.NoError(t, err)
 
-		err = repo.CreateTemplate(ctx, pt1_v2)
-		require.NoError(t, err)
-
-		err = repo.CreateTemplate(ctx, pt2_v1)
+		err = repo.CreateTemplate(ctx, pt2)
 		require.NoError(t, err)
 	})
 
 	t.Run("Get Template By ID", func(t *testing.T) {
-		fetched, err := repo.GetTemplateByID(ctx, pt1_v1.ID)
+		fetched, err := repo.GetTemplateByID(ctx, pt1.ID)
 		require.NoError(t, err)
-		assert.Equal(t, pt1_v1.ID, fetched.ID)
-		assert.Equal(t, pt1_v1.Name, fetched.Name)
-		assert.Equal(t, pt1_v1.Content, fetched.Content)
-		assert.Equal(t, pt1_v1.Version, fetched.Version)
+		assert.Equal(t, pt1.ID, fetched.ID)
+		assert.Equal(t, pt1.Name, fetched.Name)
+		assert.Equal(t, pt1.Content, fetched.Content)
 	})
 
-	t.Run("Get Latest Template By Name", func(t *testing.T) {
-		fetched, err := repo.GetLatestTemplateByName(ctx, "test-greeting")
-		require.NoError(t, err)
-		assert.Equal(t, pt1_v2.ID, fetched.ID)
-		assert.Equal(t, 2, fetched.Version)
-	})
-
-	t.Run("List Templates (Latest)", func(t *testing.T) {
+	t.Run("List Templates", func(t *testing.T) {
 		list, err := repo.ListTemplates(ctx)
 		require.NoError(t, err)
 		assert.NotEmpty(t, list)
@@ -108,20 +83,12 @@ func TestPromptRepository_Lifecycle(t *testing.T) {
 		assert.Contains(t, names, "test-goodbye")
 	})
 
-	t.Run("List Template Versions", func(t *testing.T) {
-		versions, err := repo.ListTemplateVersions(ctx, "test-greeting")
-		require.NoError(t, err)
-		assert.Len(t, versions, 2)
-		assert.Equal(t, 2, versions[0].Version)
-		assert.Equal(t, 1, versions[1].Version)
-	})
-
 	// Collections test
 	collection := &model.PromptCollection{
 		ID:          uuid.New(),
 		Name:        "test-suite",
 		Description: "A suite of prompt templates",
-		Templates:   []uuid.UUID{pt1_v1.ID, pt2_v1.ID},
+		Templates:   []uuid.UUID{pt1.ID, pt2.ID},
 		CreatedAt:   time.Now().UTC(),
 		UpdatedAt:   time.Now().UTC(),
 	}
@@ -141,33 +108,28 @@ func TestPromptRepository_Lifecycle(t *testing.T) {
 
 	t.Run("Update Collection", func(t *testing.T) {
 		collection.Description = "Updated test suite description"
-		collection.Templates = []uuid.UUID{pt1_v2.ID} // Update association to latest v2
+		collection.Templates = []uuid.UUID{pt1.ID}
 		err := repo.UpdateCollection(ctx, collection)
 		require.NoError(t, err)
 
 		fetched, err := repo.GetCollectionByID(ctx, collection.ID)
 		require.NoError(t, err)
 		assert.Equal(t, "Updated test suite description", fetched.Description)
-		assert.Equal(t, []uuid.UUID{pt1_v2.ID}, fetched.Templates)
+		assert.Equal(t, []uuid.UUID{pt1.ID}, fetched.Templates)
 	})
 
 	t.Run("Resolve Collection Prompts (Only Active)", func(t *testing.T) {
-		// We add pt2_v1 which is "draft" to the collection
-		collection.Templates = []uuid.UUID{pt1_v1.ID, pt2_v1.ID}
+		collection.Templates = []uuid.UUID{pt1.ID, pt2.ID}
 		err := repo.UpdateCollection(ctx, collection)
 		require.NoError(t, err)
 
-		// Dynamic resolution:
-		// pt1_v1 has name "test-greeting". Its latest *active* version is pt1_v2!
-		// pt2_v1 has name "test-goodbye". Its latest version is pt2_v1 but its status is "draft" (not active), so it should not be resolved!
 		resolved, err := repo.ResolveCollectionPrompts(ctx, collection.ID)
 		require.NoError(t, err)
 		
-		// Should only resolve the active greeting prompt (pt1_v2)
+		// Should only resolve the active greeting prompt (pt1)
 		assert.Len(t, resolved, 1)
 		assert.Equal(t, "test-greeting", resolved[0].Name)
-		assert.Equal(t, 2, resolved[0].Version)
-		assert.Equal(t, pt1_v2.ID, resolved[0].ID)
+		assert.Equal(t, pt1.ID, resolved[0].ID)
 	})
 
 	t.Run("Multi-Tenant Isolation", func(t *testing.T) {
@@ -177,7 +139,7 @@ func TestPromptRepository_Lifecycle(t *testing.T) {
 		tenB, _ := tenant.New("tenant-b.com", "")
 		ctxB := tenant.ContextWithTenant(context.Background(), tenB)
 
-		// Clean up previous records for these tenants to prevent conflict with parallel tests
+		// Clean up previous records for these tenants
 		_, _ = pool.Exec(ctx, "DELETE FROM prompt_collections WHERE tenant_id IN ($1, $2)", tenA.FullName(), tenB.FullName())
 		_, _ = pool.Exec(ctx, "DELETE FROM prompt_templates WHERE tenant_id IN ($1, $2)", tenA.FullName(), tenB.FullName())
 
@@ -185,8 +147,6 @@ func TestPromptRepository_Lifecycle(t *testing.T) {
 			ID:        uuid.New(),
 			Name:      "test-tenant-scoped",
 			Content:   "Content A",
-			Role:      model.PromptRoleSystem,
-			Version:   1,
 			Status:    model.PromptStatusActive,
 			CreatedAt: time.Now().UTC(),
 		}
@@ -195,8 +155,6 @@ func TestPromptRepository_Lifecycle(t *testing.T) {
 			ID:        uuid.New(),
 			Name:      "test-tenant-scoped", // same name
 			Content:   "Content B",
-			Role:      model.PromptRoleSystem,
-			Version:   1,
 			Status:    model.PromptStatusActive,
 			CreatedAt: time.Now().UTC(),
 		}
@@ -205,7 +163,7 @@ func TestPromptRepository_Lifecycle(t *testing.T) {
 		err := repo.CreateTemplate(ctxA, ptA)
 		require.NoError(t, err)
 
-		// Create under Tenant B (should succeed because of uniqueness constraints per tenant!)
+		// Create under Tenant B
 		err = repo.CreateTemplate(ctxB, ptB)
 		require.NoError(t, err)
 
@@ -216,16 +174,6 @@ func TestPromptRepository_Lifecycle(t *testing.T) {
 		// Tenant A should not see Tenant B's template by ID
 		_, err = repo.GetTemplateByID(ctxA, ptB.ID)
 		assert.Error(t, err)
-
-		// GetLatestTemplateByName under Tenant A should return ptA
-		fetchedA, err := repo.GetLatestTemplateByName(ctxA, "test-tenant-scoped")
-		require.NoError(t, err)
-		assert.Equal(t, ptA.ID, fetchedA.ID)
-
-		// GetLatestTemplateByName under Tenant B should return ptB
-		fetchedB, err := repo.GetLatestTemplateByName(ctxB, "test-tenant-scoped")
-		require.NoError(t, err)
-		assert.Equal(t, ptB.ID, fetchedB.ID)
 
 		// ListTemplates under Tenant A should contain ptA but NOT ptB
 		listA, err := repo.ListTemplates(ctxA)
@@ -290,12 +238,6 @@ func TestPromptRepository_Lifecycle(t *testing.T) {
 		assert.True(t, foundCollA)
 		assert.False(t, foundCollBInA)
 
-		// Resolve collection prompts isolation
-		resolvedA, err := repo.ResolveCollectionPrompts(ctxA, collA.ID)
-		require.NoError(t, err)
-		assert.Len(t, resolvedA, 1)
-		assert.Equal(t, ptA.ID, resolvedA[0].ID)
-
 		// Clean up
 		_ = repo.DeleteCollection(ctxA, collA.ID)
 		_ = repo.DeleteCollection(ctxB, collB.ID)
@@ -312,10 +254,10 @@ func TestPromptRepository_Lifecycle(t *testing.T) {
 	})
 
 	t.Run("Delete Template", func(t *testing.T) {
-		err := repo.DeleteTemplate(ctx, pt1_v1.ID)
+		err := repo.DeleteTemplate(ctx, pt1.ID)
 		require.NoError(t, err)
 
-		_, err = repo.GetTemplateByID(ctx, pt1_v1.ID)
+		_, err = repo.GetTemplateByID(ctx, pt1.ID)
 		assert.Error(t, err)
 	})
 }

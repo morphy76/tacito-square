@@ -190,8 +190,6 @@ func TestCommunityRepository_Lifecycle(t *testing.T) {
 			ID:        uuid.New(),
 			Name:      "test-prereq-prompt",
 			Content:   "You are an assistant",
-			Role:      model.PromptRoleSystem,
-			Version:   1,
 			Status:    model.PromptStatusActive,
 			CreatedAt: time.Now().UTC(),
 		}
@@ -202,9 +200,6 @@ func TestCommunityRepository_Lifecycle(t *testing.T) {
 			ID:           uuid.New(),
 			Name:         "test-prereq-skill",
 			Description:  "Prereq skill",
-			MCPServers:   []uuid.UUID{},
-			AllowedTools: []string{"test_tool"},
-			DeniedTools:  []string{},
 			Status:       model.SkillStatusActive,
 			CreatedAt:    time.Now().UTC(),
 			UpdatedAt:    time.Now().UTC(),

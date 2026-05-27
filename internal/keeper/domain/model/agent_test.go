@@ -207,6 +207,46 @@ func TestAgent_Validation(t *testing.T) {
 			}(),
 			wantErr: "assigned agent must not have defined status",
 		},
+		{
+			name: "Valid Agent with stopped status assigned to community",
+			agent: func() Agent {
+				a := validAgent
+				cid := uuid.New()
+				a.CommunityID = &cid
+				a.Status = AgentStatus("stopped")
+				return a
+			}(),
+		},
+		{
+			name: "Valid Agent with pending status assigned to community",
+			agent: func() Agent {
+				a := validAgent
+				cid := uuid.New()
+				a.CommunityID = &cid
+				a.Status = AgentStatus("pending")
+				return a
+			}(),
+		},
+		{
+			name: "Valid Agent with running status assigned to community",
+			agent: func() Agent {
+				a := validAgent
+				cid := uuid.New()
+				a.CommunityID = &cid
+				a.Status = AgentStatus("running")
+				return a
+			}(),
+		},
+		{
+			name: "Valid Agent with error status assigned to community",
+			agent: func() Agent {
+				a := validAgent
+				cid := uuid.New()
+				a.CommunityID = &cid
+				a.Status = AgentStatus("error")
+				return a
+			}(),
+		},
 	}
 
 	for _, tt := range tests {

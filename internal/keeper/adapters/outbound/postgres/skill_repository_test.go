@@ -32,47 +32,16 @@ func TestSkillRepository_Lifecycle(t *testing.T) {
 	// Clean up any test records
 	_, err = pool.Exec(ctx, "DELETE FROM skills WHERE name LIKE 'test-%'")
 	require.NoError(t, err)
-	_, err = pool.Exec(ctx, "DELETE FROM mcp_servers WHERE name LIKE 'test-%'")
-	require.NoError(t, err)
 
 	repo := NewSkillRepository(pool)
-	mcpRepo := NewMCPServerRepository(pool)
-
-	// Create test MCP servers first
-	mcp1 := &model.MCPServer{
-		ID:        uuid.New(),
-		Name:      "test-mcp-1",
-		Transport: model.TransportStdio,
-		Command:   "node",
-		Status:    model.MCPServerStatusActive,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-	err = mcpRepo.Create(ctx, mcp1)
-	require.NoError(t, err)
-
-	mcp2 := &model.MCPServer{
-		ID:        uuid.New(),
-		Name:      "test-mcp-2",
-		Transport: model.TransportSSE,
-		URL:       "http://localhost/events",
-		Status:    model.MCPServerStatusActive,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-	err = mcpRepo.Create(ctx, mcp2)
-	require.NoError(t, err)
 
 	skill := &model.Skill{
-		ID:           uuid.New(),
-		Name:         "test-web-search",
-		Description:  "Test skill",
-		MCPServers:   []uuid.UUID{mcp1.ID, mcp2.ID},
-		AllowedTools: []string{"search_google", "fetch_url"},
-		DeniedTools:  []string{"format_disk"},
-		Status:       model.SkillStatusActive,
-		CreatedAt:    time.Now().UTC(),
-		UpdatedAt:    time.Now().UTC(),
+		ID:          uuid.New(),
+		Name:        "test-web-search",
+		Description: "Test skill description",
+		Status:      model.SkillStatusActive,
+		CreatedAt:   time.Now().UTC(),
+		UpdatedAt:   time.Now().UTC(),
 	}
 
 	t.Run("Create Skill", func(t *testing.T) {
@@ -85,9 +54,8 @@ func TestSkillRepository_Lifecycle(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, skill.ID, fetched.ID)
 		assert.Equal(t, skill.Name, fetched.Name)
-		assert.ElementsMatch(t, skill.MCPServers, fetched.MCPServers)
-		assert.Equal(t, skill.AllowedTools, fetched.AllowedTools)
-		assert.Equal(t, skill.DeniedTools, fetched.DeniedTools)
+		assert.Equal(t, skill.Description, fetched.Description)
+		assert.Equal(t, skill.Status, fetched.Status)
 	})
 
 	t.Run("Get Skill by Name", func(t *testing.T) {
@@ -112,14 +80,12 @@ func TestSkillRepository_Lifecycle(t *testing.T) {
 
 	t.Run("Update Skill", func(t *testing.T) {
 		skill.Description = "Updated skill desc"
-		skill.MCPServers = []uuid.UUID{mcp1.ID} // remove mcp2
 		err := repo.Update(ctx, skill)
 		require.NoError(t, err)
 
 		fetched, err := repo.GetByID(ctx, skill.ID)
 		require.NoError(t, err)
 		assert.Equal(t, "Updated skill desc", fetched.Description)
-		assert.Equal(t, []uuid.UUID{mcp1.ID}, fetched.MCPServers)
 	})
 
 	t.Run("Agent-Skill Association", func(t *testing.T) {
@@ -187,34 +153,28 @@ func TestSkillRepository_Lifecycle(t *testing.T) {
 		_, _ = pool.Exec(ctx, "DELETE FROM skills WHERE tenant_id IN ($1, $2)", tenA.FullName(), tenB.FullName())
 
 		skillA := &model.Skill{
-			ID:           uuid.New(),
-			Name:         "test-tenant-scoped",
-			Description:  "Tenant A Skill",
-			MCPServers:   []uuid.UUID{},
-			AllowedTools: []string{"search_google"},
-			DeniedTools:  []string{"format_disk"},
-			Status:       model.SkillStatusActive,
-			CreatedAt:    time.Now().UTC(),
-			UpdatedAt:    time.Now().UTC(),
+			ID:          uuid.New(),
+			Name:        "test-tenant-scoped",
+			Description: "Tenant A Skill",
+			Status:      model.SkillStatusActive,
+			CreatedAt:   time.Now().UTC(),
+			UpdatedAt:   time.Now().UTC(),
 		}
 
 		skillB := &model.Skill{
-			ID:           uuid.New(),
-			Name:         "test-tenant-scoped", // same name
-			Description:  "Tenant B Skill",
-			MCPServers:   []uuid.UUID{},
-			AllowedTools: []string{"search_google"},
-			DeniedTools:  []string{"format_disk"},
-			Status:       model.SkillStatusActive,
-			CreatedAt:    time.Now().UTC(),
-			UpdatedAt:    time.Now().UTC(),
+			ID:          uuid.New(),
+			Name:        "test-tenant-scoped", // same name
+			Description: "Tenant B Skill",
+			Status:      model.SkillStatusActive,
+			CreatedAt:   time.Now().UTC(),
+			UpdatedAt:   time.Now().UTC(),
 		}
 
 		// Create under Tenant A
 		err := repo.Create(ctxA, skillA)
 		require.NoError(t, err)
 
-		// Create under Tenant B (should succeed because of (tenant_id, name) composite unique constraint!)
+		// Create under Tenant B
 		err = repo.Create(ctxB, skillB)
 		require.NoError(t, err)
 
@@ -287,7 +247,7 @@ func TestSkillRepository_Lifecycle(t *testing.T) {
 		}()
 
 		// Detach under Tenant B for Tenant A's skill should have no effect
-		err = repo.AttachSkillToAgent(ctxB, agentID, skillA.ID) // should fail/do nothing because skillA is not in Tenant B
+		err = repo.AttachSkillToAgent(ctxB, agentID, skillA.ID)
 		require.NoError(t, err)
 
 		// List by agent under Tenant B should be empty

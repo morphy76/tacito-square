@@ -16,6 +16,10 @@ const (
 	AgentStatusAssigned   AgentStatus = "assigned"
 	AgentStatusActive     AgentStatus = "active"
 	AgentStatusTerminated AgentStatus = "terminated"
+	AgentStatusStopped    AgentStatus = "stopped"
+	AgentStatusPending    AgentStatus = "pending"
+	AgentStatusRunning    AgentStatus = "running"
+	AgentStatusError      AgentStatus = "error"
 )
 
 // BrainConfig encapsulates Large Language Model settings for the agent.
@@ -75,13 +79,14 @@ func (a Agent) Validate() error {
 	if a.Name == "" {
 		return errors.New("name is required")
 	}
-	if a.Status != AgentStatusDefined && a.Status != AgentStatusAssigned && a.Status != AgentStatusActive && a.Status != AgentStatusTerminated {
+	if a.Status != AgentStatusDefined && a.Status != AgentStatusAssigned && a.Status != AgentStatusActive && a.Status != AgentStatusTerminated &&
+		a.Status != AgentStatusStopped && a.Status != AgentStatusPending && a.Status != AgentStatusRunning && a.Status != AgentStatusError {
 		return errors.New("invalid agent status")
 	}
 	if a.CommunityID != nil && a.Status == AgentStatusDefined {
 		return errors.New("assigned agent must not have defined status")
 	}
-	if a.CommunityID == nil && a.Status == AgentStatusAssigned {
+	if a.CommunityID == nil && (a.Status == AgentStatusAssigned || a.Status == AgentStatusStopped || a.Status == AgentStatusPending || a.Status == AgentStatusRunning || a.Status == AgentStatusError) {
 		return errors.New("unassigned agent must not have assigned status")
 	}
 

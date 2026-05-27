@@ -77,6 +77,14 @@ func TestCommunity_Validation(t *testing.T) {
 			}(),
 			wantErr: "invalid community status",
 		},
+		{
+			name: "Valid community with inactive status",
+			community: func() Community {
+				c := validCommunity
+				c.Status = CommunityStatus("inactive")
+				return c
+			}(),
+		},
 	}
 
 	for _, tt := range tests {

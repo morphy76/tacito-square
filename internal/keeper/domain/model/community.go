@@ -14,6 +14,7 @@ const (
 	CommunityStatusActive     CommunityStatus = "active"
 	CommunityStatusSuspended  CommunityStatus = "suspended"
 	CommunityStatusTerminated CommunityStatus = "terminated"
+	CommunityStatusInactive   CommunityStatus = "inactive"
 )
 
 type CommunityTopology string
@@ -50,7 +51,8 @@ func (c Community) Validate() error {
 	if c.Status != CommunityStatusCreated &&
 		c.Status != CommunityStatusActive &&
 		c.Status != CommunityStatusSuspended &&
-		c.Status != CommunityStatusTerminated {
+		c.Status != CommunityStatusTerminated &&
+		c.Status != CommunityStatusInactive {
 		return errors.New("invalid community status")
 	}
 	return nil
