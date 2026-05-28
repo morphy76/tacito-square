@@ -87,7 +87,7 @@ func TestAgentRepository_AssignmentLifecycle(t *testing.T) {
 
 		fetched, err := repo.GetByID(ctx, agent.ID)
 		require.NoError(t, err)
-		assert.Equal(t, model.AgentStatusStopped, fetched.Status)
+		assert.Equal(t, model.AgentStatusPending, fetched.Status)
 		require.NotNil(t, fetched.CommunityID)
 		assert.Equal(t, comm.ID, *fetched.CommunityID)
 	})

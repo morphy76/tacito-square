@@ -401,7 +401,7 @@ func (r *AgentRepository) AssignToCommunity(ctx context.Context, agentID uuid.UU
 		// 3. Update agent assignment
 		updatedAt := time.Now().UTC()
 		_, err = tx.Exec(ctx, `UPDATE agents SET community_id = $1, status = $2, updated_at = $3 WHERE id = $4 AND tenant_id = $5`,
-			communityID, string(model.AgentStatusStopped), updatedAt, agentID, ten.FullName())
+			communityID, string(model.AgentStatusPending), updatedAt, agentID, ten.FullName())
 		if err != nil {
 			return fmt.Errorf("update agent assignment: %w", err)
 		}

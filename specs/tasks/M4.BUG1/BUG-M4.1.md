@@ -3,7 +3,7 @@
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
 | ID            | BUG-M4.1                                                           |
-| Status        | OPEN                                                               |
+| Status        | VERIFIED                                                           |
 | Severity      | HIGH                                                               |
 | Milestone     | M4 — Operator Core                                                 |
 | Affects       | TASK-M4.3.1, TASK-M4.3.2, TASK-M4.3.3                              |

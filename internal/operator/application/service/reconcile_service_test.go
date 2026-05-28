@@ -10,16 +10,22 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func TestBuildDeployment_TenantIDAndBasicEnv(t *testing.T) {
 	logger := zerolog.Nop()
 	cfg := viper.New()
-	svc := service.NewReconcileAgentService(logger, cfg)
+	fakeClient := fake.NewClientBuilder().Build()
+	svc := service.NewReconcileAgentService(fakeClient, logger, cfg)
 
 	agent := &v1alpha1.TacitoAgent{
 		ObjectMeta: metav1.ObjectMeta{
@@ -69,7 +75,8 @@ func TestBuildDeployment_TenantIDAndBasicEnv(t *testing.T) {
 func TestBuildDeployment_LLMDefaultsAndOverrides(t *testing.T) {
 	logger := zerolog.Nop()
 	cfg := viper.New()
-	svc := service.NewReconcileAgentService(logger, cfg)
+	fakeClient := fake.NewClientBuilder().Build()
+	svc := service.NewReconcileAgentService(fakeClient, logger, cfg)
 
 	// Test 1: Defaults fallback
 	agentDefaults := &v1alpha1.TacitoAgent{
@@ -119,7 +126,8 @@ func TestBuildDeployment_LLMDefaultsAndOverrides(t *testing.T) {
 func TestBuildDeployment_ResourceConstraints(t *testing.T) {
 	logger := zerolog.Nop()
 	cfg := viper.New()
-	svc := service.NewReconcileAgentService(logger, cfg)
+	fakeClient := fake.NewClientBuilder().Build()
+	svc := service.NewReconcileAgentService(fakeClient, logger, cfg)
 
 	cpuRequest := resource.MustParse("100m")
 	memLimit := resource.MustParse("256Mi")
@@ -148,7 +156,8 @@ func TestBuildDeployment_ResourceConstraints(t *testing.T) {
 func TestBuildDeployment_OwnerReference(t *testing.T) {
 	logger := zerolog.Nop()
 	cfg := viper.New()
-	svc := service.NewReconcileAgentService(logger, cfg)
+	fakeClient := fake.NewClientBuilder().Build()
+	svc := service.NewReconcileAgentService(fakeClient, logger, cfg)
 
 	agent := &v1alpha1.TacitoAgent{
 		ObjectMeta: metav1.ObjectMeta{
@@ -172,7 +181,8 @@ func TestBuildDeployment_OwnerReference(t *testing.T) {
 func TestBuildHeadlessService(t *testing.T) {
 	logger := zerolog.Nop()
 	cfg := viper.New()
-	svc := service.NewReconcileAgentService(logger, cfg)
+	fakeClient := fake.NewClientBuilder().Build()
+	svc := service.NewReconcileAgentService(fakeClient, logger, cfg)
 
 	agent := &v1alpha1.TacitoAgent{
 		ObjectMeta: metav1.ObjectMeta{
@@ -210,4 +220,140 @@ func TestBuildHeadlessService(t *testing.T) {
 	assert.Equal(t, "test-agent", ownerRef.Name)
 	assert.Equal(t, types.UID("agent-uid-123"), ownerRef.UID)
 	assert.True(t, *ownerRef.Controller)
+}
+
+func TestReconcile_CreatesDeploymentAndService(t *testing.T) {
+	logger := zerolog.Nop()
+	cfg := viper.New()
+
+	scheme := runtime.NewScheme()
+	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = appsv1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	agent := &v1alpha1.TacitoAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "my-test-agent",
+			Namespace: "tacito-ns",
+			UID:       types.UID("uid-val-456"),
+		},
+		Spec: v1alpha1.TacitoAgentSpec{
+			TenantID:     "tenant-1",
+			AgentName:    "agent-1",
+			CommunityRef: "comm-1",
+			LLMConfig: v1alpha1.LLMConfig{
+				Model: "gpt-4",
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithStatusSubresource(&v1alpha1.TacitoAgent{}).WithObjects(agent).Build()
+	svc := service.NewReconcileAgentService(fakeClient, logger, cfg)
+
+	err = svc.Reconcile(context.Background(), agent)
+	assert.NoError(t, err)
+
+	// In TDD RED phase, the Reconcile method is a stub and does not create these K8s resources, so this test WILL fail (RED).
+	var dep appsv1.Deployment
+	err = fakeClient.Get(context.Background(), client.ObjectKey{Namespace: "tacito-ns", Name: "my-test-agent"}, &dep)
+	assert.NoError(t, err, "Expected Deployment to be created in fake client")
+
+	var serviceObj corev1.Service
+	err = fakeClient.Get(context.Background(), client.ObjectKey{Namespace: "tacito-ns", Name: "my-test-agent"}, &serviceObj)
+	assert.NoError(t, err, "Expected Service to be created in fake client")
+}
+
+func TestReconcile_StatusTransitions(t *testing.T) {
+	logger := zerolog.Nop()
+	cfg := viper.New()
+
+	scheme := runtime.NewScheme()
+	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = appsv1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	agent := &v1alpha1.TacitoAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "status-agent",
+			Namespace: "tacito-ns",
+			UID:       types.UID("uid-val-789"),
+		},
+		Spec: v1alpha1.TacitoAgentSpec{
+			TenantID:     "tenant-1",
+			AgentName:    "agent-1",
+			CommunityRef: "comm-1",
+			LLMConfig: v1alpha1.LLMConfig{
+				Model: "gpt-4",
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithStatusSubresource(&v1alpha1.TacitoAgent{}).WithObjects(agent).Build()
+	svc := service.NewReconcileAgentService(fakeClient, logger, cfg)
+
+	// 1. Initial Reconcile -> Pending (0 ready replicas)
+	err = svc.Reconcile(context.Background(), agent)
+	assert.NoError(t, err)
+
+	// Fetch updated agent from fake client to verify status
+	var updatedAgent v1alpha1.TacitoAgent
+	err = fakeClient.Get(context.Background(), client.ObjectKey{Namespace: "tacito-ns", Name: "status-agent"}, &updatedAgent)
+	assert.NoError(t, err)
+	assert.Equal(t, v1alpha1.PhasePending, updatedAgent.Status.Phase)
+	assert.Equal(t, int32(0), updatedAgent.Status.Replicas)
+	assert.Len(t, updatedAgent.Status.Conditions, 1)
+	assert.Equal(t, "Available", updatedAgent.Status.Conditions[0].Type)
+	assert.Equal(t, metav1.ConditionFalse, updatedAgent.Status.Conditions[0].Status)
+	assert.Equal(t, "NoReplicasAvailable", updatedAgent.Status.Conditions[0].Reason)
+
+	// 2. Deployment status updated to 1 Ready Replica -> Reconcile -> Running
+	var dep appsv1.Deployment
+	err = fakeClient.Get(context.Background(), client.ObjectKey{Namespace: "tacito-ns", Name: "status-agent"}, &dep)
+	assert.NoError(t, err)
+	dep.Status.ReadyReplicas = 1
+	err = fakeClient.Status().Update(context.Background(), &dep)
+	assert.NoError(t, err)
+
+	err = svc.Reconcile(context.Background(), &updatedAgent)
+	assert.NoError(t, err)
+
+	err = fakeClient.Get(context.Background(), client.ObjectKey{Namespace: "tacito-ns", Name: "status-agent"}, &updatedAgent)
+	assert.NoError(t, err)
+	assert.Equal(t, v1alpha1.PhaseRunning, updatedAgent.Status.Phase)
+	assert.Equal(t, int32(1), updatedAgent.Status.Replicas)
+	assert.Equal(t, metav1.ConditionTrue, updatedAgent.Status.Conditions[0].Status)
+	assert.Equal(t, "MinimumReplicasAvailable", updatedAgent.Status.Conditions[0].Reason)
+
+	// 3. Scale agent spec to 0 replicas -> Reconcile -> Idle
+	zero := int32(0)
+	updatedAgent.Spec.Replicas = &zero
+	err = fakeClient.Update(context.Background(), &updatedAgent)
+	assert.NoError(t, err)
+
+	// Also simulate the deployment getting updated to 0 replicas by operator and ready replicas dropping to 0
+	err = fakeClient.Get(context.Background(), client.ObjectKey{Namespace: "tacito-ns", Name: "status-agent"}, &dep)
+	assert.NoError(t, err)
+	dep.Spec.Replicas = &zero
+	err = fakeClient.Update(context.Background(), &dep)
+	assert.NoError(t, err)
+
+	dep.Status.ReadyReplicas = 0
+	err = fakeClient.Status().Update(context.Background(), &dep)
+	assert.NoError(t, err)
+
+	err = svc.Reconcile(context.Background(), &updatedAgent)
+	assert.NoError(t, err)
+
+	err = fakeClient.Get(context.Background(), client.ObjectKey{Namespace: "tacito-ns", Name: "status-agent"}, &updatedAgent)
+	assert.NoError(t, err)
+	assert.Equal(t, v1alpha1.PhaseIdle, updatedAgent.Status.Phase)
+	assert.Equal(t, int32(0), updatedAgent.Status.Replicas)
+	assert.Equal(t, metav1.ConditionFalse, updatedAgent.Status.Conditions[0].Status)
+	assert.Equal(t, "ScaleToZero", updatedAgent.Status.Conditions[0].Reason)
 }
