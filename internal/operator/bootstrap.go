@@ -28,12 +28,12 @@ func NewServer(checkers ...health.Checker) *gin.Engine {
 }
 
 // KubeAPIChecker creates a health.Checker that lists namespaces to verify Kubernetes API server connectivity.
-func KubeAPIChecker(c client.Client) health.Checker {
+func KubeAPIChecker(r client.Reader) health.Checker {
 	return health.Checker{
 		Name: "kubernetes-api",
 		Check: func(ctx context.Context) error {
 			var nsList corev1.NamespaceList
-			if err := c.List(ctx, &nsList, client.Limit(1)); err != nil {
+			if err := r.List(ctx, &nsList, client.Limit(1)); err != nil {
 				return err
 			}
 			return nil

@@ -69,6 +69,7 @@ keeper:
 
 # --- Agent (default template) ---
 agent:
+  enabled: false
   replicaCount: 0  # agents are spawned dynamically by the operator
   image:
     registry: ""
@@ -102,13 +103,39 @@ agent:
 
 # --- Operator ---
 operator:
-  enabled: false  # enabled in M4
+  enabled: true
   replicaCount: 1
   image:
     registry: ""
     name: tacito-square/operator
     tag: "0.1.0"
     pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: http
+    initialDelaySeconds: 1
+    periodSeconds: 1
+  readinessProbe:
+    httpGet:
+      path: /readyz
+      port: http
+    initialDelaySeconds: 1
+    periodSeconds: 1
+  config:
+    logLevel: info
+    port: 8082
+    otel:
+      endpoint: "tacito-infra-otel-collector:4317"
+    tls:
+      caCertPath: "/etc/ssl/tacito/ca.crt"
 
 # --- BFF ---
 bff:

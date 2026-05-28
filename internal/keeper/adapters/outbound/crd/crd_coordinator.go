@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -158,6 +159,8 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 	c.PublishProvisioningEvent(ctx, "agent.provisioning.started", agent, nil)
 	defer func() {
 		if err != nil {
+			logger := observability.WithContext(log.Logger, ctx)
+			logger.Error().Err(err).Msg("failed to submit agent crd")
 			c.PublishProvisioningEvent(ctx, "agent.provisioning.failed", agent, err)
 		} else {
 			c.PublishProvisioningEvent(ctx, "agent.provisioning.completed", agent, nil)
@@ -200,7 +203,7 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 			// Construct a brand new Custom Resource
 			crdObj := &v1alpha1.TacitoAgent{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      agent.ID.String(),
+					Name:      "u-" + strings.ToLower(agent.ID.String()),
 					Namespace: c.namespace,
 				},
 				Spec: v1alpha1.TacitoAgentSpec{
@@ -246,7 +249,7 @@ func (c *K8sCRDCoordinator) TeardownAgentCRD(ctx context.Context, agent *model.A
 
 	crdObj := &v1alpha1.TacitoAgent{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      agent.ID.String(),
+			Name:      "u-" + strings.ToLower(agent.ID.String()),
 			Namespace: c.namespace,
 		},
 	}
@@ -280,4 +283,3 @@ func (c *K8sCRDCoordinator) GetAgentCRDStatus(ctx context.Context, agentID uuid.
 
 	return &agentCRD.Status, nil
 }
-

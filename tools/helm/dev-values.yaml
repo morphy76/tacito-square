@@ -15,6 +15,7 @@ keeper:
     nats:
       url: nats://ts-infra-nats-headless:4222
 operator:
-  enabled: false
+  image:
+    pullPolicy: Never
 bff:
   enabled: false

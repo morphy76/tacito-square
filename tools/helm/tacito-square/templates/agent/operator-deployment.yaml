@@ -15,24 +15,39 @@ spec:
       labels:
         {{- include "tacito-square.selectorLabels" (dict "component" "operator" "context" .) | nindent 8 }}
     spec:
+      serviceAccountName: {{ include "tacito-square.fullname" . }}-operator
       containers:
         - name: operator
           image: {{ include "tacito-square.image" (dict "registry" .Values.operator.image.registry "name" .Values.operator.image.name "tag" .Values.operator.image.tag "global" .Values.global) }}
           imagePullPolicy: {{ .Values.operator.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: 8082
+              containerPort: {{ .Values.operator.config.port }}
               protocol: TCP
+          env:
+            - name: TS_OPERATOR_LOG_LEVEL
+              value: {{ .Values.operator.config.logLevel | quote }}
+            - name: TS_OPERATOR_PORT
+              value: {{ .Values.operator.config.port | toString | quote }}
+            - name: TS_OPERATOR_OTEL_ENDPOINT
+              value: {{ .Values.operator.config.otel.endpoint | quote }}
+            - name: TS_OPERATOR_TLS_CA_CERT_PATH
+              value: {{ .Values.operator.config.tls.caCertPath | quote }}
           livenessProbe:
-            httpGet:
-              path: /healthz
-              port: http
-            initialDelaySeconds: 5
-            periodSeconds: 10
+            {{- toYaml .Values.operator.livenessProbe | nindent 12 }}
           readinessProbe:
-            httpGet:
-              path: /readyz
-              port: http
-            initialDelaySeconds: 5
-            periodSeconds: 10
+            {{- toYaml .Values.operator.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.operator.resources | nindent 12 }}
+          volumeMounts:
+            - name: ca-cert
+              mountPath: /etc/ssl/tacito
+              readOnly: true
+      volumes:
+        - name: ca-cert
+          configMap:
+            name: {{ .Values.global.caTrustBundle.configMapName }}
+            items:
+              - key: {{ .Values.global.caTrustBundle.key }}
+                path: ca.crt
 {{- end }}

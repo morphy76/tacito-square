@@ -1,0 +1,79 @@
+{{- /* Keeper ServiceAccount and RBAC */ -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "tacito-square.fullname" . }}-keeper
+  labels:
+    {{- include "tacito-square.labels" (dict "component" "keeper" "context" .) | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "tacito-square.fullname" . }}-keeper-crd
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "tacito-square.labels" (dict "component" "keeper" "context" .) | nindent 4 }}
+rules:
+  - apiGroups: ["tacito.square.io"]
+    resources: ["tacitoagents", "tacitoagents/status"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "tacito-square.fullname" . }}-keeper-crd
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "tacito-square.labels" (dict "component" "keeper" "context" .) | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "tacito-square.fullname" . }}-keeper-crd
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "tacito-square.fullname" . }}-keeper
+    namespace: {{ .Release.Namespace }}
+
+{{- /* Operator ServiceAccount and RBAC */ -}}
+{{- if .Values.operator.enabled }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "tacito-square.fullname" . }}-operator
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "tacito-square.labels" (dict "component" "operator" "context" .) | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "tacito-square.fullname" . }}-operator-crd
+  labels:
+    {{- include "tacito-square.labels" (dict "component" "operator" "context" .) | nindent 4 }}
+rules:
+  - apiGroups: ["tacito.square.io"]
+    resources: ["tacitoagents", "tacitoagents/status"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["services", "namespaces"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "tacito-square.fullname" . }}-operator-crd
+  labels:
+    {{- include "tacito-square.labels" (dict "component" "operator" "context" .) | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "tacito-square.fullname" . }}-operator-crd
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "tacito-square.fullname" . }}-operator
+    namespace: {{ .Release.Namespace }}
+{{- end }}

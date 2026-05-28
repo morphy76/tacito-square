@@ -69,6 +69,18 @@ else
   fail "keeper ServiceAccount rendered"
 fi
 
+if grep -q "kind: Role" "${TEMPLATE_FILE}" && grep -q "keeper" "${TEMPLATE_FILE}"; then
+  pass "keeper Role rendered"
+else
+  fail "keeper Role rendered"
+fi
+
+if grep -q "kind: RoleBinding" "${TEMPLATE_FILE}" && grep -q "keeper" "${TEMPLATE_FILE}"; then
+  pass "keeper RoleBinding rendered"
+else
+  fail "keeper RoleBinding rendered"
+fi
+
 # ── 5. Agent templates ─────────────────────────────────
 section "Agent Templates"
 
@@ -87,9 +99,27 @@ else
   fail "operator Deployment rendered (enabled=true)"
 fi
 
+if grep -q "kind: ServiceAccount" "${TEMPLATE_FILE}" && grep -q "operator" "${TEMPLATE_FILE}"; then
+  pass "operator ServiceAccount rendered"
+else
+  fail "operator ServiceAccount rendered"
+fi
+
+if grep -q "kind: ClusterRole" "${TEMPLATE_FILE}" && grep -q "operator" "${TEMPLATE_FILE}"; then
+  pass "operator ClusterRole rendered"
+else
+  fail "operator ClusterRole rendered"
+fi
+
+if grep -q "kind: ClusterRoleBinding" "${TEMPLATE_FILE}" && grep -q "operator" "${TEMPLATE_FILE}"; then
+  pass "operator ClusterRoleBinding rendered"
+else
+  fail "operator ClusterRoleBinding rendered"
+fi
+
 # Verify operator is absent when disabled
 DISABLED_FILE=$(mktemp)
-helm template "${RELEASE}" "${APP_CHART}" > "${DISABLED_FILE}" 2>/dev/null || true
+helm template "${RELEASE}" "${APP_CHART}" --set operator.enabled=false > "${DISABLED_FILE}" 2>/dev/null || true
 if grep -q "app.kubernetes.io/component: operator" "${DISABLED_FILE}"; then
   fail "operator absent when disabled"
 else
