@@ -12,6 +12,7 @@ import (
 
 	"github.com/morphy76/tacito-square/internal/keeper"
 	httpAdapter "github.com/morphy76/tacito-square/internal/keeper/adapters/inbound/http"
+	"github.com/morphy76/tacito-square/internal/keeper/application/ports/inbound"
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -40,7 +41,7 @@ func TestOpenAPIContract_Parity(t *testing.T) {
 	require.NoError(t, err, "failed to parse openapi.json")
 
 	// 2. Bootstrap Gin router (nil pool is fine)
-	router := keeper.NewServer(nil)
+	router := keeper.NewServer(nil, nil, nil)
 	require.NotNil(t, router)
 
 	// Extract registered Gin routes under /api/v1
@@ -110,6 +111,10 @@ func TestOpenAPIContract_Parity(t *testing.T) {
 		"LongTermMemoryConfig":          model.LongTermMemoryConfig{},
 		"MCPClientConfig":               model.MCPClientConfig{},
 		"ErrorResponse":                 ErrorResponse{},
+		"AgentStatusDetails":            inbound.AgentStatusDetails{},
+		"AgentDeploymentResult":         inbound.AgentDeploymentResult{},
+		"CommunityDeploymentDetails":    inbound.CommunityDeploymentDetails{},
+		"CommunityStatusDetails":        inbound.CommunityStatusDetails{},
 	}
 
 	// Bidirectional registry vs spec check (no less, no more schemas)

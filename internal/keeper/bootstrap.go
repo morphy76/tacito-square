@@ -106,6 +106,7 @@ func NewServer(pool *pgxpool.Pool, nc *nats.Conn, k8sConfig *rest.Config) *gin.E
 
 	agentService := service.NewAgentService(agentRepo, crdCoord)
 	communityService := service.NewCommunityService(communityRepo)
+	lifecycleService := service.NewLifecycleService(agentRepo, communityRepo, crdCoord, nc)
 
 	// Inbound Handlers (Gin adapters depending strictly on inboundports / services)
 	handler := httpAdapter.NewLLMBindingHandler(llmService)
@@ -115,6 +116,7 @@ func NewServer(pool *pgxpool.Pool, nc *nats.Conn, k8sConfig *rest.Config) *gin.E
 	agentHandler := httpAdapter.NewAgentHandler(agentService)
 	communityHandler := httpAdapter.NewCommunityHandler(communityService)
 	assignmentHandler := httpAdapter.NewAssignmentHandler(agentService)
+	lifecycleHandler := httpAdapter.NewLifecycleHandler(lifecycleService)
 
 	v1 := r.Group("/api/v1")
 	v1.Use(httpAdapter.TenantResolutionMiddleware(httpAdapter.NewHeaderTenantResolver()))
@@ -175,6 +177,15 @@ func NewServer(pool *pgxpool.Pool, nc *nats.Conn, k8sConfig *rest.Config) *gin.E
 
 		v1.POST("/communities/:community_id/agents/:agent_id", assignmentHandler.Assign)
 		v1.DELETE("/communities/:community_id/agents/:agent_id", assignmentHandler.Unassign)
+
+		// Agent & Community Lifecycle Management routes
+		v1.POST("/agents/:agent_id/deploy", lifecycleHandler.DeployAgent)
+		v1.POST("/agents/:agent_id/undeploy", lifecycleHandler.UndeployAgent)
+		v1.GET("/agents/:agent_id/status", lifecycleHandler.GetAgentStatus)
+
+		v1.POST("/communities/:community_id/deploy", lifecycleHandler.DeployCommunity)
+		v1.POST("/communities/:community_id/undeploy", lifecycleHandler.UndeployCommunity)
+		v1.GET("/communities/:community_id/status", lifecycleHandler.GetCommunityStatus)
 	}
 
 	return r
