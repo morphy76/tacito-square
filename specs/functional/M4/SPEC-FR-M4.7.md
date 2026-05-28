@@ -11,9 +11,9 @@
 
 ## Context
 
-While Keeper provides full CRUD capabilities (Create, Retrieve, Update, Delete) for Agent templates and logical Communities, it currently lacks explicit lifecycle control endpoints to programmatically **deploy**, **undeploy**, and query the **runtime status** of existing assigned Agents and Communities.
+While Keeper provides full CRUD capabilities (Create, Retrieve, Update, Delete) for Agent templates and logical Communities, assigning an Agent to a Community automatically triggers CRD creation and runtime pod deployment (as specified in `SPEC-FR-M3.7`). 
 
-Currently, assigning an Agent to a Community automatically triggers CRD creation under Milestone 3 boundaries. However, operators and downstream consumers (such as the BFF or UI) require granular, independent controls to suspend (undeploy) and resume (deploy) running Agents/Communities without tearing down their database associations, and to fetch real-time K8s pod health status (e.g. Running, Error, Pending, Stopped).
+However, operators and downstream consumers (such as the BFF or UI) require granular, independent controls to suspend (undeploy) and resume (deploy) running Agents/Communities without tearing down their database associations, and to fetch real-time K8s pod health status (e.g., Running, Error, Pending, Stopped).
 
 This specification establishes the REST API endpoints and state machine transitions for executing Agent and Community lifecycle actions.
 
@@ -23,8 +23,8 @@ This specification establishes the REST API endpoints and state machine transiti
 
 ### 1. Agent & Community Runtime State Machine
 An assigned Agent Template possesses a runtime state managed by the Keeper, persisted in the database, and synced by the Operator:
-*   **`stopped`**: Persisted database status indicating the record exists and is assigned to a community, but no active `TacitoAgent` CRD or Pod is provisioned in the cluster.
-*   **`pending`**: CRD is submitted, but the K8s pod is still scheduling or pulling images.
+*   **`stopped`**: Persisted database status indicating the record exists and is assigned to a community, but no active `TacitoAgent` CRD or Pod is provisioned in the cluster (manually suspended via `/undeploy`).
+*   **`pending`**: CRD is submitted (via automatic assignment trigger or manual `/deploy`), but the K8s pod is still scheduling or pulling images.
 *   **`running`**: Pod is active, healthy, and NATS listener threads are processing conversation streams.
 *   **`error`**: Pod crashed, encountered OOM, or the model config failed validation at boot.
 
@@ -43,7 +43,7 @@ The `inactive` status is added directly to `model.CommunityStatus` and is suppor
 
 ### 2. Agent Lifecycle Endpoints
 
-#### A. Deploy Agent
+#### A. Deploy Agent (Resume Suspension)
 *   **Endpoint**: `POST /api/v1/agents/:agent_id/deploy`
 *   **Behavior**:
     *   The Agent MUST be assigned to a Community (its `community_id` in the DB is non-nil).
@@ -56,7 +56,7 @@ The `inactive` status is added directly to `model.CommunityStatus` and is suppor
     *   `400 Bad Request` if the Agent is not assigned to a community.
     *   `409 Conflict` if the Agent is already in a `pending` or `running` state.
 
-#### B. Undeploy Agent
+#### B. Undeploy Agent (Suspend Active)
 *   **Endpoint**: `POST /api/v1/agents/:agent_id/undeploy`
 *   **Behavior**:
     *   The Agent's current state MUST be `running`, `pending`, or `error`.
@@ -158,4 +158,3 @@ The `inactive` status is added directly to `model.CommunityStatus` and is suppor
 - `[MODIFY] internal/keeper/domain/model/community.go`
 - `[MODIFY] internal/keeper/bootstrap.go`
 - `[MODIFY] api/openapi/openapi.json`
-
