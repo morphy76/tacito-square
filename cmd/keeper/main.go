@@ -131,7 +131,7 @@ func main() {
 		var err error
 		nc, err = nats.Connect(natsURL)
 		if err != nil {
-			logger.Fatal().Err(err).Msg("failed to connect to NATS")
+			logger.Fatal().Err(err).Str("nats.url", natsURL).Msg("failed to connect to NATS")
 		}
 		mgr.Register("nats-client", func(ctx context.Context) error {
 			logger.Info().Msg("closing NATS connection")

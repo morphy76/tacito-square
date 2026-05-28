@@ -1,16 +1,19 @@
 # Tacito Square — Infrastructure Helm values
 # Secured defaults: TLS everywhere, authenticated connections, auto-provisioned tenants.
 
+tls:
+  generate: false
+
 # ── NATS (messaging backbone) ───────────────────────────
 nats:
   enabled: true
   config:
     nats:
       tls:
-        enabled: true
-        secretName: ts-infra-tacito-square-infra-nats-tls
-        cert: tls.crt
-        key: tls.key
+        enabled: false
+        # secretName:
+        # cert: tls.crt
+        # key: tls.key
       authorization:
         token: "tacito-nats-dev-token"
 
@@ -19,22 +22,22 @@ redis:
   enabled: true
   useDeploymentWhenNonHA: true
   args:
-    - "--tls-port"
-    - "\"6479\""
+    # - "--tls-port"
+    # - "\"6479\""
     - "--port"
     - "\"6379\""
-    - "--tls-cert-file"
-    - "/tls/tls.crt"
-    - "--tls-key-file"
-    - "/tls/tls.key"
-    - "--tls-ca-cert-file"
-    - "/tls/ca.crt"
+    # - "--tls-cert-file"
+    # - "/tls/tls.crt"
+    # - "--tls-key-file"
+    # - "/tls/tls.key"
+    # - "--tls-ca-cert-file"
+    # - "/tls/ca.crt"
     - "--requirepass"
     - "tacito-redis-dev"
-  extraRedisSecrets:
-    - name: ts-infra-tacito-square-infra-redis-tls
-      defaultMode: 0440
-      mountPath: /tls
+  # extraRedisSecrets:
+    # - name: ts-infra-tacito-square-infra-redis-tls
+    #   defaultMode: 0440
+    #   mountPath: /tls
 
 # ── PostgreSQL (keeper persistence) ─────────────────────
 postgresql:
@@ -52,14 +55,14 @@ postgresql:
     password:
       value: tacito-dev
   customConfig: |
-    ssl = on
-    ssl_cert_file = '/tls/tls.crt'
-    ssl_key_file = '/tls/tls.key'
-    ssl_ca_file = '/tls/ca.crt'
-  extraSecrets:
-    - name: ts-infra-tacito-square-infra-pg-tls
-      defaultMode: 0600
-      mountPath: /tls
+    ssl = off
+    # ssl_cert_file = '/tls/tls.crt'
+    # ssl_key_file = '/tls/tls.key'
+    # ssl_ca_file = '/tls/ca.crt'
+  # extraSecrets:
+    # - name: ts-infra-tacito-square-infra-pg-tls
+    #   defaultMode: 0600
+    #   mountPath: /tls
   storage:
     requestedSize: 1Gi
 
@@ -69,22 +72,22 @@ qdrant:
   replicaCount: 1
   config:
     service:
-      enable_tls: true
-    tls:
-      cert: /tls/tls.crt
-      key: /tls/tls.key
-      ca_cert: /tls/ca.crt
-  extraSecrets:
-    - name: ts-infra-tacito-square-infra-qdrant-tls
-      defaultMode: 0600
-      mountPath: /tls
-  additionalVolumes:
-    - name: qdrant-tls
-      secret:
-        secretName: ts-infra-tacito-square-infra-qdrant-tls
-  additionalVolumeMounts:
-    - name: qdrant-tls
-      mountPath: /tls
+      enable_tls: false
+    # tls:
+    #   cert: /tls/tls.crt
+    #   key: /tls/tls.key
+    #   ca_cert: /tls/ca.crt
+  # extraSecrets:
+    # - name: ts-infra-tacito-square-infra-qdrant-tls
+    #   defaultMode: 0600
+    #   mountPath: /tls
+  # additionalVolumes:
+    # - name: qdrant-tls
+    #   secret:
+    #     secretName: ts-infra-tacito-square-infra-qdrant-tls
+  # additionalVolumeMounts:
+    # - name: qdrant-tls
+    #   mountPath: /tls
 
 # ── OpenTelemetry Collector (tracing) ───────────────────
 otel-collector:
@@ -121,8 +124,8 @@ keycloak:
     - "start"
     - "--import-realm"
     - "--hostname-strict=false"
-    - "--https-certificate-file=/tls/tls.crt"
-    - "--https-certificate-key-file=/tls/tls.key"
+    # - "--https-certificate-file=/tls/tls.crt"
+    # - "--https-certificate-key-file=/tls/tls.key"
     - "--http-enabled=true"
   database:
     vendor: postgres
@@ -139,21 +142,21 @@ keycloak:
     # - name: KC_LOG_LEVEL
     #   value: "DEBUG"
   extraVolumes: |
-    - name: keycloak-tls
-      secret:
-        secretName: ts-infra-tacito-square-infra-keycloak-tls
+    # - name: keycloak-tls
+    #   secret:
+    #     secretName: ts-infra-tacito-square-infra-keycloak-tls
     - name: keycloak-realm
       configMap:
         name: keycloak-realm
   extraVolumeMounts: |
-    - name: keycloak-tls
-      mountPath: /tls
-      readOnly: true
+    # - name: keycloak-tls
+    #   mountPath: /tls
+    #   readOnly: true
     - name: keycloak-realm
       mountPath: /opt/keycloak/data/import
       readOnly: true
-  http:
-    internalScheme: HTTPS
+  # http:
+  #   internalScheme: HTTPS
 
 # ── MinIO (S3-compatible) ───────────────────────────────
 minio:
@@ -169,9 +172,9 @@ minio:
       policy: none
       purge: false
   tls:
-    enabled: true
-    certSecret: ts-infra-tacito-square-infra-minio-tls
-    publicCrt: tls.crt
-    privateKey: tls.key
+    enabled: false
+    # certSecret: ts-infra-tacito-square-infra-minio-tls
+    # publicCrt: tls.crt
+    # privateKey: tls.key
   persistence:
     size: 2Gi

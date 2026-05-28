@@ -1,3 +1,4 @@
+{{- if .Values.tls.generate }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -20,7 +21,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: tls-generate
-          image: alpine:3.20
+          image: alpine:3.23
           env:
             - name: NAMESPACE
               valueFrom:
@@ -137,7 +138,7 @@ spec:
               create_cert_secret \
                 "${RELEASE_NAME}-nats-tls" \
                 "${RELEASE_NAME}-nats" \
-                "DNS:${RELEASE_NAME}-nats,DNS:${RELEASE_NAME}-nats.${NAMESPACE}.svc.cluster.local"
+                "DNS:${RELEASE_NAME}-nats,DNS:${RELEASE_NAME}-nats.${NAMESPACE}.svc.cluster.local,DNS:ts-infra-nats-headless"
 
               create_cert_secret \
                 "${RELEASE_NAME}-qdrant-tls" \
@@ -145,3 +146,4 @@ spec:
                 "DNS:${RELEASE_NAME}-qdrant,DNS:${RELEASE_NAME}-qdrant.${NAMESPACE}.svc.cluster.local"
 
               echo ">>> TLS certificate generation complete."
+{{- end -}}
