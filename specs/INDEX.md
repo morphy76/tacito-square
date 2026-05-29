@@ -111,6 +111,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | SPEC-FR-M5.4 | Long-Term Memory (Qdrant) | DRAFT | agent | [SPEC-FR-M5.4](functional/M5/SPEC-FR-M5.4.md) |
 | SPEC-FR-M5.5 | Tool Invocation (MCP) | DRAFT | agent | [SPEC-FR-M5.5](functional/M5/SPEC-FR-M5.5.md) |
 | SPEC-FR-M5.6 | Object Storage (S3/MinIO) | DRAFT | agent | [SPEC-FR-M5.6](functional/M5/SPEC-FR-M5.6.md) |
+| SPEC-FR-M5.7 | Standalone Agent Deployment Helm Chart | DRAFT | deploy | [SPEC-FR-M5.7](functional/M5/SPEC-FR-M5.7.md) |
 
 ### M6: Communities & Messaging
 
@@ -165,7 +166,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | M2 | Application Helm Chart & Component Scaffolding | ✔️ IMPLEMENTED | 11 | [M2](milestones/M2-packaging.md) |
 | M3 | Keeper Core | ✔️ IMPLEMENTED | 8 | [M3](milestones/M3-keeper-core.md) |
 | M4 | Operator Core | ⬜ PLANNED | 6 | [M4](milestones/M4-operator-core.md) |
-| M5 | Agent Core | ⬜ PLANNED | 6 | [M5](milestones/M5-agent-core.md) |
+| M5 | Agent Core | ⬜ PLANNED | 7 | [M5](milestones/M5-agent-core.md) |
 | M6 | Communities & Messaging | ⬜ PLANNED | 7 | [M6](milestones/M6-communities.md) |
 | M7 | BFF & UIs | ⬜ PLANNED | 4 | [M7](milestones/M7-bff-uis.md) |
 | M8 | Governance | ⬜ PLANNED | 7 | [M8](milestones/M8-governance.md) |
