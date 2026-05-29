@@ -88,10 +88,11 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | SPEC-FR-M4.1 | Agent CRD Definition & Registration | IMPLEMENTED | operator | [SPEC-FR-M4.1](functional/M4/SPEC-FR-M4.1.md) |
 | SPEC-FR-M4.2 | AgentCommunity CRD Definition | REJECTED | operator | [SPEC-FR-M4.2](functional/M4/SPEC-FR-M4.2.md) |
 | SPEC-FR-M4.3 | Reconciliation Controller | IMPLEMENTED | operator | [SPEC-FR-M4.3](functional/M4/SPEC-FR-M4.3.md) |
-| SPEC-FR-M4.4 | Zero-Scaling Support | DRAFT | operator | [SPEC-FR-M4.4](functional/M4/SPEC-FR-M4.4.md) |
+| SPEC-FR-M4.4 | Zero-Scaling Support | ACCEPTED | operator | [SPEC-FR-M4.4](functional/M4/SPEC-FR-M4.4.md) |
 | SPEC-FR-M4.5 | OIDC/JWT Authentication | DRAFT | keeper, shared | [SPEC-FR-M4.5](functional/M4/SPEC-FR-M4.5.md) |
 | SPEC-FR-M4.6 | Agent CRD Submission | IMPLEMENTED | keeper | [SPEC-FR-M4.6](functional/M4/SPEC-FR-M4.6.md) |
 | SPEC-FR-M4.7 | Agent & Community Lifecycle Management REST API | IMPLEMENTED | keeper, operator | [SPEC-FR-M4.7](functional/M4/SPEC-FR-M4.7.md) |
+| SPEC-FR-M4.8 | Community Echo Endpoint | ACCEPTED | keeper, agent | [SPEC-FR-M4.8](functional/M4/SPEC-FR-M4.8.md) |
 
 ### M4: Bugs
 
@@ -197,6 +198,8 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | SPEC-FR-M3.8 | 8 | Domain, HTTP API Boundaries, Observability & Helm | [tasks/M3.8/](tasks/M3.8/) |
 | SPEC-FR-M4.1 | 3 | RED → GREEN → REFACTOR | [tasks/M4.1/](tasks/M4.1/) |
 | SPEC-FR-M4.3 | 3 | RED → GREEN → REFACTOR | [tasks/M4.3/](tasks/M4.3/) |
+| SPEC-FR-M4.4 | 6 | CRD Schema, HeartbeatStore, NATS Subscriber, Scale Service, Reconciler, Bootstrap | [tasks/M4.4/](tasks/M4.4/) |
 | SPEC-FR-M4.6 | 3 | RED → GREEN → REFACTOR | [tasks/M4.6/](tasks/M4.6/) |
 | SPEC-FR-M4.7 | 5 | RED → GREEN → REFACTOR | [tasks/M4.7/](tasks/M4.7/) |
+| SPEC-FR-M4.8 | 7 | Domain, Ports, NATS Adapter, Service, HTTP Handler, Agent Subscriber, Bootstrap | [tasks/M4.8/](tasks/M4.8/) |
 
