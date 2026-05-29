@@ -5,7 +5,7 @@
 | Task ID     | TASK-M4.8-T4                                             |
 | Spec        | SPEC-FR-M4.8                                             |
 | Boundary    | Application Service — `internal/keeper/application/service` |
-| Status      | TODO                                                     |
+| Status      | VERIFIED                                                  |
 | Depends On  | TASK-M4.8-T2, TASK-M4.8-T3                              |
 
 ## Objective

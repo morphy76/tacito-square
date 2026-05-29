@@ -1,7 +1,5 @@
 # Brainstorming
 
-- sdd-spec-creation
- in milestone 5 about a new helm chart which deploys an agent image as astandalone component, the required configuration, which cannot be retrieved from the keeper, is provided using an internal configmap filled from structured helm values, such agent will keep on leveraging external infrastructural dependencies, e.g. LTM, STM and so on...
 - keeper: get /readyz keeper: get /healthz da ignorare in export tracce
 - convert metrics from prometheus to otel
 - Tacito multistage builds addirional make steps, they are faster than the single stage builds and decouples the workspace from tooling and runtime dependencies. This is especially useful for development, where we want to iterate quickly on the workspace without having to rebuild the entire image.
