@@ -158,3 +158,40 @@ The `inactive` status is added directly to `model.CommunityStatus` and is suppor
 - `[MODIFY] internal/keeper/domain/model/community.go`
 - `[MODIFY] internal/keeper/bootstrap.go`
 - `[MODIFY] api/openapi/openapi.json`
+
+---
+
+## Errata Corrige
+
+> **Effective**: 2026-05-29 | **Reason**: SPEC-FR-M4.2 rejected — `TacitoCommunity` CRD does not exist.
+
+### Architectural Clarification: Community Is a Keeper Database Entity
+
+A **Community** is a purely logical grouping of agent templates, persisted as a row in Keeper's PostgreSQL `communities` table. It is **not** a Kubernetes deployable unit and has **no CRD, no Operator reconciler, and no K8s runtime lifecycle**.
+
+The correct data model is:
+
+```
+Keeper DB (PostgreSQL)
+└── communities (id, name, status, ...)
+    └── agents (id, community_id FK, status, ...)
+
+Kubernetes API Server
+└── TacitoAgent CRD (spec.communityRef = community UUID string)
+    └── Deployment  ← reconciled by Operator
+    └── headless Service ← reconciled by Operator
+```
+
+### Community Lifecycle Endpoints Are Keeper REST Calls, Not Operator-Reconciled Objects
+
+The endpoints `POST /api/v1/communities/:id/deploy` and `POST /api/v1/communities/:id/undeploy` (Section 3) are **Keeper REST API calls** that bulk-orchestrate `TacitoAgent` CRDs:
+
+- **Deploy community** → Keeper iterates all agents assigned to the community and submits one `TacitoAgent` CRD per agent to the Kubernetes API server (in parallel). Community `status` is a DB field updated by Keeper.
+- **Undeploy community** → Keeper iterates all assigned agents and deletes their `TacitoAgent` CRDs (in parallel). Community `status` transitions to `inactive` in the DB.
+
+No community-level Kubernetes resource is created, modified, or deleted in either operation.
+
+### `Depends On` Correction
+
+The `Depends On` field of this spec should reference `SPEC-FR-M3.7, SPEC-FR-M4.1, SPEC-FR-M4.6` only. The implicit dependency on `SPEC-FR-M4.2` (AgentCommunity CRD) is **removed** as that spec has been rejected.
+

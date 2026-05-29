@@ -29,7 +29,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 
 | ID | Title | Status | Severity | File |
 |----|-------|--------|----------|------|
-| BUG-M1.1 | PostgreSQL Server Does Not Support or Accept SSL Connections | OPEN | HIGH | [BUG-M1.1](tasks/M1.BUG1/BUG-M1.1.md) |
+| BUG-M1.1 | Infrastructure Services Do Not Enforce SSL/TLS or Authenticated Connections | OPEN | HIGH | [BUG-M1.1](tasks/M1.BUG1/BUG-M1.1.md) |
 
 ### M2: Application Helm Chart & Component Scaffolding
 
@@ -86,7 +86,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | ID | Title | Status | Component | File |
 |----|-------|--------|-----------|------|
 | SPEC-FR-M4.1 | Agent CRD Definition & Registration | IMPLEMENTED | operator | [SPEC-FR-M4.1](functional/M4/SPEC-FR-M4.1.md) |
-| SPEC-FR-M4.2 | AgentCommunity CRD Definition | DRAFT | operator | [SPEC-FR-M4.2](functional/M4/SPEC-FR-M4.2.md) |
+| SPEC-FR-M4.2 | AgentCommunity CRD Definition | REJECTED | operator | [SPEC-FR-M4.2](functional/M4/SPEC-FR-M4.2.md) |
 | SPEC-FR-M4.3 | Reconciliation Controller | IMPLEMENTED | operator | [SPEC-FR-M4.3](functional/M4/SPEC-FR-M4.3.md) |
 | SPEC-FR-M4.4 | Zero-Scaling Support | DRAFT | operator | [SPEC-FR-M4.4](functional/M4/SPEC-FR-M4.4.md) |
 | SPEC-FR-M4.5 | OIDC/JWT Authentication | DRAFT | keeper, shared | [SPEC-FR-M4.5](functional/M4/SPEC-FR-M4.5.md) |

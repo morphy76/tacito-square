@@ -95,3 +95,18 @@ The operator must watch `TacitoAgent` CRDs and reconcile them into Kubernetes De
 * `internal/operator/application/service/reconcile_service.go` [NEW]
 * `internal/operator/bootstrap.go` (Register the reconciler with the manager setup)
 
+---
+
+## Errata Corrige
+
+> **Effective**: 2026-05-29 | **Reason**: SPEC-FR-M4.2 rejected — `TacitoCommunity` CRD does not exist.
+
+### `TS_AGENT_COMMUNITY_REF` — Community UUID, Not a CRD Reference
+
+Section 3 ("Multi-Tenancy & Base Configuration Injection") lists `TS_AGENT_COMMUNITY_REF` as sourced from `spec.communityRef`. This is correct, but the description *"from `spec.communityRef`"* must be understood as: **a plain UUID string** (the community's PostgreSQL database ID), not a reference to a Kubernetes `TacitoCommunity` resource.
+
+### No TacitoCommunity Reconciler
+
+The Operator reconciles **only `TacitoAgent` CRDs**. There is no `TacitoCommunity` CRD, no community reconciler loop, and no community controller registered with `controller-runtime`. The controller manager setup in `internal/operator/bootstrap.go` must register only the `TacitoAgent` reconciler.
+
+

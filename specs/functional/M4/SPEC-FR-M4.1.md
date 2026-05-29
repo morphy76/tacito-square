@@ -82,3 +82,20 @@ The operator needs a CustomResourceDefinition (CRD) for `TacitoAgent` resources 
 * `tools/helm/tacito-square/crds/tacitoagents.yaml` [NEW]
 * `internal/operator/bootstrap.go` (Enhance `/readyz` probe to check Kube client)
 
+---
+
+## Errata Corrige
+
+> **Effective**: 2026-05-29 | **Reason**: SPEC-FR-M4.2 rejected — `TacitoCommunity` CRD does not exist.
+
+### `spec.communityRef` — Plain UUID String, Not a K8s Resource Reference
+
+Section 2 ("CRD Spec Fields & Validations") specifies `communityRef` as *"Reference to the parent `TacitoCommunity` ID/name"*. This description is **incorrect** and must be read as follows:
+
+- `communityRef` (string, required) — The **database UUID** of the community this agent belongs to, as stored in Keeper's PostgreSQL `communities` table. Minimum length: 1.
+- There is **no `TacitoCommunity` CRD** in the Kubernetes API server. `communityRef` is a plain opaque string used for NATS subject namespacing and agent isolation, not a cross-resource K8s reference.
+- The Operator must **not** attempt to resolve or watch a `TacitoCommunity` resource when this field is populated.
+
+The Go struct field type (`string`) is already correct in the implementation; only the spec prose description was misleading.
+
+

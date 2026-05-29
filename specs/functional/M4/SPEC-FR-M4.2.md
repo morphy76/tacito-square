@@ -3,31 +3,46 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M4.2                                |
-| Status        | DRAFT                                       |
+| Status        | REJECTED                                    |
 | Milestone     | M4                                          |
 | Component     | operator                                    |
 | Depends On    | SPEC-FR-M4.1                                |
 | Supersedes    | none                                        |
 
-## Context
+## Rejection Rationale
 
-The TacitoCommunity CRD represents a community of agents in the cluster. It defines the topology, member agents, and community-level configuration that the operator uses for orchestration.
+This specification has been **rejected** on architectural grounds. A `TacitoCommunity` Kubernetes CRD must **not** be created.
 
-## Specification
+### Why a TacitoCommunity CRD is Wrong
 
-1. The system MUST define a `TacitoCommunity` CRD in API group `tacito.square.io/v1alpha1`.
-2. The CRD spec MUST include fields: communityName, topology (enum: hub-spoke), agentRefs (list of TacitoAgent references), quotas (maxAgents, maxTokens), natsNamespace.
-3. The CRD status MUST include fields: phase (Pending, Active, Suspended, Terminated), activeAgents (count), conditions.
-4. The CRD MUST be generated using Kubebuilder markers.
+A **Community** is a purely logical, database-layer grouping concept owned by the **Keeper** component. It is:
 
-## Acceptance Criteria
+- Persisted as a row in the PostgreSQL `communities` table.
+- Managed exclusively via Keeper's REST API (`POST /api/v1/communities`, `GET`, `PUT`, `DELETE`).
+- Referenced by `TacitoAgent` records via a `community_id` UUID foreign key.
+- Used as a namespacing boundary for NATS subjects and agent isolation.
 
-To be defined during spec review.
+A Community has **no independent Kubernetes workload**, **no pods**, **no containers**, and **no runtime lifecycle** of its own in the cluster. The Kubernetes Operator's sole responsibility is to watch `TacitoAgent` CRDs and reconcile them into Deployments and headless Services. There is no Operator controller, no reconciler loop, and no K8s resource kind for communities.
 
-## Test Plan
+### What "Community Lifecycle" Actually Means
 
-To be defined during spec review.
+The lifecycle endpoints `POST /api/v1/communities/:id/deploy` and `POST /api/v1/communities/:id/undeploy` (defined in `SPEC-FR-M4.7`) are **Keeper REST API calls** that iterate over all agent templates assigned to a community and bulk-submit or bulk-delete their corresponding `TacitoAgent` CRDs. Community state (`created`, `active`, `inactive`, `suspended`, `terminated`) is a database field, not a Kubernetes resource status.
 
-## Files Affected
+### Correct Data Model
 
-To be defined during spec review.
+```
+Keeper DB (PostgreSQL)
+└── communities (id, name, status, ...)
+    └── agents (id, community_id FK, status, ...)
+
+Kubernetes API Server
+└── TacitoAgent CRD (spec.communityRef = community UUID string)
+    └── Deployment  ← reconciled by Operator
+    └── headless Service ← reconciled by Operator
+```
+
+`TacitoCommunity` does not appear in the Kubernetes API Server at any point.
+
+## Superseded By
+
+None. This design decision is final. Any future requirement to represent community-level cluster state should open a new superseding spec with explicit justification.

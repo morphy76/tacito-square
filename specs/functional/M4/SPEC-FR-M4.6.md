@@ -104,3 +104,21 @@ When an agent template is declartively assigned to a community, the Keeper must 
 * `pkg/kubernetes/apis/tacito/v1alpha1/tacitoagent_types.go` [NEW - Shared with Operator]
 * `pkg/kubernetes/apis/tacito/v1alpha1/zz_generated.deepcopy.go` [NEW - Shared with Operator]
 
+---
+
+## Errata Corrige
+
+> **Effective**: 2026-05-29 | **Reason**: SPEC-FR-M4.2 rejected — `TacitoCommunity` CRD does not exist.
+
+### No `TacitoCommunity` Type in the Shared K8s Package
+
+Section 1 ("Shared Kubernetes API Schema Types") states that *"The `TacitoAgent` and `TacitoCommunity` Go structs MUST reside in a shared package `pkg/kubernetes/apis/tacito/v1alpha1/`"*. This is **partially incorrect**:
+
+- Only the **`TacitoAgent`** Go struct and its associated deepcopy/groupversion files belong in `pkg/kubernetes/apis/tacito/v1alpha1/`.
+- **`TacitoCommunity` must not be defined** in this package or anywhere else as a Kubernetes API type. There is no community CRD, no community Go runtime type in the K8s API layer, and no `tacitocommunity_types.go` file.
+
+### `spec.communityRef` Populated With a UUID String
+
+Section 2 ("Custom Resource Construction") maps `spec.communityRef` ← `agent.CommunityID.String()`. This is correct. The value is the **community's database UUID** as a plain string. The `TacitoAgent` CRD stores it as an opaque identifier; the Operator does not resolve it against any Kubernetes resource.
+
+
