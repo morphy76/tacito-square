@@ -220,3 +220,8 @@ prometheus:
       static_configs:
         - targets:
             - "ts-infra-otel-collector:8889"
+    dyna-tacito:
+      enabled: true
+      job_name: "dyna-tacito"
+      kubernetes_sd_configs:
+        - role: pod
