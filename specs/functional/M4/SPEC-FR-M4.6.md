@@ -121,4 +121,17 @@ Section 1 ("Shared Kubernetes API Schema Types") states that *"The `TacitoAgent`
 
 Section 2 ("Custom Resource Construction") maps `spec.communityRef` ← `agent.CommunityID.String()`. This is correct. The value is the **community's database UUID** as a plain string. The `TacitoAgent` CRD stores it as an opaque identifier; the Operator does not resolve it against any Kubernetes resource.
 
+> **Effective**: 2026-05-30 | **Reason**: Kubernetes RFC 1123 DNS subdomain naming constraint.
+
+### CRD `ObjectMeta.Name` Requires a `u-` Prefix
+
+Section 2 ("Custom Resource Construction") does not specify the naming convention for the `ObjectMeta.Name` of the created `TacitoAgent` custom resource. The implementation uses the format:
+
+```
+u-<lowercase-agent-UUID>
+```
+
+The `u-` prefix is **required** because Kubernetes resource names must conform to RFC 1123 DNS subdomain rules, which mandate that names begin with a lowercase alphabetic character. UUIDs are hex strings that can start with digits (`0`–`9`), making raw UUIDs invalid as K8s resource names. The `u-` prefix (short for "unit") guarantees a valid leading character.
+
+All lookup, update, teardown, and status-check operations MUST consistently use `"u-" + strings.ToLower(agentID.String())` as the resource name.
 

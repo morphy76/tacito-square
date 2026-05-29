@@ -194,7 +194,7 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 		communityRef = agent.CommunityID.String()
 	}
 
-	key := types.NamespacedName{Namespace: c.namespace, Name: agent.ID.String()}
+	key := types.NamespacedName{Namespace: c.namespace, Name: "u-" + strings.ToLower(agent.ID.String())}
 	existing := &v1alpha1.TacitoAgent{}
 
 	getErr := c.client.Get(deadlineCtx, key, existing)
@@ -270,7 +270,7 @@ func (c *K8sCRDCoordinator) GetAgentCRDStatus(ctx context.Context, agentID uuid.
 	deadlineCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	key := types.NamespacedName{Namespace: c.namespace, Name: agentID.String()}
+	key := types.NamespacedName{Namespace: c.namespace, Name: "u-" + strings.ToLower(agentID.String())}
 	agentCRD := &v1alpha1.TacitoAgent{}
 
 	err := c.client.Get(deadlineCtx, key, agentCRD)

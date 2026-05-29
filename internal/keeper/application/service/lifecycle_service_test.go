@@ -131,7 +131,9 @@ func TestLifecycleService_DeployAgent_Success(t *testing.T) {
 	}
 
 	agentRepo.On("GetByID", mock.Anything, agentID).Return(agent, nil)
-	crdCoord.On("SubmitAgentCRD", mock.Anything, agent).Return(nil)
+	crdCoord.On("SubmitAgentCRD", mock.Anything, mock.MatchedBy(func(a *model.Agent) bool {
+		return a.ID == agentID && a.Status == model.AgentStatusPending
+	})).Return(nil)
 	agentRepo.On("Update", mock.Anything, mock.MatchedBy(func(a *model.Agent) bool {
 		return a.Status == model.AgentStatusPending
 	})).Return(nil)
@@ -238,7 +240,9 @@ func TestLifecycleService_DeployCommunity_MultiStatusPartialSuccess(t *testing.T
 
 	// mock DeployAgent behaviours: first succeeds, second fails
 	agentRepo.On("GetByID", mock.Anything, agentID1).Return(agents[0], nil)
-	crdCoord.On("SubmitAgentCRD", mock.Anything, agents[0]).Return(nil)
+	crdCoord.On("SubmitAgentCRD", mock.Anything, mock.MatchedBy(func(a *model.Agent) bool {
+		return a.ID == agentID1 && a.Status == model.AgentStatusPending
+	})).Return(nil)
 	agentRepo.On("Update", mock.Anything, mock.MatchedBy(func(a *model.Agent) bool {
 		return a.ID == agentID1 && a.Status == model.AgentStatusPending
 	})).Return(nil)
@@ -247,7 +251,9 @@ func TestLifecycleService_DeployCommunity_MultiStatusPartialSuccess(t *testing.T
 	agentRepo.On("Update", mock.Anything, mock.MatchedBy(func(a *model.Agent) bool {
 		return a.ID == agentID2 && a.Status == model.AgentStatusPending
 	})).Return(nil)
-	crdCoord.On("SubmitAgentCRD", mock.Anything, agents[1]).Return(errors.New("k8s API error"))
+	crdCoord.On("SubmitAgentCRD", mock.Anything, mock.MatchedBy(func(a *model.Agent) bool {
+		return a.ID == agentID2 && a.Status == model.AgentStatusPending
+	})).Return(errors.New("k8s API error"))
 
 	// We still update the community to active if at least one starts, or let's say community status transitions to active
 	commRepo.On("Update", mock.Anything, mock.MatchedBy(func(c *model.Community) bool {

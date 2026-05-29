@@ -66,14 +66,18 @@ func (s *LifecycleService) DeployAgent(ctx context.Context, agentID uuid.UUID) e
 		return fmt.Errorf("agent is already pending or running")
 	}
 
-	agent.Status = model.AgentStatusPending
-	agent.UpdatedAt = time.Now().UTC()
-	if err := s.agentRepo.Update(ctx, agent); err != nil {
+	// Work on a shallow copy to avoid mutating the repository-returned pointer,
+	// which would cause data races when DeployAgent is called concurrently
+	// from DeployCommunity's errgroup goroutines.
+	agentCopy := *agent
+	agentCopy.Status = model.AgentStatusPending
+	agentCopy.UpdatedAt = time.Now().UTC()
+	if err := s.agentRepo.Update(ctx, &agentCopy); err != nil {
 		return fmt.Errorf("updating agent status to pending: %w", err)
 	}
 
 	// Submit CRD which asynchronously triggers K8s and publishes started/completed NATS events
-	if err := s.crdCoordinator.SubmitAgentCRD(ctx, agent); err != nil {
+	if err := s.crdCoordinator.SubmitAgentCRD(ctx, &agentCopy); err != nil {
 		return fmt.Errorf("submitting agent CRD: %w", err)
 	}
 

@@ -55,7 +55,7 @@ func TestSubmitAgentCRD_CreateSuccess(t *testing.T) {
 
 	// Fetch custom resource from fake client
 	fetched := &v1alpha1.TacitoAgent{}
-	key := types.NamespacedName{Namespace: "tacito", Name: agentID.String()}
+	key := types.NamespacedName{Namespace: "tacito", Name: "u-" + agentID.String()}
 	err = fakeClient.Get(context.Background(), key, fetched)
 	assert.NoError(t, err)
 
@@ -79,7 +79,7 @@ func TestSubmitAgentCRD_UpdateSuccess(t *testing.T) {
 	// Pre-populate an existing CRD
 	existing := &v1alpha1.TacitoAgent{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      agentID.String(),
+			Name:      "u-" + agentID.String(),
 			Namespace: "tacito",
 		},
 		Spec: v1alpha1.TacitoAgentSpec{
@@ -114,7 +114,7 @@ func TestSubmitAgentCRD_UpdateSuccess(t *testing.T) {
 
 	// Fetch custom resource from fake client and check updates
 	fetched := &v1alpha1.TacitoAgent{}
-	key := types.NamespacedName{Namespace: "tacito", Name: agentID.String()}
+	key := types.NamespacedName{Namespace: "tacito", Name: "u-" + agentID.String()}
 	err = fakeClient.Get(context.Background(), key, fetched)
 	assert.NoError(t, err)
 
@@ -135,7 +135,7 @@ func TestSubmitAgentCRD_ConflictResolution(t *testing.T) {
 	// Pre-populate an existing CRD
 	existing := &v1alpha1.TacitoAgent{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      agentID.String(),
+			Name:      "u-" + agentID.String(),
 			Namespace: "tacito",
 		},
 		Spec: v1alpha1.TacitoAgentSpec{
@@ -185,7 +185,7 @@ func TestSubmitAgentCRD_ConflictResolution(t *testing.T) {
 
 	// Verify updates persisted
 	fetched := &v1alpha1.TacitoAgent{}
-	key := types.NamespacedName{Namespace: "tacito", Name: agentID.String()}
+	key := types.NamespacedName{Namespace: "tacito", Name: "u-" + agentID.String()}
 	err = fakeClient.Get(context.Background(), key, fetched)
 	assert.NoError(t, err)
 	assert.Equal(t, "agent-new", fetched.Spec.AgentName)
@@ -246,7 +246,7 @@ func TestTeardownAgentCRD_Success(t *testing.T) {
 	agentID := uuid.New()
 	existing := &v1alpha1.TacitoAgent{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      agentID.String(),
+			Name:      "u-" + agentID.String(),
 			Namespace: "tacito",
 		},
 	}
@@ -264,7 +264,7 @@ func TestTeardownAgentCRD_Success(t *testing.T) {
 
 	// Assert deleted
 	fetched := &v1alpha1.TacitoAgent{}
-	key := types.NamespacedName{Namespace: "tacito", Name: agentID.String()}
+	key := types.NamespacedName{Namespace: "tacito", Name: "u-" + agentID.String()}
 	err = fakeClient.Get(context.Background(), key, fetched)
 	assert.Error(t, err)
 	assert.True(t, apierrors.IsNotFound(err))
@@ -565,7 +565,7 @@ func TestSubmitAgentCRD_SynthesizedPromptAndTenantMapped(t *testing.T) {
 	assert.NoError(t, err)
 
 	fetched := &v1alpha1.TacitoAgent{}
-	key := types.NamespacedName{Namespace: "tacito", Name: agentID.String()}
+	key := types.NamespacedName{Namespace: "tacito", Name: "u-" + agentID.String()}
 	err = fakeClient.Get(context.Background(), key, fetched)
 	assert.NoError(t, err)
 
@@ -634,7 +634,7 @@ func TestGetAgentCRDStatus_Existing(t *testing.T) {
 	agentID := uuid.New()
 	existing := &v1alpha1.TacitoAgent{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      agentID.String(),
+			Name:      "u-" + agentID.String(),
 			Namespace: "tacito",
 		},
 		Status: v1alpha1.TacitoAgentStatus{
