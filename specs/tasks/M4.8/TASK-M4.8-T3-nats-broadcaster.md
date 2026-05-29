@@ -5,7 +5,7 @@
 | Task ID     | TASK-M4.8-T3                                                  |
 | Spec        | SPEC-FR-M4.8                                                  |
 | Boundary    | Outbound Adapter — `internal/keeper/adapters/outbound/nats`   |
-| Status      | TODO                                                          |
+| Status      | VERIFIED                                                      |
 | Depends On  | TASK-M4.8-T2                                                  |
 
 ## Objective

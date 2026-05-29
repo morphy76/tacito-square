@@ -5,7 +5,7 @@
 | Task ID     | TASK-M4.8-T2                                            |
 | Spec        | SPEC-FR-M4.8                                            |
 | Boundary    | Application Ports — `internal/keeper/application/ports` |
-| Status      | TODO                                                    |
+| Status      | VERIFIED                                                |
 | Depends On  | TASK-M4.8-T1                                            |
 
 ## Objective

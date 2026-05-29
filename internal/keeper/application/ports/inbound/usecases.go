@@ -84,3 +84,11 @@ type AssignmentUseCase interface {
 	Assign(ctx context.Context, communityID uuid.UUID, agentID uuid.UUID) error
 	Unassign(ctx context.Context, communityID uuid.UUID, agentID uuid.UUID) error
 }
+
+// EchoUseCase defines the driving port for the community echo feature.
+type EchoUseCase interface {
+	// EchoCommunity sanitizes the message, fans it out to all running agents in
+	// the community via NATS request-reply, and returns the aggregated results.
+	EchoCommunity(ctx context.Context, communityID uuid.UUID, message string) (*model.CommunityEchoResponse, error)
+}
+
