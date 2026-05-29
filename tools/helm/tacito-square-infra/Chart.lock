@@ -20,5 +20,11 @@ dependencies:
 - name: minio
   repository: https://charts.min.io/
   version: 5.4.0
-digest: sha256:cb6057a0f0eee91acdd8e14fe73041677a7a3fb98a2e400016518655ca5bb8b5
-generated: "2026-05-22T18:43:09.109819+02:00"
+- name: zipkin
+  repository: https://zipkin.io/zipkin-helm
+  version: 0.5.0
+- name: prometheus
+  repository: https://prometheus-community.github.io/helm-charts
+  version: 29.9.0
+digest: sha256:808ec753c26553595b38e2a5e55e39990845462e7086d8377be29db9d08fe513
+generated: "2026-05-29T20:16:29.485421+02:00"
