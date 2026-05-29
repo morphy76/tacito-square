@@ -92,7 +92,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | SPEC-FR-M4.5 | OIDC/JWT Authentication | DRAFT | keeper, shared | [SPEC-FR-M4.5](functional/M4/SPEC-FR-M4.5.md) |
 | SPEC-FR-M4.6 | Agent CRD Submission | IMPLEMENTED | keeper | [SPEC-FR-M4.6](functional/M4/SPEC-FR-M4.6.md) |
 | SPEC-FR-M4.7 | Agent & Community Lifecycle Management REST API | IMPLEMENTED | keeper, operator | [SPEC-FR-M4.7](functional/M4/SPEC-FR-M4.7.md) |
-| SPEC-FR-M4.8 | Community Echo Endpoint | ACCEPTED | keeper, agent | [SPEC-FR-M4.8](functional/M4/SPEC-FR-M4.8.md) |
+| SPEC-FR-M4.8 | Community Echo Endpoint | IN_PROGRESS | keeper, agent | [SPEC-FR-M4.8](functional/M4/SPEC-FR-M4.8.md) |
 
 ### M4: Bugs
 

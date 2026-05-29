@@ -5,7 +5,7 @@
 | Task ID     | TASK-M4.8-T1                                  |
 | Spec        | SPEC-FR-M4.8                                  |
 | Boundary    | Domain Layer — `internal/keeper/domain/model` |
-| Status      | TODO                                          |
+| Status      | IMPLEMENTED                                   |
 | Depends On  | —                                             |
 
 ## Objective
