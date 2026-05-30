@@ -118,7 +118,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | SPEC-FR-M5.4 | Long-Term Memory (Qdrant) | DRAFT | agent | [SPEC-FR-M5.4](functional/M5/SPEC-FR-M5.4.md) |
 | SPEC-FR-M5.5 | Tool Invocation (MCP) | DRAFT | agent | [SPEC-FR-M5.5](functional/M5/SPEC-FR-M5.5.md) |
 | SPEC-FR-M5.6 | Object Storage (S3/MinIO) | DRAFT | agent | [SPEC-FR-M5.6](functional/M5/SPEC-FR-M5.6.md) |
-| SPEC-FR-M5.7 | Standalone Agent Deployment Helm Chart | ACCEPTED | deploy | [SPEC-FR-M5.7](functional/M5/SPEC-FR-M5.7.md) |
+| SPEC-FR-M5.7 | Standalone Agent Deployment Helm Chart | IN_PROGRESS | deploy | [SPEC-FR-M5.7](functional/M5/SPEC-FR-M5.7.md) |
 | SPEC-FR-M5.8 | Benchmark Suite & Integration Coverage Verification | ACCEPTED | test | [SPEC-FR-M5.8](functional/M5/SPEC-FR-M5.8.md) |
 | SPEC-FR-M5.9 | Flexible Agent Runtime Tiers & Deployment Customization | ACCEPTED | keeper, operator, deploy | [SPEC-FR-M5.9](functional/M5/SPEC-FR-M5.9.md) |
 

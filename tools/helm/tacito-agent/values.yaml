@@ -1,0 +1,44 @@
+# Tacito Agent — Standalone application Helm values
+# This configuration runs a single agent statically in Kubernetes,
+# completely independent of the dynamic Keeper lifecycle APIs and the Operator.
+
+# --- Agent Metadata & Identity ---
+agent:
+  id: "00000000-0000-0000-0000-000000000000"
+  name: "standalone-agent"
+  tenantId: "default-tenant"
+  communityRef: "standalone-community"
+
+  # --- LLM Brain Configuration ---
+  llm:
+    model: "gpt-4o"
+    endpoint: "https://api.openai.com/v1"
+    temperature: 0.7
+    maxTokens: 2048
+    credentialsSecret: "tacito-agent-llm-secret"
+
+  # --- System Prompt (multi-line) ---
+  systemPrompt: |
+    You are a helpful and precise coding assistant.
+    You assist the user in their software tasks.
+
+# --- Short-Term Memory (Redis) ---
+redis:
+  url: "rediss://ts-infra-redis:6379"
+  keyNamespace: "tacito:agent"
+  ttlSeconds: 3600
+
+# --- Long-Term Memory (Qdrant) ---
+qdrant:
+  url: "http://ts-infra-qdrant:6334"
+  collectionName: "tacito-memories"
+  vectorDimension: 1536
+
+# --- Event Bus (NATS) ---
+nats:
+  url: "nats://ts-infra-nats:4222"
+
+# --- Object Storage (S3/MinIO) ---
+s3:
+  url: "https://ts-infra-minio:9000"
+  bucket: "tacito"
