@@ -134,6 +134,8 @@ operator:
     port: 8082
     otel:
       endpoint: "tacito-infra-otel-collector:4317"
+    nats:
+      url: "nats://tacito-infra-nats:4222"
     tls:
       caCertPath: "/etc/ssl/tacito/ca.crt"
 

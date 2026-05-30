@@ -27,12 +27,24 @@ spec:
           env:
             - name: TS_OPERATOR_LOG_LEVEL
               value: {{ .Values.operator.config.logLevel | quote }}
+            - name: TS_OPERATOR_AGENT_LOG_LEVEL
+              value: {{ .Values.agent.config.logLevel | quote }}
             - name: TS_OPERATOR_PORT
               value: {{ .Values.operator.config.port | toString | quote }}
+            - name: TS_OPERATOR_AGENT_PORT
+              value: {{ .Values.agent.config.port | quote }}
             - name: TS_OPERATOR_OTEL_ENDPOINT
               value: {{ .Values.operator.config.otel.endpoint | quote }}
+            - name: TS_OPERATOR_AGENT_OTEL_ENDPOINT
+              value: {{ .Values.agent.config.otel.endpoint | quote }}
+            - name: TS_OPERATOR_NATS_URL
+              value: {{ .Values.operator.config.nats.url | quote }}
+            - name: TS_OPERATOR_AGENT_NATS_URL
+              value: {{ .Values.agent.config.nats.url | quote }}
             - name: TS_OPERATOR_TLS_CA_CERT_PATH
               value: {{ .Values.operator.config.tls.caCertPath | quote }}
+            - name: TS_OPERATOR_AGENT_TLS_CA_CERT_PATH
+              value: {{ .Values.agent.config.tls.caCertPath | quote }}
           livenessProbe:
             {{- toYaml .Values.operator.livenessProbe | nindent 12 }}
           readinessProbe:
