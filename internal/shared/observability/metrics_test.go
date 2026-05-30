@@ -1,13 +1,15 @@
 package observability
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
 )
 
 func TestMetricsMiddleware_InstrumentsRequests(t *testing.T) {
@@ -32,24 +34,40 @@ func TestRegisterDBPoolStats_NilPool_NoPanic(t *testing.T) {
 	})
 }
 
-func TestDBPoolCollector_NilPool_NoPanic(t *testing.T) {
-	collector := NewDBPoolCollector(nil)
-	descs := make(chan *prometheus.Desc, 10)
-	assert.NotPanics(t, func() {
-		collector.Describe(descs)
-	})
+func TestMetricsExposition_OTel(t *testing.T) {
+	gin.SetMode(gin.TestMode)
 
-	metrics := make(chan prometheus.Metric, 10)
-	assert.NotPanics(t, func() {
-		collector.Collect(metrics)
-	})
-}
+	ctx := context.Background()
+	// Initialize unified telemetry (InitTracer acts as our telemetry bootstrapper)
+	shutdown, err := InitTracer(ctx, "test-service", "1.0.0", "")
+	require.NoError(t, err)
+	defer shutdown(ctx)
 
-func TestCustomPrometheusMetrics_Registration(t *testing.T) {
-	assert.NotNil(t, ActiveThreads)
-	assert.NotNil(t, AgentStatus)
-	assert.NotNil(t, PendingHITLCallbacks)
-	assert.NotNil(t, CommunityQuotaUtilization)
-	assert.NotNil(t, AgentQuotaUtilization)
-	assert.NotNil(t, OutboundDependencyDuration)
+	r := gin.New()
+	r.Use(MetricsMiddleware())
+	r.GET("/test", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+	r.GET("/metrics", MetricsHandler())
+
+	// Record a request metric
+	req, _ := http.NewRequest(http.MethodGet, "/test", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Scrape the /metrics endpoint
+	reqMetrics, _ := http.NewRequest(http.MethodGet, "/metrics", nil)
+	wMetrics := httptest.NewRecorder()
+	r.ServeHTTP(wMetrics, reqMetrics)
+
+	assert.Equal(t, http.StatusOK, wMetrics.Code)
+	body := wMetrics.Body.String()
+
+	// Assert that OTel registered metrics appear in the Prometheus scrape
+	assert.Contains(t, body, "http_requests_total")
+	assert.Contains(t, body, "http_request_duration_seconds")
+	
+	// Assert that we have a global MeterProvider set
+	assert.NotNil(t, otel.GetMeterProvider())
 }

@@ -8,6 +8,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -59,6 +60,11 @@ func (t *PgxQueryTracer) TraceQueryEnd(ctx context.Context, conn *pgx.Conn, data
 		if data.Err != nil {
 			status = "failure"
 		}
-		OutboundDependencyDuration.WithLabelValues("postgresql", "query", status).Observe(duration)
+		attrs := otelmetric.WithAttributes(
+			attribute.String("dependency", "postgresql"),
+			attribute.String("operation", "query"),
+			attribute.String("status", status),
+		)
+		OutboundDependencyDuration.Record(ctx, duration, attrs)
 	}
 }

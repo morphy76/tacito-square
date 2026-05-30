@@ -1,99 +1,120 @@
 package observability
 
 import (
+	"context"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	otelprometheus "go.opentelemetry.io/otel/exporters/prometheus"
+	otelmetric "go.opentelemetry.io/otel/metric"
 )
 
 var (
+	// globalPrometheusExporter is the pull-based metrics exporter.
+	globalPrometheusExporter *otelprometheus.Exporter
+
+	// OTel Meter
+	meter = otel.Meter("tacito-square")
+
 	// HTTPRequestDuration collects request duration metrics.
-	HTTPRequestDuration = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "http_request_duration_seconds",
-			Help:    "Duration of HTTP requests in seconds.",
-			Buckets: prometheus.DefBuckets,
-		},
-		[]string{"path", "method", "status"},
+	HTTPRequestDuration, _ = meter.Float64Histogram(
+		"http_request_duration_seconds",
+		otelmetric.WithDescription("Duration of HTTP requests in seconds."),
 	)
 
 	// HTTPRequestsTotal collects total request counts.
-	HTTPRequestsTotal = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "http_requests_total",
-			Help: "Total number of HTTP requests.",
-		},
-		[]string{"path", "method", "status"},
+	HTTPRequestsTotal, _ = meter.Int64Counter(
+		"http_requests_total",
+		otelmetric.WithDescription("Total number of HTTP requests."),
 	)
 
 	// ActiveThreads collects the number of active processing threads.
-	ActiveThreads = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "active_threads",
-			Help: "Number of active processing threads.",
-		},
+	ActiveThreads, _ = meter.Int64UpDownCounter(
+		"active_threads",
+		otelmetric.WithDescription("Number of active processing threads."),
 	)
 
 	// AgentStatus collects the count of active agents by status.
-	AgentStatus = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "agent_status",
-			Help: "Number of active agents by status.",
-		},
-		[]string{"status"},
+	AgentStatus, _ = meter.Int64Gauge(
+		"agent_status",
+		otelmetric.WithDescription("Number of active agents by status."),
 	)
 
 	// PendingHITLCallbacks collects the number of pending HITL callbacks.
-	PendingHITLCallbacks = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "pending_hitl_callbacks",
-			Help: "Number of pending HITL callbacks.",
-		},
+	PendingHITLCallbacks, _ = meter.Int64Gauge(
+		"pending_hitl_callbacks",
+		otelmetric.WithDescription("Number of pending HITL callbacks."),
 	)
 
 	// CommunityQuotaUtilization collects community quota utilization.
-	CommunityQuotaUtilization = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "community_quota_utilization",
-			Help: "Quota utilization per community.",
-		},
-		[]string{"community_id"},
+	CommunityQuotaUtilization, _ = meter.Int64Gauge(
+		"community_quota_utilization",
+		otelmetric.WithDescription("Quota utilization per community."),
 	)
 
 	// AgentQuotaUtilization collects agent quota utilization.
-	AgentQuotaUtilization = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "agent_quota_utilization",
-			Help: "Quota utilization per agent.",
-		},
-		[]string{"agent_id"},
+	AgentQuotaUtilization, _ = meter.Int64Gauge(
+		"agent_quota_utilization",
+		otelmetric.WithDescription("Quota utilization per agent."),
 	)
 
 	// OutboundDependencyDuration collects request durations to external services.
-	OutboundDependencyDuration = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "outbound_dependency_duration_seconds",
-			Help:    "Duration of outbound request to external dependencies in seconds.",
-			Buckets: prometheus.DefBuckets,
-		},
-		[]string{"dependency", "operation", "status"},
+	OutboundDependencyDuration, _ = meter.Float64Histogram(
+		"outbound_dependency_duration_seconds",
+		otelmetric.WithDescription("Duration of outbound request to external dependencies in seconds."),
 	)
 )
 
-func init() {
-	// Register the technical metrics
-	prometheus.MustRegister(HTTPRequestDuration)
-	prometheus.MustRegister(HTTPRequestsTotal)
-	prometheus.MustRegister(ActiveThreads)
-	prometheus.MustRegister(AgentStatus)
-	prometheus.MustRegister(PendingHITLCallbacks)
-	prometheus.MustRegister(CommunityQuotaUtilization)
-	prometheus.MustRegister(AgentQuotaUtilization)
-	prometheus.MustRegister(OutboundDependencyDuration)
+// initInstruments initializes all OpenTelemetry metrics instruments.
+// This is called during telemetry setup to ensure instruments are registered
+// with the fully-configured concrete MeterProvider.
+func initInstruments() {
+	meter = otel.Meter("tacito-square")
+
+	HTTPRequestDuration, _ = meter.Float64Histogram(
+		"http_request_duration_seconds",
+		otelmetric.WithDescription("Duration of HTTP requests in seconds."),
+	)
+
+	HTTPRequestsTotal, _ = meter.Int64Counter(
+		"http_requests_total",
+		otelmetric.WithDescription("Total number of HTTP requests."),
+	)
+
+	ActiveThreads, _ = meter.Int64UpDownCounter(
+		"active_threads",
+		otelmetric.WithDescription("Number of active processing threads."),
+	)
+
+	AgentStatus, _ = meter.Int64Gauge(
+		"agent_status",
+		otelmetric.WithDescription("Number of active agents by status."),
+	)
+
+	PendingHITLCallbacks, _ = meter.Int64Gauge(
+		"pending_hitl_callbacks",
+		otelmetric.WithDescription("Number of pending HITL callbacks."),
+	)
+
+	CommunityQuotaUtilization, _ = meter.Int64Gauge(
+		"community_quota_utilization",
+		otelmetric.WithDescription("Quota utilization per community."),
+	)
+
+	AgentQuotaUtilization, _ = meter.Int64Gauge(
+		"agent_quota_utilization",
+		otelmetric.WithDescription("Quota utilization per agent."),
+	)
+
+	OutboundDependencyDuration, _ = meter.Float64Histogram(
+		"outbound_dependency_duration_seconds",
+		otelmetric.WithDescription("Duration of outbound request to external dependencies in seconds."),
+	)
 }
 
 // MetricsMiddleware auto-instruments HTTP metrics for all routes.
@@ -115,8 +136,15 @@ func MetricsMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		HTTPRequestDuration.WithLabelValues(path, method, status).Observe(duration)
-		HTTPRequestsTotal.WithLabelValues(path, method, status).Inc()
+		ctx := c.Request.Context()
+		attrs := otelmetric.WithAttributes(
+			attribute.String("path", path),
+			attribute.String("method", method),
+			attribute.String("status", status),
+		)
+
+		HTTPRequestDuration.Record(ctx, duration, attrs)
+		HTTPRequestsTotal.Add(ctx, 1, attrs)
 	}
 }
 
@@ -133,58 +161,46 @@ func RegisterDBPoolStats(pool *pgxpool.Pool) {
 	if pool == nil {
 		return
 	}
-	prometheus.MustRegister(NewDBPoolCollector(pool))
-}
 
-type dbPoolCollector struct {
-	pool          *pgxpool.Pool
-	acquiredConns *prometheus.Desc
-	idleConns     *prometheus.Desc
-	totalConns    *prometheus.Desc
-	maxConns      *prometheus.Desc
-}
+	dbMeter := otel.Meter("db-pool")
 
-// NewDBPoolCollector creates a new custom Prometheus collector for the database connection pool.
-func NewDBPoolCollector(pool *pgxpool.Pool) prometheus.Collector {
-	return &dbPoolCollector{
-		pool: pool,
-		acquiredConns: prometheus.NewDesc(
-			"db_pool_acquired_connections",
-			"Number of currently acquired/active connections in the database pool.",
-			nil, nil,
-		),
-		idleConns: prometheus.NewDesc(
-			"db_pool_idle_connections",
-			"Number of currently idle connections in the database pool.",
-			nil, nil,
-		),
-		totalConns: prometheus.NewDesc(
-			"db_pool_total_connections",
-			"Total number of connections currently in the database pool.",
-			nil, nil,
-		),
-		maxConns: prometheus.NewDesc(
-			"db_pool_max_connections",
-			"Maximum number of connections allowed in the database pool.",
-			nil, nil,
-		),
-	}
-}
+	_, _ = dbMeter.Int64ObservableGauge(
+		"db_pool_acquired_connections",
+		otelmetric.WithDescription("Number of currently acquired/active connections in the database pool."),
+		otelmetric.WithInt64Callback(func(ctx context.Context, obs otelmetric.Int64Observer) error {
+			stats := pool.Stat()
+			obs.Observe(int64(stats.AcquiredConns()))
+			return nil
+		}),
+	)
 
-func (c *dbPoolCollector) Describe(ch chan<- *prometheus.Desc) {
-	ch <- c.acquiredConns
-	ch <- c.idleConns
-	ch <- c.totalConns
-	ch <- c.maxConns
-}
+	_, _ = dbMeter.Int64ObservableGauge(
+		"db_pool_idle_connections",
+		otelmetric.WithDescription("Number of currently idle connections in the database pool."),
+		otelmetric.WithInt64Callback(func(ctx context.Context, obs otelmetric.Int64Observer) error {
+			stats := pool.Stat()
+			obs.Observe(int64(stats.IdleConns()))
+			return nil
+		}),
+	)
 
-func (c *dbPoolCollector) Collect(ch chan<- prometheus.Metric) {
-	if c.pool == nil {
-		return
-	}
-	stats := c.pool.Stat()
-	ch <- prometheus.MustNewConstMetric(c.acquiredConns, prometheus.GaugeValue, float64(stats.AcquiredConns()))
-	ch <- prometheus.MustNewConstMetric(c.idleConns, prometheus.GaugeValue, float64(stats.IdleConns()))
-	ch <- prometheus.MustNewConstMetric(c.totalConns, prometheus.GaugeValue, float64(stats.TotalConns()))
-	ch <- prometheus.MustNewConstMetric(c.maxConns, prometheus.GaugeValue, float64(stats.MaxConns()))
+	_, _ = dbMeter.Int64ObservableGauge(
+		"db_pool_total_connections",
+		otelmetric.WithDescription("Total number of connections currently in the database pool."),
+		otelmetric.WithInt64Callback(func(ctx context.Context, obs otelmetric.Int64Observer) error {
+			stats := pool.Stat()
+			obs.Observe(int64(stats.TotalConns()))
+			return nil
+		}),
+	)
+
+	_, _ = dbMeter.Int64ObservableGauge(
+		"db_pool_max_connections",
+		otelmetric.WithDescription("Maximum number of connections allowed in the database pool."),
+		otelmetric.WithInt64Callback(func(ctx context.Context, obs otelmetric.Int64Observer) error {
+			stats := pool.Stat()
+			obs.Observe(int64(stats.MaxConns()))
+			return nil
+		}),
+	)
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"regexp"
+	"sync"
 	"testing"
 	"time"
 
@@ -75,12 +76,29 @@ func TestEchoSubscriber_Replies(t *testing.T) {
 	assert.NoError(t, err, "timestamp must be valid RFC3339 format")
 }
 
+type safeBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (s *safeBuffer) Write(p []byte) (n int, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.Write(p)
+}
+
+func (s *safeBuffer) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.String()
+}
+
 func TestEchoSubscriber_LogsSanitizedMessage(t *testing.T) {
 	ns, nc := startTestNatsServer(t)
 	defer ns.Shutdown()
 	defer nc.Close()
 
-	var buf bytes.Buffer
+	var buf safeBuffer
 	logger := zerolog.New(&buf)
 	sub := agentnats.NewEchoSubscriber(nc, "agent-alpha", "comm-1", "tenant-1", logger)
 
@@ -138,7 +156,7 @@ func TestEchoSubscriber_MalformedPayload(t *testing.T) {
 	defer ns.Shutdown()
 	defer nc.Close()
 
-	var buf bytes.Buffer
+	var buf safeBuffer
 	logger := zerolog.New(&buf)
 	sub := agentnats.NewEchoSubscriber(nc, "agent-alpha", "comm-1", "tenant-1", logger)
 

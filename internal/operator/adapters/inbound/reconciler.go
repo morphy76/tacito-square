@@ -6,7 +6,9 @@ import (
 
 	"github.com/morphy76/tacito-square/internal/operator/application/ports/inbound"
 	"github.com/morphy76/tacito-square/pkg/kubernetes/apis/tacito/v1alpha1"
-	"github.com/prometheus/client_golang/prometheus"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	otelmetric "go.opentelemetry.io/otel/metric"
 	"github.com/rs/zerolog"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -15,39 +17,54 @@ import (
 )
 
 var (
-	reconciliationTotal = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "tacito_operator_reconciliation_total",
-			Help: "Total number of TacitoAgent reconciliation executions",
-		},
-		[]string{"status"},
+	meter = otel.Meter("operator-reconciler")
+
+	reconciliationTotal, _ = meter.Int64Counter(
+		"tacito_operator_reconciliation_total",
+		otelmetric.WithDescription("Total number of TacitoAgent reconciliation executions"),
 	)
-	reconciliationDuration = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "tacito_operator_reconciliation_duration_seconds",
-			Help:    "Duration of TacitoAgent reconciliation executions in seconds",
-			Buckets: prometheus.DefBuckets,
-		},
-		[]string{"status"},
+	reconciliationDuration, _ = meter.Float64Histogram(
+		"tacito_operator_reconciliation_duration_seconds",
+		otelmetric.WithDescription("Duration of TacitoAgent reconciliation executions in seconds"),
 	)
-	activeAgents = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "tacito_operator_active_agents",
-			Help: "Current number of active TacitoAgent resources",
-		},
+	activeAgents, _ = meter.Int64Gauge(
+		"tacito_operator_active_agents",
+		otelmetric.WithDescription("Current number of active TacitoAgent resources"),
 	)
 )
 
-func init() {
-	prometheus.MustRegister(reconciliationTotal)
-	prometheus.MustRegister(reconciliationDuration)
-	prometheus.MustRegister(activeAgents)
+// InitReconcilerMetrics re-initializes and registers reconciler metrics with the concrete MeterProvider.
+func InitReconcilerMetrics() {
+	meter = otel.Meter("operator-reconciler")
+
+	reconciliationTotal, _ = meter.Int64Counter(
+		"tacito_operator_reconciliation_total",
+		otelmetric.WithDescription("Total number of TacitoAgent reconciliation executions"),
+	)
+	reconciliationDuration, _ = meter.Float64Histogram(
+		"tacito_operator_reconciliation_duration_seconds",
+		otelmetric.WithDescription("Duration of TacitoAgent reconciliation executions in seconds"),
+	)
+	activeAgents, _ = meter.Int64Gauge(
+		"tacito_operator_active_agents",
+		otelmetric.WithDescription("Current number of active TacitoAgent resources"),
+	)
 
 	// Pre-initialize vector metrics series so they appear immediately in GET /metrics scrapes
-	reconciliationTotal.WithLabelValues("success")
-	reconciliationTotal.WithLabelValues("error")
-	reconciliationDuration.WithLabelValues("success")
-	reconciliationDuration.WithLabelValues("error")
+	reconciliationTotal.Add(context.Background(), 0, otelmetric.WithAttributes(attribute.String("status", "success")))
+	reconciliationTotal.Add(context.Background(), 0, otelmetric.WithAttributes(attribute.String("status", "error")))
+	reconciliationDuration.Record(context.Background(), 0, otelmetric.WithAttributes(attribute.String("status", "success")))
+	reconciliationDuration.Record(context.Background(), 0, otelmetric.WithAttributes(attribute.String("status", "error")))
+	activeAgents.Record(context.Background(), 0)
+}
+
+func init() {
+	// Pre-initialize vector metrics series so they appear immediately in GET /metrics scrapes
+	reconciliationTotal.Add(context.Background(), 0, otelmetric.WithAttributes(attribute.String("status", "success")))
+	reconciliationTotal.Add(context.Background(), 0, otelmetric.WithAttributes(attribute.String("status", "error")))
+	reconciliationDuration.Record(context.Background(), 0, otelmetric.WithAttributes(attribute.String("status", "success")))
+	reconciliationDuration.Record(context.Background(), 0, otelmetric.WithAttributes(attribute.String("status", "error")))
+	activeAgents.Record(context.Background(), 0)
 }
 
 // TacitoAgentReconciler reconciles a TacitoAgent object.
@@ -106,13 +123,13 @@ func (r *TacitoAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			Str("namespace", req.Namespace).
 			Str("name", req.Name).
 			Msg("failed to reconcile TacitoAgent through application service")
-		reconciliationTotal.WithLabelValues("error").Inc()
-		reconciliationDuration.WithLabelValues("error").Observe(duration)
+		reconciliationTotal.Add(ctx, 1, otelmetric.WithAttributes(attribute.String("status", "error")))
+		reconciliationDuration.Record(ctx, duration, otelmetric.WithAttributes(attribute.String("status", "error")))
 		return ctrl.Result{}, err
 	}
 
-	reconciliationTotal.WithLabelValues("success").Inc()
-	reconciliationDuration.WithLabelValues("success").Observe(duration)
+	reconciliationTotal.Add(ctx, 1, otelmetric.WithAttributes(attribute.String("status", "success")))
+	reconciliationDuration.Record(ctx, duration, otelmetric.WithAttributes(attribute.String("status", "success")))
 	return ctrl.Result{}, nil
 }
 
@@ -126,6 +143,6 @@ func (r *TacitoAgentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *TacitoAgentReconciler) updateActiveAgentsMetric(ctx context.Context) {
 	var list v1alpha1.TacitoAgentList
 	if err := r.client.List(ctx, &list); err == nil {
-		activeAgents.Set(float64(len(list.Items)))
+		activeAgents.Record(ctx, int64(len(list.Items)))
 	}
 }

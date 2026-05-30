@@ -9,8 +9,9 @@ import (
 	"testing"
 
 	"github.com/morphy76/tacito-square/internal/operator"
-	_ "github.com/morphy76/tacito-square/internal/operator/adapters/inbound"
+	"github.com/morphy76/tacito-square/internal/operator/adapters/inbound"
 	"github.com/morphy76/tacito-square/internal/shared/health"
+	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -78,6 +79,12 @@ func TestReadyz_Returns503(t *testing.T) {
 }
 
 func TestMetrics_ExposesCustomMetrics(t *testing.T) {
+	ctx := context.Background()
+	shutdown, err := observability.InitTracer(ctx, "operator-test", "1.0.0", "")
+	require.NoError(t, err)
+	defer shutdown(ctx)
+	inbound.InitReconcilerMetrics()
+
 	srv := operator.NewServer()
 
 	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)

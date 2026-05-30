@@ -100,7 +100,8 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 |----|-------|--------|----------|------|
 | BUG-M4.1 | Assigned Agent Pods Fail to Deploy Due to Stubbed Operator Reconciliation Service | CLOSED | HIGH | [BUG-M4.1](tasks/M4.BUG1/BUG-M4.1.md) |
 | BUG-M4.2 | Health and Metrics Endpoints Leak Tracing Spans | OPEN | MEDIUM | [BUG-M4.2](tasks/M4.BUG2/BUG-M4.2.md) |
-| BUG-M4.3 | Overlapping Observability Frameworks with Prometheus and OpenTelemetry | OPEN | HIGH | [BUG-M4.3](tasks/M4.BUG3/BUG-M4.3.md) |
+| BUG-M4.3 | Overlapping Observability Frameworks with Prometheus and OpenTelemetry | CLOSED | HIGH | [BUG-M4.3](tasks/M4.BUG3/BUG-M4.3.md) |
+| BUG-M4.4 | Redundant Infrastructure Monitoring Services (Prometheus Server & Zipkin Tracing) | OPEN | MEDIUM | [BUG-M4.4](tasks/M4.BUG4/BUG-M4.4.md) |
 
 
 ### M5: Agent Core
@@ -114,6 +115,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | SPEC-FR-M5.5 | Tool Invocation (MCP) | DRAFT | agent | [SPEC-FR-M5.5](functional/M5/SPEC-FR-M5.5.md) |
 | SPEC-FR-M5.6 | Object Storage (S3/MinIO) | DRAFT | agent | [SPEC-FR-M5.6](functional/M5/SPEC-FR-M5.6.md) |
 | SPEC-FR-M5.7 | Standalone Agent Deployment Helm Chart | DRAFT | deploy | [SPEC-FR-M5.7](functional/M5/SPEC-FR-M5.7.md) |
+| SPEC-FR-M5.8 | Benchmark Suite & Integration Coverage Verification | ACCEPTED | test | [SPEC-FR-M5.8](functional/M5/SPEC-FR-M5.8.md) |
 
 ### M6: Communities & Messaging
 

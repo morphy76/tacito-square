@@ -2,18 +2,26 @@ package observability
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
-	"github.com/prometheus/client_golang/prometheus"
-	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 func TestPgxQueryTracer_Telemetry(t *testing.T) {
+	// Setup unified OpenTelemetry telemetry
+	ctx := context.Background()
+	shutdown, err := InitTracer(ctx, "test-db-service", "1.0.0", "")
+	require.NoError(t, err)
+	defer shutdown(ctx)
+
 	// Setup mock OpenTelemetry tracer provider
 	tp := trace.NewTracerProvider()
 	otel.SetTracerProvider(tp)
@@ -21,8 +29,6 @@ func TestPgxQueryTracer_Telemetry(t *testing.T) {
 	// Create pgx tracer
 	pgTracer := NewPgxQueryTracer()
 	assert.NotNil(t, pgTracer)
-
-	ctx := context.Background()
 
 	// 1. Trace Query Start
 	startData := pgx.TraceQueryStartData{
@@ -41,44 +47,19 @@ func TestPgxQueryTracer_Telemetry(t *testing.T) {
 		Err: nil,
 	}
 
-	// We reset the histogram vector to get a clean state
-	OutboundDependencyDuration.Reset()
-
 	pgTracer.TraceQueryEnd(ctx, nil, endData)
 
-	// Verify Prometheus metric was captured
-	metricChan := make(chan prometheus.Metric, 10)
-	OutboundDependencyDuration.Collect(metricChan)
-	close(metricChan)
+	// Verify OTel outbound dependency metric is captured in the metrics handler
+	r := gin.New()
+	r.GET("/metrics", MetricsHandler())
 
-	var foundMetric bool
-	for m := range metricChan {
-		var metric dto.Metric
-		err := m.Write(&metric)
-		assert.NoError(t, err)
+	reqMetrics, _ := http.NewRequest(http.MethodGet, "/metrics", nil)
+	wMetrics := httptest.NewRecorder()
+	r.ServeHTTP(wMetrics, reqMetrics)
 
-		// Assert labels
-		labels := metric.GetLabel()
-		assert.Len(t, labels, 3)
+	assert.Equal(t, http.StatusOK, wMetrics.Code)
+	body := wMetrics.Body.String()
 
-		var hasPostgresLabel, hasQueryLabel, hasSuccessLabel bool
-		for _, l := range labels {
-			if l.GetName() == "dependency" && l.GetValue() == "postgresql" {
-				hasPostgresLabel = true
-			}
-			if l.GetName() == "operation" && l.GetValue() == "query" {
-				hasQueryLabel = true
-			}
-			if l.GetName() == "status" && l.GetValue() == "success" {
-				hasSuccessLabel = true
-			}
-		}
-
-		if hasPostgresLabel && hasQueryLabel && hasSuccessLabel {
-			foundMetric = true
-			assert.Equal(t, uint64(1), metric.GetHistogram().GetSampleCount())
-		}
-	}
-
-	assert.True(t, foundMetric, "Prometheus outbound dependency metric for postgres should be recorded")
+	// Assert that OTel outbound dependency metric appears in scrape
+	assert.Contains(t, body, "outbound_dependency_duration_seconds")
 }

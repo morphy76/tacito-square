@@ -56,6 +56,7 @@ func main() {
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to initialize tracer")
 	}
+	inbound.InitReconcilerMetrics()
 
 	// 4. Initialize shutdown manager (30 seconds graceful shutdown timeout)
 	mgr := shutdown.NewManager(30 * time.Second)
