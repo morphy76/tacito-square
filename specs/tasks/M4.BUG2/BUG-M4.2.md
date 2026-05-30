@@ -3,7 +3,7 @@
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
 | ID            | BUG-M4.2                                                           |
-| Status        | OPEN                                                               |
+| Status        | CLOSED                                                             |
 | Severity      | MEDIUM                                                             |
 | Milestone     | M4 — Operator Core                                                 |
 | Affects       | internal/shared/observability/tracing.go                           |
@@ -31,6 +31,20 @@ In a production environment, Kubernetes frequently scrapes health endpoints (eve
 
 1. The OpenTelemetry HTTP request middleware `TracingMiddleware` MUST bypass span generation when the request path matches `/healthz`, `/readyz`, or `/metrics`.
 2. The middleware must still extract and propagate incoming tracing headers (e.g. `traceparent`) to the request context to preserve trace propagation context down the call stack, but it must not generate a local server span for these endpoints.
+
+## Work Items
+
+1. **RED Phase**:
+   - Write unit tests in [tracing_test.go](file:///Users/R.Pasquini/Projects/side/tacito-square/internal/shared/observability/tracing_test.go) simulating GET requests to `/healthz`, `/readyz`, and `/metrics`.
+   - Assert that no new active server span is created (i.e. `span.IsRecording()` is false, and `span.SpanContext().IsValid()` is false if no traceparent header was supplied).
+   - Assert that standard endpoints (e.g. `/api/v1/echo` or `/test`) still successfully generate valid, recording server spans (`span.IsRecording()` is true).
+   - Temporarily comment out the path-exclusion bypass logic in [tracing.go](file:///Users/R.Pasquini/Projects/side/tacito-square/internal/shared/observability/tracing.go) to verify that the new unit tests fail cleanly (**RED**).
+2. **GREEN Phase**:
+   - Restore the path-exclusion bypass logic in [tracing.go](file:///Users/R.Pasquini/Projects/side/tacito-square/internal/shared/observability/tracing.go).
+   - Run the test suite and verify all tests pass successfully (**GREEN**).
+3. **REFACTOR Phase**:
+   - Clean up unit test helper functions in [tracing_test.go](file:///Users/R.Pasquini/Projects/side/tacito-square/internal/shared/observability/tracing_test.go) to avoid redundancy and improve readability.
+   - Verify the test suite remains fully green.
 
 ## Acceptance Criteria
 
