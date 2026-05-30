@@ -53,13 +53,13 @@ func TestEchoCommunity_HappyPath(t *testing.T) {
 	agentRepo.On("List", mock.Anything).Return(agents, nil)
 	broadcaster.On("Available").Return(true)
 
-	broadcaster.On("RequestEcho", mock.Anything, "test-comm", "agent-1", mock.Anything).Return(&model.EchoReply{
+	broadcaster.On("RequestEcho", mock.Anything, communityID.String(), "agent-1", mock.Anything).Return(&model.EchoReply{
 		AgentName: "agent-1",
 		Decorated: "[agent:agent-1 at 2026-05-30T00:00:00Z] hello",
 		Timestamp: "2026-05-30T00:00:00Z",
 	}, nil)
 
-	broadcaster.On("RequestEcho", mock.Anything, "test-comm", "agent-2", mock.Anything).Return(&model.EchoReply{
+	broadcaster.On("RequestEcho", mock.Anything, communityID.String(), "agent-2", mock.Anything).Return(&model.EchoReply{
 		AgentName: "agent-2",
 		Decorated: "[agent:agent-2 at 2026-05-30T00:00:00Z] hello",
 		Timestamp: "2026-05-30T00:00:00Z",
@@ -100,7 +100,7 @@ func TestEchoCommunity_ExcludesNonRunningAgents(t *testing.T) {
 	agentRepo.On("List", mock.Anything).Return(agents, nil)
 	broadcaster.On("Available").Return(true)
 
-	broadcaster.On("RequestEcho", mock.Anything, "test-comm", "agent-running", mock.Anything).Return(&model.EchoReply{
+	broadcaster.On("RequestEcho", mock.Anything, communityID.String(), "agent-running", mock.Anything).Return(&model.EchoReply{
 		AgentName: "agent-running",
 		Decorated: "[agent:agent-running] hello",
 	}, nil)
@@ -134,7 +134,7 @@ func TestEchoCommunity_ConcurrentFanout(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
-	broadcaster.On("RequestEcho", mock.Anything, "test-comm", mock.Anything, mock.Anything).
+	broadcaster.On("RequestEcho", mock.Anything, communityID.String(), mock.Anything, mock.Anything).
 		Run(func(args mock.Arguments) {
 			wg.Done()
 			time.Sleep(50 * time.Millisecond)
@@ -169,7 +169,7 @@ func TestEchoCommunity_AgentTimeout(t *testing.T) {
 	agentRepo.On("List", mock.Anything).Return(agents, nil)
 	broadcaster.On("Available").Return(true)
 
-	broadcaster.On("RequestEcho", mock.Anything, "test-comm", "agent-alpha", mock.Anything).Return(nil, context.DeadlineExceeded)
+	broadcaster.On("RequestEcho", mock.Anything, communityID.String(), "agent-alpha", mock.Anything).Return(nil, context.DeadlineExceeded)
 
 	res, err := svc.EchoCommunity(context.Background(), communityID, "hello")
 	require.NoError(t, err)
@@ -281,7 +281,7 @@ func TestEchoCommunity_WokeCommunity(t *testing.T) {
 		Phase: v1alpha1.PhaseIdle,
 	}, nil)
 
-	broadcaster.On("RequestEcho", mock.Anything, "test-comm", "agent-1", mock.Anything).Return(&model.EchoReply{
+	broadcaster.On("RequestEcho", mock.Anything, communityID.String(), "agent-1", mock.Anything).Return(&model.EchoReply{
 		AgentName: "agent-1",
 		Decorated: "[agent:agent-1] hello",
 	}, nil)
@@ -324,7 +324,7 @@ func TestEchoCommunity_PendingDatabaseStatus_RunningCRDStatus(t *testing.T) {
 		return a.ID == agentID1 && a.Status == model.AgentStatusRunning
 	})).Return(nil)
 
-	broadcaster.On("RequestEcho", mock.Anything, "test-comm", "agent-1", mock.Anything).Return(&model.EchoReply{
+	broadcaster.On("RequestEcho", mock.Anything, communityID.String(), "agent-1", mock.Anything).Return(&model.EchoReply{
 		AgentName: "agent-1",
 		Decorated: "[agent:agent-1] hello",
 	}, nil)

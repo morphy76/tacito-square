@@ -171,7 +171,7 @@ func (s *EchoServiceImpl) EchoCommunity(ctx context.Context, communityID uuid.UU
 				TenantID:    ag.TenantID,
 			}
 
-			reply, err := s.broadcaster.RequestEcho(agentCtx, comm.Name, ag.Name, req)
+			reply, err := s.broadcaster.RequestEcho(agentCtx, comm.ID.String(), ag.Name, req)
 
 			var res model.AgentEchoResult
 			res.AgentName = ag.Name
