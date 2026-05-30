@@ -89,6 +89,96 @@ for key in "${REQUIRED_KEYS[@]}"; do
   fi
 done
 
+# ── 4. Deployment & Environment Injection Verification ──
+section "Deployment and Environment Injection Check"
+
+if grep -q "kind: Deployment" "${TEMPLATE_FILE}" 2>/dev/null; then
+  pass "Deployment resource rendered"
+else
+  fail "Deployment resource rendered"
+fi
+
+if grep -q "name: ${RELEASE}-tacito-agent" "${TEMPLATE_FILE}" 2>/dev/null; then
+  pass "Deployment is named '${RELEASE}-tacito-agent'"
+else
+  fail "Deployment is named '${RELEASE}-tacito-agent'"
+fi
+
+# ConfigMap binding via envFrom check
+if grep -A 10 "containers:" "${TEMPLATE_FILE}" | grep -q "envFrom:" 2>/dev/null; then
+  pass "Deployment uses envFrom for ConfigMap reference"
+else
+  fail "Deployment uses envFrom for ConfigMap reference"
+fi
+
+if grep -A 15 "envFrom:" "${TEMPLATE_FILE}" | grep -q "name: ${RELEASE}-tacito-agent-config" 2>/dev/null; then
+  pass "envFrom points to config map '${RELEASE}-tacito-agent-config'"
+else
+  fail "envFrom points to config map '${RELEASE}-tacito-agent-config'"
+fi
+
+# Secure credentials secret check (TS_AGENT_LLM_API_KEY)
+if grep -q "name: TS_AGENT_LLM_API_KEY" "${TEMPLATE_FILE}" 2>/dev/null; then
+  pass "TS_AGENT_LLM_API_KEY env var is defined"
+else
+  fail "TS_AGENT_LLM_API_KEY env var is defined"
+fi
+
+if grep -A 5 "name: TS_AGENT_LLM_API_KEY" "${TEMPLATE_FILE}" | grep -q "secretKeyRef:" 2>/dev/null; then
+  pass "TS_AGENT_LLM_API_KEY uses secretKeyRef"
+else
+  fail "TS_AGENT_LLM_API_KEY uses secretKeyRef"
+fi
+
+if grep -A 5 "name: TS_AGENT_LLM_API_KEY" "${TEMPLATE_FILE}" | grep -qE "name: \"?tacito-agent-llm-secret\"?" 2>/dev/null; then
+  pass "TS_AGENT_LLM_API_KEY references correct secret name"
+else
+  fail "TS_AGENT_LLM_API_KEY references correct secret name"
+fi
+
+# Workload probes check
+if grep -A 5 "livenessProbe:" "${TEMPLATE_FILE}" | grep -q "path: /healthz" 2>/dev/null; then
+  pass "Liveness probe is configured for /healthz"
+else
+  fail "Liveness probe is configured for /healthz"
+fi
+
+if grep -A 5 "readinessProbe:" "${TEMPLATE_FILE}" | grep -q "path: /readyz" 2>/dev/null; then
+  pass "Readiness probe is configured for /readyz"
+else
+  fail "Readiness probe is configured for /readyz"
+fi
+
+# ── 5. Client Deployment Verification ──────────────────
+section "Client Deployment Check"
+
+if grep -q "name: ${RELEASE}-tacito-agent-client" "${TEMPLATE_FILE}" 2>/dev/null; then
+  pass "Client Deployment named '${RELEASE}-tacito-agent-client' rendered"
+else
+  fail "Client Deployment named '${RELEASE}-tacito-agent-client' rendered"
+fi
+
+if grep -A 10 "name: ${RELEASE}-tacito-agent-client" "${TEMPLATE_FILE}" | grep -q "component: client" 2>/dev/null; then
+  pass "Client Deployment has correct component label (client)"
+else
+  fail "Client Deployment has correct component label (client)"
+fi
+
+if grep -A 30 "name: ${RELEASE}-tacito-agent-client" "${TEMPLATE_FILE}" | grep -q "synadia/nats-box" 2>/dev/null; then
+  pass "Client Deployment runs synadia/nats-box container"
+else
+  fail "Client Deployment runs synadia/nats-box container"
+fi
+
+if grep -A 35 "name: ${RELEASE}-tacito-agent-client" "${TEMPLATE_FILE}" | grep -q "NATS_URL" 2>/dev/null; then
+  pass "Client Deployment configures NATS_URL environment variable"
+else
+  fail "Client Deployment configures NATS_URL environment variable"
+fi
+
+
+
+
 # ── Summary ─────────────────────────────────────────────
 section "Summary"
 TOTAL=$((PASS + FAIL))
