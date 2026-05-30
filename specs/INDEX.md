@@ -166,6 +166,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | SPEC-FR-M9.5 | E2E & Benchmark Tests | DRAFT | test | [SPEC-FR-M9.5](functional/M9/SPEC-FR-M9.5.md) |
 | SPEC-FR-M9.6 | Production Helm & Hardening | DRAFT | deploy | [SPEC-FR-M9.6](functional/M9/SPEC-FR-M9.6.md) |
 | SPEC-FR-M9.7 | K8s NetworkPolicies | DRAFT | operator | [SPEC-FR-M9.7](functional/M9/SPEC-FR-M9.7.md) |
+| SPEC-FR-M9.8 | Comprehensive System Documentation | DRAFT | docs | [SPEC-FR-M9.8](functional/M9/SPEC-FR-M9.8.md) |
 
 ## Milestones
 

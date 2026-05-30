@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
+	"github.com/morphy76/tacito-square/internal/shared/observability"
 	natsclient "github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
 )
@@ -38,7 +39,8 @@ func NewEchoSubscriber(nc *natsclient.Conn, agentName, communityID, tenantID str
 // Start subscribes to the agent's echo subject. Returns an error if subscription fails.
 func (s *EchoSubscriber) Start(_ context.Context) error {
 	subject := fmt.Sprintf(echoSubjectFormat, s.communityID, s.agentName)
-	sub, err := s.nc.Subscribe(subject, s.handleEcho)
+	sub, err := s.nc.Subscribe(subject,
+		observability.WrapNATSHandler("nats.echo_handler", s.logger, s.handleEcho))
 	if err != nil {
 		return fmt.Errorf("echo subscriber: subscribe to %s: %w", subject, err)
 	}
@@ -57,16 +59,16 @@ func (s *EchoSubscriber) Stop() error {
 	return nil
 }
 
-func (s *EchoSubscriber) handleEcho(msg *natsclient.Msg) {
+func (s *EchoSubscriber) handleEcho(ctx context.Context, logger zerolog.Logger, msg *natsclient.Msg) error {
 	var req model.EchoRequest
 	if err := json.Unmarshal(msg.Data, &req); err != nil {
-		s.logger.Warn().Err(err).Msg("echo subscriber: malformed payload, ignoring")
-		return
+		logger.Warn().Err(err).Msg("echo subscriber: malformed payload, ignoring")
+		return nil // intentional: malformed messages are silently ignored, no reply sent
 	}
 
 	sanitized := model.SanitizeMessage(req.Message)
 
-	s.logger.Info().
+	logger.Info().
 		Str("agent_name", s.agentName).
 		Str("community_id", s.communityID).
 		Str("tenant_id", req.TenantID).
@@ -84,11 +86,14 @@ func (s *EchoSubscriber) handleEcho(msg *natsclient.Msg) {
 
 	data, err := json.Marshal(reply)
 	if err != nil {
-		s.logger.Error().Err(err).Msg("echo subscriber: failed to marshal reply")
-		return
+		logger.Error().Err(err).Msg("echo subscriber: failed to marshal reply")
+		return fmt.Errorf("marshal echo reply: %w", err)
 	}
 
 	if err := msg.Respond(data); err != nil {
-		s.logger.Error().Err(err).Msg("echo subscriber: failed to send reply")
+		logger.Error().Err(err).Msg("echo subscriber: failed to send reply")
+		return fmt.Errorf("respond to echo request: %w", err)
 	}
+
+	return nil
 }

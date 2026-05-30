@@ -7,6 +7,7 @@ import (
 
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
+	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
 )
@@ -50,7 +51,7 @@ func (b *NATSCommunityBroadcaster) RequestEcho(ctx context.Context, communityID,
 		return nil, fmt.Errorf("marshal echo request: %w", err)
 	}
 
-	msg, err := b.nc.RequestMsgWithContext(ctx, &nats.Msg{
+	msg, err := observability.RequestMsgWithTrace(ctx, b.nc, subject, &nats.Msg{
 		Subject: subject,
 		Data:    payload,
 	})

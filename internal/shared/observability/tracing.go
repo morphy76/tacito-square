@@ -148,10 +148,8 @@ func TracingMiddleware(serviceName string) gin.HandlerFunc {
 
 		c.Next()
 
-		// Record span status based on status code
-		status := c.Writer.Status()
-		if status >= 500 {
-			span.RecordError(fmt.Errorf("HTTP request failed with status: %d", status))
-		}
+		// Emit structured error events for 4xx and 5xx via the framework helper.
+		// This covers all handlers uniformly without any per-handler wiring.
+		afterRequest(c)
 	}
 }

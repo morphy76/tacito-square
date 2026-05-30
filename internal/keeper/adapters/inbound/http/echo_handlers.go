@@ -40,7 +40,7 @@ func (h *EchoHandler) EchoCommunity(c *gin.Context) {
 	ctx, cancel := context.WithCancel(c.Request.Context())
 	defer cancel()
 
-	ctx, span := otel.Tracer("keeper").Start(ctx, "http.echo_community",
+	ctx, span := otel.Tracer("keeper").Start(ctx, "keeper.echo_community",
 		trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
@@ -72,18 +72,32 @@ func (h *EchoHandler) EchoCommunity(c *gin.Context) {
 		attribute.String("tenant_id", ten.FullName()),
 	)
 
+	// Emit a context event visible as a Zipkin/Jaeger annotation: useful for
+	// correlating the trace to the resolved business entity without log-diving.
+	observability.SpanEventFromGinContext(c, "keeper.request.accepted",
+		attribute.String("community_id", commID.String()),
+	)
+
 	resp, err := h.echoUseCase.EchoCommunity(ctx, commID, req.Message)
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrEmptyMessage):
+			observability.RecordGinError(c, http.StatusBadRequest, err,
+				attribute.String("community_id", commID.String()))
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		case errors.Is(err, service.ErrCommunityNotFound):
+			observability.RecordGinError(c, http.StatusNotFound, err,
+				attribute.String("community_id", commID.String()))
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		case errors.Is(err, service.ErrNoRunningAgents),
 			errors.Is(err, service.ErrBroadcasterUnavailable):
+			observability.RecordGinError(c, http.StatusServiceUnavailable, err,
+				attribute.String("community_id", commID.String()))
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
 		default:
 			reqLogger.Error().Err(err).Msg("echo community failed")
+			observability.RecordGinError(c, http.StatusInternalServerError, err,
+				attribute.String("community_id", commID.String()))
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		}
 		return
