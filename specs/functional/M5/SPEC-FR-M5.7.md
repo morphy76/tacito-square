@@ -11,9 +11,11 @@
 
 ## Context
 
-In many deployments, users want to run a specific Agent instance as a standalone, statically configured workload in Kubernetes, completely independent of the dynamic Keeper lifecycle APIs and the Kubernetes Operator controller. This is highly useful for static pipelines, debugging, and simple single-agent setups.
+In many deployments, and in particular in local or test environments, it is useful to run a specific Agent instance as a standalone, statically configured workload in Kubernetes, completely independent of the dynamic Keeper lifecycle APIs and the Kubernetes Operator controller. This is highly useful for static pipelines, debugging, and simple single-agent setups.
 
 This specification introduces a new standalone Helm Chart (`tools/helm/tacito-agent`) that packages the TacitoAgent container. Since the agent does not contact the Keeper to retrieve its configuration in standalone mode, all required dynamic properties (such as LLM brain details, custom system prompts, and memory dimensions) are provided directly in the Helm values and mounted as an internal Kubernetes ConfigMap which is loaded as environment variables into the pod. The agent continues to utilize and connect to external, shared infrastructure dependencies (like NATS, Redis, and Qdrant).
+
+As the only external interface for the agent is the NATS message bus, the helm needs to provide a client component to interact with the agent (e.g. a web interface or a CLI tool or a CURL endpoint, the easiest one). This client component will use the NATS API to send messages to the agent and receive messages from the agent. The optimal approach for the client component is to leverage existing third party NATS clients to publish messages to the agent, if third party tools are not available stop processing this specification.
 
 ## Specification
 
