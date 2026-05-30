@@ -115,6 +115,8 @@ func TestOpenAPIContract_Parity(t *testing.T) {
 		"AgentDeploymentResult":         inbound.AgentDeploymentResult{},
 		"CommunityDeploymentDetails":    inbound.CommunityDeploymentDetails{},
 		"CommunityStatusDetails":        inbound.CommunityStatusDetails{},
+		"AgentEchoResult":               model.AgentEchoResult{},
+		"CommunityEchoResponse":         model.CommunityEchoResponse{},
 	}
 
 	// Bidirectional registry vs spec check (no less, no more schemas)

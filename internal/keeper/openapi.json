@@ -41,8 +41,8 @@
       "description": "Bounded context: Lifecycle Management. Enables deploying, undeploying and monitoring runtime status."
     },
     {
-      "name": "community/echo",
-      "description": "Bounded context: Community Echo. Enables fanning out request-reply echo operations to running agents."
+      "name": "development/operations",
+      "description": "development supporting operations"
     }
   ],
   "paths": {
@@ -2699,7 +2699,7 @@
         "summary": "Send an echo ping to all running agents in a community",
         "operationId": "echoCommunity",
         "tags": [
-          "community/echo"
+          "development/operations"
         ],
         "parameters": [
           {

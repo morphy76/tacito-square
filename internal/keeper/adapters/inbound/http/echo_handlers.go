@@ -35,7 +35,7 @@ func (h *EchoHandler) RegisterRoutes(v1 *gin.RouterGroup) {
 }
 
 // EchoCommunity handles POST /api/v1/communities/:community_id/echo
-// @Tags community/echo
+// @Tags development/operations
 func (h *EchoHandler) EchoCommunity(c *gin.Context) {
 	ctx, cancel := context.WithCancel(c.Request.Context())
 	defer cancel()
