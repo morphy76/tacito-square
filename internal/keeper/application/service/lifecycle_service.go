@@ -183,6 +183,12 @@ func (s *LifecycleService) GetAgentStatus(ctx context.Context, agentID uuid.UUID
 		details.Message = "K8s resource missing"
 	}
 
+	if details.Status != agent.Status {
+		agent.Status = details.Status
+		agent.UpdatedAt = time.Now().UTC()
+		_ = s.agentRepo.Update(ctx, agent)
+	}
+
 	return details, nil
 }
 

@@ -292,3 +292,47 @@ func TestEchoCommunity_WokeCommunity(t *testing.T) {
 	assert.Len(t, res.Results, 1)
 	assert.Equal(t, "agent-1", res.Results[0].AgentName)
 }
+
+func TestEchoCommunity_PendingDatabaseStatus_RunningCRDStatus(t *testing.T) {
+	commRepo := new(mockCommunityRepository)
+	agentRepo := new(mockAgentRepository)
+	broadcaster := new(mockCommunityBroadcaster)
+	crdCoord := new(mockCRDCoordinator)
+	cfg := viper.New()
+
+	svc := service.NewEchoService(commRepo, agentRepo, crdCoord, broadcaster, cfg)
+
+	communityID := uuid.New()
+	comm := &model.Community{ID: communityID, Name: "test-comm", Status: "active"}
+	
+	agentID1 := uuid.New()
+	agents := []*model.Agent{
+		{ID: agentID1, Name: "agent-1", Status: model.AgentStatusPending, CommunityID: &communityID},
+	}
+
+	commRepo.On("GetByID", mock.Anything, communityID).Return(comm, nil)
+	agentRepo.On("List", mock.Anything).Return(agents, nil)
+	broadcaster.On("Available").Return(true)
+
+	// Mock GetAgentCRDStatus to return PhaseRunning
+	crdCoord.On("GetAgentCRDStatus", mock.Anything, agentID1).Return(&v1alpha1.TacitoAgentStatus{
+		Phase: v1alpha1.PhaseRunning,
+	}, nil)
+
+	// Expecting that GetAgentStatus / status sync will call agentRepo.Update to sync the status to running!
+	agentRepo.On("Update", mock.Anything, mock.MatchedBy(func(a *model.Agent) bool {
+		return a.ID == agentID1 && a.Status == model.AgentStatusRunning
+	})).Return(nil)
+
+	broadcaster.On("RequestEcho", mock.Anything, "test-comm", "agent-1", mock.Anything).Return(&model.EchoReply{
+		AgentName: "agent-1",
+		Decorated: "[agent:agent-1] hello",
+	}, nil)
+
+	res, err := svc.EchoCommunity(context.Background(), communityID, "hello")
+	require.NoError(t, err)
+	assert.Len(t, res.Results, 1)
+	assert.Equal(t, "agent-1", res.Results[0].AgentName)
+	assert.Empty(t, res.Results[0].Error)
+}
+

@@ -279,3 +279,41 @@ func TestLifecycleService_DeployCommunity_MultiStatusPartialSuccess(t *testing.T
 	assert.Equal(t, agentID1, successID)
 	assert.Equal(t, agentID2, failID)
 }
+
+func TestGetAgentStatus_PersistsStateTransition(t *testing.T) {
+	agentRepo := new(mockAgentRepository)
+	commRepo := new(mockCommunityRepository)
+	crdCoord := new(mockCRDCoordinator)
+
+	svc := service.NewLifecycleService(agentRepo, commRepo, crdCoord, nil)
+
+	ten, _ := tenant.New("acme.com", "")
+	ctx := tenant.ContextWithTenant(context.Background(), ten)
+
+	agentID := uuid.New()
+	agent := &model.Agent{
+		ID:       agentID,
+		TenantID: ten.FullName(),
+		Name:     "test-agent",
+		Status:   model.AgentStatusPending,
+	}
+
+	agentRepo.On("GetByID", mock.Anything, agentID).Return(agent, nil)
+	crdCoord.On("GetAgentCRDStatus", mock.Anything, agentID).Return(&v1alpha1.TacitoAgentStatus{
+		Phase: v1alpha1.PhaseRunning,
+	}, nil)
+
+	// Expecting that GetAgentStatus will call agentRepo.Update to sync the status to running!
+	agentRepo.On("Update", mock.Anything, mock.MatchedBy(func(a *model.Agent) bool {
+		return a.ID == agentID && a.Status == model.AgentStatusRunning
+	})).Return(nil)
+
+	details, err := svc.GetAgentStatus(ctx, agentID)
+	assert.NoError(t, err)
+	require.NotNil(t, details)
+	assert.Equal(t, model.AgentStatusRunning, details.Status)
+
+	agentRepo.AssertExpectations(t)
+	crdCoord.AssertExpectations(t)
+}
+

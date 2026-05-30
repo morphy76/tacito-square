@@ -70,6 +70,8 @@ func (s *EchoServiceImpl) EchoCommunity(ctx context.Context, communityID uuid.UU
 		return nil, err
 	}
 
+	s.syncAgentStatuses(ctx, allAgents, communityID)
+
 	var wokeCommunity bool
 	runningAgents := filterRunningAgents(allAgents, communityID)
 
@@ -117,6 +119,7 @@ func (s *EchoServiceImpl) EchoCommunity(ctx context.Context, communityID uuid.UU
 				case <-ticker.C:
 					agentsList, err := s.agentRepo.List(ctx)
 					if err == nil {
+						s.syncAgentStatuses(ctx, agentsList, communityID)
 						activeRunning := filterRunningAgents(agentsList, communityID)
 						if len(activeRunning) > 0 {
 							waitChan <- true
@@ -132,6 +135,7 @@ func (s *EchoServiceImpl) EchoCommunity(ctx context.Context, communityID uuid.UU
 			if success {
 				agentsList, err := s.agentRepo.List(ctx)
 				if err == nil {
+					s.syncAgentStatuses(ctx, agentsList, communityID)
 					runningAgents = filterRunningAgents(agentsList, communityID)
 				}
 			}
@@ -205,4 +209,37 @@ func filterRunningAgents(agents []*model.Agent, communityID uuid.UUID) []*model.
 		}
 	}
 	return running
+}
+
+func (s *EchoServiceImpl) syncAgentStatuses(ctx context.Context, agents []*model.Agent, communityID uuid.UUID) {
+	for _, a := range agents {
+		if a.CommunityID != nil && *a.CommunityID == communityID && a.Status == model.AgentStatusPending {
+			crdStatus, err := s.crdCoord.GetAgentCRDStatus(ctx, a.ID)
+			if err == nil && crdStatus != nil {
+				var mappedStatus model.AgentStatus
+				switch crdStatus.Phase {
+				case v1alpha1.PhaseRunning:
+					mappedStatus = model.AgentStatusRunning
+				case v1alpha1.PhasePending:
+					mappedStatus = model.AgentStatusPending
+				case v1alpha1.PhaseTerminated:
+					mappedStatus = model.AgentStatusStopped
+				case v1alpha1.PhaseIdle:
+					if a.Status == model.AgentStatusRunning {
+						mappedStatus = model.AgentStatusPending
+					} else {
+						mappedStatus = a.Status
+					}
+				default:
+					mappedStatus = model.AgentStatusError
+				}
+
+				if mappedStatus != a.Status {
+					a.Status = mappedStatus
+					a.UpdatedAt = time.Now().UTC()
+					_ = s.agentRepo.Update(ctx, a)
+				}
+			}
+		}
+	}
 }
