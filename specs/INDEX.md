@@ -105,6 +105,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | BUG-M4.5 | Echo Endpoint Fails with 503 Due to Static Database Status Check | CLOSED | HIGH | [BUG-M4.5](tasks/M4.BUG5/BUG-M4.5.md) |
 | BUG-M4.6 | Echo Message Fails to Dispatch Due to NATS Subject Mismatch (Name vs UUID) | CLOSED | HIGH | [BUG-M4.6](tasks/M4.BUG6/BUG-M4.6.md) |
 | BUG-M4.7 | Agent Pod Never Subscribes to NATS Echo Subject — EchoSubscriber Not Wired in Bootstrap | CLOSED | HIGH | [BUG-M4.7](tasks/M4.BUG7/BUG-M4.7.md) |
+| BUG-M4.8 | OTel Trace Context Not Propagated Across NATS Boundary in Echo Flow | OPEN | HIGH | [BUG-M4.8](tasks/M4.BUG8/BUG-M4.8.md) |
 
 
 ### M5: Agent Core
