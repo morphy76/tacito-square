@@ -10,6 +10,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"github.com/rs/zerolog"
+	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -137,6 +138,7 @@ func (r *TacitoAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 func (r *TacitoAgentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.TacitoAgent{}).
+		Owns(&appsv1.Deployment{}).
 		Complete(r)
 }
 
