@@ -102,6 +102,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | BUG-M4.2 | Health and Metrics Endpoints Leak Tracing Spans | CLOSED | MEDIUM | [BUG-M4.2](tasks/M4.BUG2/BUG-M4.2.md) |
 | BUG-M4.3 | Overlapping Observability Frameworks with Prometheus and OpenTelemetry | CLOSED | HIGH | [BUG-M4.3](tasks/M4.BUG3/BUG-M4.3.md) |
 | BUG-M4.4 | Redundant Infrastructure Monitoring Services (Prometheus Server & Zipkin Tracing) | OPEN | MEDIUM | [BUG-M4.4](tasks/M4.BUG4/BUG-M4.4.md) |
+| BUG-M4.5 | Echo Endpoint Fails with 503 Due to Static Database Status Check | OPEN | HIGH | [BUG-M4.5](tasks/M4.BUG5/BUG-M4.5.md) |
 
 
 ### M5: Agent Core
