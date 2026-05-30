@@ -56,7 +56,42 @@ func main() {
 		return shutdownTracer(ctx)
 	})
 
-	// 5. Create HTTP router
+	// 5. Initialize NATS connection and echo subscriber
+	natsURL := v.GetString("nats.url")
+	if natsURL == "" {
+		logger.Fatal().Msg("TS_AGENT_NATS_URL is required but not set")
+	}
+
+	agentName := v.GetString("name")
+	if agentName == "" {
+		logger.Fatal().Msg("TS_AGENT_NAME is required but not set")
+	}
+
+	communityRef := v.GetString("community.ref")
+	if communityRef == "" {
+		logger.Fatal().Msg("TS_AGENT_COMMUNITY_REF is required but not set")
+	}
+
+	nc, err := agent.ConnectNATS(natsURL, logger)
+	if err != nil {
+		logger.Fatal().Err(err).Str("nats.url", natsURL).Msg("failed to connect to NATS")
+	}
+	mgr.Register("nats-client", func(ctx context.Context) error {
+		logger.Info().Msg("closing NATS connection")
+		nc.Close()
+		return nil
+	})
+
+	echoSubscriber := agent.NewEchoSubscriber(nc, agentName, communityRef, "", logger)
+	if err := echoSubscriber.Start(ctx); err != nil {
+		logger.Fatal().Err(err).Msg("failed to start echo subscriber")
+	}
+	mgr.Register("echo-subscriber", func(ctx context.Context) error {
+		logger.Info().Msg("stopping echo subscriber")
+		return echoSubscriber.Stop()
+	})
+
+	// 6. Create HTTP router
 	router := agent.NewServer()
 
 	srv := &http.Server{
@@ -78,7 +113,7 @@ func main() {
 		return srv.Shutdown(ctx)
 	})
 
-	// 6. Block until termination signal and execute cleanup
+	// 7. Block until termination signal and execute cleanup
 	logger.Info().Msg("component is ready")
 	if err := mgr.Wait(syscall.SIGINT, syscall.SIGTERM); err != nil {
 		logger.Error().Err(err).Msg("error during graceful shutdown")
