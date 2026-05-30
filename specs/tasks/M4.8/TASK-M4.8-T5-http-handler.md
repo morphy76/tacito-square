@@ -5,7 +5,7 @@
 | Task ID     | TASK-M4.8-T5                                                     |
 | Spec        | SPEC-FR-M4.8                                                     |
 | Boundary    | Inbound HTTP Adapter — `internal/keeper/adapters/inbound/http`   |
-| Status      | IMPLEMENTED                                                      |
+| Status      | VERIFIED                                                         |
 | Depends On  | TASK-M4.8-T4                                                     |
 
 ## Objective
