@@ -116,6 +116,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | SPEC-FR-M5.6 | Object Storage (S3/MinIO) | DRAFT | agent | [SPEC-FR-M5.6](functional/M5/SPEC-FR-M5.6.md) |
 | SPEC-FR-M5.7 | Standalone Agent Deployment Helm Chart | DRAFT | deploy | [SPEC-FR-M5.7](functional/M5/SPEC-FR-M5.7.md) |
 | SPEC-FR-M5.8 | Benchmark Suite & Integration Coverage Verification | ACCEPTED | test | [SPEC-FR-M5.8](functional/M5/SPEC-FR-M5.8.md) |
+| SPEC-FR-M5.9 | Flexible Agent Runtime Tiers & Deployment Customization | ACCEPTED | keeper, operator, deploy | [SPEC-FR-M5.9](functional/M5/SPEC-FR-M5.9.md) |
 
 ### M6: Communities & Messaging
 
@@ -207,4 +208,5 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | SPEC-FR-M4.6 | 3 | RED → GREEN → REFACTOR | [tasks/M4.6/](tasks/M4.6/) |
 | SPEC-FR-M4.7 | 5 | RED → GREEN → REFACTOR | [tasks/M4.7/](tasks/M4.7/) |
 | SPEC-FR-M4.8 | 7 | Domain, Ports, NATS Adapter, Service, HTTP Handler, Agent Subscriber, Bootstrap | [tasks/M4.8/](tasks/M4.8/) |
+| SPEC-FR-M5.9 | 4 | Keeper Domain/REST, CRD Schema, Helm configs, Operator Reconciler Customizer | [tasks/M5.9/](tasks/M5.9/) |
 
