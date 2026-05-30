@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M4.8                                |
-| Status        | ACCEPTED                                    |
+| Status        | IMPLEMENTED                                 |
 | Milestone     | M4                                          |
 | Component     | keeper, agent                               |
 | Depends On    | SPEC-FR-M4.4, SPEC-FR-M4.7                 |

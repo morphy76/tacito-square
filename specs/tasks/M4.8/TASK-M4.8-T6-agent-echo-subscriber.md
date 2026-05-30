@@ -5,7 +5,7 @@
 | Task ID     | TASK-M4.8-T6                                                    |
 | Spec        | SPEC-FR-M4.8                                                    |
 | Boundary    | Agent Inbound Adapter — `internal/agent/adapters/inbound/nats`  |
-| Status      | IMPLEMENTED                                                     |
+| Status      | VERIFIED                                                        |
 | Depends On  | TASK-M4.8-T1                                                    |
 
 ## Objective

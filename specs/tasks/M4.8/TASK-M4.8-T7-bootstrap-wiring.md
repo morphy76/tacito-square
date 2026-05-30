@@ -5,8 +5,9 @@
 | Task ID     | TASK-M4.8-T7                                    |
 | Spec        | SPEC-FR-M4.8                                    |
 | Boundary    | Bootstrap / Wiring — `internal/keeper/bootstrap.go` |
-| Status      | TODO                                            |
+| Status      | IMPLEMENTED                                     |
 | Depends On  | TASK-M4.8-T3, TASK-M4.8-T4, TASK-M4.8-T5      |
+
 
 ## Objective
 

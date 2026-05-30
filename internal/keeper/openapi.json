@@ -39,6 +39,10 @@
     {
       "name": "lifecycle/management",
       "description": "Bounded context: Lifecycle Management. Enables deploying, undeploying and monitoring runtime status."
+    },
+    {
+      "name": "community/echo",
+      "description": "Bounded context: Community Echo. Enables fanning out request-reply echo operations to running agents."
     }
   ],
   "paths": {
@@ -2681,6 +2685,98 @@
           }
         }
       }
+    },
+    "/communities/{community_id}/echo": {
+      "post": {
+        "summary": "Send an echo ping to all running agents in a community",
+        "operationId": "echoCommunity",
+        "tags": [
+          "community/echo"
+        ],
+        "parameters": [
+          {
+            "name": "community_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Community",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "message"
+                ],
+                "properties": {
+                  "message": {
+                    "type": "string",
+                    "example": "ping"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully dispatched echo to community agents",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityEchoResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Community not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable (NATS unavailable or no running agents)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3867,6 +3963,51 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/AgentStatusDetails"
+            }
+          }
+        }
+      },
+      "AgentEchoResult": {
+        "type": "object",
+        "required": [
+          "agent_name"
+        ],
+        "properties": {
+          "agent_name": {
+            "type": "string",
+            "example": "math-agent"
+          },
+          "decorated": {
+            "type": "string",
+            "example": "[math-agent]: Echo: hello (w/ community-1 info)"
+          },
+          "error": {
+            "type": "string",
+            "example": "timeout"
+          }
+        }
+      },
+      "CommunityEchoResponse": {
+        "type": "object",
+        "required": [
+          "community_id",
+          "woke_community",
+          "results"
+        ],
+        "properties": {
+          "community_id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "ec57f1af-d2d8-4ad4-be1e-195176775734"
+          },
+          "woke_community": {
+            "type": "boolean",
+            "example": false
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentEchoResult"
             }
           }
         }

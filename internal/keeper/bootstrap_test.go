@@ -1,12 +1,15 @@
 package keeper
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -127,4 +130,33 @@ func TestEndpoints_DatabaseUnavailable_Returns503(t *testing.T) {
 	err := json.Unmarshal(w.Body.Bytes(), &body)
 	require.NoError(t, err)
 	assert.Equal(t, "Database service unavailable", body["error"])
+}
+
+func TestNewServer_EchoRouteRegistered(t *testing.T) {
+	srv := NewServer(nil, nil, nil)
+	require.NotNil(t, srv)
+
+	found := false
+	for _, route := range srv.Routes() {
+		if route.Method == http.MethodPost && route.Path == "/api/v1/communities/:community_id/echo" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "POST /api/v1/communities/:community_id/echo route was not registered")
+}
+
+func TestNewServer_EchoDatabaseUnavailable_Returns503(t *testing.T) {
+	srv := NewServer(nil, nil, nil)
+	require.NotNil(t, srv)
+
+	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/v1/communities/%s/echo", uuid.New()), bytes.NewBufferString(`{"message":"test"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Tenant-ID", "tenant-1")
+
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+	assert.Contains(t, w.Body.String(), "Database service unavailable")
 }

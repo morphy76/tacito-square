@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"errors"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,6 +14,7 @@ import (
 
 	httpAdapter "github.com/morphy76/tacito-square/internal/keeper/adapters/inbound/http"
 	"github.com/morphy76/tacito-square/internal/keeper/adapters/outbound/crd"
+	outboundNats "github.com/morphy76/tacito-square/internal/keeper/adapters/outbound/nats"
 	"github.com/morphy76/tacito-square/internal/keeper/adapters/outbound/postgres"
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/keeper/application/service"
@@ -108,6 +110,10 @@ func NewServer(pool *pgxpool.Pool, nc *nats.Conn, k8sConfig *rest.Config) *gin.E
 	communityService := service.NewCommunityService(communityRepo)
 	lifecycleService := service.NewLifecycleService(agentRepo, communityRepo, crdCoord, nc)
 
+	// Echo feature
+	natsBroadcaster := outboundNats.NewNATSCommunityBroadcaster(nc, observability.NewLogger("info", os.Stdout))
+	echoService := service.NewEchoService(communityRepo, agentRepo, crdCoord, natsBroadcaster, nil)
+
 	// Inbound Handlers (Gin adapters depending strictly on inboundports / services)
 	handler := httpAdapter.NewLLMBindingHandler(llmService)
 	mcpHandler := httpAdapter.NewMCPServerHandler(mcpService)
@@ -117,6 +123,7 @@ func NewServer(pool *pgxpool.Pool, nc *nats.Conn, k8sConfig *rest.Config) *gin.E
 	communityHandler := httpAdapter.NewCommunityHandler(communityService)
 	assignmentHandler := httpAdapter.NewAssignmentHandler(agentService)
 	lifecycleHandler := httpAdapter.NewLifecycleHandler(lifecycleService)
+	echoHandler := httpAdapter.NewEchoHandler(echoService)
 
 	v1 := r.Group("/api/v1")
 	v1.Use(httpAdapter.TenantResolutionMiddleware(httpAdapter.NewHeaderTenantResolver()))
@@ -186,6 +193,9 @@ func NewServer(pool *pgxpool.Pool, nc *nats.Conn, k8sConfig *rest.Config) *gin.E
 		v1.POST("/communities/:community_id/deploy", lifecycleHandler.DeployCommunity)
 		v1.POST("/communities/:community_id/undeploy", lifecycleHandler.UndeployCommunity)
 		v1.GET("/communities/:community_id/status", lifecycleHandler.GetCommunityStatus)
+
+		// Echo routes
+		echoHandler.RegisterRoutes(v1)
 	}
 
 	return r
