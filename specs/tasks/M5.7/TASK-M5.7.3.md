@@ -24,9 +24,12 @@ Implement the automated Helm validation test script `test/helm/test_agent_standa
      - Custom overlays (custom agent name, system prompt, LLM temperature).
      - Secure secret reference inclusion.
    - Implement exit-code based check blocks that fail if any expectation is not met.
-   - Provide concrete examples in a chart `README.md` or in the script header for using the standard `nats` CLI client:
-     - `nats sub "tacito.community.*"` to monitor agent communications.
-     - `nats request "tacito.agent.<agent-name>"` to dispatch queries and listen for the agent's replies.
+   - Provide concrete examples in the chart's `README.md` and script headers detailing the two primary integration patterns for the NATS CLI client:
+      - **In-Cluster Interaction**: Running a temporary pod using the official `synadia/nats-box` image:
+        `kubectl run nats-box --rm -it --image=synadia/nats-box --namespace=<namespace> -- nats request -s "nats://ts-nats:4222" tacito.agent.<agent-name> "message"`
+      - **Local Port-Forwarding**: Port-forwarding the NATS service (`kubectl port-forward svc/ts-nats 4222:4222`) and executing local host commands:
+        - `nats sub "tacito.community.>"` to monitor communications.
+        - `nats request tacito.agent.<agent-name> '<payload>'` to dispatch queries and verify the agent's replies.
    - Verify all tests pass successfully (GREEN).
 
 3. **REFACTOR Phase**:
