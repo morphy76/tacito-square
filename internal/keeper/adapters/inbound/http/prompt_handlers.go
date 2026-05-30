@@ -109,7 +109,8 @@ func (h *PromptHandler) CreateTemplate(c *gin.Context) {
 		Str("prompt_template_id", pt.ID.String()).
 		Msg("Prompt template created successfully")
 
-	c.JSON(http.StatusCreated, nil)
+	c.Header("Location", "/api/v1/prompts/"+pt.ID.String())
+	c.Status(http.StatusCreated)
 }
 
 // GetTemplateByID handles GET /api/v1/prompts/:id
@@ -343,7 +344,8 @@ func (h *PromptHandler) CreateCollection(c *gin.Context) {
 		Str("prompt_collection_id", col.ID.String()).
 		Msg("Prompt collection created successfully")
 
-	c.JSON(http.StatusCreated, nil)
+	c.Header("Location", "/api/v1/prompt-collections/"+col.ID.String())
+	c.Status(http.StatusCreated)
 }
 
 // GetCollectionByID handles GET /api/v1/prompt-collections/:id

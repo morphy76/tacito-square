@@ -135,8 +135,10 @@ func TestSkillHandlers_Create(t *testing.T) {
 		}
 
 		var capturedCtx context.Context
+		var capturedSkillID uuid.UUID
 		repo.On("Create", mock.Anything, mock.AnythingOfType("*model.Skill")).Return(nil).Run(func(args mock.Arguments) {
 			capturedCtx = args.Get(0).(context.Context)
+			capturedSkillID = args.Get(1).(*model.Skill).ID
 		})
 
 		body, _ := json.Marshal(payload)
@@ -147,7 +149,8 @@ func TestSkillHandlers_Create(t *testing.T) {
 		r.ServeHTTP(resp, req)
 
 		assert.Equal(t, http.StatusCreated, resp.Code)
-		assert.Equal(t, "null", resp.Body.String())
+		assert.Equal(t, "/api/v1/skills/"+capturedSkillID.String(), resp.Header().Get("Location"))
+		assert.Empty(t, resp.Body.String())
 		if assert.NotNil(t, capturedCtx) {
 			assert.ErrorIs(t, capturedCtx.Err(), context.Canceled)
 		}
@@ -397,8 +400,10 @@ func TestSkillHandlers_Collections(t *testing.T) {
 		}
 
 		var capturedCtx context.Context
+		var capturedCollectionID uuid.UUID
 		repo.On("CreateCollection", mock.Anything, mock.AnythingOfType("*model.SkillCollection")).Return(nil).Run(func(args mock.Arguments) {
 			capturedCtx = args.Get(0).(context.Context)
+			capturedCollectionID = args.Get(1).(*model.SkillCollection).ID
 		})
 
 		body, _ := json.Marshal(payload)
@@ -409,7 +414,8 @@ func TestSkillHandlers_Collections(t *testing.T) {
 		r.ServeHTTP(resp, req)
 
 		assert.Equal(t, http.StatusCreated, resp.Code)
-		assert.Equal(t, "null", resp.Body.String())
+		assert.Equal(t, "/api/v1/skill-collections/"+capturedCollectionID.String(), resp.Header().Get("Location"))
+		assert.Empty(t, resp.Body.String())
 		if assert.NotNil(t, capturedCtx) {
 			assert.ErrorIs(t, capturedCtx.Err(), context.Canceled)
 		}

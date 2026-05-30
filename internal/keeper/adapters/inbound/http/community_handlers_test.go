@@ -82,8 +82,10 @@ func TestCommunityHandlers_Create(t *testing.T) {
 		}
 
 		var capturedCtx context.Context
+		var capturedCommID uuid.UUID
 		repo.On("Create", mock.Anything, mock.AnythingOfType("*model.Community")).Return(nil).Run(func(args mock.Arguments) {
 			capturedCtx = args.Get(0).(context.Context)
+			capturedCommID = args.Get(1).(*model.Community).ID
 		})
 
 		body, _ := json.Marshal(payload)
@@ -94,7 +96,8 @@ func TestCommunityHandlers_Create(t *testing.T) {
 		r.ServeHTTP(resp, req)
 
 		assert.Equal(t, http.StatusCreated, resp.Code)
-		assert.Equal(t, "null", resp.Body.String())
+		assert.Equal(t, "/api/v1/communities/"+capturedCommID.String(), resp.Header().Get("Location"))
+		assert.Empty(t, resp.Body.String())
 		if assert.NotNil(t, capturedCtx) {
 			assert.ErrorIs(t, capturedCtx.Err(), context.Canceled)
 		}

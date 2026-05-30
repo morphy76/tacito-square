@@ -114,8 +114,10 @@ func TestAgentHandlers_Create(t *testing.T) {
 		}
 
 		var capturedCtx context.Context
+		var capturedAgentID uuid.UUID
 		repo.On("Create", mock.Anything, mock.AnythingOfType("*model.Agent")).Return(nil).Run(func(args mock.Arguments) {
 			capturedCtx = args.Get(0).(context.Context)
+			capturedAgentID = args.Get(1).(*model.Agent).ID
 		})
 
 		body, _ := json.Marshal(payload)
@@ -126,7 +128,8 @@ func TestAgentHandlers_Create(t *testing.T) {
 		r.ServeHTTP(resp, req)
 
 		assert.Equal(t, http.StatusCreated, resp.Code)
-		assert.Equal(t, "null", resp.Body.String())
+		assert.Equal(t, "/api/v1/agents/"+capturedAgentID.String(), resp.Header().Get("Location"))
+		assert.Empty(t, resp.Body.String())
 		if assert.NotNil(t, capturedCtx) {
 			assert.ErrorIs(t, capturedCtx.Err(), context.Canceled)
 		}

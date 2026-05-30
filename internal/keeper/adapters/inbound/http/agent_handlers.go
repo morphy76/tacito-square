@@ -184,7 +184,8 @@ func (h *AgentHandler) Create(c *gin.Context) {
 		Str("agent_id", agent.ID.String()).
 		Msg("Agent template created successfully")
 
-	c.JSON(http.StatusCreated, nil)
+	c.Header("Location", "/api/v1/agents/"+agent.ID.String())
+	c.Status(http.StatusCreated)
 }
 
 // GetByID handles GET /api/v1/agents/:id

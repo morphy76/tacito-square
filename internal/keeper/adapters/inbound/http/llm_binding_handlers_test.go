@@ -94,8 +94,10 @@ func TestLLMBindingHandlers_Create(t *testing.T) {
 		}
 
 		var capturedCtx context.Context
+		var capturedBindingID uuid.UUID
 		repo.On("Create", mock.Anything, mock.AnythingOfType("*model.LLMBinding")).Return(nil).Run(func(args mock.Arguments) {
 			capturedCtx = args.Get(0).(context.Context)
+			capturedBindingID = args.Get(1).(*model.LLMBinding).ID
 		})
 
 		body, _ := json.Marshal(payload)
@@ -106,7 +108,8 @@ func TestLLMBindingHandlers_Create(t *testing.T) {
 		r.ServeHTTP(resp, req)
 
 		assert.Equal(t, http.StatusCreated, resp.Code)
-		assert.Equal(t, "null", resp.Body.String())
+		assert.Equal(t, "/api/v1/llm-bindings/"+capturedBindingID.String(), resp.Header().Get("Location"))
+		assert.Empty(t, resp.Body.String())
 		if assert.NotNil(t, capturedCtx) {
 			assert.ErrorIs(t, capturedCtx.Err(), context.Canceled)
 		}

@@ -107,7 +107,8 @@ func (h *MCPServerHandler) Create(c *gin.Context) {
 		Str("mcp_server_id", server.ID.String()).
 		Msg("MCP server template created successfully")
 
-	c.JSON(http.StatusCreated, nil)
+	c.Header("Location", "/api/v1/mcp-servers/"+server.ID.String())
+	c.Status(http.StatusCreated)
 }
 
 // GetByID handles GET /api/v1/mcp-servers/:id

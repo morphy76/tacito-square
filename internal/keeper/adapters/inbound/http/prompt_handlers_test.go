@@ -111,8 +111,10 @@ func TestPromptHandlers_CreateTemplate(t *testing.T) {
 		}
 
 		var capturedCtx context.Context
+		var capturedTemplateID uuid.UUID
 		repo.On("CreateTemplate", mock.Anything, mock.AnythingOfType("*model.PromptTemplate")).Return(nil).Run(func(args mock.Arguments) {
 			capturedCtx = args.Get(0).(context.Context)
+			capturedTemplateID = args.Get(1).(*model.PromptTemplate).ID
 		})
 
 		body, _ := json.Marshal(payload)
@@ -123,7 +125,8 @@ func TestPromptHandlers_CreateTemplate(t *testing.T) {
 		r.ServeHTTP(resp, req)
 
 		assert.Equal(t, http.StatusCreated, resp.Code)
-		assert.Equal(t, "null", resp.Body.String())
+		assert.Equal(t, "/api/v1/prompts/"+capturedTemplateID.String(), resp.Header().Get("Location"))
+		assert.Empty(t, resp.Body.String())
 		if assert.NotNil(t, capturedCtx) {
 			assert.ErrorIs(t, capturedCtx.Err(), context.Canceled)
 		}
@@ -196,8 +199,10 @@ func TestPromptHandlers_Collections(t *testing.T) {
 		}
 
 		var capturedCtx context.Context
+		var capturedCollectionID uuid.UUID
 		repo.On("CreateCollection", mock.Anything, mock.AnythingOfType("*model.PromptCollection")).Return(nil).Run(func(args mock.Arguments) {
 			capturedCtx = args.Get(0).(context.Context)
+			capturedCollectionID = args.Get(1).(*model.PromptCollection).ID
 		})
 
 		body, _ := json.Marshal(payload)
@@ -208,7 +213,8 @@ func TestPromptHandlers_Collections(t *testing.T) {
 		r.ServeHTTP(resp, req)
 
 		assert.Equal(t, http.StatusCreated, resp.Code)
-		assert.Equal(t, "null", resp.Body.String())
+		assert.Equal(t, "/api/v1/prompt-collections/"+capturedCollectionID.String(), resp.Header().Get("Location"))
+		assert.Empty(t, resp.Body.String())
 		if assert.NotNil(t, capturedCtx) {
 			assert.ErrorIs(t, capturedCtx.Err(), context.Canceled)
 		}

@@ -103,7 +103,8 @@ func (h *SkillHandler) Create(c *gin.Context) {
 		Str("skill_id", skill.ID.String()).
 		Msg("Skill created successfully")
 
-	c.JSON(http.StatusCreated, nil)
+	c.Header("Location", "/api/v1/skills/"+skill.ID.String())
+	c.Status(http.StatusCreated)
 }
 
 // GetByID handles GET /api/v1/skills/:id
@@ -436,7 +437,8 @@ func (h *SkillHandler) CreateCollection(c *gin.Context) {
 		Str("skill_collection_id", col.ID.String()).
 		Msg("Skill collection created successfully")
 
-	c.JSON(http.StatusCreated, nil)
+	c.Header("Location", "/api/v1/skill-collections/"+col.ID.String())
+	c.Status(http.StatusCreated)
 }
 
 // GetCollectionByID handles GET /api/v1/skill-collections/:id

@@ -66,10 +66,11 @@
         "responses": {
           "201": {
             "description": "Successfully created LLM provider binding",
-            "content": {
-              "application/json": {
+            "headers": {
+              "Location": {
+                "description": "The URI of the newly created llm bindings",
                 "schema": {
-                  "$ref": "#/components/schemas/LLMBinding"
+                  "type": "string"
                 }
               }
             }
@@ -307,10 +308,11 @@
         "responses": {
           "201": {
             "description": "Successfully registered MCP server profile",
-            "content": {
-              "application/json": {
+            "headers": {
+              "Location": {
+                "description": "The URI of the newly created mcp servers",
                 "schema": {
-                  "$ref": "#/components/schemas/MCPServer"
+                  "type": "string"
                 }
               }
             }
@@ -548,10 +550,11 @@
         "responses": {
           "201": {
             "description": "Successfully created Skill Collection",
-            "content": {
-              "application/json": {
+            "headers": {
+              "Location": {
+                "description": "The URI of the newly created skills",
                 "schema": {
-                  "$ref": "#/components/schemas/Skill"
+                  "type": "string"
                 }
               }
             }
@@ -909,10 +912,11 @@
         "responses": {
           "201": {
             "description": "Successfully created Skill Collection",
-            "content": {
-              "application/json": {
+            "headers": {
+              "Location": {
+                "description": "The URI of the newly created skill collections",
                 "schema": {
-                  "$ref": "#/components/schemas/SkillCollection"
+                  "type": "string"
                 }
               }
             }
@@ -1186,10 +1190,11 @@
         "responses": {
           "201": {
             "description": "Successfully created Prompt Template",
-            "content": {
-              "application/json": {
+            "headers": {
+              "Location": {
+                "description": "The URI of the newly created prompts",
                 "schema": {
-                  "$ref": "#/components/schemas/PromptTemplate"
+                  "type": "string"
                 }
               }
             }
@@ -1417,10 +1422,11 @@
         "responses": {
           "201": {
             "description": "Successfully created Prompt Collection",
-            "content": {
-              "application/json": {
+            "headers": {
+              "Location": {
+                "description": "The URI of the newly created prompt collections",
                 "schema": {
-                  "$ref": "#/components/schemas/PromptCollection"
+                  "type": "string"
                 }
               }
             }
@@ -1697,10 +1703,11 @@
         "responses": {
           "201": {
             "description": "Successfully created Agent template",
-            "content": {
-              "application/json": {
+            "headers": {
+              "Location": {
+                "description": "The URI of the newly created agents",
                 "schema": {
-                  "$ref": "#/components/schemas/Agent"
+                  "type": "string"
                 }
               }
             }
@@ -1938,10 +1945,11 @@
         "responses": {
           "201": {
             "description": "Successfully created Community",
-            "content": {
-              "application/json": {
+            "headers": {
+              "Location": {
+                "description": "The URI of the newly created communities",
                 "schema": {
-                  "$ref": "#/components/schemas/Community"
+                  "type": "string"
                 }
               }
             }

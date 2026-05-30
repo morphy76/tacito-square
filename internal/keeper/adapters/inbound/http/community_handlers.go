@@ -102,7 +102,8 @@ func (h *CommunityHandler) Create(c *gin.Context) {
 		Str("topology", string(comm.Topology)).
 		Msg("Community template created successfully")
 
-	c.JSON(http.StatusCreated, nil)
+	c.Header("Location", "/api/v1/communities/"+comm.ID.String())
+	c.Status(http.StatusCreated)
 }
 
 // GetByID handles GET /api/v1/communities/:id

@@ -122,7 +122,8 @@ func (h *LLMBindingHandler) Create(c *gin.Context) {
 		Str("provider", string(binding.Provider)).
 		Msg("LLM provider binding template created successfully")
 
-	c.JSON(http.StatusCreated, nil)
+	c.Header("Location", "/api/v1/llm-bindings/"+binding.ID.String())
+	c.Status(http.StatusCreated)
 }
 
 // GetByID handles GET /api/v1/llm-bindings/:id
