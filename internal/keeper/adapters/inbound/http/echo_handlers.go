@@ -12,9 +12,7 @@ import (
 	"github.com/morphy76/tacito-square/internal/keeper/application/service"
 	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/morphy76/tacito-square/internal/shared/tenant"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type EchoHandler struct {
@@ -40,9 +38,7 @@ func (h *EchoHandler) EchoCommunity(c *gin.Context) {
 	ctx, cancel := context.WithCancel(c.Request.Context())
 	defer cancel()
 
-	ctx, span := otel.Tracer("keeper").Start(ctx, "keeper.echo_community",
-		trace.WithSpanKind(trace.SpanKindServer))
-	defer span.End()
+	_, span := observability.StartHandlerSpan(c, "keeper.echo_community")
 
 	logger := observability.NewLogger("info", os.Stdout)
 	reqLogger := observability.WithContext(logger, ctx)

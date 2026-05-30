@@ -11,8 +11,6 @@ import (
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/inbound"
 	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/morphy76/tacito-square/internal/shared/tenant"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type LifecycleHandler struct {
@@ -28,8 +26,7 @@ func (h *LifecycleHandler) DeployAgent(c *gin.Context) {
 	ctx, cancel := context.WithCancel(c.Request.Context())
 	defer cancel()
 
-	ctx, span := otel.Tracer("keeper").Start(ctx, "http.deploy_agent", trace.WithSpanKind(trace.SpanKindServer))
-	defer span.End()
+	observability.StartHandlerSpan(c, "http.deploy_agent")
 
 	logger := observability.NewLogger("info", os.Stdout)
 	reqLogger := observability.WithContext(logger, ctx)
@@ -80,8 +77,7 @@ func (h *LifecycleHandler) UndeployAgent(c *gin.Context) {
 	ctx, cancel := context.WithCancel(c.Request.Context())
 	defer cancel()
 
-	ctx, span := otel.Tracer("keeper").Start(ctx, "http.undeploy_agent", trace.WithSpanKind(trace.SpanKindServer))
-	defer span.End()
+	observability.StartHandlerSpan(c, "http.undeploy_agent")
 
 	logger := observability.NewLogger("info", os.Stdout)
 	reqLogger := observability.WithContext(logger, ctx)
@@ -125,8 +121,7 @@ func (h *LifecycleHandler) UndeployAgent(c *gin.Context) {
 
 // GetAgentStatus handles GET /api/v1/agents/:agent_id/status
 func (h *LifecycleHandler) GetAgentStatus(c *gin.Context) {
-	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.get_agent_status", trace.WithSpanKind(trace.SpanKindServer))
-	defer span.End()
+	ctx, _ := observability.StartHandlerSpan(c, "http.get_agent_status")
 
 	logger := observability.NewLogger("info", os.Stdout)
 	reqLogger := observability.WithContext(logger, ctx)
@@ -164,8 +159,7 @@ func (h *LifecycleHandler) DeployCommunity(c *gin.Context) {
 	ctx, cancel := context.WithCancel(c.Request.Context())
 	defer cancel()
 
-	ctx, span := otel.Tracer("keeper").Start(ctx, "http.deploy_community", trace.WithSpanKind(trace.SpanKindServer))
-	defer span.End()
+	observability.StartHandlerSpan(c, "http.deploy_community")
 
 	logger := observability.NewLogger("info", os.Stdout)
 	reqLogger := observability.WithContext(logger, ctx)
@@ -214,8 +208,7 @@ func (h *LifecycleHandler) UndeployCommunity(c *gin.Context) {
 	ctx, cancel := context.WithCancel(c.Request.Context())
 	defer cancel()
 
-	ctx, span := otel.Tracer("keeper").Start(ctx, "http.undeploy_community", trace.WithSpanKind(trace.SpanKindServer))
-	defer span.End()
+	observability.StartHandlerSpan(c, "http.undeploy_community")
 
 	logger := observability.NewLogger("info", os.Stdout)
 	reqLogger := observability.WithContext(logger, ctx)
@@ -261,8 +254,7 @@ func (h *LifecycleHandler) UndeployCommunity(c *gin.Context) {
 
 // GetCommunityStatus handles GET /api/v1/communities/:community_id/status
 func (h *LifecycleHandler) GetCommunityStatus(c *gin.Context) {
-	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.get_community_status", trace.WithSpanKind(trace.SpanKindServer))
-	defer span.End()
+	ctx, _ := observability.StartHandlerSpan(c, "http.get_community_status")
 
 	logger := observability.NewLogger("info", os.Stdout)
 	reqLogger := observability.WithContext(logger, ctx)

@@ -61,6 +61,18 @@ func RecordGinError(c *gin.Context, statusCode int, err error, attrs ...attribut
 	span.AddEvent("http.error", trace.WithAttributes(all...))
 }
 
+// StartHandlerSpan reuses and renames the active Gin server span to operationName,
+// avoiding invalid nested server spans. It returns the updated context carrying the span
+// and the span itself.
+func StartHandlerSpan(c *gin.Context, operationName string) (context.Context, trace.Span) {
+	ctx := c.Request.Context()
+	span := trace.SpanFromContext(ctx)
+	if span.SpanContext().IsValid() {
+		span.SetName(operationName)
+	}
+	return ctx, span
+}
+
 // ginContextAttrs builds the standard event attribute set for a Gin handler span
 // event: tenant_id (from context if available) plus any caller-supplied extras.
 func ginContextAttrs(ctx context.Context, extra ...attribute.KeyValue) []attribute.KeyValue {

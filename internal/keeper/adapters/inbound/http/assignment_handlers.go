@@ -11,8 +11,6 @@ import (
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/inbound"
 	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/morphy76/tacito-square/internal/shared/tenant"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/trace"
 )
 
 // AssignmentHandler implements HTTP endpoints for Agent-Community Assignment lifecycle.
@@ -32,8 +30,7 @@ func (h *AssignmentHandler) Assign(c *gin.Context) {
 	ctx, cancel := context.WithCancel(c.Request.Context())
 	defer cancel()
 
-	ctx, span := otel.Tracer("keeper").Start(ctx, "http.assign_agent", trace.WithSpanKind(trace.SpanKindServer))
-	defer span.End()
+	observability.StartHandlerSpan(c, "http.assign_agent")
 
 	logger := observability.NewLogger("info", os.Stdout)
 	reqLogger := observability.WithContext(logger, ctx)
@@ -90,8 +87,7 @@ func (h *AssignmentHandler) Assign(c *gin.Context) {
 
 // Unassign handles DELETE /api/v1/communities/:community_id/agents/:agent_id
 func (h *AssignmentHandler) Unassign(c *gin.Context) {
-	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.unassign_agent", trace.WithSpanKind(trace.SpanKindServer))
-	defer span.End()
+	ctx, _ := observability.StartHandlerSpan(c, "http.unassign_agent")
 
 	logger := observability.NewLogger("info", os.Stdout)
 	reqLogger := observability.WithContext(logger, ctx)

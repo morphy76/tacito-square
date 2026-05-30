@@ -1,5 +1,7 @@
 # Brainstorming
 
+- tracing across crd reconciliation: e.g. request of agent assignment and operator activities
+- agents capabilities, e.g. compacting context and summary/memory agents, language identification, conversation context and long term memory management
 - come e per cosa sfruttare i jetstream di nats?
 - Tacito multistage builds addirional make steps, they are faster than the single stage builds and decouples the workspace from tooling and runtime dependencies. This is especially useful for development, where we want to iterate quickly on the workspace without having to rebuild the entire image.
 - Summary agent to reduce conversations when they start to get long. This can be implemented as a separate tool that the agent can call when the conversation history exceeds a certain threshold. The summary agent can use techniques like extractive summarization or abstractive summarization to generate a concise summary of the conversation history, which can then be used as context for future interactions. This can help improve the performance and relevance of the agent's responses while keeping the conversation manageable.
