@@ -2,7 +2,7 @@
 
 | Field      | Value |
 |------------|-------|
-| Status     | 🏃 IN_PROGRESS |
+| Status     | ✔️ IMPLEMENTED |
 
 ## Goal
 

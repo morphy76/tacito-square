@@ -105,7 +105,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | BUG-M4.5 | Echo Endpoint Fails with 503 Due to Static Database Status Check | CLOSED | HIGH | [BUG-M4.5](tasks/M4.BUG5/BUG-M4.5.md) |
 | BUG-M4.6 | Echo Message Fails to Dispatch Due to NATS Subject Mismatch (Name vs UUID) | CLOSED | HIGH | [BUG-M4.6](tasks/M4.BUG6/BUG-M4.6.md) |
 | BUG-M4.7 | Agent Pod Never Subscribes to NATS Echo Subject — EchoSubscriber Not Wired in Bootstrap | CLOSED | HIGH | [BUG-M4.7](tasks/M4.BUG7/BUG-M4.7.md) |
-| BUG-M4.8 | OTel Trace Context Not Propagated Across NATS Boundary in Echo Flow | OPEN | HIGH | [BUG-M4.8](tasks/M4.BUG8/BUG-M4.8.md) |
+| BUG-M4.8 | OTel Trace Context Not Propagated Across NATS Boundary in Echo Flow | CLOSED | HIGH | [BUG-M4.8](tasks/M4.BUG8/BUG-M4.8.md) |
 
 
 ### M5: Agent Core
@@ -175,43 +175,10 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | M1 | Infrastructure Helm Chart | ✔️ IMPLEMENTED | 2 | [M1](milestones/M1-infrastructure.md) |
 | M2 | Application Helm Chart & Component Scaffolding | ✔️ IMPLEMENTED | 11 | [M2](milestones/M2-packaging.md) |
 | M3 | Keeper Core | ✔️ IMPLEMENTED | 8 | [M3](milestones/M3-keeper-core.md) |
-| M4 | Operator Core | ⬜ PLANNED | 6 | [M4](milestones/M4-operator-core.md) |
+| M4 | Operator Core | ✔️ IMPLEMENTED | 6 | [M4](milestones/M4-operator-core.md) |
 | M5 | Agent Core | ⬜ PLANNED | 7 | [M5](milestones/M5-agent-core.md) |
 | M6 | Communities & Messaging | ⬜ PLANNED | 7 | [M6](milestones/M6-communities.md) |
 | M7 | BFF & UIs | ⬜ PLANNED | 4 | [M7](milestones/M7-bff-uis.md) |
 | M8 | Governance | ⬜ PLANNED | 7 | [M8](milestones/M8-governance.md) |
 | M9 | Federation & Hardening | ⬜ PLANNED | 7 | [M9](milestones/M9-federation-hardening.md) |
-
-## Task Files
-
-| Spec | Tasks | Phase | Directory |
-|------|-------|-------|-----------|
-| SPEC-FR-M1.1 | 5 | RED → GREEN → REFACTOR | [tasks/M1.1/](tasks/M1.1/) |
-| SPEC-FR-M1.2 | 3 | RED → GREEN → REFACTOR | [tasks/M1.2/](tasks/M1.2/) |
-| SPEC-FR-M2.1 | 4 | RED → GREEN → REFACTOR | [tasks/M2.1/](tasks/M2.1/) |
-| SPEC-FR-M2.2 | 3 | RED → GREEN → REFACTOR | [tasks/M2.2/](tasks/M2.2/) |
-| SPEC-FR-M2.3 | 3 | RED → GREEN → REFACTOR | [tasks/M2.3/](tasks/M2.3/) |
-| SPEC-FR-M2.4 | 3 | RED → GREEN → REFACTOR | [tasks/M2.4/](tasks/M2.4/) |
-| SPEC-FR-M2.5 | 3 | RED → GREEN → REFACTOR | [tasks/M2.5/](tasks/M2.5/) |
-| SPEC-FR-M2.6 | 3 | RED → GREEN → REFACTOR | [tasks/M2.6/](tasks/M2.6/) |
-| SPEC-FR-M2.7 | 3 | RED → GREEN → REFACTOR | [tasks/M2.7/](tasks/M2.7/) |
-| SPEC-FR-M2.8 | 3 | RED → GREEN → REFACTOR | [tasks/M2.8/](tasks/M2.8/) |
-| SPEC-FR-M2.9 | 4 | RED → GREEN → REFACTOR | [tasks/M2.9/](tasks/M2.9/) |
-| SPEC-FR-M2.10 | 3 | RED → GREEN → REFACTOR | [tasks/M2.10/](tasks/M2.10/) |
-| SPEC-FR-M2.11 | 3 | RED → GREEN → REFACTOR | [tasks/M2.11/](tasks/M2.11/) |
-| SPEC-FR-M3.1 | 2 | Domain/Persistence & HTTP API Boundaries | [tasks/M3.1/](tasks/M3.1/) |
-| SPEC-FR-M3.2 | 2 | Domain/Persistence & HTTP API Boundaries | [tasks/M3.2/](tasks/M3.2/) |
-| SPEC-FR-M3.3 | 2 | Domain/Persistence & HTTP API Boundaries | [tasks/M3.3/](tasks/M3.3/) |
-| SPEC-FR-M3.4 | 2 | Domain/Persistence & HTTP API Boundaries | [tasks/M3.4/](tasks/M3.4/) |
-| SPEC-FR-M3.5 | 2 | Domain/Persistence & HTTP API Boundaries | [tasks/M3.5/](tasks/M3.5/) |
-| SPEC-FR-M3.6 | 3 | Domain/Persistence & HTTP API Boundaries | [tasks/M3.6/](tasks/M3.6/) |
-| SPEC-FR-M3.7 | 3 | Domain, HTTP API Boundaries & Observability | [tasks/M3.7/](tasks/M3.7/) |
-| SPEC-FR-M3.8 | 8 | Domain, HTTP API Boundaries, Observability & Helm | [tasks/M3.8/](tasks/M3.8/) |
-| SPEC-FR-M4.1 | 3 | RED → GREEN → REFACTOR | [tasks/M4.1/](tasks/M4.1/) |
-| SPEC-FR-M4.3 | 3 | RED → GREEN → REFACTOR | [tasks/M4.3/](tasks/M4.3/) |
-| SPEC-FR-M4.4 | 6 | CRD Schema, HeartbeatStore, NATS Subscriber, Scale Service, Reconciler, Bootstrap | [tasks/M4.4/](tasks/M4.4/) |
-| SPEC-FR-M4.6 | 3 | RED → GREEN → REFACTOR | [tasks/M4.6/](tasks/M4.6/) |
-| SPEC-FR-M4.7 | 5 | RED → GREEN → REFACTOR | [tasks/M4.7/](tasks/M4.7/) |
-| SPEC-FR-M4.8 | 7 | Domain, Ports, NATS Adapter, Service, HTTP Handler, Agent Subscriber, Bootstrap | [tasks/M4.8/](tasks/M4.8/) |
-| SPEC-FR-M5.9 | 4 | Keeper Domain/REST, CRD Schema, Helm configs, Operator Reconciler Customizer | [tasks/M5.9/](tasks/M5.9/) |
 
