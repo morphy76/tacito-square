@@ -68,15 +68,15 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | BUG-M3.2 | Silent Route Registration Failure due to PostgreSQL Coupling in Keeper Bootstrap | CLOSED | HIGH | [BUG-M3.2](tasks/M3.BUG2/BUG-M3.2.md) |
 | BUG-M3.3 | Hexagonal Architecture Violations (Missing Application Service Layer & Flat Bounded Contexts) | CLOSED | HIGH | [BUG-M3.3](tasks/M3.BUG3/BUG-M3.3.md) |
 | BUG-M3.4 | Broken Observability Context Propagation & Domain Metric Gaps | CLOSED | HIGH | [BUG-M3.4](tasks/M3.BUG4/BUG-M3.4.md) |
-| BUG-M3.5 | Missing OpenAPI Contract Tests | IMPLEMENTED | MEDIUM | [BUG-M3.5](tasks/M3.BUG5/BUG-M3.5.md) |
+| BUG-M3.5 | Missing OpenAPI Contract Tests | CLOSED | MEDIUM | [BUG-M3.5](tasks/M3.BUG5/BUG-M3.5.md) |
 | BUG-M3.6 | Synchronous Blocking Side-Effects in Agent-Community Assignment | CLOSED | HIGH | [BUG-M3.6](tasks/M3.BUG6/BUG-M3.6.md) |
 | BUG-M3.7 | Health Probes Missing NATS and Redis Dependency Checks | CLOSED | MEDIUM | [BUG-M3.7](tasks/M3.BUG7/BUG-M3.7.md) |
-| BUG-M3.8 | Stack Dependencies & Migration Framework Deviations | IMPLEMENTED | MEDIUM | [BUG-M3.8](tasks/M3.BUG8/BUG-M3.8.md) |
+| BUG-M3.8 | Stack Dependencies & Migration Framework Deviations | CLOSED | MEDIUM | [BUG-M3.8](tasks/M3.BUG8/BUG-M3.8.md) |
 | BUG-M3.9 | Misaligned Environment Variable Bindings for Keeper Deployment in Helm Chart | CLOSED | HIGH | [BUG-M3.9](tasks/M3.BUG9/BUG-M3.9.md) |
 | BUG-M3.10 | Inconsistent Logging of Trace ID and Tenant Context Across Keeper Entities | CLOSED | HIGH | [BUG-M3.10](tasks/M3.BUG10/BUG-M3.10.md) |
 | BUG-M3.11 | Inconsistent REST API Semantics and Null Empty Collections in List Endpoints | CLOSED | MEDIUM | [BUG-M3.11](tasks/M3.BUG11/BUG-M3.11.md) |
 | BUG-M3.12 | Agent Definition Lacks Strict Enforcement of Brain Requirement | CLOSED | HIGH | [BUG-M3.12](tasks/M3.BUG12/BUG-M3.12.md) |
-| BUG-M3.13 | Inconsistent REST API Behaviors, Prompts, and Skills | IMPLEMENTED | MEDIUM | [BUG-M3.13](tasks/M3.BUG13/BUG-M3.13.md) |
+| BUG-M3.13 | Inconsistent REST API Behaviors, Prompts, and Skills | CLOSED | MEDIUM | [BUG-M3.13](tasks/M3.BUG13/BUG-M3.13.md) |
 | BUG-M3.14 | POST REST Calls Missing Location HTTP Header | CLOSED | MEDIUM | [BUG-M3.14](tasks/M3.BUG14/BUG-M3.14.md) |
 | BUG-M3.15 | POST REST Calls Lack Cancel Context | CLOSED | MEDIUM | [BUG-M3.15](tasks/M3.BUG15/BUG-M3.15.md) |
 
