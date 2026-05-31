@@ -6,6 +6,7 @@ import "errors"
 type BrainRequest struct {
 	Prompt            string             `json:"prompt"`
 	SystemPrompt      string             `json:"system_prompt,omitempty"`
+	History           []MemoryEntry      `json:"history,omitempty"`
 	Temperature       float64            `json:"temperature,omitempty"`
 	MaxTokens         int                `json:"max_tokens,omitempty"`
 	ProviderOptions   map[string]any     `json:"provider_options,omitempty"`

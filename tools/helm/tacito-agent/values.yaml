@@ -61,7 +61,7 @@ agent:
 
 # --- Short-Term Memory (Redis) ---
 redis:
-  url: "rediss://ts-infra-redis:6379"
+  url: "rediss://ts-infra-redis-headless:6379"
   keyNamespace: "tacito:agent"
   ttlSeconds: 3600
 

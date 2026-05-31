@@ -81,8 +81,17 @@ func (s *EchoSubscriber) handleEcho(ctx context.Context, logger zerolog.Logger, 
 	// Store enriched logger in context so downstream reasoning pipeline retains trace correlation
 	ctx = logger.WithContext(ctx)
 
+	// Resolve thread ID from headers or fallback to community-scoped thread for hello-world session continuity
+	threadID := msg.Header.Get("X-Thread-ID")
+	if threadID == "" {
+		threadID = msg.Header.Get("thread_id")
+	}
+	if threadID == "" {
+		threadID = "thread-" + s.communityID
+	}
+
 	// Trigger the message processing framework pipeline (Brain reasoning engine)
-	brainResult, err := s.processor.ProcessIncomingMessage(ctx, req.Message)
+	brainResult, err := s.processor.ProcessIncomingMessage(ctx, req.TenantID, s.agentName, threadID, req.Message)
 	if err != nil {
 		logger.Error().Err(err).Msg("echo subscriber: message processing failed")
 		return fmt.Errorf("process incoming message: %w", err)

@@ -19,12 +19,12 @@ import (
 )
 
 type MockMessageProcessor struct {
-	ProcessFunc func(ctx context.Context, payload string) (string, error)
+	ProcessFunc func(ctx context.Context, tenantID, agentID, threadID string, payload string) (string, error)
 }
 
-func (m *MockMessageProcessor) ProcessIncomingMessage(ctx context.Context, payload string) (string, error) {
+func (m *MockMessageProcessor) ProcessIncomingMessage(ctx context.Context, tenantID, agentID, threadID string, payload string) (string, error) {
 	if m.ProcessFunc != nil {
-		return m.ProcessFunc(ctx, payload)
+		return m.ProcessFunc(ctx, tenantID, agentID, threadID, payload)
 	}
 	return "mocked answer", nil
 }
@@ -55,7 +55,7 @@ func TestEchoSubscriber_Replies(t *testing.T) {
 
 	logger := zerolog.New(nil)
 	mp := &MockMessageProcessor{
-		ProcessFunc: func(ctx context.Context, payload string) (string, error) {
+		ProcessFunc: func(ctx context.Context, tenantID, agentID, threadID, payload string) (string, error) {
 			return "reasoned hello", nil
 		},
 	}

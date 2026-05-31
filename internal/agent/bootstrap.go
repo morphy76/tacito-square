@@ -43,14 +43,14 @@ func ConnectNATS(url string, logger zerolog.Logger) (*natsclient.Conn, error) {
 }
 
 // NewServer creates and configures a new Gin HTTP server with health probes.
-func NewServer() *gin.Engine {
+func NewServer(checkers ...health.Checker) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 
 	r := gin.New()
 	r.Use(gin.Recovery())
 
-	// Hello world health check probe without additional checkers.
-	probe := health.NewProbe(5 * time.Second)
+	// Hello world health check probe with optional dependency checkers.
+	probe := health.NewProbe(5 * time.Second, checkers...)
 
 	r.GET("/healthz", gin.WrapF(probe.LivezHandler))
 	r.GET("/readyz", gin.WrapF(probe.ReadyzHandler))

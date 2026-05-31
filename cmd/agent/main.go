@@ -12,9 +12,11 @@ import (
 	"github.com/morphy76/tacito-square/internal/agent"
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/ollama"
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/openai"
+	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/redis"
 	"github.com/morphy76/tacito-square/internal/agent/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/agent/application/service"
 	"github.com/morphy76/tacito-square/internal/shared/config"
+	"github.com/morphy76/tacito-square/internal/shared/health"
 	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/morphy76/tacito-square/internal/shared/shutdown"
 )
@@ -131,7 +133,27 @@ func main() {
 		})
 	}
 
-	processor := service.NewMessageProcessorService(brain)
+	// 5. Initialize Redis short-term memory adapter
+	redisURL := v.GetString("redis.url")
+	if redisURL == "" {
+		redisURL = "redis://localhost:6379"
+	}
+	ttlSecs := v.GetInt("stm.ttl.seconds")
+	if ttlSecs == 0 {
+		ttlSecs = 86400 // 24 hours default
+	}
+	ttl := time.Duration(ttlSecs) * time.Second
+
+	memoryAdapter, err := redis.NewRedisMemoryAdapter(redisURL, ttl)
+	if err != nil {
+		logger.Fatal().Err(err).Str("redis.url", redisURL).Msg("failed to connect to Redis short-term memory")
+	}
+	mgr.Register("redis-client", func(ctx context.Context) error {
+		logger.Info().Msg("closing Redis memory connection")
+		return memoryAdapter.Close()
+	})
+
+	processor := service.NewMessageProcessorService(brain, memoryAdapter)
 
 	echoSubscriber := agent.NewEchoSubscriber(nc, agentName, communityRef, "", processor, logger)
 	if err := echoSubscriber.Start(ctx); err != nil {
@@ -142,8 +164,12 @@ func main() {
 		return echoSubscriber.Stop()
 	})
 
-	// 6. Create HTTP router
-	router := agent.NewServer()
+	// 6. Create HTTP router with parallel readiness dependency checkers
+	redisChecker := health.Checker{
+		Name:  "redis",
+		Check: memoryAdapter.Ping,
+	}
+	router := agent.NewServer(redisChecker)
 
 	srv := &http.Server{
 		Addr:    ":" + port,
