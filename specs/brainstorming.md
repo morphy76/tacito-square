@@ -1,5 +1,6 @@
 # Brainstorming
 
+- nats non sta nell'health dell'agente, verifica anche il keeper
 - documented test use cases: ingestion, chat, search
 - tracing across crd reconciliation: e.g. request of agent assignment and operator activities
 - agents capabilities, e.g. compacting context and summary/memory agents, language identification, conversation context and long term memory management, plannning, delegating and parallelizing tasks

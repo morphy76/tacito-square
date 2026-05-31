@@ -13,7 +13,7 @@ keeper:
     otel:
       endpoint: "ts-infra-otel-collector:4317"
     nats:
-      url: nats://ts-infra-nats-headless:4222
+      url: "nats://ts-infra-nats-headless:4222"
 operator:
   image:
     pullPolicy: Never
@@ -22,6 +22,9 @@ agent:
     otel:
       endpoint: "ts-infra-otel-collector:4317"
     nats:
-      url: nats://ts-infra-nats-headless:4222
+      url: "nats://ts-infra-nats-headless:4222"
+    redis:
+      url: "redis://:tacito-redis-dev@ts-infra-redis-headless:6379"
+
 bff:
   enabled: false
