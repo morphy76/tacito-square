@@ -38,6 +38,7 @@ type CognitiveEngine struct {
 	brain         outbound.Brain
 	embedder      outbound.Embedder
 	ltm           outbound.LongTermMemory
+	publisher     outbound.EventPublisher
 	toolRegistry  map[string]ToolHandler
 	skillPool     map[string]map[string]ToolHandler
 	maxSteps      int
@@ -75,6 +76,11 @@ func (e *CognitiveEngine) WithLTM(embedder outbound.Embedder, ltm outbound.LongT
 	e.embedder = embedder
 	e.ltm = ltm
 	e.RegisterTool("recall_memory", e.handleRecallMemory)
+	return e
+}
+
+func (e *CognitiveEngine) WithPublisher(publisher outbound.EventPublisher) *CognitiveEngine {
+	e.publisher = publisher
 	return e
 }
 
@@ -142,9 +148,15 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 			return resp.Content, nil
 		}
 
+		// Construct Domain Model reasoning step payload
+		payload := model.AgentReasoningStepPayload{
+			StepIndex: step,
+			Thought:   parsed.Thought,
+			Timestamp: time.Now().UTC(),
+		}
+
 		if parsed.Thought != "" {
 			lastThought = parsed.Thought
-			logger.Debug().Str("thought", parsed.Thought).Msg("parsed brain thought")
 			activeHistory = append(activeHistory, model.MemoryEntry{
 				Role:      "assistant",
 				Content:   "Thought: " + parsed.Thought,
@@ -156,7 +168,16 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 		if parsed.ToolCall != nil && parsed.ToolCall.Name != "" {
 			toolName := parsed.ToolCall.Name
 			toolArgs := parsed.ToolCall.Arguments
-			logger.Info().Str("tool", toolName).Interface("args", toolArgs).Msg("parsed tool call execution request")
+
+			payload.Action = &model.ToolCallAction{
+				Tool:  toolName,
+				Input: toolArgs,
+			}
+
+			// Output proper structured JSON stdout log for Thought + Action
+			e.logStep(ctx, tenantID, agentID, threadID, payload)
+			// Emit intermediate event asynchronously over NATS publisher port
+			e.emitStepEvent(ctx, tenantID, agentID, threadID, payload)
 
 			// Register tool call to active trace history
 			activeHistory = append(activeHistory, model.MemoryEntry{
@@ -190,9 +211,22 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 				Timestamp: time.Now().UTC(),
 			})
 
+			// Update payload with observation, and publish again
+			payload.Observation = observation
+			payload.Timestamp = time.Now().UTC()
+
+			// Output Proper structured JSON log for Action Observation
+			e.logStep(ctx, tenantID, agentID, threadID, payload)
+			// Emit updated intermediate NATS event
+			e.emitStepEvent(ctx, tenantID, agentID, threadID, payload)
+
 			// Continue reasoning loop with tool observation injected
 			continue
 		}
+
+		// If no tool call, log and publish thought-only step event
+		e.logStep(ctx, tenantID, agentID, threadID, payload)
+		e.emitStepEvent(ctx, tenantID, agentID, threadID, payload)
 
 		// Check if final answer is present
 		if parsed.FinalAnswer != "" {
@@ -212,6 +246,38 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 		return "Thought: " + lastThought, nil
 	}
 	return "Error: reasoning steps limit exceeded", nil
+}
+
+func (e *CognitiveEngine) logStep(ctx context.Context, tenantID, agentID, threadID string, payload model.AgentReasoningStepPayload) {
+	logger := zerolog.Ctx(ctx)
+	logger.Info().
+		Int("reasoning_step_index", payload.StepIndex).
+		Str("tenant_id", tenantID).
+		Str("agent_id", agentID).
+		Str("thread_id", threadID).
+		Str("thought", payload.Thought).
+		Interface("action", payload.Action).
+		Str("observation", payload.Observation).
+		Msg("reasoning loop step executed")
+}
+
+func (e *CognitiveEngine) emitStepEvent(ctx context.Context, tenantID, agentID, threadID string, payload model.AgentReasoningStepPayload) {
+	if e.publisher == nil {
+		return
+	}
+
+	logger := zerolog.Ctx(ctx)
+	subject := fmt.Sprintf("ts.tenant.%s.agent.%s.thread.%s.reasoning", tenantID, agentID, threadID)
+	data, err := json.Marshal(payload)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to marshal intermediate reasoning step payload")
+		return
+	}
+
+	err = e.publisher.Publish(ctx, subject, data)
+	if err != nil {
+		logger.Warn().Err(err).Str("subject", subject).Msg("failed to publish intermediate reasoning event over NATS publisher port")
+	}
 }
 
 func (e *CognitiveEngine) handleRecallMemory(ctx context.Context, args map[string]any) (string, error) {
