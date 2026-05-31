@@ -12,6 +12,10 @@ import (
 	"github.com/morphy76/tacito-square/internal/agent/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/agent/domain/model"
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type ToolHandler func(ctx context.Context, args map[string]any) (string, error)
@@ -41,6 +45,7 @@ type CognitiveEngine struct {
 	publisher     outbound.EventPublisher
 	toolRegistry  map[string]ToolHandler
 	skillPool     map[string]map[string]ToolHandler
+	tracer        trace.Tracer
 	maxSteps      int
 }
 
@@ -66,6 +71,7 @@ func NewCognitiveEngine(brain outbound.Brain) *CognitiveEngine {
 		brain:        brain,
 		toolRegistry: make(map[string]ToolHandler),
 		skillPool:    make(map[string]map[string]ToolHandler),
+		tracer:       otel.Tracer("cognitive_engine"),
 		maxSteps:     maxSteps,
 	}
 	engine.RegisterTool("enable_skill", engine.handleEnableSkill)
@@ -123,122 +129,20 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 	var lastThought string
 
 	for step := 1; step <= e.maxSteps; step++ {
-		logger.Debug().Int("step", step).Msg("starting reasoning step")
-
-		// 1. Generate LLM turn
-		req := model.BrainRequest{
-			Prompt:       userQuery,
-			SystemPrompt: systemPrompt,
-			History:      activeHistory,
+		finalAnswer, shouldContinue, lastParsedThought, err := e.executeStep(
+			ctx, step, tenantID, agentID, threadID,
+			userQuery, systemPrompt, &activeHistory,
+			activeTools, logger,
+		)
+		if lastParsedThought != "" {
+			lastThought = lastParsedThought
 		}
-
-		resp, err := e.brain.Generate(ctx, req)
 		if err != nil {
-			logger.Error().Err(err).Int("step", step).Msg("LLM generation failed in reasoning loop")
 			return "", err
 		}
-
-		// 2. Parse brain response
-		var parsed parsedResponse
-		isJSON := json.Unmarshal([]byte(resp.Content), &parsed) == nil
-
-		if !isJSON {
-			// Fallback: raw text response is immediately treated as final answer
-			logger.Debug().Msg("brain returned raw text; treating as final answer")
-			return resp.Content, nil
+		if !shouldContinue {
+			return finalAnswer, nil
 		}
-
-		// Construct Domain Model reasoning step payload
-		payload := model.AgentReasoningStepPayload{
-			StepIndex: step,
-			Thought:   parsed.Thought,
-			Timestamp: time.Now().UTC(),
-		}
-
-		if parsed.Thought != "" {
-			lastThought = parsed.Thought
-			activeHistory = append(activeHistory, model.MemoryEntry{
-				Role:      "assistant",
-				Content:   "Thought: " + parsed.Thought,
-				Timestamp: time.Now().UTC(),
-			})
-		}
-
-		// Check if it's a tool call
-		if parsed.ToolCall != nil && parsed.ToolCall.Name != "" {
-			toolName := parsed.ToolCall.Name
-			toolArgs := parsed.ToolCall.Arguments
-
-			payload.Action = &model.ToolCallAction{
-				Tool:  toolName,
-				Input: toolArgs,
-			}
-
-			// Output proper structured JSON stdout log for Thought + Action
-			e.logStep(ctx, tenantID, agentID, threadID, payload)
-			// Emit intermediate event asynchronously over NATS publisher port
-			e.emitStepEvent(ctx, tenantID, agentID, threadID, payload)
-
-			// Register tool call to active trace history
-			activeHistory = append(activeHistory, model.MemoryEntry{
-				Role:      "assistant",
-				Content:   fmt.Sprintf("Call: %s with args %v", toolName, toolArgs),
-				Timestamp: time.Now().UTC(),
-			})
-
-			// Execute the tool from the thread-local active tool map
-			handler, exists := activeTools[toolName]
-			var observation string
-			if !exists {
-				observation = fmt.Sprintf("Error: tool %s is not registered or allowed", toolName)
-				logger.Warn().Str("tool", toolName).Msg("tool execution requested but tool is not registered")
-			} else {
-				obs, err := handler(ctx, toolArgs)
-				if err != nil {
-					observation = fmt.Sprintf("Error: tool execution failed: %v", err)
-					logger.Warn().Err(err).Str("tool", toolName).Msg("tool execution returned error")
-				} else {
-					observation = obs
-				}
-			}
-
-			logger.Debug().Str("tool", toolName).Str("observation", observation).Msg("tool execution finished")
-
-			// Register observation to active trace history
-			activeHistory = append(activeHistory, model.MemoryEntry{
-				Role:      "tool",
-				Content:   observation,
-				Timestamp: time.Now().UTC(),
-			})
-
-			// Update payload with observation, and publish again
-			payload.Observation = observation
-			payload.Timestamp = time.Now().UTC()
-
-			// Output Proper structured JSON log for Action Observation
-			e.logStep(ctx, tenantID, agentID, threadID, payload)
-			// Emit updated intermediate NATS event
-			e.emitStepEvent(ctx, tenantID, agentID, threadID, payload)
-
-			// Continue reasoning loop with tool observation injected
-			continue
-		}
-
-		// If no tool call, log and publish thought-only step event
-		e.logStep(ctx, tenantID, agentID, threadID, payload)
-		e.emitStepEvent(ctx, tenantID, agentID, threadID, payload)
-
-		// Check if final answer is present
-		if parsed.FinalAnswer != "" {
-			logger.Debug().Str("final_answer", parsed.FinalAnswer).Msg("parsed final answer")
-			return parsed.FinalAnswer, nil
-		}
-
-		// If LLM returned JSON but no tool call and no final answer, default to thought or content
-		if parsed.Thought != "" {
-			return parsed.Thought, nil
-		}
-		return resp.Content, nil
 	}
 
 	logger.Warn().Int("max_steps", e.maxSteps).Msg("exceeded maximum reasoning steps limit without yielding final answer")
@@ -246,6 +150,161 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 		return "Thought: " + lastThought, nil
 	}
 	return "Error: reasoning steps limit exceeded", nil
+}
+
+func (e *CognitiveEngine) executeStep(
+	ctx context.Context,
+	step int,
+	tenantID, agentID, threadID string,
+	userQuery string,
+	systemPrompt string,
+	activeHistory *[]model.MemoryEntry,
+	activeTools map[string]ToolHandler,
+	logger zerolog.Logger,
+) (string, bool, string, error) {
+	// Start OTel sub-span for this granular reasoning step
+	ctx, span := e.tracer.Start(ctx, "cognitive_engine.step",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(
+			attribute.String("tenant_id", tenantID),
+			attribute.String("agent_id", agentID),
+			attribute.String("thread_id", threadID),
+			attribute.Int("reasoning_step_index", step),
+		),
+	)
+	defer span.End()
+
+	logger.Debug().Int("step", step).Msg("starting reasoning step")
+
+	// 1. Generate LLM turn
+	req := model.BrainRequest{
+		Prompt:       userQuery,
+		SystemPrompt: systemPrompt,
+		History:      *activeHistory,
+	}
+
+	resp, err := e.brain.Generate(ctx, req)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		logger.Error().Err(err).Int("step", step).Msg("LLM generation failed in reasoning loop")
+		return "", false, "", err
+	}
+
+	// 2. Parse brain response
+	var parsed parsedResponse
+	isJSON := json.Unmarshal([]byte(resp.Content), &parsed) == nil
+
+	if !isJSON {
+		// Fallback: raw text response is immediately treated as final answer
+		span.SetStatus(codes.Ok, "")
+		logger.Debug().Msg("brain returned raw text; treating as final answer")
+		return resp.Content, false, "", nil
+	}
+
+	// Construct Domain Model reasoning step payload
+	payload := model.AgentReasoningStepPayload{
+		StepIndex: step,
+		Thought:   parsed.Thought,
+		Timestamp: time.Now().UTC(),
+	}
+
+	if parsed.Thought != "" {
+		span.AddEvent("thought", trace.WithAttributes(attribute.String("thought", parsed.Thought)))
+		*activeHistory = append(*activeHistory, model.MemoryEntry{
+			Role:      "assistant",
+			Content:   "Thought: " + parsed.Thought,
+			Timestamp: time.Now().UTC(),
+		})
+	}
+
+	// Check if it's a tool call
+	if parsed.ToolCall != nil && parsed.ToolCall.Name != "" {
+		toolName := parsed.ToolCall.Name
+		toolArgs := parsed.ToolCall.Arguments
+
+		payload.Action = &model.ToolCallAction{
+			Tool:  toolName,
+			Input: toolArgs,
+		}
+
+		span.AddEvent("tool_call", trace.WithAttributes(attribute.String("tool", toolName)))
+
+		// Output proper structured JSON stdout log for Thought + Action
+		e.logStep(ctx, tenantID, agentID, threadID, payload)
+		// Emit intermediate event asynchronously over NATS publisher port
+		e.emitStepEvent(ctx, tenantID, agentID, threadID, payload)
+
+		// Register tool call to active trace history
+		*activeHistory = append(*activeHistory, model.MemoryEntry{
+			Role:      "assistant",
+			Content:   fmt.Sprintf("Call: %s with args %v", toolName, toolArgs),
+			Timestamp: time.Now().UTC(),
+		})
+
+		// Execute the tool from the thread-local active tool map
+		handler, exists := activeTools[toolName]
+		var observation string
+		var toolErr error
+		if !exists {
+			toolErr = fmt.Errorf("tool %s is not registered or allowed", toolName)
+			observation = fmt.Sprintf("Error: tool %s is not registered or allowed", toolName)
+			logger.Warn().Str("tool", toolName).Msg("tool execution requested but tool is not registered")
+		} else {
+			obs, err := handler(ctx, toolArgs)
+			if err != nil {
+				toolErr = err
+				observation = fmt.Sprintf("Error: tool execution failed: %v", err)
+				logger.Warn().Err(err).Str("tool", toolName).Msg("tool execution returned error")
+			} else {
+				observation = obs
+			}
+		}
+
+		if toolErr != nil {
+			span.RecordError(toolErr)
+			span.SetStatus(codes.Error, toolErr.Error())
+		} else {
+			span.SetStatus(codes.Ok, "")
+		}
+
+		// Register observation to active trace history
+		*activeHistory = append(*activeHistory, model.MemoryEntry{
+			Role:      "tool",
+			Content:   observation,
+			Timestamp: time.Now().UTC(),
+		})
+
+		// Update payload with observation, and publish again
+		payload.Observation = observation
+		payload.Timestamp = time.Now().UTC()
+
+		// Output Proper structured JSON log for Action Observation
+		e.logStep(ctx, tenantID, agentID, threadID, payload)
+		// Emit updated intermediate NATS event
+		e.emitStepEvent(ctx, tenantID, agentID, threadID, payload)
+
+		// Continue reasoning loop with tool observation injected
+		return "", true, parsed.Thought, nil
+	}
+
+	span.SetStatus(codes.Ok, "")
+
+	// If no tool call, log and publish thought-only step event
+	e.logStep(ctx, tenantID, agentID, threadID, payload)
+	e.emitStepEvent(ctx, tenantID, agentID, threadID, payload)
+
+	// Check if final answer is present
+	if parsed.FinalAnswer != "" {
+		logger.Debug().Str("final_answer", parsed.FinalAnswer).Msg("parsed final answer")
+		return parsed.FinalAnswer, false, parsed.Thought, nil
+	}
+
+	// If LLM returned JSON but no tool call and no final answer, default to thought or content
+	if parsed.Thought != "" {
+		return parsed.Thought, false, parsed.Thought, nil
+	}
+	return resp.Content, false, parsed.Thought, nil
 }
 
 func (e *CognitiveEngine) logStep(ctx context.Context, tenantID, agentID, threadID string, payload model.AgentReasoningStepPayload) {
