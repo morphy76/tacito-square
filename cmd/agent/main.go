@@ -10,6 +10,10 @@ import (
 	"time"
 
 	"github.com/morphy76/tacito-square/internal/agent"
+	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/ollama"
+	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/openai"
+	"github.com/morphy76/tacito-square/internal/agent/application/ports/outbound"
+	"github.com/morphy76/tacito-square/internal/agent/application/service"
 	"github.com/morphy76/tacito-square/internal/shared/config"
 	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/morphy76/tacito-square/internal/shared/shutdown"
@@ -82,7 +86,54 @@ func main() {
 		return nil
 	})
 
-	echoSubscriber := agent.NewEchoSubscriber(nc, agentName, communityRef, "", logger)
+	// 5. Initialize brain reasoning engine (stateless outbound port)
+	provider := v.GetString("brain.provider")
+	if provider == "" {
+		provider = "openai"
+	}
+
+	failureThreshold := v.GetInt("brain.circuit.failure.threshold")
+	recoveryTimeoutSecs := v.GetInt("brain.circuit.recovery.timeout.seconds")
+	recoveryTimeout := time.Duration(recoveryTimeoutSecs) * time.Second
+	timeoutSecs := v.GetInt("brain.timeout.seconds")
+	timeout := time.Duration(timeoutSecs) * time.Second
+
+	// Create a single shared thread-safe instrumented HTTP client for the outbound LLM calls
+	sharedHTTPClient := observability.NewInstrumentedClient(timeout)
+
+	var brain outbound.Brain
+
+	switch provider {
+	case "ollama":
+		brain = ollama.NewAdapter(ollama.Config{
+			Endpoint:         v.GetString("ollama.endpoint"),
+			Model:            v.GetString("brain.model"),
+			Temperature:      v.GetFloat64("brain.temperature"),
+			MaxTokens:        v.GetInt("brain.max.tokens"),
+			Timeout:          timeout,
+			FailureThreshold: failureThreshold,
+			RecoveryTimeout:  recoveryTimeout,
+			FallbackMessage:  "ollama brain fallback response",
+			HTTPClient:       sharedHTTPClient,
+		})
+	default:
+		brain = openai.NewAdapter(openai.Config{
+			Endpoint:         v.GetString("openai.endpoint"),
+			APIKey:           v.GetString("openai.api.key"),
+			Model:            v.GetString("brain.model"),
+			Temperature:      v.GetFloat64("brain.temperature"),
+			MaxTokens:        v.GetInt("brain.max.tokens"),
+			Timeout:          timeout,
+			FailureThreshold: failureThreshold,
+			RecoveryTimeout:  recoveryTimeout,
+			FallbackMessage:  "openai brain fallback response",
+			HTTPClient:       sharedHTTPClient,
+		})
+	}
+
+	processor := service.NewMessageProcessorService(brain)
+
+	echoSubscriber := agent.NewEchoSubscriber(nc, agentName, communityRef, "", processor, logger)
 	if err := echoSubscriber.Start(ctx); err != nil {
 		logger.Fatal().Err(err).Msg("failed to start echo subscriber")
 	}

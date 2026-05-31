@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "tacito-agent.fullname" . }}-mocks-expectations
+  labels:
+    {{- include "tacito-agent.labels" . | nindent 4 }}
+data:
+  expectations.json: |
+    [
+      {
+        "httpRequest": {
+          "method": "POST",
+          "path": "/v1/chat/completions"
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "headers": {
+            "Content-Type": ["application/json"]
+          },
+          "body": "{\"id\":\"chatcmpl-mock\",\"object\":\"chat.completion\",\"created\":1677652288,\"model\":\"gpt-4o\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"Hello from local developer mock OpenAI server!\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":15,\"total_tokens\":25}}"
+        }
+      },
+      {
+        "httpRequest": {
+          "method": "POST",
+          "path": "/api/chat"
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "headers": {
+            "Content-Type": ["application/json"]
+          },
+          "body": "{\"model\":\"llama3\",\"created_at\":\"2026-05-31T09:20:00Z\",\"message\":{\"role\":\"assistant\",\"content\":\"Hello from local developer mock Ollama server!\"},\"done\":true,\"prompt_eval_count\":8,\"eval_count\":12}"
+        }
+      }
+    ]
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tacito-agent.fullname" . }}-mocks
+  labels:
+    {{- include "tacito-agent.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "tacito-agent.name" . }}-mocks
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "tacito-agent.name" . }}-mocks
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: mockserver
+          image: "mockserver/mockserver:5.15.0"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 1080
+              name: http
+          env:
+            - name: MOCKSERVER_INITIALIZATION_JSON_PATH
+              value: "/config/expectations.json"
+          volumeMounts:
+            - name: expectations-volume
+              mountPath: "/config"
+      volumes:
+        - name: expectations-volume
+          configMap:
+            name: {{ include "tacito-agent.fullname" . }}-mocks-expectations
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tacito-agent.fullname" . }}-mocks
+  labels:
+    {{- include "tacito-agent.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 1080
+      targetPort: 1080
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: {{ include "tacito-agent.name" . }}-mocks
+    app.kubernetes.io/instance: {{ .Release.Name }}

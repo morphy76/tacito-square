@@ -113,7 +113,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | ID | Title | Status | Component | File |
 |----|-------|--------|-----------|------|
 | SPEC-FR-M5.1 | Agent Configuration from CRD Spec | DRAFT | agent | [SPEC-FR-M5.1](functional/M5/SPEC-FR-M5.1.md) |
-| SPEC-FR-M5.2 | LLM Reasoning (Brain Adapter) | ACCEPTED | agent | [SPEC-FR-M5.2](functional/M5/SPEC-FR-M5.2.md) |
+| SPEC-FR-M5.2 | LLM Reasoning (Brain Adapter) | VERIFIED | agent | [SPEC-FR-M5.2](functional/M5/SPEC-FR-M5.2.md) |
 | SPEC-FR-M5.3 | Short-Term Memory (Redis) | DRAFT | agent | [SPEC-FR-M5.3](functional/M5/SPEC-FR-M5.3.md) |
 | SPEC-FR-M5.4 | Long-Term Memory (Qdrant) | DRAFT | agent | [SPEC-FR-M5.4](functional/M5/SPEC-FR-M5.4.md) |
 | SPEC-FR-M5.5 | Tool Invocation (MCP) | DRAFT | agent | [SPEC-FR-M5.5](functional/M5/SPEC-FR-M5.5.md) |
@@ -182,7 +182,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | M2 | Application Helm Chart & Component Scaffolding | ✔️ IMPLEMENTED | 11 | [M2](milestones/M2-packaging.md) |
 | M3 | Keeper Core | ✔️ IMPLEMENTED | 8 | [M3](milestones/M3-keeper-core.md) |
 | M4 | Operator Core | ✔️ IMPLEMENTED | 6 | [M4](milestones/M4-operator-core.md) |
-| M5 | Agent Core | ⬜ PLANNED | 7 | [M5](milestones/M5-agent-core.md) |
+| M5 | Agent Core | ⏳ IN_PROGRESS | 7 | [M5](milestones/M5-agent-core.md) |
 | M6 | Communities & Messaging | ⬜ PLANNED | 7 | [M6](milestones/M6-communities.md) |
 | M7 | BFF & UIs | ⬜ PLANNED | 4 | [M7](milestones/M7-bff-uis.md) |
 | M8 | Governance | ⬜ PLANNED | 7 | [M8](milestones/M8-governance.md) |

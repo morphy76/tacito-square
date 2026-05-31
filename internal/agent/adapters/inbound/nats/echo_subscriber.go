@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/morphy76/tacito-square/internal/agent/application/ports/inbound"
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
 	"github.com/morphy76/tacito-square/internal/shared/observability"
 	natsclient "github.com/nats-io/nats.go"
@@ -15,23 +16,25 @@ import (
 const echoSubjectFormat = "ts.community.%s.agent.%s"
 
 // EchoSubscriber listens for EchoRequest messages on the agent's community subject
-// and replies with a decorated EchoReply.
+// and replies with a decorated EchoReply containing reasoning completions.
 type EchoSubscriber struct {
 	nc          *natsclient.Conn
 	agentName   string
 	communityID string
 	tenantID    string
+	processor   inbound.MessageProcessor
 	logger      zerolog.Logger
 	sub         *natsclient.Subscription
 }
 
 // NewEchoSubscriber constructs a new EchoSubscriber. Call Start() to begin listening.
-func NewEchoSubscriber(nc *natsclient.Conn, agentName, communityID, tenantID string, logger zerolog.Logger) *EchoSubscriber {
+func NewEchoSubscriber(nc *natsclient.Conn, agentName, communityID, tenantID string, processor inbound.MessageProcessor, logger zerolog.Logger) *EchoSubscriber {
 	return &EchoSubscriber{
 		nc:          nc,
 		agentName:   agentName,
 		communityID: communityID,
 		tenantID:    tenantID,
+		processor:   processor,
 		logger:      logger,
 	}
 }
@@ -75,7 +78,17 @@ func (s *EchoSubscriber) handleEcho(ctx context.Context, logger zerolog.Logger, 
 		Str("message", sanitized).
 		Msg("echo request received")
 
-	decorated := model.DecorateMessage(s.agentName, sanitized)
+	// Store enriched logger in context so downstream reasoning pipeline retains trace correlation
+	ctx = logger.WithContext(ctx)
+
+	// Trigger the message processing framework pipeline (Brain reasoning engine)
+	brainResult, err := s.processor.ProcessIncomingMessage(ctx, req.Message)
+	if err != nil {
+		logger.Error().Err(err).Msg("echo subscriber: message processing failed")
+		return fmt.Errorf("process incoming message: %w", err)
+	}
+
+	decorated := model.DecorateMessage(s.agentName, brainResult)
 	now := time.Now().UTC()
 
 	reply := model.EchoReply{

@@ -18,6 +18,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type MockMessageProcessor struct {
+	ProcessFunc func(ctx context.Context, payload string) (string, error)
+}
+
+func (m *MockMessageProcessor) ProcessIncomingMessage(ctx context.Context, payload string) (string, error) {
+	if m.ProcessFunc != nil {
+		return m.ProcessFunc(ctx, payload)
+	}
+	return "mocked answer", nil
+}
+
 func startTestNatsServer(t *testing.T) (*server.Server, *nats.Conn) {
 	opts := &server.Options{
 		Host: "127.0.0.1",
@@ -43,7 +54,12 @@ func TestEchoSubscriber_Replies(t *testing.T) {
 	defer nc.Close()
 
 	logger := zerolog.New(nil)
-	sub := agentnats.NewEchoSubscriber(nc, "agent-alpha", "comm-1", "tenant-1", logger)
+	mp := &MockMessageProcessor{
+		ProcessFunc: func(ctx context.Context, payload string) (string, error) {
+			return "reasoned hello", nil
+		},
+	}
+	sub := agentnats.NewEchoSubscriber(nc, "agent-alpha", "comm-1", "tenant-1", mp, logger)
 
 	err := sub.Start(context.Background())
 	require.NoError(t, err)
@@ -67,7 +83,7 @@ func TestEchoSubscriber_Replies(t *testing.T) {
 
 	assert.Equal(t, "agent-alpha", reply.AgentName)
 
-	pattern := `^\[agent:agent-alpha at \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\] hello$`
+	pattern := `^\[agent:agent-alpha at \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\] reasoned hello$`
 	matched, err := regexp.MatchString(pattern, reply.Decorated)
 	require.NoError(t, err)
 	assert.True(t, matched, "decorated message must match standard envelope format: %s", reply.Decorated)
@@ -100,7 +116,8 @@ func TestEchoSubscriber_LogsSanitizedMessage(t *testing.T) {
 
 	var buf safeBuffer
 	logger := zerolog.New(&buf)
-	sub := agentnats.NewEchoSubscriber(nc, "agent-alpha", "comm-1", "tenant-1", logger)
+	mp := &MockMessageProcessor{}
+	sub := agentnats.NewEchoSubscriber(nc, "agent-alpha", "comm-1", "tenant-1", mp, logger)
 
 	err := sub.Start(context.Background())
 	require.NoError(t, err)
@@ -131,7 +148,8 @@ func TestEchoSubscriber_Stop(t *testing.T) {
 	defer nc.Close()
 
 	logger := zerolog.New(nil)
-	sub := agentnats.NewEchoSubscriber(nc, "agent-alpha", "comm-1", "tenant-1", logger)
+	mp := &MockMessageProcessor{}
+	sub := agentnats.NewEchoSubscriber(nc, "agent-alpha", "comm-1", "tenant-1", mp, logger)
 
 	err := sub.Start(context.Background())
 	require.NoError(t, err)
@@ -158,7 +176,8 @@ func TestEchoSubscriber_MalformedPayload(t *testing.T) {
 
 	var buf safeBuffer
 	logger := zerolog.New(&buf)
-	sub := agentnats.NewEchoSubscriber(nc, "agent-alpha", "comm-1", "tenant-1", logger)
+	mp := &MockMessageProcessor{}
+	sub := agentnats.NewEchoSubscriber(nc, "agent-alpha", "comm-1", "tenant-1", mp, logger)
 
 	err := sub.Start(context.Background())
 	require.NoError(t, err)

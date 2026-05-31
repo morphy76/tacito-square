@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M5.2                                |
-| Status        | ACCEPTED                                    |
+| Status        | VERIFIED                                    |
 | Milestone     | M5                                          |
 | Component     | agent                                       |
 | Depends On    | SPEC-FR-M5.1                                |
@@ -55,9 +55,15 @@ Agents reason by sending prompts to an LLM and processing responses. Decoupling 
   - `TS_AGENT_BRAIN_TIMEOUT_SECONDS`: Request deadline duration (defaults to `30`).
 
 ### 3. Outbound Port Resiliency
-- **Circuit Breakers**: Every outbound request made by an LLM adapter must be executed within a tested circuit breaker. When failure thresholds are crossed, the circuit breaker trips to protect the agent.
+- **Circuit Breakers**: Every outbound request made by an LLM adapter must be executed within a tested circuit breaker. 
+  - **Implementation Choice**: The agent uses a Go-native, lightweight, state-machine-based circuit breaker implemented in `internal/agent/adapters/outbound/resiliency/circuit_breaker.go` rather than an external library.
+  - **Rationale**: A Go-native implementation allows custom integration of environment variable configuration mappings and direct injection of a fallback operation block during execution without pulling in third-party library dependencies.
+  - **Configuration Keys**:
+    - `TS_AGENT_BRAIN_CIRCUIT_FAILURE_THRESHOLD`: The number of consecutive failures before the circuit trips open (defaults to `5`).
+    - `TS_AGENT_BRAIN_CIRCUIT_RECOVERY_TIMEOUT_SECONDS`: The duration in seconds to wait in the open state before transitioning to half-open (defaults to `15`).
+  - **Fallback Support**: The circuit breaker directly supports a configurable fallback operation function. When the circuit is `Open` or a request fails, the fallback operation is executed automatically.
 - **Configurable Timeouts**: LLM requests must carry a configurable deadline propagated via `context.Context`, utilizing the value of `TS_AGENT_BRAIN_TIMEOUT_SECONDS` (defaulting to 30 seconds if unspecified).
-- **Retries & Backoff**: Standardize transient network retries with exponential backoff and randomized jitter to prevent service starvation.
+- **Retries & Backoff**: Standardize transient network retries with exponential backoff and randomized jitter to prevent service starvation. Utilizes the approved `github.com/sethvargo/go-retry` package already defined in the project.
 
 ### 4. Simple Incoming Message Processing Pipeline
 - To trigger the stateless `Brain` port, define a simple use case pipeline:
