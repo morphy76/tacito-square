@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/morphy76/tacito-square/internal/agent/application/ports/outbound"
@@ -15,8 +16,27 @@ import (
 
 type ToolHandler func(ctx context.Context, args map[string]any) (string, error)
 
+type tenantCtxKey struct{}
+type agentCtxKey struct{}
+
+func GetTenantID(ctx context.Context) string {
+	if v, ok := ctx.Value(tenantCtxKey{}).(string); ok {
+		return v
+	}
+	return ""
+}
+
+func GetAgentID(ctx context.Context) string {
+	if v, ok := ctx.Value(agentCtxKey{}).(string); ok {
+		return v
+	}
+	return ""
+}
+
 type CognitiveEngine struct {
 	brain         outbound.Brain
+	embedder      outbound.Embedder
+	ltm           outbound.LongTermMemory
 	toolRegistry  map[string]ToolHandler
 	maxSteps      int
 }
@@ -46,6 +66,13 @@ func NewCognitiveEngine(brain outbound.Brain) *CognitiveEngine {
 	}
 }
 
+func (e *CognitiveEngine) WithLTM(embedder outbound.Embedder, ltm outbound.LongTermMemory) *CognitiveEngine {
+	e.embedder = embedder
+	e.ltm = ltm
+	e.RegisterTool("recall_memory", e.handleRecallMemory)
+	return e
+}
+
 func (e *CognitiveEngine) RegisterTool(name string, handler ToolHandler) {
 	e.toolRegistry[name] = handler
 }
@@ -62,6 +89,10 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 		Str("agent_id", agentID).
 		Str("thread_id", threadID).
 		Logger()
+
+	// Inject tenant and agent metadata into context for tool handlers
+	ctx = context.WithValue(ctx, tenantCtxKey{}, tenantID)
+	ctx = context.WithValue(ctx, agentCtxKey{}, agentID)
 
 	// Ephemeral trace context is represented as virtual conversation turns appended to history context
 	activeHistory := make([]model.MemoryEntry, len(history))
@@ -165,4 +196,63 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 		return "Thought: " + lastThought, nil
 	}
 	return "Error: reasoning steps limit exceeded", nil
+}
+
+func (e *CognitiveEngine) handleRecallMemory(ctx context.Context, args map[string]any) (string, error) {
+	logger := zerolog.Ctx(ctx)
+
+	if e.embedder == nil || e.ltm == nil {
+		logger.Warn().Msg("recall_memory called but long-term memory or embedder is nil")
+		return `{"error": "Memory store temporarily unavailable."}`, nil
+	}
+
+	query, ok := args["query"].(string)
+	if !ok || query == "" {
+		return "Error: query parameter must be a non-empty string", nil
+	}
+
+	limit := 3
+	if limitVal, ok := args["limit"]; ok {
+		switch v := limitVal.(type) {
+		case float64:
+			limit = int(v)
+		case int:
+			limit = v
+		}
+	}
+
+	var filter model.LTMFilter
+	if catVal, ok := args["category"].(string); ok && catVal != "" {
+		filter.Types = []model.LTMEntryType{model.LTMEntryType(catVal)}
+	}
+
+	tenantID := GetTenantID(ctx)
+	agentID := GetAgentID(ctx)
+
+	// 1. Generate text embedding vector
+	vector, err := e.embedder.CreateEmbedding(ctx, query)
+	if err != nil {
+		logger.Warn().Err(err).Msg("failed to generate embedding for recall_memory tool")
+		return `{"error": "Memory store temporarily unavailable."}`, nil
+	}
+
+	// 2. Perform similarity search in Qdrant LTM
+	threshold := float32(0.7)
+	matches, err := e.ltm.Search(ctx, tenantID, agentID, vector, filter, limit, threshold)
+	if err != nil {
+		logger.Warn().Err(err).Msg("failed to query Qdrant LTM for recall_memory tool")
+		return `{"error": "Memory store temporarily unavailable."}`, nil
+	}
+
+	if len(matches) == 0 {
+		return "No relevant memories found.", nil
+	}
+
+	// 3. Format matches
+	var sb strings.Builder
+	sb.WriteString("Matched context details:\n")
+	for _, match := range matches {
+		sb.WriteString(fmt.Sprintf("- %s\n", match.Content))
+	}
+	return sb.String(), nil
 }
