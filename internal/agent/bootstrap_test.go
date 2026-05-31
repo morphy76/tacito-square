@@ -69,3 +69,36 @@ func TestReadyz_Returns503_WhenDependencyUnhealthy(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "not_ready", body["status"])
 }
+
+func TestReadyz_Returns503_WhenQdrantUnhealthy(t *testing.T) {
+	qdrantChecker := health.Checker{
+		Name: "qdrant",
+		Check: func(ctx context.Context) error {
+			return errors.New("qdrant connection refused")
+		},
+	}
+	srv := NewServer(qdrantChecker)
+
+	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+
+	var body map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &body)
+	require.NoError(t, err)
+	assert.Equal(t, "not_ready", body["status"])
+
+	checks := body["checks"].([]interface{})
+	foundQdrant := false
+	for _, ch := range checks {
+		chMap := ch.(map[string]interface{})
+		if chMap["name"] == "qdrant" {
+			assert.Equal(t, "unhealthy", chMap["status"])
+			assert.Equal(t, "qdrant connection refused", chMap["error"])
+			foundQdrant = true
+		}
+	}
+	assert.True(t, foundQdrant)
+}

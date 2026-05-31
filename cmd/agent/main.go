@@ -12,6 +12,7 @@ import (
 	"github.com/morphy76/tacito-square/internal/agent"
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/ollama"
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/openai"
+	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/qdrant"
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/redis"
 	"github.com/morphy76/tacito-square/internal/agent/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/agent/application/service"
@@ -19,6 +20,7 @@ import (
 	"github.com/morphy76/tacito-square/internal/shared/health"
 	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/morphy76/tacito-square/internal/shared/shutdown"
+	natsclient "github.com/nats-io/nats.go"
 )
 
 // Version is the application version, set at build time or using fallback.
@@ -33,6 +35,8 @@ func main() {
 	}
 
 	v.SetDefault("port", "8081")
+	v.SetDefault("qdrant.collection.name", "ts_agent_memories")
+	v.SetDefault("qdrant.vector.dimension", 1536)
 
 	port := v.GetString("port")
 	logLevel := v.GetString("log.level")
@@ -153,7 +157,45 @@ func main() {
 		return memoryAdapter.Close()
 	})
 
-	processor := service.NewMessageProcessorService(brain, memoryAdapter)
+	// 5b. Initialize Qdrant long-term memory adapter
+	var ltm outbound.LongTermMemory
+	var embedder outbound.Embedder
+	var qdrantAdapter *qdrant.QdrantLTMAdapter
+	var hasQdrant bool
+
+	qdrantURL := v.GetString("qdrant.url")
+	if qdrantURL != "" {
+		collectionName := v.GetString("qdrant.collection.name")
+		vectorDim := v.GetInt("qdrant.vector.dimension")
+
+		logger.Info().
+			Str("qdrant.url", qdrantURL).
+			Str("qdrant.collection", collectionName).
+			Int("qdrant.dimension", vectorDim).
+			Msg("initializing Qdrant long-term memory")
+
+		var err error
+		qdrantAdapter, err = qdrant.NewQdrantLTMAdapter(qdrantURL, collectionName, uint64(vectorDim))
+		if err != nil {
+			logger.Fatal().Err(err).Str("qdrant.url", qdrantURL).Msg("failed to connect to Qdrant long-term memory")
+		}
+
+		mgr.Register("qdrant-client", func(ctx context.Context) error {
+			logger.Info().Msg("closing Qdrant memory connection")
+			return qdrantAdapter.Close()
+		})
+
+		ltm = qdrantAdapter
+		hasQdrant = true
+
+		var ok bool
+		embedder, ok = brain.(outbound.Embedder)
+		if !ok {
+			logger.Fatal().Msg("Brain adapter does not implement Embedder interface")
+		}
+	}
+
+	processor := service.NewMessageProcessorService(brain, memoryAdapter, ltm, embedder)
 
 	echoSubscriber := agent.NewEchoSubscriber(nc, agentName, communityRef, "", processor, logger)
 	if err := echoSubscriber.Start(ctx); err != nil {
@@ -165,11 +207,42 @@ func main() {
 	})
 
 	// 6. Create HTTP router with parallel readiness dependency checkers
-	redisChecker := health.Checker{
+	var checkers []health.Checker
+
+	// NATS Checker
+	checkers = append(checkers, health.Checker{
+		Name: "nats",
+		Check: func(ctx context.Context) error {
+			if nc == nil || nc.Status() != natsclient.CONNECTED {
+				return errors.New("NATS connection is offline")
+			}
+			return nil
+		},
+	})
+
+	// Redis Checker
+	checkers = append(checkers, health.Checker{
 		Name:  "redis",
 		Check: memoryAdapter.Ping,
+	})
+
+	// Cache Redis Checker (stub)
+	checkers = append(checkers, health.Checker{
+		Name: "cache-redis",
+		Check: func(ctx context.Context) error {
+			return nil
+		},
+	})
+
+	// Qdrant Checker
+	if hasQdrant && qdrantAdapter != nil {
+		checkers = append(checkers, health.Checker{
+			Name:  "qdrant",
+			Check: qdrantAdapter.Ping,
+		})
 	}
-	router := agent.NewServer(redisChecker)
+
+	router := agent.NewServer(checkers...)
 
 	srv := &http.Server{
 		Addr:    ":" + port,

@@ -30,9 +30,10 @@ type Config struct {
 }
 
 type Adapter struct {
-	cfg    Config
-	client openai.Client
-	cb     *resiliency.CircuitBreaker
+	cfg        Config
+	client     openai.Client
+	cb         *resiliency.CircuitBreaker
+	embedderCB *resiliency.CircuitBreaker
 }
 
 func NewAdapter(cfg Config) *Adapter {
@@ -63,11 +64,13 @@ func NewAdapter(cfg Config) *Adapter {
 
 	client := openai.NewClient(opts...)
 	cb := resiliency.NewCircuitBreaker(cfg.FailureThreshold, cfg.RecoveryTimeout)
+	embedderCB := resiliency.NewCircuitBreaker(cfg.FailureThreshold, cfg.RecoveryTimeout)
 
 	return &Adapter{
-		cfg:    cfg,
-		client: client,
-		cb:     cb,
+		cfg:        cfg,
+		client:     client,
+		cb:         cb,
+		embedderCB: embedderCB,
 	}
 }
 
@@ -206,4 +209,132 @@ func (a *Adapter) GenerateStream(ctx context.Context, req model.BrainRequest) (<
 	close(ch)
 	close(errCh)
 	return ch, errCh, nil
+}
+
+// CreateEmbedding generates a high-dimensional dense vector for the given text.
+func (a *Adapter) CreateEmbedding(ctx context.Context, text string) ([]float32, error) {
+	logger := zerolog.Ctx(ctx)
+	logger.Info().Str("model", a.cfg.Model).Msg("generating text embedding")
+
+	var result []float32
+
+	op := func() error {
+		runCtx, cancel := context.WithTimeout(ctx, a.cfg.Timeout)
+		defer cancel()
+
+		modelName := a.cfg.Model
+		if modelName == "" {
+			modelName = "text-embedding-3-small"
+		}
+
+		params := openai.EmbeddingNewParams{
+			Input: openai.EmbeddingNewParamsInputUnion{
+				OfString: openai.String(text),
+			},
+			Model: openai.EmbeddingModel(modelName),
+		}
+
+		b := retry.NewExponential(10 * time.Millisecond)
+		b = retry.WithMaxRetries(3, b)
+
+		var resp *openai.CreateEmbeddingResponse
+		err := retry.Do(runCtx, b, func(ctx context.Context) error {
+			var err error
+			resp, err = a.client.Embeddings.New(ctx, params)
+			if err != nil {
+				logger.Warn().Err(err).Msg("embedding call failed, retrying...")
+				return retry.RetryableError(err)
+			}
+			return nil
+		})
+		if err != nil {
+			logger.Error().Err(err).Msg("all embedding retries exhausted")
+			return err
+		}
+
+		if len(resp.Data) == 0 {
+			return errors.New("empty data from embedding response")
+		}
+
+		result = make([]float32, len(resp.Data[0].Embedding))
+		for i, v := range resp.Data[0].Embedding {
+			result[i] = float32(v)
+		}
+		return nil
+	}
+
+	fb := func(err error) error {
+		logger.Warn().Err(err).Msg("embedder circuit breaker tripped")
+		return err
+	}
+
+	err := a.embedderCB.Execute(ctx, op, fb)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// CreateEmbeddingsBatch generates dense vectors for a slice of texts in parallel.
+func (a *Adapter) CreateEmbeddingsBatch(ctx context.Context, texts []string) ([][]float32, error) {
+	logger := zerolog.Ctx(ctx)
+	logger.Info().Str("model", a.cfg.Model).Int("batch_size", len(texts)).Msg("generating batch text embeddings")
+
+	var result [][]float32
+
+	op := func() error {
+		runCtx, cancel := context.WithTimeout(ctx, a.cfg.Timeout)
+		defer cancel()
+
+		modelName := a.cfg.Model
+		if modelName == "" {
+			modelName = "text-embedding-3-small"
+		}
+
+		params := openai.EmbeddingNewParams{
+			Input: openai.EmbeddingNewParamsInputUnion{
+				OfArrayOfStrings: texts,
+			},
+			Model: openai.EmbeddingModel(modelName),
+		}
+
+		b := retry.NewExponential(10 * time.Millisecond)
+		b = retry.WithMaxRetries(3, b)
+
+		var resp *openai.CreateEmbeddingResponse
+		err := retry.Do(runCtx, b, func(ctx context.Context) error {
+			var err error
+			resp, err = a.client.Embeddings.New(ctx, params)
+			if err != nil {
+				logger.Warn().Err(err).Msg("batch embedding call failed, retrying...")
+				return retry.RetryableError(err)
+			}
+			return nil
+		})
+		if err != nil {
+			logger.Error().Err(err).Msg("all batch embedding retries exhausted")
+			return err
+		}
+
+		result = make([][]float32, len(resp.Data))
+		for i, d := range resp.Data {
+			vec := make([]float32, len(d.Embedding))
+			for j, v := range d.Embedding {
+				vec[j] = float32(v)
+			}
+			result[i] = vec
+		}
+		return nil
+	}
+
+	fb := func(err error) error {
+		logger.Warn().Err(err).Msg("batch embedder circuit breaker tripped")
+		return err
+	}
+
+	err := a.embedderCB.Execute(ctx, op, fb)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }

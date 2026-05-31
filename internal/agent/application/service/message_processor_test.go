@@ -3,7 +3,10 @@ package service_test
 import (
 	"context"
 	"errors"
+	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/morphy76/tacito-square/internal/agent/application/ports/inbound"
 	"github.com/morphy76/tacito-square/internal/agent/application/service"
@@ -61,6 +64,64 @@ func (m *MockShortTermMemory) Clear(ctx context.Context, tenantID, agentID, thre
 	return nil
 }
 
+// MockEmbedder is a mock implementation of the Embedder outbound port.
+type MockEmbedder struct {
+	CreateEmbeddingFunc func(ctx context.Context, text string) ([]float32, error)
+}
+
+func (m *MockEmbedder) CreateEmbedding(ctx context.Context, text string) ([]float32, error) {
+	if m.CreateEmbeddingFunc != nil {
+		return m.CreateEmbeddingFunc(ctx, text)
+	}
+	return []float32{0.1, 0.2, 0.3}, nil
+}
+
+func (m *MockEmbedder) CreateEmbeddingsBatch(ctx context.Context, texts []string) ([][]float32, error) {
+	return [][]float32{}, nil
+}
+
+// MockLongTermMemory is a mock implementation of the LongTermMemory outbound port.
+type MockLongTermMemory struct {
+	mu         sync.Mutex
+	SaveFunc   func(ctx context.Context, tenantID, agentID string, entries []model.LTMEntry) error
+	SearchFunc func(ctx context.Context, tenantID, agentID string, vector []float32, filter model.LTMFilter, limit int, threshold float32) ([]model.LTMEntry, error)
+	DeleteFunc func(ctx context.Context, tenantID, agentID string, filter model.LTMFilter) error
+
+	SaveCalls []model.LTMEntry
+}
+
+func (m *MockLongTermMemory) Save(ctx context.Context, tenantID, agentID string, entries []model.LTMEntry) error {
+	m.mu.Lock()
+	m.SaveCalls = append(m.SaveCalls, entries...)
+	m.mu.Unlock()
+	if m.SaveFunc != nil {
+		return m.SaveFunc(ctx, tenantID, agentID, entries)
+	}
+	return nil
+}
+
+func (m *MockLongTermMemory) GetSaveCalls() []model.LTMEntry {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	calls := make([]model.LTMEntry, len(m.SaveCalls))
+	copy(calls, m.SaveCalls)
+	return calls
+}
+
+func (m *MockLongTermMemory) Search(ctx context.Context, tenantID, agentID string, vector []float32, filter model.LTMFilter, limit int, threshold float32) ([]model.LTMEntry, error) {
+	if m.SearchFunc != nil {
+		return m.SearchFunc(ctx, tenantID, agentID, vector, filter, limit, threshold)
+	}
+	return []model.LTMEntry{}, nil
+}
+
+func (m *MockLongTermMemory) Delete(ctx context.Context, tenantID, agentID string, filter model.LTMFilter) error {
+	if m.DeleteFunc != nil {
+		return m.DeleteFunc(ctx, tenantID, agentID, filter)
+	}
+	return nil
+}
+
 func TestMessageProcessorService_ProcessIncomingMessage(t *testing.T) {
 	t.Run("should map incoming payload to brain request, maintain history, and return content", func(t *testing.T) {
 		mockBrain := &MockBrain{
@@ -84,7 +145,10 @@ func TestMessageProcessorService_ProcessIncomingMessage(t *testing.T) {
 			},
 		}
 
-		var processor inbound.MessageProcessor = service.NewMessageProcessorService(mockBrain, mockMemory)
+		mockLTM := &MockLongTermMemory{}
+		mockEmbed := &MockEmbedder{}
+
+		var processor inbound.MessageProcessor = service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed)
 
 		res, err := processor.ProcessIncomingMessage(context.Background(), "tenant-1", "agent-1", "thread-123", "Hello, world")
 		assert.NoError(t, err)
@@ -121,7 +185,10 @@ func TestMessageProcessorService_ProcessIncomingMessage(t *testing.T) {
 			},
 		}
 
-		processor := service.NewMessageProcessorService(mockBrain, mockMemory)
+		mockLTM := &MockLongTermMemory{}
+		mockEmbed := &MockEmbedder{}
+
+		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed)
 
 		// Service must not fail even if memory fails
 		res, err := processor.ProcessIncomingMessage(context.Background(), "tenant-1", "agent-1", "thread-123", "Hello, world")
@@ -137,9 +204,106 @@ func TestMessageProcessorService_ProcessIncomingMessage(t *testing.T) {
 			},
 		}
 		mockMemory := &MockShortTermMemory{}
+		mockLTM := &MockLongTermMemory{}
+		mockEmbed := &MockEmbedder{}
 
-		processor := service.NewMessageProcessorService(mockBrain, mockMemory)
+		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed)
 		_, err := processor.ProcessIncomingMessage(context.Background(), "tenant-1", "agent-1", "thread-123", "Hello")
 		assert.ErrorIs(t, err, mockErr)
+	})
+
+	t.Run("should query LTM, inject retrieved matches, and consolidate on eviction", func(t *testing.T) {
+		// Mock brain that asserts prompt contains LTM context
+		mockBrain := &MockBrain{
+			GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
+				// If it's a summarization call (the background worker runs async summarization)
+				if strings.Contains(request.Prompt, "summarize") || strings.Contains(request.Prompt, "compress") {
+					return &model.BrainResponse{
+						Content: "Summary of evicted turns",
+					}, nil
+				}
+
+				// Assert system prompt contains injected LTM block
+				assert.Contains(t, request.SystemPrompt, "<long_term_memory>")
+				assert.Contains(t, request.SystemPrompt, "cognitive context matched")
+				assert.Contains(t, request.SystemPrompt, "</long_term_memory>")
+
+				return &model.BrainResponse{
+					Content: "LLM Response",
+				}, nil
+			},
+		}
+
+		// Mock stm with 4 turns to trigger consolidation (limit is set to 3)
+		mockMemory := &MockShortTermMemory{
+			GetFunc: func(ctx context.Context, tenantID, agentID, threadID string, limit int) ([]model.MemoryEntry, error) {
+				return []model.MemoryEntry{
+					{Role: "user", Content: "Turn 1", Timestamp: time.Now()},
+					{Role: "assistant", Content: "Resp 1", Timestamp: time.Now()},
+					{Role: "user", Content: "Turn 2", Timestamp: time.Now()},
+					{Role: "assistant", Content: "Resp 2", Timestamp: time.Now()},
+				}, nil
+			},
+		}
+
+		mockLTM := &MockLongTermMemory{
+			SearchFunc: func(ctx context.Context, tenantID, agentID string, vector []float32, filter model.LTMFilter, limit int, threshold float32) ([]model.LTMEntry, error) {
+				return []model.LTMEntry{
+					{ID: "m1", Content: "cognitive context matched", Score: 0.9},
+				}, nil
+			},
+		}
+
+		mockEmbed := &MockEmbedder{
+			CreateEmbeddingFunc: func(ctx context.Context, text string) ([]float32, error) {
+				return []float32{0.1, 0.2, 0.3}, nil
+			},
+		}
+
+		t.Setenv("TS_AGENT_STM_LIMIT", "3")
+		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed)
+
+		res, err := processor.ProcessIncomingMessage(context.Background(), "tenant-1", "agent-1", "thread-123", "Hello")
+		assert.NoError(t, err)
+		assert.Equal(t, "LLM Response", res)
+
+		// Wait briefly for the async consolidation goroutine to complete
+		time.Sleep(100 * time.Millisecond)
+
+		// Verify that LTM Save was called with the summarized eviction
+		saveCalls := mockLTM.GetSaveCalls()
+		require.NotEmpty(t, saveCalls)
+		assert.Equal(t, model.EntryTypeConversation, saveCalls[0].Type)
+		assert.Contains(t, saveCalls[0].Content, "Summary of evicted turns")
+	})
+
+	t.Run("should gracefully degrade if LTM or Embedder fails", func(t *testing.T) {
+		mockBrain := &MockBrain{
+			GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
+				// Prompt should NOT contain LTM blocks because search failed
+				assert.NotContains(t, request.SystemPrompt, "<long_term_memory>")
+				return &model.BrainResponse{
+					Content: "Response without LTM",
+				}, nil
+			},
+		}
+
+		mockMemory := &MockShortTermMemory{}
+		mockLTM := &MockLongTermMemory{
+			SearchFunc: func(ctx context.Context, tenantID, agentID string, vector []float32, filter model.LTMFilter, limit int, threshold float32) ([]model.LTMEntry, error) {
+				return nil, errors.New("qdrant timeout")
+			},
+		}
+		mockEmbed := &MockEmbedder{
+			CreateEmbeddingFunc: func(ctx context.Context, text string) ([]float32, error) {
+				return nil, errors.New("embeddings api outage")
+			},
+		}
+
+		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed)
+
+		res, err := processor.ProcessIncomingMessage(context.Background(), "tenant-1", "agent-1", "thread-123", "Hello")
+		assert.NoError(t, err)
+		assert.Equal(t, "Response without LTM", res)
 	})
 }

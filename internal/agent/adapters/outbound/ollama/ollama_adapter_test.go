@@ -11,6 +11,7 @@ import (
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/ollama"
 	"github.com/morphy76/tacito-square/internal/agent/domain/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestOllamaAdapter_Generate(t *testing.T) {
@@ -61,5 +62,67 @@ func TestOllamaAdapter_Generate(t *testing.T) {
 		res, err := adapter.Generate(context.Background(), req)
 		assert.NoError(t, err) // Fallback handles the error gracefully
 		assert.Equal(t, "ollama fallback text", res.Content)
+	})
+}
+
+func TestOllamaAdapter_Embeddings(t *testing.T) {
+	t.Run("should generate single embedding successfully", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			resp := map[string]any{
+				"model": "nomic-embed-text",
+				"embeddings": [][]float64{
+					{0.1, 0.2, 0.3},
+				},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+		}))
+		defer server.Close()
+
+		adapter := ollama.NewAdapter(ollama.Config{
+			Endpoint: server.URL,
+			Model:    "nomic-embed-text",
+			Timeout:  2 * time.Second,
+		})
+
+		res, err := adapter.CreateEmbedding(context.Background(), "test text")
+		assert.NoError(t, err)
+		assert.Equal(t, []float32{0.1, 0.2, 0.3}, res)
+	})
+
+	t.Run("should generate batch embeddings successfully", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			resp := map[string]any{
+				"model": "nomic-embed-text",
+				"embeddings": [][]float64{
+					{0.1, 0.2},
+					{0.3, 0.4},
+				},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+		}))
+		defer server.Close()
+
+		adapter := ollama.NewAdapter(ollama.Config{
+			Endpoint: server.URL,
+			Model:    "nomic-embed-text",
+		})
+
+		res, err := adapter.CreateEmbeddingsBatch(context.Background(), []string{"one", "two"})
+		assert.NoError(t, err)
+		require.Len(t, res, 2)
+		assert.Equal(t, []float32{0.1, 0.2}, res[0])
+		assert.Equal(t, []float32{0.3, 0.4}, res[1])
+	})
+
+	t.Run("should fail on connection outages and propagate breaker failures", func(t *testing.T) {
+		adapter := ollama.NewAdapter(ollama.Config{
+			Endpoint:         "http://invalid-host:12345",
+			FailureThreshold: 1, // Trip on first failure
+		})
+
+		_, err := adapter.CreateEmbedding(context.Background(), "test text")
+		assert.Error(t, err)
 	})
 }

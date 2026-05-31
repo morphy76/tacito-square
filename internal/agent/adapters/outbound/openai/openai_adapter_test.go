@@ -11,6 +11,7 @@ import (
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/openai"
 	"github.com/morphy76/tacito-square/internal/agent/domain/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestOpenAIAdapter_Generate(t *testing.T) {
@@ -73,5 +74,88 @@ func TestOpenAIAdapter_Generate(t *testing.T) {
 		res, err := adapter.Generate(context.Background(), req)
 		assert.NoError(t, err) // Fallback handles the error gracefully
 		assert.Equal(t, "fallback text", res.Content)
+	})
+}
+
+func TestOpenAIAdapter_Embeddings(t *testing.T) {
+	t.Run("should generate single embedding successfully", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			resp := map[string]any{
+				"object": "list",
+				"data": []map[string]any{
+					{
+						"object":    "embedding",
+						"index":     0,
+						"embedding": []float64{0.1, 0.2, 0.3},
+					},
+				},
+				"model": "text-embedding-3-small",
+				"usage": map[string]any{
+					"prompt_tokens": 5,
+					"total_tokens":  5,
+				},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+		}))
+		defer server.Close()
+
+		adapter := openai.NewAdapter(openai.Config{
+			Endpoint: server.URL,
+			APIKey:   "mock-key",
+			Model:    "text-embedding-3-small",
+			Timeout:  2 * time.Second,
+		})
+
+		res, err := adapter.CreateEmbedding(context.Background(), "test text")
+		assert.NoError(t, err)
+		assert.Equal(t, []float32{0.1, 0.2, 0.3}, res)
+	})
+
+	t.Run("should generate batch embeddings successfully", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			resp := map[string]any{
+				"object": "list",
+				"data": []map[string]any{
+					{
+						"object":    "embedding",
+						"index":     0,
+						"embedding": []float64{0.1, 0.2},
+					},
+					{
+						"object":    "embedding",
+						"index":     1,
+						"embedding": []float64{0.3, 0.4},
+					},
+				},
+				"model": "text-embedding-3-small",
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+		}))
+		defer server.Close()
+
+		adapter := openai.NewAdapter(openai.Config{
+			Endpoint: server.URL,
+			APIKey:   "mock-key",
+			Model:    "text-embedding-3-small",
+		})
+
+		res, err := adapter.CreateEmbeddingsBatch(context.Background(), []string{"one", "two"})
+		assert.NoError(t, err)
+		require.Len(t, res, 2)
+		assert.Equal(t, []float32{0.1, 0.2}, res[0])
+		assert.Equal(t, []float32{0.3, 0.4}, res[1])
+	})
+
+	t.Run("should fail on connection outages and propagate breaker failures", func(t *testing.T) {
+		adapter := openai.NewAdapter(openai.Config{
+			Endpoint:         "http://invalid-host:12345",
+			APIKey:           "mock-key",
+			FailureThreshold: 1, // Trip on first failure
+		})
+
+		_, err := adapter.CreateEmbedding(context.Background(), "test text")
+		assert.Error(t, err)
 	})
 }
