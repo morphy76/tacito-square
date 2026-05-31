@@ -30,11 +30,29 @@ agent:
   # --- LLM Brain Configuration ---
   llm:
     model: "gpt-4o"
-    endpoint: "https://api.openai.com/v1"
+    endpoint: "http://standalone-agent-tacito-agent-mocks:1080/v1"
     temperature: 0.7
     maxTokens: 2048
     apiKey: "dummy-key"
     credentialsSecret: "tacito-agent-llm-secret"
+
+  # --- Outbound Reasoning & Provider Configuration ---
+  brain:
+    provider: "openai" # "openai" or "ollama"
+    model: "gpt-4o"
+    temperature: 0.7
+    maxTokens: 1000
+    timeoutSeconds: 30
+    circuit:
+      failureThreshold: 5
+      recoveryTimeoutSeconds: 15
+
+  openai:
+    endpoint: "http://standalone-agent-tacito-agent-mocks:1080/v1"
+    apiKey: "dummy-key"
+
+  ollama:
+    endpoint: "http://standalone-agent-tacito-agent-mocks:1080"
 
   # --- System Prompt (multi-line) ---
   systemPrompt: |

@@ -13,6 +13,16 @@ data:
   TS_AGENT_LLM_ENDPOINT: {{ .Values.agent.llm.endpoint | quote }}
   TS_AGENT_LLM_TEMPERATURE: {{ .Values.agent.llm.temperature | toString | quote }}
   TS_AGENT_LLM_MAX_TOKENS: {{ .Values.agent.llm.maxTokens | toString | quote }}
+  TS_AGENT_BRAIN_PROVIDER: {{ .Values.agent.brain.provider | quote }}
+  TS_AGENT_BRAIN_MODEL: {{ .Values.agent.brain.model | quote }}
+  TS_AGENT_BRAIN_TEMPERATURE: {{ .Values.agent.brain.temperature | toString | quote }}
+  TS_AGENT_BRAIN_MAX_TOKENS: {{ .Values.agent.brain.maxTokens | toString | quote }}
+  TS_AGENT_BRAIN_TIMEOUT_SECONDS: {{ .Values.agent.brain.timeoutSeconds | toString | quote }}
+  TS_AGENT_BRAIN_CIRCUIT_FAILURE_THRESHOLD: {{ .Values.agent.brain.circuit.failureThreshold | toString | quote }}
+  TS_AGENT_BRAIN_CIRCUIT_RECOVERY_TIMEOUT_SECONDS: {{ .Values.agent.brain.circuit.recoveryTimeoutSeconds | toString | quote }}
+  TS_AGENT_OPENAI_ENDPOINT: {{ .Values.agent.openai.endpoint | quote }}
+  TS_AGENT_OPENAI_API_KEY: {{ .Values.agent.openai.apiKey | quote }}
+  TS_AGENT_OLLAMA_ENDPOINT: {{ .Values.agent.ollama.endpoint | quote }}
   TS_AGENT_SYSTEM_PROMPT: {{ .Values.agent.systemPrompt | quote }}
   TS_AGENT_REDIS_URL: {{ .Values.redis.url | quote }}
   TS_AGENT_REDIS_KEY_NAMESPACE: {{ .Values.redis.keyNamespace | quote }}
