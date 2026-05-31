@@ -18,6 +18,7 @@ type ToolHandler func(ctx context.Context, args map[string]any) (string, error)
 
 type tenantCtxKey struct{}
 type agentCtxKey struct{}
+type activeToolsKey struct{}
 
 func GetTenantID(ctx context.Context) string {
 	if v, ok := ctx.Value(tenantCtxKey{}).(string); ok {
@@ -38,6 +39,7 @@ type CognitiveEngine struct {
 	embedder      outbound.Embedder
 	ltm           outbound.LongTermMemory
 	toolRegistry  map[string]ToolHandler
+	skillPool     map[string]map[string]ToolHandler
 	maxSteps      int
 }
 
@@ -59,11 +61,14 @@ func NewCognitiveEngine(brain outbound.Brain) *CognitiveEngine {
 			maxSteps = val
 		}
 	}
-	return &CognitiveEngine{
+	engine := &CognitiveEngine{
 		brain:        brain,
 		toolRegistry: make(map[string]ToolHandler),
+		skillPool:    make(map[string]map[string]ToolHandler),
 		maxSteps:     maxSteps,
 	}
+	engine.RegisterTool("enable_skill", engine.handleEnableSkill)
+	return engine
 }
 
 func (e *CognitiveEngine) WithLTM(embedder outbound.Embedder, ltm outbound.LongTermMemory) *CognitiveEngine {
@@ -75,6 +80,10 @@ func (e *CognitiveEngine) WithLTM(embedder outbound.Embedder, ltm outbound.LongT
 
 func (e *CognitiveEngine) RegisterTool(name string, handler ToolHandler) {
 	e.toolRegistry[name] = handler
+}
+
+func (e *CognitiveEngine) RegisterSkillCollection(name string, tools map[string]ToolHandler) {
+	e.skillPool[name] = tools
 }
 
 func (e *CognitiveEngine) ExecuteReasoningLoop(
@@ -90,9 +99,16 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 		Str("thread_id", threadID).
 		Logger()
 
-	// Inject tenant and agent metadata into context for tool handlers
+	// Instantiate request-scoped, thread-safe active tools map
+	activeTools := make(map[string]ToolHandler)
+	for name, handler := range e.toolRegistry {
+		activeTools[name] = handler
+	}
+
+	// Inject tenant, agent metadata and thread-scoped active tools into context
 	ctx = context.WithValue(ctx, tenantCtxKey{}, tenantID)
 	ctx = context.WithValue(ctx, agentCtxKey{}, agentID)
+	ctx = context.WithValue(ctx, activeToolsKey{}, activeTools)
 
 	// Ephemeral trace context is represented as virtual conversation turns appended to history context
 	activeHistory := make([]model.MemoryEntry, len(history))
@@ -149,8 +165,8 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 				Timestamp: time.Now().UTC(),
 			})
 
-			// Execute the tool if registered
-			handler, exists := e.toolRegistry[toolName]
+			// Execute the tool from the thread-local active tool map
+			handler, exists := activeTools[toolName]
 			var observation string
 			if !exists {
 				observation = fmt.Sprintf("Error: tool %s is not registered or allowed", toolName)
@@ -255,4 +271,33 @@ func (e *CognitiveEngine) handleRecallMemory(ctx context.Context, args map[strin
 		sb.WriteString(fmt.Sprintf("- %s\n", match.Content))
 	}
 	return sb.String(), nil
+}
+
+func (e *CognitiveEngine) handleEnableSkill(ctx context.Context, args map[string]any) (string, error) {
+	logger := zerolog.Ctx(ctx)
+
+	skillName, _ := args["skill_name"].(string)
+	if skillName == "" {
+		return "Error: skill_name parameter must be a non-empty string", nil
+	}
+
+	tools, exists := e.skillPool[skillName]
+	if !exists {
+		logger.Warn().Str("skill", skillName).Msg("enable_skill requested for unauthorized or non-existent skill collection")
+		return "Skill unauthorized or not found.", nil
+	}
+
+	// Retrieve dynamic request-scoped active tools map from context
+	active, ok := ctx.Value(activeToolsKey{}).(map[string]ToolHandler)
+	if !ok {
+		logger.Error().Msg("unable to retrieve request-scoped active tools map from context")
+		return "Error: engine execution context mismatch.", nil
+	}
+
+	for name, handler := range tools {
+		active[name] = handler
+		logger.Debug().Str("tool", name).Str("skill", skillName).Msg("dynamically registered tool for thread execution")
+	}
+
+	return fmt.Sprintf("Skill %s enabled successfully.", skillName), nil
 }
