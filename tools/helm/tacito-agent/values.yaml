@@ -14,7 +14,7 @@ image:
   registry: ""
   name: "tacito-square/agent"
   tag: "0.1.0"
-  pullPolicy: IfNotPresent
+  pullPolicy: Never
 
 # --- Container configuration ---
 port: 8081
@@ -33,6 +33,7 @@ agent:
     endpoint: "https://api.openai.com/v1"
     temperature: 0.7
     maxTokens: 2048
+    apiKey: "dummy-key"
     credentialsSecret: "tacito-agent-llm-secret"
 
   # --- System Prompt (multi-line) ---
@@ -63,14 +64,14 @@ s3:
 
 # --- Probes ---
 livenessProbe:
-  initialDelaySeconds: 5
-  periodSeconds: 10
+  initialDelaySeconds: 1
+  periodSeconds: 1
   timeoutSeconds: 5
   failureThreshold: 3
 
 readinessProbe:
-  initialDelaySeconds: 5
-  periodSeconds: 10
+  initialDelaySeconds: 1
+  periodSeconds: 1
   timeoutSeconds: 5
   failureThreshold: 3
 
@@ -87,20 +88,4 @@ resources:
 nodeSelector: {}
 tolerations: []
 affinity: {}
-
-# --- Client Deployment ---
-client:
-  enabled: true
-  image:
-    registry: ""
-    name: "synadia/nats-box"
-    tag: "latest"
-    pullPolicy: IfNotPresent
-  resources:
-    requests:
-      cpu: 50m
-      memory: 64Mi
-    limits:
-      cpu: 100m
-      memory: 128Mi
 

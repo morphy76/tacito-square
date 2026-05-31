@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "tacito-agent.fullname" . }}
+  name: {{ include "tacito-agent.fullname" . }}-unit
   labels:
     {{- include "tacito-agent.labels" . | nindent 4 }}
 spec:
@@ -9,10 +9,12 @@ spec:
   selector:
     matchLabels:
       {{- include "tacito-agent.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: agent
   template:
     metadata:
       labels:
         {{- include "tacito-agent.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: agent
     spec:
       {{- with .Values.global.imagePullSecrets }}
       imagePullSecrets:
@@ -34,11 +36,17 @@ spec:
               value: {{ .Values.port | toString | quote }}
             - name: TS_AGENT_LOG_LEVEL
               value: {{ .Values.logLevel | quote }}
+            {{- $secretName := "" }}
             {{- if .Values.agent.llm.credentialsSecret }}
+              {{- $secretName = .Values.agent.llm.credentialsSecret }}
+            {{- else if .Values.agent.llm.apiKey }}
+              {{- $secretName = printf "%s-llm" (include "tacito-agent.fullname" .) }}
+            {{- end }}
+            {{- if $secretName }}
             - name: TS_AGENT_LLM_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.agent.llm.credentialsSecret | quote }}
+                  name: {{ $secretName | quote }}
                   key: api-key
             {{- end }}
           livenessProbe:

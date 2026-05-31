@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M5.7                                |
-| Status        | ACCEPTED                                    |
+| Status        | VERIFIED                                    |
 | Milestone     | M5                                          |
 | Component     | deploy                                      |
 | Depends On    | SPEC-FR-M2.4, SPEC-FR-M5.1                  |
@@ -15,7 +15,10 @@ In many deployments, and in particular in local or test environments, it is usef
 
 This specification introduces a new standalone Helm Chart (`tools/helm/tacito-agent`) that packages the TacitoAgent container. Since the agent does not contact the Keeper to retrieve its configuration in standalone mode, all required dynamic properties (such as LLM brain details, custom system prompts, and memory dimensions) are provided directly in the Helm values and mounted as an internal Kubernetes ConfigMap which is loaded as environment variables into the pod. The agent continues to utilize and connect to external, shared infrastructure dependencies (like NATS, Redis, and Qdrant).
 
-As the only external interface for the agent is the NATS message bus, the helm needs to provide a client component to interact with the agent (e.g. a web interface or a CLI tool or a CURL endpoint, the easiest one). This client component will use the NATS API to send messages to the agent and receive messages from the agent. The client component will leverage the standard NATS CLI client (e.g., nats pub, nats sub, nats request) as a third-party tool to publish messages to and receive messages from the standalone agent, ensuring full testability of the NATS API.
+> [!NOTE]
+> Rather than deploying a persistent client/helper component inside the Helm chart itself, testing and NATS bus verification are performed dynamically. Users should launch a temporary, interactive container running the official NATS toolbox image (`natsio/nats-box`) via the following command:
+> `kubectl run -i --rm --tty nats-box --image=natsio/nats-box --restart=Never -n tacito -- sh`
+> This allows dynamic, direct verification using standard `nats` CLI utilities (`nats sub`, `nats request`) without chart footprint pollution.
 
 ## Specification
 
