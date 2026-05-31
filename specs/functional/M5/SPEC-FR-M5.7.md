@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M5.7                                |
-| Status        | DRAFT                                       |
+| Status        | VERIFIED                                    |
 | Milestone     | M5                                          |
 | Component     | deploy                                      |
 | Depends On    | SPEC-FR-M2.4, SPEC-FR-M5.1                  |
@@ -15,7 +15,10 @@ In many deployments, and in particular in local or test environments, it is usef
 
 This specification introduces a new standalone Helm Chart (`tools/helm/tacito-agent`) that packages the TacitoAgent container. Since the agent does not contact the Keeper to retrieve its configuration in standalone mode, all required dynamic properties (such as LLM brain details, custom system prompts, and memory dimensions) are provided directly in the Helm values and mounted as an internal Kubernetes ConfigMap which is loaded as environment variables into the pod. The agent continues to utilize and connect to external, shared infrastructure dependencies (like NATS, Redis, and Qdrant).
 
-As the only external interface for the agent is the NATS message bus, the helm needs to provide a client component to interact with the agent (e.g. a web interface or a CLI tool or a CURL endpoint, the easiest one). This client component will use the NATS API to send messages to the agent and receive messages from the agent. The optimal approach for the client component is to leverage existing third party NATS clients to publish messages to the agent, if third party tools are not available stop processing this specification.
+> [!NOTE]
+> Rather than deploying a persistent client/helper component inside the Helm chart itself, testing and NATS bus verification are performed dynamically. Users should launch a temporary, interactive container running the official NATS toolbox image (`natsio/nats-box`) via the following command:
+> `kubectl run -i --rm --tty nats-box --image=natsio/nats-box --restart=Never -n tacito -- sh`
+> This allows dynamic, direct verification using standard `nats` CLI utilities (`nats sub`, `nats request`) without chart footprint pollution.
 
 ## Specification
 
@@ -25,7 +28,7 @@ As the only external interface for the agent is the NATS message bus, the helm n
 
 2. **Structured Configuration Values**:
    - The chart's `values.yaml` MUST support structured configuration parameters covering:
-     - **Agent Metadata**: `agent.id` (UUID), `agent.name` (string), `agent.tenantId` (string), `agent.communityId` (UUID).
+     - **Agent Metadata**: `agent.id` (UUID), `agent.name` (string), `agent.tenantId` (string), `agent.communityRef` (string).
      - **LLM Brain Configuration**: `agent.llm.model` (string), `agent.llm.endpoint` (string), `agent.llm.temperature` (float), `agent.llm.maxTokens` (int), `agent.llm.credentialsSecret` (string or secret reference).
      - **System Prompt**: `agent.systemPrompt` (string, multi-line).
      - **Short-Term Memory (Redis)**: `redis.url` (string), `redis.keyNamespace` (string), `redis.ttlSeconds` (int).
@@ -39,7 +42,7 @@ As the only external interface for the agent is the NATS message bus, the helm n
      - `TS_AGENT_ID`
      - `TS_AGENT_NAME`
      - `TS_AGENT_TENANT_ID`
-     - `TS_AGENT_COMMUNITY_ID`
+     - `TS_AGENT_COMMUNITY_REF`
      - `TS_AGENT_LLM_MODEL`
      - `TS_AGENT_LLM_ENDPOINT`
      - `TS_AGENT_LLM_TEMPERATURE`
@@ -92,6 +95,10 @@ As the only external interface for the agent is the NATS message bus, the helm n
      --set nats.url="nats://nats:4222"
    ```
 2. Verify all keys appear inside the generated ConfigMap block.
+
+## API Contract (if applicable)
+
+Not applicable. This is a deployment-only Helm Chart and does not expose any new HTTP or REST endpoints. Health check endpoints (`/healthz`, `/readyz`) follow existing standards as configured in the agent application code.
 
 ## Files Affected
 

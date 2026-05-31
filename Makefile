@@ -13,6 +13,8 @@ HELM_INFRA_RELEASE ?= ts-infra
 HELM_INFRA_CHART   := tools/helm/tacito-square-infra
 NAMESPACE          ?= tacito
 HELM_DEV_VALUES    := tools/helm/dev-values.yaml
+HELM_AGENT_RELEASE ?= ts-agent
+HELM_AGENT_CHART   := tools/helm/tacito-agent
 
 GO             := go
 GOTEST         := $(GO) test
@@ -25,6 +27,7 @@ NERDCTL_ADDR   := /var/run/docker/containerd/containerd.sock
         docker-build docker-push \
         docker-load docker-load-agent docker-load-keeper docker-load-operator docker-load-bff \
         helm-template helm-install helm-uninstall \
+        helm-template-agent helm-install-agent helm-uninstall-agent test-helm-agent \
         helm-infra-deps helm-infra-lint helm-infra-template helm-infra-install helm-infra-uninstall \
         ci clean help
 
@@ -147,6 +150,20 @@ helm-install: ## Install/upgrade application Helm release
 
 helm-uninstall: ## Uninstall application Helm release
 	helm uninstall $(HELM_RELEASE) --namespace $(NAMESPACE)
+
+## —— Helm (agent) ———————————————————————————————————————
+
+helm-template-agent: ## Render standalone agent Helm templates locally
+	helm template $(HELM_AGENT_RELEASE) $(HELM_AGENT_CHART) --namespace $(NAMESPACE)
+
+helm-install-agent: ## Install/upgrade standalone agent Helm release
+	helm upgrade --install $(HELM_AGENT_RELEASE) $(HELM_AGENT_CHART) --namespace $(NAMESPACE) --create-namespace --wait
+
+helm-uninstall-agent: ## Uninstall standalone agent Helm release
+	helm uninstall $(HELM_AGENT_RELEASE) --namespace $(NAMESPACE)
+
+test-helm-agent: ## Run automated dry-run testing suite for the standalone agent Helm chart
+	bash test/helm/test_agent_standalone_chart.sh
 
 ## —— Helm (infra) ———————————————————————————————————————
 
