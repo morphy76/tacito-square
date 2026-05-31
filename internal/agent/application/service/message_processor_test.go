@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -81,6 +82,7 @@ func (m *MockEmbedder) CreateEmbeddingsBatch(ctx context.Context, texts []string
 
 // MockLongTermMemory is a mock implementation of the LongTermMemory outbound port.
 type MockLongTermMemory struct {
+	mu         sync.Mutex
 	SaveFunc   func(ctx context.Context, tenantID, agentID string, entries []model.LTMEntry) error
 	SearchFunc func(ctx context.Context, tenantID, agentID string, vector []float32, filter model.LTMFilter, limit int, threshold float32) ([]model.LTMEntry, error)
 	DeleteFunc func(ctx context.Context, tenantID, agentID string, filter model.LTMFilter) error
@@ -89,11 +91,21 @@ type MockLongTermMemory struct {
 }
 
 func (m *MockLongTermMemory) Save(ctx context.Context, tenantID, agentID string, entries []model.LTMEntry) error {
+	m.mu.Lock()
 	m.SaveCalls = append(m.SaveCalls, entries...)
+	m.mu.Unlock()
 	if m.SaveFunc != nil {
 		return m.SaveFunc(ctx, tenantID, agentID, entries)
 	}
 	return nil
+}
+
+func (m *MockLongTermMemory) GetSaveCalls() []model.LTMEntry {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	calls := make([]model.LTMEntry, len(m.SaveCalls))
+	copy(calls, m.SaveCalls)
+	return calls
 }
 
 func (m *MockLongTermMemory) Search(ctx context.Context, tenantID, agentID string, vector []float32, filter model.LTMFilter, limit int, threshold float32) ([]model.LTMEntry, error) {
@@ -259,9 +271,10 @@ func TestMessageProcessorService_ProcessIncomingMessage(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 
 		// Verify that LTM Save was called with the summarized eviction
-		require.NotEmpty(t, mockLTM.SaveCalls)
-		assert.Equal(t, model.EntryTypeConversation, mockLTM.SaveCalls[0].Type)
-		assert.Contains(t, mockLTM.SaveCalls[0].Content, "Summary of evicted turns")
+		saveCalls := mockLTM.GetSaveCalls()
+		require.NotEmpty(t, saveCalls)
+		assert.Equal(t, model.EntryTypeConversation, saveCalls[0].Type)
+		assert.Contains(t, saveCalls[0].Content, "Summary of evicted turns")
 	})
 
 	t.Run("should gracefully degrade if LTM or Embedder fails", func(t *testing.T) {

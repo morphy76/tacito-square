@@ -170,4 +170,9 @@ func TestQdrantLTMAdapter(t *testing.T) {
 			assert.NotEqual(t, "Private fact for Agent 1", r.Content)
 		}
 	})
+
+	t.Run("Ping health check", func(t *testing.T) {
+		err := adapter.Ping(ctx)
+		assert.NoError(t, err)
+	})
 }

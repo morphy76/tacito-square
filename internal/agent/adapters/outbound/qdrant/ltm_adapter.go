@@ -84,6 +84,21 @@ func (a *QdrantLTMAdapter) Close() error {
 	return nil
 }
 
+// Ping checks the health of the Qdrant connection by retrieving collection info.
+func (a *QdrantLTMAdapter) Ping(ctx context.Context) error {
+	if a.conn == nil {
+		return fmt.Errorf("qdrant connection not initialized")
+	}
+	collectionsClient := qdrant.NewCollectionsClient(a.conn)
+	_, err := collectionsClient.Get(ctx, &qdrant.GetCollectionInfoRequest{
+		CollectionName: a.collectionName,
+	})
+	if err != nil {
+		return fmt.Errorf("qdrant ping failed: %w", err)
+	}
+	return nil
+}
+
 func stringVal(s string) *qdrant.Value {
 	return &qdrant.Value{
 		Kind: &qdrant.Value_StringValue{StringValue: s},
