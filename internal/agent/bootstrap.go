@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	agentnats "github.com/morphy76/tacito-square/internal/agent/adapters/inbound/nats"
+	"github.com/morphy76/tacito-square/internal/agent/application/ports/inbound"
 	"github.com/morphy76/tacito-square/internal/shared/health"
 	natsclient "github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
@@ -15,8 +16,8 @@ type EchoSubscriber = agentnats.EchoSubscriber
 
 // NewEchoSubscriber constructs a new EchoSubscriber for the given agent identity.
 // The tenantID may be empty for pre-auth milestones.
-func NewEchoSubscriber(nc *natsclient.Conn, agentName, communityID, tenantID string, logger zerolog.Logger) *EchoSubscriber {
-	return agentnats.NewEchoSubscriber(nc, agentName, communityID, tenantID, logger)
+func NewEchoSubscriber(nc *natsclient.Conn, agentName, communityID, tenantID string, processor inbound.MessageProcessor, logger zerolog.Logger) *EchoSubscriber {
+	return agentnats.NewEchoSubscriber(nc, agentName, communityID, tenantID, processor, logger)
 }
 
 // ConnectNATS establishes a NATS connection with default reconnect options and logs the outcome.
