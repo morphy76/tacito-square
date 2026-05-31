@@ -121,6 +121,9 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | SPEC-FR-M5.7 | Standalone Agent Deployment Helm Chart | VERIFIED | deploy | [SPEC-FR-M5.7](functional/M5/SPEC-FR-M5.7.md) |
 | SPEC-FR-M5.8 | Benchmark Suite & Integration Coverage Verification | ACCEPTED | test | [SPEC-FR-M5.8](functional/M5/SPEC-FR-M5.8.md) |
 | SPEC-FR-M5.9 | Flexible Agent Runtime Tiers & Deployment Customization | ACCEPTED | keeper, operator, deploy | [SPEC-FR-M5.9](functional/M5/SPEC-FR-M5.9.md) |
+| SPEC-FR-M5.10 | Agent Cognitive Architecture & Reasoning Loop | ACCEPTED | agent | [SPEC-FR-M5.10](functional/M5/SPEC-FR-M5.10.md) |
+
+
 
 ### M5: Bugs
 
@@ -182,7 +185,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | M2 | Application Helm Chart & Component Scaffolding | ✔️ IMPLEMENTED | 11 | [M2](milestones/M2-packaging.md) |
 | M3 | Keeper Core | ✔️ IMPLEMENTED | 8 | [M3](milestones/M3-keeper-core.md) |
 | M4 | Operator Core | ✔️ IMPLEMENTED | 6 | [M4](milestones/M4-operator-core.md) |
-| M5 | Agent Core | ⏳ IN_PROGRESS | 7 | [M5](milestones/M5-agent-core.md) |
+| M5 | Agent Core | ⏳ IN_PROGRESS | 10 | [M5](milestones/M5-agent-core.md) |
 | M6 | Communities & Messaging | ⬜ PLANNED | 7 | [M6](milestones/M6-communities.md) |
 | M7 | BFF & UIs | ⬜ PLANNED | 4 | [M7](milestones/M7-bff-uis.md) |
 | M8 | Governance | ⬜ PLANNED | 7 | [M8](milestones/M8-governance.md) |
