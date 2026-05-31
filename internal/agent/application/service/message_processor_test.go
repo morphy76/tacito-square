@@ -2,6 +2,7 @@ package service_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"sync"
@@ -148,7 +149,9 @@ func TestMessageProcessorService_ProcessIncomingMessage(t *testing.T) {
 		mockLTM := &MockLongTermMemory{}
 		mockEmbed := &MockEmbedder{}
 
-		var processor inbound.MessageProcessor = service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed)
+		cogEngine := service.NewCognitiveEngine(mockBrain).WithLTM(mockEmbed, mockLTM)
+
+		var processor inbound.MessageProcessor = service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine)
 
 		res, err := processor.ProcessIncomingMessage(context.Background(), "tenant-1", "agent-1", "thread-123", "Hello, world")
 		assert.NoError(t, err)
@@ -188,7 +191,9 @@ func TestMessageProcessorService_ProcessIncomingMessage(t *testing.T) {
 		mockLTM := &MockLongTermMemory{}
 		mockEmbed := &MockEmbedder{}
 
-		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed)
+		cogEngine := service.NewCognitiveEngine(mockBrain).WithLTM(mockEmbed, mockLTM)
+
+		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine)
 
 		// Service must not fail even if memory fails
 		res, err := processor.ProcessIncomingMessage(context.Background(), "tenant-1", "agent-1", "thread-123", "Hello, world")
@@ -207,13 +212,16 @@ func TestMessageProcessorService_ProcessIncomingMessage(t *testing.T) {
 		mockLTM := &MockLongTermMemory{}
 		mockEmbed := &MockEmbedder{}
 
-		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed)
+		cogEngine := service.NewCognitiveEngine(mockBrain).WithLTM(mockEmbed, mockLTM)
+
+		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine)
 		_, err := processor.ProcessIncomingMessage(context.Background(), "tenant-1", "agent-1", "thread-123", "Hello")
 		assert.ErrorIs(t, err, mockErr)
 	})
 
 	t.Run("should query LTM, inject retrieved matches, and consolidate on eviction", func(t *testing.T) {
-		// Mock brain that asserts prompt contains LTM context
+		stepCount := 0
+		// Mock brain that outputs active recall memory tool request, then final answer
 		mockBrain := &MockBrain{
 			GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
 				// If it's a summarization call (the background worker runs async summarization)
@@ -223,14 +231,32 @@ func TestMessageProcessorService_ProcessIncomingMessage(t *testing.T) {
 					}, nil
 				}
 
-				// Assert system prompt contains injected LTM block
-				assert.Contains(t, request.SystemPrompt, "<long_term_memory>")
-				assert.Contains(t, request.SystemPrompt, "cognitive context matched")
-				assert.Contains(t, request.SystemPrompt, "</long_term_memory>")
+				stepCount++
+				if stepCount == 1 {
+					toolCall := map[string]any{
+						"thought": "Deciding to recall memories.",
+						"tool_call": map[string]any{
+							"name": "recall_memory",
+							"arguments": map[string]any{
+								"query": "Hello",
+							},
+						},
+					}
+					data, _ := json.Marshal(toolCall)
+					return &model.BrainResponse{Content: string(data)}, nil
+				}
 
-				return &model.BrainResponse{
-					Content: "LLM Response",
-				}, nil
+				// Verify that tool observation was successfully injected into history turns
+				assert.True(t, len(request.History) > 0)
+				lastTurn := request.History[len(request.History)-1]
+				assert.Equal(t, "tool", lastTurn.Role)
+				assert.Contains(t, lastTurn.Content, "cognitive context matched")
+
+				finalAnswer := map[string]any{
+					"final_answer": "LLM Response",
+				}
+				data, _ := json.Marshal(finalAnswer)
+				return &model.BrainResponse{Content: string(data)}, nil
 			},
 		}
 
@@ -261,7 +287,8 @@ func TestMessageProcessorService_ProcessIncomingMessage(t *testing.T) {
 		}
 
 		t.Setenv("TS_AGENT_STM_LIMIT", "3")
-		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed)
+		cogEngine := service.NewCognitiveEngine(mockBrain).WithLTM(mockEmbed, mockLTM)
+		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine)
 
 		res, err := processor.ProcessIncomingMessage(context.Background(), "tenant-1", "agent-1", "thread-123", "Hello")
 		assert.NoError(t, err)
@@ -278,13 +305,34 @@ func TestMessageProcessorService_ProcessIncomingMessage(t *testing.T) {
 	})
 
 	t.Run("should gracefully degrade if LTM or Embedder fails", func(t *testing.T) {
+		stepCount := 0
 		mockBrain := &MockBrain{
 			GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
-				// Prompt should NOT contain LTM blocks because search failed
-				assert.NotContains(t, request.SystemPrompt, "<long_term_memory>")
-				return &model.BrainResponse{
-					Content: "Response without LTM",
-				}, nil
+				stepCount++
+				if stepCount == 1 {
+					toolCall := map[string]any{
+						"tool_call": map[string]any{
+							"name": "recall_memory",
+							"arguments": map[string]any{
+								"query": "Hello",
+							},
+						},
+					}
+					data, _ := json.Marshal(toolCall)
+					return &model.BrainResponse{Content: string(data)}, nil
+				}
+
+				// The history contains the tool error observation from graceful degradation
+				assert.True(t, len(request.History) > 0)
+				lastTurn := request.History[len(request.History)-1]
+				assert.Equal(t, "tool", lastTurn.Role)
+				assert.Contains(t, lastTurn.Content, "Memory store temporarily unavailable")
+
+				finalAnswer := map[string]any{
+					"final_answer": "Response without LTM",
+				}
+				data, _ := json.Marshal(finalAnswer)
+				return &model.BrainResponse{Content: string(data)}, nil
 			},
 		}
 
@@ -300,7 +348,8 @@ func TestMessageProcessorService_ProcessIncomingMessage(t *testing.T) {
 			},
 		}
 
-		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed)
+		cogEngine := service.NewCognitiveEngine(mockBrain).WithLTM(mockEmbed, mockLTM)
+		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine)
 
 		res, err := processor.ProcessIncomingMessage(context.Background(), "tenant-1", "agent-1", "thread-123", "Hello")
 		assert.NoError(t, err)

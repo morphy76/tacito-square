@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/morphy76/tacito-square/internal/agent"
+	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/nats"
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/ollama"
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/openai"
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/qdrant"
@@ -195,7 +196,15 @@ func main() {
 		}
 	}
 
-	processor := service.NewMessageProcessorService(brain, memoryAdapter, ltm, embedder)
+	// 5c. Initialize Cognitive reasoning engine loop
+	cogEngine := service.NewCognitiveEngine(brain)
+	if hasQdrant {
+		cogEngine = cogEngine.WithLTM(embedder, ltm)
+	}
+	natsPublisher := nats.NewNATSEventPublisher(nc)
+	cogEngine = cogEngine.WithPublisher(natsPublisher)
+
+	processor := service.NewMessageProcessorService(brain, memoryAdapter, ltm, embedder, cogEngine)
 
 	echoSubscriber := agent.NewEchoSubscriber(nc, agentName, communityRef, "", processor, logger)
 	if err := echoSubscriber.Start(ctx); err != nil {

@@ -128,6 +128,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 
 
 
+
 ### M5: Bugs
 
 | ID | Title | Status | Severity | File |
