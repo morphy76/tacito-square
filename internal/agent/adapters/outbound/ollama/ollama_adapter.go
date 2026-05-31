@@ -2,6 +2,7 @@ package ollama
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/url"
 	"time"
@@ -27,9 +28,10 @@ type Config struct {
 }
 
 type Adapter struct {
-	cfg    Config
-	client *api.Client
-	cb     *resiliency.CircuitBreaker
+	cfg        Config
+	client     *api.Client
+	cb         *resiliency.CircuitBreaker
+	embedderCB *resiliency.CircuitBreaker
 }
 
 func NewAdapter(cfg Config) *Adapter {
@@ -57,11 +59,13 @@ func NewAdapter(cfg Config) *Adapter {
 
 	client := api.NewClient(endpointURL, httpClient)
 	cb := resiliency.NewCircuitBreaker(cfg.FailureThreshold, cfg.RecoveryTimeout)
+	embedderCB := resiliency.NewCircuitBreaker(cfg.FailureThreshold, cfg.RecoveryTimeout)
 
 	return &Adapter{
-		cfg:    cfg,
-		client: client,
-		cb:     cb,
+		cfg:        cfg,
+		client:     client,
+		cb:         cb,
+		embedderCB: embedderCB,
 	}
 }
 
@@ -214,4 +218,128 @@ func (a *Adapter) GenerateStream(ctx context.Context, req model.BrainRequest) (<
 	close(ch)
 	close(errCh)
 	return ch, errCh, nil
+}
+
+// CreateEmbedding generates a high-dimensional dense vector for the given text.
+func (a *Adapter) CreateEmbedding(ctx context.Context, text string) ([]float32, error) {
+	logger := zerolog.Ctx(ctx)
+	logger.Info().Str("model", a.cfg.Model).Msg("generating text embedding via Ollama")
+
+	var result []float32
+
+	op := func() error {
+		runCtx, cancel := context.WithTimeout(ctx, a.cfg.Timeout)
+		defer cancel()
+
+		modelName := a.cfg.Model
+		if modelName == "" {
+			modelName = "nomic-embed-text"
+		}
+
+		req := &api.EmbedRequest{
+			Model: modelName,
+			Input: text,
+		}
+
+		b := retry.NewExponential(10 * time.Millisecond)
+		b = retry.WithMaxRetries(3, b)
+
+		var resp *api.EmbedResponse
+		err := retry.Do(runCtx, b, func(ctx context.Context) error {
+			var err error
+			resp, err = a.client.Embed(ctx, req)
+			if err != nil {
+				logger.Warn().Err(err).Msg("Ollama embedding call failed, retrying...")
+				return retry.RetryableError(err)
+			}
+			return nil
+		})
+		if err != nil {
+			logger.Error().Err(err).Msg("all Ollama embedding retries exhausted")
+			return err
+		}
+
+		if len(resp.Embeddings) == 0 {
+			return errors.New("empty embeddings from Ollama response")
+		}
+
+		result = make([]float32, len(resp.Embeddings[0]))
+		for i, v := range resp.Embeddings[0] {
+			result[i] = float32(v)
+		}
+		return nil
+	}
+
+	fb := func(err error) error {
+		logger.Warn().Err(err).Msg("Ollama embedder circuit breaker tripped")
+		return err
+	}
+
+	err := a.embedderCB.Execute(ctx, op, fb)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// CreateEmbeddingsBatch generates dense vectors for a slice of texts in parallel.
+func (a *Adapter) CreateEmbeddingsBatch(ctx context.Context, texts []string) ([][]float32, error) {
+	logger := zerolog.Ctx(ctx)
+	logger.Info().Str("model", a.cfg.Model).Int("batch_size", len(texts)).Msg("generating batch text embeddings via Ollama")
+
+	var result [][]float32
+
+	op := func() error {
+		runCtx, cancel := context.WithTimeout(ctx, a.cfg.Timeout)
+		defer cancel()
+
+		modelName := a.cfg.Model
+		if modelName == "" {
+			modelName = "nomic-embed-text"
+		}
+
+		req := &api.EmbedRequest{
+			Model: modelName,
+			Input: texts,
+		}
+
+		b := retry.NewExponential(10 * time.Millisecond)
+		b = retry.WithMaxRetries(3, b)
+
+		var resp *api.EmbedResponse
+		err := retry.Do(runCtx, b, func(ctx context.Context) error {
+			var err error
+			resp, err = a.client.Embed(ctx, req)
+			if err != nil {
+				logger.Warn().Err(err).Msg("Ollama batch embedding call failed, retrying...")
+				return retry.RetryableError(err)
+			}
+			return nil
+		})
+		if err != nil {
+			logger.Error().Err(err).Msg("all Ollama batch embedding retries exhausted")
+			return err
+		}
+
+		result = make([][]float32, len(resp.Embeddings))
+		for i, d := range resp.Embeddings {
+			vec := make([]float32, len(d))
+			for j, v := range d {
+				vec[j] = float32(v)
+			}
+			result[i] = vec
+		}
+		return nil
+	}
+
+	fb := func(err error) error {
+		logger.Warn().Err(err).Msg("Ollama batch embedder circuit breaker tripped")
+		return err
+	}
+
+	err := a.embedderCB.Execute(ctx, op, fb)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
