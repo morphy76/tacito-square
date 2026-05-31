@@ -1,0 +1,65 @@
+package ollama_test
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
+
+	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/ollama"
+	"github.com/morphy76/tacito-square/internal/agent/domain/model"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestOllamaAdapter_Generate(t *testing.T) {
+	t.Run("should parse chat completions response correctly", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Mock Ollama chat completions response structure
+			resp := map[string]any{
+				"model":      "llama3",
+				"created_at": "2026-05-31T09:20:00Z",
+				"message": map[string]any{
+					"role":    "assistant",
+					"content": "Hello! I am Ollama.",
+				},
+				"done": true,
+				"prompt_eval_count": 8,
+				"eval_count":        10,
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+		}))
+		defer server.Close()
+
+		adapter := ollama.NewAdapter(ollama.Config{
+			Endpoint:    server.URL,
+			Model:       "llama3",
+			Temperature: 0.7,
+			MaxTokens:   100,
+			Timeout:     2 * time.Second,
+		})
+
+		req := model.BrainRequest{Prompt: "Hi"}
+		res, err := adapter.Generate(context.Background(), req)
+		assert.NoError(t, err)
+		assert.Equal(t, "Hello! I am Ollama.", res.Content)
+		assert.Equal(t, 8, res.Usage.PromptTokens)
+		assert.Equal(t, 10, res.Usage.CompletionTokens)
+	})
+
+	t.Run("should execute fallback on connection failures and trip breaker", func(t *testing.T) {
+		adapter := ollama.NewAdapter(ollama.Config{
+			Endpoint:         "http://invalid-host:12345",
+			FailureThreshold: 1, // Trip on first failure
+			RecoveryTimeout:  10 * time.Second,
+			FallbackMessage:  "ollama fallback text",
+		})
+
+		req := model.BrainRequest{Prompt: "Hi"}
+		res, err := adapter.Generate(context.Background(), req)
+		assert.NoError(t, err) // Fallback handles the error gracefully
+		assert.Equal(t, "ollama fallback text", res.Content)
+	})
+}
