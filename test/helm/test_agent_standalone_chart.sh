@@ -40,5 +40,11 @@ if ! echo "$RENDERED" | grep -q "TS_AGENT_OLLAMA_ENDPOINT"; then
     exit 1
 fi
 
+echo "Checking for TS_AGENT_OTEL_ENDPOINT env key..."
+if ! echo "$RENDERED" | grep -q "TS_AGENT_OTEL_ENDPOINT"; then
+    echo "FAIL: TS_AGENT_OTEL_ENDPOINT env key not found in agent configmap"
+    exit 1
+fi
+
 echo "PASS: Standalone Agent Chart template validation successful!"
 exit 0

@@ -98,6 +98,9 @@ func main() {
 	timeoutSecs := v.GetInt("brain.timeout.seconds")
 	timeout := time.Duration(timeoutSecs) * time.Second
 
+	// Create a single shared thread-safe instrumented HTTP client for the outbound LLM calls
+	sharedHTTPClient := observability.NewInstrumentedClient(timeout)
+
 	var brain outbound.Brain
 
 	switch provider {
@@ -111,6 +114,7 @@ func main() {
 			FailureThreshold: failureThreshold,
 			RecoveryTimeout:  recoveryTimeout,
 			FallbackMessage:  "ollama brain fallback response",
+			HTTPClient:       sharedHTTPClient,
 		})
 	default:
 		brain = openai.NewAdapter(openai.Config{
@@ -123,6 +127,7 @@ func main() {
 			FailureThreshold: failureThreshold,
 			RecoveryTimeout:  recoveryTimeout,
 			FallbackMessage:  "openai brain fallback response",
+			HTTPClient:       sharedHTTPClient,
 		})
 	}
 

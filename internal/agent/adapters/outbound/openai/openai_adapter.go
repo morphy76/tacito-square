@@ -3,6 +3,7 @@ package openai
 import (
 	"context"
 	"errors"
+	"net/http"
 	"time"
 
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/resiliency"
@@ -10,7 +11,9 @@ import (
 	"github.com/openai/openai-go"
 	"github.com/openai/openai-go/option"
 	"github.com/openai/openai-go/shared"
+	"github.com/rs/zerolog"
 	"github.com/sethvargo/go-retry"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 type Config struct {
@@ -23,6 +26,7 @@ type Config struct {
 	FailureThreshold int
 	RecoveryTimeout  time.Duration
 	FallbackMessage  string
+	HTTPClient       *http.Client
 }
 
 type Adapter struct {
@@ -42,8 +46,16 @@ func NewAdapter(cfg Config) *Adapter {
 		cfg.RecoveryTimeout = 15 * time.Second
 	}
 
+	httpClient := cfg.HTTPClient
+	if httpClient == nil {
+		httpClient = &http.Client{
+			Transport: otelhttp.NewTransport(http.DefaultTransport),
+		}
+	}
+
 	opts := []option.RequestOption{
 		option.WithAPIKey(cfg.APIKey),
+		option.WithHTTPClient(httpClient),
 	}
 	if cfg.Endpoint != "" {
 		opts = append(opts, option.WithBaseURL(cfg.Endpoint))
@@ -60,7 +72,14 @@ func NewAdapter(cfg Config) *Adapter {
 }
 
 func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.BrainResponse, error) {
+	logger := zerolog.Ctx(ctx)
+	logger.Info().
+		Str("model", a.cfg.Model).
+		Str("endpoint", a.cfg.Endpoint).
+		Msg("sending chat completion request to OpenAI")
+
 	if err := req.Validate(); err != nil {
+		logger.Error().Err(err).Msg("invalid brain request payload")
 		return nil, err
 	}
 
@@ -107,24 +126,34 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 		b := retry.NewExponential(10 * time.Millisecond)
 		b = retry.WithMaxRetries(3, b)
 
+		logger.Info().Msg("initiating chat completion wire call (with backoff retry)")
 		var chatComp *openai.ChatCompletion
+		start := time.Now()
 		err := retry.Do(runCtx, b, func(ctx context.Context) error {
 			var err error
 			chatComp, err = a.client.Chat.Completions.New(ctx, params)
 			if err != nil {
-				// Retry on HTTP transport failures or server failures
+				logger.Warn().Err(err).Msg("chat completion call failed, retrying...")
 				return retry.RetryableError(err)
 			}
 			return nil
 		})
+		duration := time.Since(start)
 
 		if err != nil {
+			logger.Error().Err(err).Dur("duration_ms", duration).Msg("all chat completion retries exhausted")
 			return err
 		}
 
 		if len(chatComp.Choices) == 0 {
 			return errors.New("empty choices from openai response")
 		}
+
+		logger.Info().
+			Dur("duration_ms", duration).
+			Int("prompt_tokens", int(chatComp.Usage.PromptTokens)).
+			Int("completion_tokens", int(chatComp.Usage.CompletionTokens)).
+			Msg("chat completion wire call completed successfully")
 
 		result = &model.BrainResponse{
 			Content: chatComp.Choices[0].Message.Content,
@@ -141,6 +170,7 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 
 	// Define fallback operation
 	fb := func(err error) error {
+		logger.Warn().Err(err).Msg("circuit breaker tripped, executing fallback operation")
 		result = &model.BrainResponse{
 			Content:      a.cfg.FallbackMessage,
 			FinishReason: "fallback",

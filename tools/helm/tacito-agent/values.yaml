@@ -30,7 +30,7 @@ agent:
   # --- LLM Brain Configuration ---
   llm:
     model: "gpt-4o"
-    endpoint: "http://standalone-agent-tacito-agent-mocks:1080/v1"
+    endpoint: "http://{{ include \"tacito-agent.fullname\" . }}-mocks:1080/v1"
     temperature: 0.7
     maxTokens: 2048
     apiKey: "dummy-key"
@@ -48,11 +48,11 @@ agent:
       recoveryTimeoutSeconds: 15
 
   openai:
-    endpoint: "http://standalone-agent-tacito-agent-mocks:1080/v1"
+    endpoint: "http://{{ include \"tacito-agent.fullname\" . }}-mocks:1080/v1"
     apiKey: "dummy-key"
 
   ollama:
-    endpoint: "http://standalone-agent-tacito-agent-mocks:1080"
+    endpoint: "http://{{ include \"tacito-agent.fullname\" . }}-mocks:1080"
 
   # --- System Prompt (multi-line) ---
   systemPrompt: |
@@ -74,6 +74,10 @@ qdrant:
 # --- Event Bus (NATS) ---
 nats:
   url: "nats://ts-infra-nats:4222"
+
+# --- OpenTelemetry Tracing ---
+otel:
+  endpoint: "ts-infra-otel-collector:4317"
 
 # --- Object Storage (S3/MinIO) ---
 s3:

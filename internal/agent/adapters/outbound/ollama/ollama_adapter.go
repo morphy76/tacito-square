@@ -9,7 +9,9 @@ import (
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/resiliency"
 	"github.com/morphy76/tacito-square/internal/agent/domain/model"
 	"github.com/ollama/ollama/api"
+	"github.com/rs/zerolog"
 	"github.com/sethvargo/go-retry"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 type Config struct {
@@ -21,6 +23,7 @@ type Config struct {
 	FailureThreshold int
 	RecoveryTimeout  time.Duration
 	FallbackMessage  string
+	HTTPClient       *http.Client
 }
 
 type Adapter struct {
@@ -45,7 +48,14 @@ func NewAdapter(cfg Config) *Adapter {
 		endpointURL = &url.URL{Scheme: "http", Host: "127.0.0.1:11434"}
 	}
 
-	client := api.NewClient(endpointURL, http.DefaultClient)
+	httpClient := cfg.HTTPClient
+	if httpClient == nil {
+		httpClient = &http.Client{
+			Transport: otelhttp.NewTransport(http.DefaultTransport),
+		}
+	}
+
+	client := api.NewClient(endpointURL, httpClient)
 	cb := resiliency.NewCircuitBreaker(cfg.FailureThreshold, cfg.RecoveryTimeout)
 
 	return &Adapter{
@@ -56,7 +66,14 @@ func NewAdapter(cfg Config) *Adapter {
 }
 
 func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.BrainResponse, error) {
+	logger := zerolog.Ctx(ctx)
+	logger.Info().
+		Str("model", a.cfg.Model).
+		Str("endpoint", a.cfg.Endpoint).
+		Msg("sending chat completion request to Ollama")
+
 	if err := req.Validate(); err != nil {
+		logger.Error().Err(err).Msg("invalid brain request payload")
 		return nil, err
 	}
 
@@ -117,6 +134,8 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 		var promptEvalCount int
 		var evalCount int
 
+		logger.Info().Msg("initiating Ollama chat wire call (with backoff retry)")
+		start := time.Now()
 		err := retry.Do(runCtx, b, func(ctx context.Context) error {
 			var err error
 			err = a.client.Chat(ctx, params, func(resp api.ChatResponse) error {
@@ -126,14 +145,23 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 				return nil
 			})
 			if err != nil {
+				logger.Warn().Err(err).Msg("Ollama chat call failed, retrying...")
 				return retry.RetryableError(err)
 			}
 			return nil
 		})
+		duration := time.Since(start)
 
 		if err != nil {
+			logger.Error().Err(err).Dur("duration_ms", duration).Msg("all Ollama chat retries exhausted")
 			return err
 		}
+
+		logger.Info().
+			Dur("duration_ms", duration).
+			Int("prompt_tokens", promptEvalCount).
+			Int("completion_tokens", evalCount).
+			Msg("Ollama chat wire call completed successfully")
 
 		result = &model.BrainResponse{
 			Content: responseText,
@@ -150,6 +178,7 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 
 	// Define fallback operation
 	fb := func(err error) error {
+		logger.Warn().Err(err).Msg("circuit breaker tripped, executing fallback operation")
 		result = &model.BrainResponse{
 			Content:      a.cfg.FallbackMessage,
 			FinishReason: "fallback",

@@ -78,6 +78,9 @@ func (s *EchoSubscriber) handleEcho(ctx context.Context, logger zerolog.Logger, 
 		Str("message", sanitized).
 		Msg("echo request received")
 
+	// Store enriched logger in context so downstream reasoning pipeline retains trace correlation
+	ctx = logger.WithContext(ctx)
+
 	// Trigger the message processing framework pipeline (Brain reasoning engine)
 	brainResult, err := s.processor.ProcessIncomingMessage(ctx, req.Message)
 	if err != nil {
