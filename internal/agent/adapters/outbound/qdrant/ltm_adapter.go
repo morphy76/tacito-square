@@ -33,7 +33,15 @@ func NewQdrantLTMAdapter(qdrantURL string, collectionName string, vectorDim uint
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	conn, err := grpc.DialContext(ctx, qdrantURL,
+	// Clean the URL schema prefix if present (e.g. http:// or https://)
+	cleanedURL := qdrantURL
+	if len(qdrantURL) > 7 && qdrantURL[:7] == "http://" {
+		cleanedURL = qdrantURL[7:]
+	} else if len(qdrantURL) > 8 && qdrantURL[:8] == "https://" {
+		cleanedURL = qdrantURL[8:]
+	}
+
+	conn, err := grpc.DialContext(ctx, cleanedURL,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithBlock(),
 	)

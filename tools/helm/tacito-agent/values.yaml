@@ -67,7 +67,7 @@ redis:
 
 # --- Long-Term Memory (Qdrant) ---
 qdrant:
-  url: "http://ts-infra-qdrant:6334"
+  url: "ts-infra-qdrant:6334"
   collectionName: "tacito-memories"
   vectorDimension: 1536
 
