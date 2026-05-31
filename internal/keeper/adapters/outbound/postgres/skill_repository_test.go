@@ -246,9 +246,10 @@ func TestSkillRepository_Lifecycle(t *testing.T) {
 			_ = agentRepo.Delete(ctxB, agentID)
 		}()
 
-		// Detach under Tenant B for Tenant A's skill should have no effect
+		// Attaching Tenant A's skill to Tenant B's agent under Tenant B's context should fail
 		err = repo.AttachSkillToAgent(ctxB, agentID, skillA.ID)
-		require.NoError(t, err)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "skill not found")
 
 		// List by agent under Tenant B should be empty
 		skillsB, err := repo.ListSkillsByAgent(ctxB, agentID)
