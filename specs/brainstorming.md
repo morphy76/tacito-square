@@ -3,6 +3,7 @@
 - nats non sta nell'health dell'agente, verifica anche il keeper
 - documented test use cases: ingestion, chat, search
 - tracing across crd reconciliation: e.g. request of agent assignment and operator activities
+- review logs and otel events
 - agents capabilities, e.g. compacting context and summary/memory agents, language identification, conversation context and long term memory management, plannning, delegating and parallelizing tasks
 - come e per cosa sfruttare i jetstream di nats?
 - Tacito multistage builds addirional make steps, they are faster than the single stage builds and decouples the workspace from tooling and runtime dependencies. This is especially useful for development, where we want to iterate quickly on the workspace without having to rebuild the entire image.
