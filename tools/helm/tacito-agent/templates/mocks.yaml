@@ -10,40 +10,10 @@ data:
       {
         "httpRequest": {
           "method": "POST",
-          "path": "/v1/chat/completions"
-        },
-        "httpResponse": {
-          "statusCode": 200,
-          "headers": {
-            "Content-Type": ["application/json"]
-          },
-          "body": "{\"id\":\"chatcmpl-mock-1\",\"object\":\"chat.completion\",\"created\":1677652288,\"model\":\"gpt-4o\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"thought\\\":\\\"I need to calculate pool size. Let me load the math guidelines.\\\",\\\"tool_call\\\":{\\\"name\\\":\\\"enable_skill\\\",\\\"arguments\\\":{\\\"skill_name\\\":\\\"math\\\"}}}\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":15,\"total_tokens\":25}}"
-        }
-      },
-      {
-        "httpRequest": {
-          "method": "POST",
           "path": "/v1/chat/completions",
           "body": {
             "type": "REGEX",
-            "regex": "(?s).*reason.*"
-          }
-        },
-        "httpResponse": {
-          "statusCode": 200,
-          "headers": {
-            "Content-Type": ["application/json"]
-          },
-          "body": "{\"id\":\"chatcmpl-mock-4\",\"object\":\"chat.completion\",\"created\":1677652291,\"model\":\"gpt-4o\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"thought\\\":\\\"The user is asking about brain reasoning. I should load the reasoning guidelines.\\\",\\\"tool_call\\\":{\\\"name\\\":\\\"enable_skill\\\",\\\"arguments\\\":{\\\"skill_name\\\":\\\"reasoning\\\"}}}\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":15,\"completion_tokens\":15,\"total_tokens\":30}}"
-        }
-      },
-      {
-        "httpRequest": {
-          "method": "POST",
-          "path": "/v1/chat/completions",
-          "body": {
-            "type": "REGEX",
-            "regex": "(?s).*Reasoning Guidelines.*"
+            "regex": "[\\s\\S]*Reasoning Guidelines[\\s\\S]*"
           }
         },
         "httpResponse": {
@@ -60,7 +30,24 @@ data:
           "path": "/v1/chat/completions",
           "body": {
             "type": "REGEX",
-            "regex": "(?s).*brin.*"
+            "regex": "[\\s\\S]*reason[\\s\\S]*"
+          }
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "headers": {
+            "Content-Type": ["application/json"]
+          },
+          "body": "{\"id\":\"chatcmpl-mock-4\",\"object\":\"chat.completion\",\"created\":1677652291,\"model\":\"gpt-4o\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"thought\\\":\\\"The user is asking about brain reasoning. I should load the reasoning guidelines.\\\",\\\"tool_call\\\":{\\\"name\\\":\\\"enable_skill\\\",\\\"arguments\\\":{\\\"skill_name\\\":\\\"reasoning\\\"}}}\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":15,\"completion_tokens\":15,\"total_tokens\":30}}"
+        }
+      },
+      {
+        "httpRequest": {
+          "method": "POST",
+          "path": "/v1/chat/completions",
+          "body": {
+            "type": "REGEX",
+            "regex": "[\\s\\S]*brin[\\s\\S]*"
           }
         },
         "httpResponse": {
@@ -77,7 +64,7 @@ data:
           "path": "/v1/chat/completions",
           "body": {
             "type": "REGEX",
-            "regex": "(?s).*Math Guidelines.*"
+            "regex": "[\\s\\S]*Math Guidelines[\\s\\S]*"
           }
         },
         "httpResponse": {
@@ -86,6 +73,19 @@ data:
             "Content-Type": ["application/json"]
           },
           "body": "{\"id\":\"chatcmpl-mock-2\",\"object\":\"chat.completion\",\"created\":1677652289,\"model\":\"gpt-4o\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"thought\\\":\\\"I have the math guidelines. The calculations are verified.\\\",\\\"final_answer\\\":\\\"Verified total pool size is 50.\\\"}\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":25,\"completion_tokens\":20,\"total_tokens\":45}}"
+        }
+      },
+      {
+        "httpRequest": {
+          "method": "POST",
+          "path": "/v1/chat/completions"
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "headers": {
+            "Content-Type": ["application/json"]
+          },
+          "body": "{\"id\":\"chatcmpl-mock-1\",\"object\":\"chat.completion\",\"created\":1677652288,\"model\":\"gpt-4o\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"thought\\\":\\\"I need to calculate pool size. Let me load the math guidelines.\\\",\\\"tool_call\\\":{\\\"name\\\":\\\"enable_skill\\\",\\\"arguments\\\":{\\\"skill_name\\\":\\\"math\\\"}}}\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":15,\"total_tokens\":25}}"
         }
       },
       {
