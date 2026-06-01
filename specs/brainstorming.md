@@ -1,5 +1,6 @@
 # Brainstorming
 
+- reduce startup time
 - UIs wizard-like e non come form per la creazione di agenti, skill, prompt, etc. Questo rende l'esperienza più guidata e meno tecnica, permettendo anche a utenti non esperti di creare e gestire agenti in modo efficace. modalità advanced per utenti più esperti che vogliono avere un controllo più fine sui dettagli tecnici.
 - brain templates to propagate stuff to llms
 - community ingress -> keeper -> crd -> agente di una comunity -> per triggerare l'inizio, tipo di ingress, conversazione, ingestion, etc etc
