@@ -1,11 +1,11 @@
-# BUG-M5.1: Missing Horizontal Pod Autoscaler in Standalone Agent Chart
+# BUG-M8.1: Missing Horizontal Pod Autoscaler in Standalone Agent Chart
 
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
-| ID            | BUG-M5.1                                                           |
+| ID            | BUG-M8.1                                                           |
 | Status        | OPEN                                                               |
 | Severity      | MEDIUM                                                             |
-| Milestone     | M5 — Agent Core                                                    |
+| Milestone     | M8 — Governance                                                    |
 | Affects       | SPEC-FR-M5.7                                                       |
 | Violates      | RULE[k8s-best-practices.md] §1 (Horizontal Pod Autoscaling)         |
 | Discovered    | Pre-review compliance check of SPEC-FR-M5.7                        |

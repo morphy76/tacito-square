@@ -1,24 +1,26 @@
-# SPEC-FR-M9.4: OpenAPI Contract Validation
+# SPEC-FR-M9.4: Production Helm & Hardening
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M9.4                                |
 | Status        | DRAFT                                       |
 | Milestone     | M9                                          |
-| Component     | all                                         |
-| Depends On    | SPEC-NFR-OPENAPI                            |
+| Component     | deploy                                      |
+| Depends On    | SPEC-FR-M2.1                                |
 | Supersedes    | none                                        |
 
 ## Context
 
-API contracts must be validated to ensure the running system matches committed OpenAPI specifications.
+Production deployments require TLS, secrets management, HA, and security hardening.
 
 ## Specification
 
-1. Each component MUST serve its OpenAPI spec at `GET /openapi.json`.
-2. Contract tests MUST compare live spec against committed spec in `api/openapi/`.
-3. Contract test failures MUST block CI.
-4. The system SHOULD provide Swagger UI at `/swagger/` in dev mode.
+1. Production Helm values MUST configure TLS termination.
+2. Secrets MUST be managed via K8s Secrets or external secrets operator.
+3. All components MUST run with read-only root filesystem and non-root user.
+4. Pod security standards MUST be enforced (restricted profile).
+5. Resource limits MUST be tuned with documented baselines.
+6. A production runbook MUST cover deployment, rollback, and incident response.
 
 ## Acceptance Criteria
 

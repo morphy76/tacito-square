@@ -6,7 +6,7 @@
 | Status        | IMPLEMENTED                                 |
 | Milestone     | M4                                          |
 | Component     | keeper, agent                               |
-| Depends On    | SPEC-FR-M4.4, SPEC-FR-M4.7                 |
+| Depends On    | SPEC-FR-M8.9, SPEC-FR-M4.7                 |
 | Supersedes    | none                                        |
 
 ## Context
@@ -15,7 +15,7 @@ This spec introduces the first synchronous Keeper-to-Agent messaging capability:
 
 This feature serves two primary purposes:
 1. **End-to-end connectivity validation**: a minimal, observable, round-trip proof that the Keeper ↔ NATS ↔ Agent pipeline is alive and that per-agent message routing is functional.
-2. **Scale-from-zero smoke path**: if a community's agents are scaled to zero (as managed by SPEC-FR-M4.4), publishing the echo message to the community NATS subject triggers the operator's NATS-driven scale-up before the keeper attempts to collect replies. A configurable wake-up wait time accommodates this.
+2. **Scale-from-zero smoke path**: if a community's agents are scaled to zero (as managed by SPEC-FR-M8.9), publishing the echo message to the community NATS subject triggers the operator's NATS-driven scale-up before the keeper attempts to collect replies. A configurable wake-up wait time accommodates this.
 
 **Message decoration** by the agent is intentionally trivial in this early phase: the agent wraps the sanitized message in a standard envelope that includes the agent's own `name` and a timestamp, e.g.:
 ```
@@ -61,7 +61,7 @@ The application service MUST:
 2. List all `Agent` records assigned to that community (`CommunityID == communityID`) from the `AgentRepository`.
 3. Filter agents whose `Status` is `running` (i.e., the agent pod is active). Agents in other states (defined, assigned, pending, stopped, error, terminated) MUST be excluded from the fanout.
 4. If no running agents exist after filtering:
-   a. Check the community's deployed agent CRD statuses. If at least one agent is in `Idle` phase (scaled to zero), set a `woke_community` flag in the response and still proceed — the NATS message publication to the community subject (per SPEC-FR-M4.4) will trigger scale-up. In this case, the endpoint SHOULD wait up to a configurable `wakeUpWaitSeconds` (default: 30s, configurable via Viper key `keeper.echo.wakeup_wait_seconds`) before attempting the per-agent NATS request.
+   a. Check the community's deployed agent CRD statuses. If at least one agent is in `Idle` phase (scaled to zero), set a `woke_community` flag in the response and still proceed — the NATS message publication to the community subject (per SPEC-FR-M8.9) will trigger scale-up. In this case, the endpoint SHOULD wait up to a configurable `wakeUpWaitSeconds` (default: 30s, configurable via Viper key `keeper.echo.wakeup_wait_seconds`) before attempting the per-agent NATS request.
    b. If no agents are running and none are idle/scalable, return `503 Service Unavailable` with `{"error": "no running agents in community"}`.
 
 ### 4. NATS Fanout (CommunityBroadcaster Outbound Port)
@@ -109,9 +109,9 @@ The agent's NATS subscriber for echo messages MUST be implemented as an **inboun
 
 > **Note**: The agent-side implementation spans the `agent` component which is currently in DRAFT (SPEC-FR-M5.x series). For this spec, the agent-side subscriber is **specified here** as a dependency but implementation may be co-delivered with M5 agent scaffolding. The Keeper-side implementation can be verified with a mock subscriber for testing purposes.
 
-### 6. Scale-from-Zero Integration (SPEC-FR-M4.4 Dependency)
+### 6. Scale-from-Zero Integration (SPEC-FR-M8.9 Dependency)
 
-The Keeper MUST use the community NATS subject `ts.community.{communityID}.agent.*` pattern implicitly, since per-agent subjects are sub-patterns of this wildcard. The operator's `NATSCommunitySubscriber` (SPEC-FR-M4.4) subscribes to this wildcard and will detect the per-agent echo requests, triggering scale-up of all scaled-to-zero agents in the community.
+The Keeper MUST use the community NATS subject `ts.community.{communityID}.agent.*` pattern implicitly, since per-agent subjects are sub-patterns of this wildcard. The operator's `NATSCommunitySubscriber` (SPEC-FR-M8.9) subscribes to this wildcard and will detect the per-agent echo requests, triggering scale-up of all scaled-to-zero agents in the community.
 
 The Keeper echo endpoint MUST NOT directly interact with the operator or Kubernetes — scale-up is a side-effect of the NATS fanout itself.
 
@@ -138,7 +138,7 @@ The Keeper echo endpoint MUST NOT directly interact with the operator or Kuberne
 7. **Concurrent fanout**: For a community with 3 running agents, all 3 requests are issued concurrently (total latency is approximately one agent round-trip, not three).
 8. **NATS unavailable**: When `nc` is nil, returns `503 Service Unavailable`.
 9. **Tenant isolation**: Requests without a valid tenant context return `401 Unauthorized`.
-10. **Scale-from-zero side-effect**: When agents are in `Idle` state, the echo NATS messages trigger the operator's scale-up (via SPEC-FR-M4.4); the endpoint waits up to `wakeUpWaitSeconds` before proceeding.
+10. **Scale-from-zero side-effect**: When agents are in `Idle` state, the echo NATS messages trigger the operator's scale-up (via SPEC-FR-M8.9); the endpoint waits up to `wakeUpWaitSeconds` before proceeding.
 11. **`CommunityBroadcaster` port compliance**: The application service `EchoService` MUST NOT import `nats.go` directly — only the `CommunityBroadcaster` interface.
 
 ## Test Plan

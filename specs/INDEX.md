@@ -25,12 +25,6 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | SPEC-FR-M1.1 | Infrastructure Helm Chart | IMPLEMENTED | deploy | [SPEC-FR-M1.1](functional/M1/SPEC-FR-M1.1.md) |
 | SPEC-FR-M1.2 | Makefile Infrastructure Targets | IMPLEMENTED | build | [SPEC-FR-M1.2](functional/M1/SPEC-FR-M1.2.md) |
 
-### M1: Bugs
-
-| ID | Title | Status | Severity | File |
-|----|-------|--------|----------|------|
-| BUG-M1.1 | Infrastructure Services Do Not Enforce SSL/TLS or Authenticated Connections | OPEN | HIGH | [BUG-M1.1](tasks/M1.BUG1/BUG-M1.1.md) |
-
 ### M2: Application Helm Chart & Component Scaffolding
 
 | ID | Title | Status | Component | File |
@@ -88,7 +82,6 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | SPEC-FR-M4.1 | Agent CRD Definition & Registration | IMPLEMENTED | operator | [SPEC-FR-M4.1](functional/M4/SPEC-FR-M4.1.md) |
 | SPEC-FR-M4.2 | AgentCommunity CRD Definition | REJECTED | operator | [SPEC-FR-M4.2](functional/M4/SPEC-FR-M4.2.md) |
 | SPEC-FR-M4.3 | Reconciliation Controller | IMPLEMENTED | operator | [SPEC-FR-M4.3](functional/M4/SPEC-FR-M4.3.md) |
-| SPEC-FR-M4.4 | Zero-Scaling Support | ACCEPTED | operator | [SPEC-FR-M4.4](functional/M4/SPEC-FR-M4.4.md) |
 | SPEC-FR-M4.6 | Agent CRD Submission | IMPLEMENTED | keeper | [SPEC-FR-M4.6](functional/M4/SPEC-FR-M4.6.md) |
 | SPEC-FR-M4.7 | Agent & Community Lifecycle Management REST API | IMPLEMENTED | keeper, operator | [SPEC-FR-M4.7](functional/M4/SPEC-FR-M4.7.md) |
 | SPEC-FR-M4.8 | Community Echo Endpoint | IMPLEMENTED | keeper, agent | [SPEC-FR-M4.8](functional/M4/SPEC-FR-M4.8.md) |
@@ -131,7 +124,6 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 
 | ID | Title | Status | Severity | File |
 |----|-------|--------|----------|------|
-| BUG-M5.1 | Missing Horizontal Pod Autoscaler in Standalone Agent Chart | OPEN | MEDIUM | [BUG-M5.1](tasks/M5.BUG1/BUG-M5.1.md) |
 | BUG-M5.2 | Unified Skills and Prompts Misinterpretation and Flattened Keeper-Agent Interface | CLOSED | HIGH | [BUG-M5.2](tasks/M5.BUG2/BUG-M5.2.md) |
 | BUG-M5.4 | Agent Tooling Violates MCP-First Architecture due to Mock Tools Embedded in Core Engine | CLOSED | MEDIUM | [BUG-M5.4](tasks/M5.BUG4/BUG-M5.4.md) |
 
@@ -171,20 +163,38 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | SPEC-FR-M8.6 | Audit Trail (events + queries) | DRAFT | keeper | [SPEC-FR-M8.6](functional/M8/SPEC-FR-M8.6.md) |
 | SPEC-FR-M8.7 | Prompt Management (CRUD + versioning) | DRAFT | keeper | [SPEC-FR-M8.7](functional/M8/SPEC-FR-M8.7.md) |
 | SPEC-FR-M8.8 | Skills Management (CRUD + MCP attach) | DRAFT | keeper | [SPEC-FR-M8.8](functional/M8/SPEC-FR-M8.8.md) |
+| SPEC-FR-M8.9 | Zero-Scaling Support | ACCEPTED | operator | [SPEC-FR-M8.9](functional/M8/SPEC-FR-M8.9.md) |
 
-### M9: Federation & Hardening
+### M8: Bugs
+
+| ID | Title | Status | Severity | File |
+|----|-------|--------|----------|------|
+| BUG-M8.1 | Missing Horizontal Pod Autoscaler in Standalone Agent Chart | OPEN | MEDIUM | [BUG-M8.1](tasks/M8.BUG1/BUG-M8.1.md) |
+
+### M9: Hardening
 
 | ID | Title | Status | Component | File |
 |----|-------|--------|-----------|------|
-| SPEC-FR-M9.1 | A2A HTTP Gateway | DRAFT | keeper | [SPEC-FR-M9.1](functional/M9/SPEC-FR-M9.1.md) |
-| SPEC-FR-M9.2 | External Agent Registry | DRAFT | keeper | [SPEC-FR-M9.2](functional/M9/SPEC-FR-M9.2.md) |
-| SPEC-FR-M9.3 | Prometheus Metrics Integration | DRAFT | all | [SPEC-FR-M9.3](functional/M9/SPEC-FR-M9.3.md) |
-| SPEC-FR-M9.4 | OpenAPI Contract Validation | DRAFT | all | [SPEC-FR-M9.4](functional/M9/SPEC-FR-M9.4.md) |
-| SPEC-FR-M9.5 | E2E & Benchmark Tests | DRAFT | test | [SPEC-FR-M9.5](functional/M9/SPEC-FR-M9.5.md) |
-| SPEC-FR-M9.6 | Production Helm & Hardening | DRAFT | deploy | [SPEC-FR-M9.6](functional/M9/SPEC-FR-M9.6.md) |
-| SPEC-FR-M9.7 | K8s NetworkPolicies | DRAFT | operator | [SPEC-FR-M9.7](functional/M9/SPEC-FR-M9.7.md) |
-| SPEC-FR-M9.8 | Comprehensive System Documentation | DRAFT | docs | [SPEC-FR-M9.8](functional/M9/SPEC-FR-M9.8.md) |
-| SPEC-FR-M9.9 | Benchmark Suite & Integration Coverage Verification | ACCEPTED | test | [SPEC-FR-M9.9](functional/M9/SPEC-FR-M9.9.md) |
+| SPEC-FR-M9.1 | Prometheus Metrics Integration | DRAFT | all | [SPEC-FR-M9.1](functional/M9/SPEC-FR-M9.1.md) |
+| SPEC-FR-M9.2 | OpenAPI Contract Validation | DRAFT | all | [SPEC-FR-M9.2](functional/M9/SPEC-FR-M9.2.md) |
+| SPEC-FR-M9.3 | E2E & Benchmark Tests | DRAFT | test | [SPEC-FR-M9.3](functional/M9/SPEC-FR-M9.3.md) |
+| SPEC-FR-M9.4 | Production Helm & Hardening | DRAFT | deploy | [SPEC-FR-M9.4](functional/M9/SPEC-FR-M9.4.md) |
+| SPEC-FR-M9.5 | K8s NetworkPolicies | DRAFT | operator | [SPEC-FR-M9.5](functional/M9/SPEC-FR-M9.5.md) |
+| SPEC-FR-M9.6 | Comprehensive System Documentation | DRAFT | docs | [SPEC-FR-M9.6](functional/M9/SPEC-FR-M9.6.md) |
+| SPEC-FR-M9.7 | Benchmark Suite & Integration Coverage Verification | ACCEPTED | test | [SPEC-FR-M9.7](functional/M9/SPEC-FR-M9.7.md) |
+
+### M9: Bugs
+
+| ID | Title | Status | Severity | File |
+|----|-------|--------|----------|------|
+| BUG-M9.1 | Infrastructure Services Do Not Enforce SSL/TLS or Authenticated Connections | OPEN | HIGH | [BUG-M9.1](tasks/M9.BUG1/BUG-M9.1.md) |
+
+### M10: Federation
+
+| ID | Title | Status | Component | File |
+|----|-------|--------|-----------|------|
+| SPEC-FR-M10.1 | A2A HTTP Gateway | DRAFT | keeper | [SPEC-FR-M10.1](functional/M10/SPEC-FR-M10.1.md) |
+| SPEC-FR-M10.2 | External Agent Registry | DRAFT | keeper | [SPEC-FR-M10.2](functional/M10/SPEC-FR-M10.2.md) |
 
 ## Milestones
 
@@ -193,10 +203,11 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | M1 | Infrastructure Helm Chart | ✔️ IMPLEMENTED | 2 | [M1](milestones/M1-infrastructure.md) |
 | M2 | Application Helm Chart & Component Scaffolding | ✔️ IMPLEMENTED | 11 | [M2](milestones/M2-packaging.md) |
 | M3 | Keeper Core | ✔️ IMPLEMENTED | 8 | [M3](milestones/M3-keeper-core.md) |
-| M4 | Operator Core | ✔️ IMPLEMENTED | 6 | [M4](milestones/M4-operator-core.md) |
+| M4 | Operator Core | ✔️ IMPLEMENTED | 5 | [M4](milestones/M4-operator-core.md) |
 | M5 | Agent Core | ⏳ IN_PROGRESS | 9 | [M5](milestones/M5-agent-core.md) |
 | M6 | Communities & Messaging | ⬜ PLANNED | 7 | [M6](milestones/M6-communities.md) |
 | M7 | BFF & UIs | ⬜ PLANNED | 4 | [M7](milestones/M7-bff-uis.md) |
-| M8 | Governance | ⬜ PLANNED | 8 | [M8](milestones/M8-governance.md) |
-| M9 | Federation & Hardening | ⬜ PLANNED | 9 | [M9](milestones/M9-federation-hardening.md) |
+| M8 | Governance | ⬜ PLANNED | 9 | [M8](milestones/M8-governance.md) |
+| M9 | Hardening | ⬜ PLANNED | 7 | [M9](milestones/M9-hardening.md) |
+| M10 | Federation | ⬜ PLANNED | 2 | [M10](milestones/M10-federation.md) |
 

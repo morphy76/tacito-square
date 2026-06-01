@@ -1,12 +1,12 @@
-# TASK-M4.4-T2: HeartbeatStore Port & In-Memory Adapter
+# TASK-M8.9-T2: HeartbeatStore Port & In-Memory Adapter
 
 | Field       | Value                                      |
 |-------------|--------------------------------------------|
-| Task ID     | TASK-M4.4-T2                               |
-| Spec        | SPEC-FR-M4.4                               |
+| Task ID     | TASK-M8.9-T2                               |
+| Spec        | SPEC-FR-M8.9                               |
 | Boundary    | Application Outbound Port + Memory Adapter |
 | Status      | TODO                                       |
-| Depends On  | TASK-M4.4-T1                               |
+| Depends On  | TASK-M8.9-T1                               |
 
 ## Objective
 

@@ -1,12 +1,12 @@
-# TASK-M4.4-T4: Scale Agent Application Service
+# TASK-M8.9-T4: Scale Agent Application Service
 
 | Field       | Value                                                |
 |-------------|------------------------------------------------------|
-| Task ID     | TASK-M4.4-T4                                         |
-| Spec        | SPEC-FR-M4.4                                         |
+| Task ID     | TASK-M8.9-T4                                         |
+| Spec        | SPEC-FR-M8.9                                         |
 | Boundary    | Application Inbound Port + Application Service Layer |
 | Status      | TODO                                                 |
-| Depends On  | TASK-M4.4-T1, TASK-M4.4-T2                          |
+| Depends On  | TASK-M8.9-T1, TASK-M8.9-T2                          |
 
 ## Objective
 

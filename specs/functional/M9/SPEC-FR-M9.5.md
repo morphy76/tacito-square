@@ -1,25 +1,25 @@
-# SPEC-FR-M9.5: E2E & Benchmark Tests
+# SPEC-FR-M9.5: K8s NetworkPolicies
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M9.5                                |
 | Status        | DRAFT                                       |
 | Milestone     | M9                                          |
-| Component     | test                                        |
-| Depends On    | all M1-M8                                   |
+| Component     | operator                                    |
+| Depends On    | SPEC-FR-M4.3, SPEC-FR-M6.3                 |
 | Supersedes    | none                                        |
 
 ## Context
 
-End-to-end and benchmark tests validate the full system on a Kind cluster.
+Network isolation between communities prevents unauthorized cross-community traffic.
 
 ## Specification
 
-1. E2E tests MUST run on a Kind cluster with all components deployed.
-2. E2E scenarios MUST cover: community creation, agent spawn, message exchange, handoff, HITL.
-3. Benchmark tests MUST establish baselines for: spawn latency, message throughput, LLM latency.
-4. Concurrency tests MUST verify race-free operation under parallel workloads.
-5. All test suites MUST be integrated into CI via Makefile targets.
+1. The operator MUST create NetworkPolicy resources for each TacitoCommunity.
+2. NetworkPolicies MUST allow only intra-community pod-to-pod traffic.
+3. NetworkPolicies MUST allow traffic from keeper and operator pods (control plane).
+4. NetworkPolicies MUST allow egress to infrastructure services.
+5. NetworkPolicies MUST deny all other ingress and egress by default.
 
 ## Acceptance Criteria
 

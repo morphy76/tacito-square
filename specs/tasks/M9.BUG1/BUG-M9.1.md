@@ -1,11 +1,11 @@
-# BUG-M1.1: Infrastructure Services Do Not Enforce SSL/TLS or Authenticated Connections
+# BUG-M9.1: Infrastructure Services Do Not Enforce SSL/TLS or Authenticated Connections
 
 | Field         | Value                                                              |
 |---------------|-------------------------------------------------------------------|
-| ID            | BUG-M1.1                                                          |
+| ID            | BUG-M9.1                                                          |
 | Status        | OPEN                                                              |
 | Severity      | HIGH                                                              |
-| Milestone     | M1 — Infrastructure Helm Chart                                    |
+| Milestone     | M9 — Hardening                                                    |
 | Affects       | `tools/helm/tacito-square-infra/values.yaml`                      |
 | Violates      | SPEC-FR-M2.11, SPEC-NFR-STACK, SPEC-NFR-CLOUD                    |
 | Discovered    | Keeper health-check and migration failures in Helm deployments    |

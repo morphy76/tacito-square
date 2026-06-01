@@ -1,12 +1,12 @@
-# TASK-M4.4-T3: SubscriptionManager Port & NATS Community Subscriber Adapter
+# TASK-M8.9-T3: SubscriptionManager Port & NATS Community Subscriber Adapter
 
 | Field       | Value                                          |
 |-------------|------------------------------------------------|
-| Task ID     | TASK-M4.4-T3                                   |
-| Spec        | SPEC-FR-M4.4                                   |
+| Task ID     | TASK-M8.9-T3                                   |
+| Spec        | SPEC-FR-M8.9                                   |
 | Boundary    | Application Outbound Port + NATS Inbound Adapter |
 | Status      | TODO                                           |
-| Depends On  | TASK-M4.4-T2, TASK-M4.4-T4                    |
+| Depends On  | TASK-M8.9-T2, TASK-M8.9-T4                    |
 
 ## Objective
 

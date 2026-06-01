@@ -1,25 +1,24 @@
-# SPEC-FR-M9.2: External Agent Registry
+# SPEC-FR-M9.2: OpenAPI Contract Validation
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M9.2                                |
 | Status        | DRAFT                                       |
 | Milestone     | M9                                          |
-| Component     | keeper                                      |
-| Depends On    | SPEC-FR-M9.1                                |
+| Component     | all                                         |
+| Depends On    | SPEC-NFR-OPENAPI                            |
 | Supersedes    | none                                        |
 
 ## Context
 
-External A2A agent sources must be registered and health-monitored for reliable federation.
+API contracts must be validated to ensure the running system matches committed OpenAPI specifications.
 
 ## Specification
 
-1. Registry API: `GET/POST /api/v1/external-sources` and `GET/PUT/DELETE /api/v1/external-sources/{id}`.
-2. Each source MUST include: endpoint URL, Agent Card URL, health check interval.
-3. The system MUST periodically poll external source health endpoints.
-4. Circuit breakers MUST disable unhealthy sources (per SPEC-NFR-CLOUD).
-5. External source status MUST be visible in the Auditor UI.
+1. Each component MUST serve its OpenAPI spec at `GET /openapi.json`.
+2. Contract tests MUST compare live spec against committed spec in `api/openapi/`.
+3. Contract test failures MUST block CI.
+4. The system SHOULD provide Swagger UI at `/swagger/` in dev mode.
 
 ## Acceptance Criteria
 

@@ -1,10 +1,10 @@
-# SPEC-FR-M4.4: Zero-Scaling Support
+# SPEC-FR-M8.9: Zero-Scaling Support
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
-| ID            | SPEC-FR-M4.4                                |
+| ID            | SPEC-FR-M8.9                                |
 | Status        | ACCEPTED                                    |
-| Milestone     | M4                                          |
+| Milestone     | M8                                          |
 | Component     | operator                                    |
 | Depends On    | SPEC-FR-M4.3                                |
 | Supersedes    | none                                        |

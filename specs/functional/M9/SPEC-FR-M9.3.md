@@ -1,25 +1,25 @@
-# SPEC-FR-M9.3: Prometheus Metrics Integration
+# SPEC-FR-M9.3: E2E & Benchmark Tests
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M9.3                                |
 | Status        | DRAFT                                       |
 | Milestone     | M9                                          |
-| Component     | all                                         |
-| Depends On    | SPEC-NFR-OBSERVABILITY                      |
+| Component     | test                                        |
+| Depends On    | all M1-M8                                   |
 | Supersedes    | none                                        |
 
 ## Context
 
-All components expose Prometheus metrics for operational monitoring beyond HTTP auto-instrumentation.
+End-to-end and benchmark tests validate the full system on a Kind cluster.
 
 ## Specification
 
-1. Keeper: `tacito_agents_total` (gauge), `tacito_communities_total` (gauge), `tacito_hitl_pending` (gauge).
-2. Agent: `tacito_agent_messages_total` (counter), `tacito_agent_llm_tokens_total` (counter), `tacito_agent_reasoning_duration_seconds` (histogram).
-3. Operator: `tacito_reconciliations_total` (counter), `tacito_agent_pods_total` (gauge).
-4. All metrics MUST be registered via Prometheus Go client.
-5. Helm charts MUST include ServiceMonitor CRDs.
+1. E2E tests MUST run on a Kind cluster with all components deployed.
+2. E2E scenarios MUST cover: community creation, agent spawn, message exchange, handoff, HITL.
+3. Benchmark tests MUST establish baselines for: spawn latency, message throughput, LLM latency.
+4. Concurrency tests MUST verify race-free operation under parallel workloads.
+5. All test suites MUST be integrated into CI via Makefile targets.
 
 ## Acceptance Criteria
 

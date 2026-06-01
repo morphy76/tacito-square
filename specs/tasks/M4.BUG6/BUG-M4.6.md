@@ -30,7 +30,7 @@ As a result, the Keeper broadcasts on the subject `ts.community.sales-agents-net
 ## Impact
 
 1. **Echo Endpoint Failure:** The community echo capability is completely broken at runtime, rendering communication validation impossible.
-2. **NATS Scale-from-Zero Failures:** Wildcard subscriptions meant to trigger scale-from-zero (SPEC-FR-M4.4) fail to catch messages because they are sent to the community Name subject instead of the community ID.
+2. **NATS Scale-from-Zero Failures:** Wildcard subscriptions meant to trigger scale-from-zero (SPEC-FR-M8.9) fail to catch messages because they are sent to the community Name subject instead of the community ID.
 
 ## Expected Behaviour
 

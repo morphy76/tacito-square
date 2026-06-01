@@ -1,12 +1,12 @@
-# TASK-M4.4-T6: Bootstrap & Dependency Wiring
+# TASK-M8.9-T6: Bootstrap & Dependency Wiring
 
 | Field       | Value                                           |
 |-------------|-------------------------------------------------|
-| Task ID     | TASK-M4.4-T6                                    |
-| Spec        | SPEC-FR-M4.4                                    |
+| Task ID     | TASK-M8.9-T6                                    |
+| Spec        | SPEC-FR-M8.9                                    |
 | Boundary    | Bootstrap / Wiring / Infrastructure Entrypoint  |
 | Status      | TODO                                            |
-| Depends On  | TASK-M4.4-T3, TASK-M4.4-T4, TASK-M4.4-T5      |
+| Depends On  | TASK-M8.9-T3, TASK-M8.9-T4, TASK-M8.9-T5      |
 
 ## Objective
 

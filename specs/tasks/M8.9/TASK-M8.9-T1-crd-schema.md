@@ -1,9 +1,9 @@
-# TASK-M4.4-T1: CRD Schema Extension
+# TASK-M8.9-T1: CRD Schema Extension
 
 | Field       | Value                                      |
 |-------------|--------------------------------------------|
-| Task ID     | TASK-M4.4-T1                               |
-| Spec        | SPEC-FR-M4.4                               |
+| Task ID     | TASK-M8.9-T1                               |
+| Spec        | SPEC-FR-M8.9                               |
 | Boundary    | CRD Type System                            |
 | Status      | TODO                                       |
 | Depends On  | —                                          |
