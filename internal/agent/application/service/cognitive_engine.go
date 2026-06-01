@@ -116,6 +116,16 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 	history []model.MemoryEntry,
 	systemPrompt string,
 ) (string, error) {
+	ctx, span := e.tracer.Start(ctx, "cognitive_engine.loop",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(
+			attribute.String("tenant_id", tenantID),
+			attribute.String("agent_id", agentID),
+			attribute.String("thread_id", threadID),
+		),
+	)
+	defer span.End()
+
 	logger := zerolog.Ctx(ctx).With().
 		Str("tenant_id", tenantID).
 		Str("agent_id", agentID).
@@ -179,14 +189,23 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 			lastThought = lastParsedThought
 		}
 		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
 			return "", err
 		}
 		if !shouldContinue {
+			span.SetStatus(codes.Ok, "")
 			return finalAnswer, nil
 		}
 	}
 
 	logger.Warn().Int("max_steps", e.maxSteps).Msg("exceeded maximum reasoning steps limit without yielding final answer")
+	span.AddEvent("safeguard_limit_reached", trace.WithAttributes(
+		attribute.Int("max_steps", e.maxSteps),
+		attribute.String("message", "exceeded maximum reasoning steps limit without yielding final answer"),
+	))
+	span.SetStatus(codes.Ok, "")
+
 	if lastThought != "" {
 		return "Thought: " + lastThought, nil
 	}

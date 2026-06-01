@@ -113,4 +113,65 @@ func TestReasoningOTel_Instrumentation(t *testing.T) {
 		assert.True(t, errorStatusFound)
 		assert.True(t, exceptionFound)
 	})
+
+	t.Run("safeguard limit: records safeguard_limit_reached event on parent loop span and sets Ok status", func(t *testing.T) {
+		exporter := tracetest.NewInMemoryExporter()
+		tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
+		otel.SetTracerProvider(tp)
+
+		mockBrain := &MockBrain{
+			GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
+				// Keep returning tool calls to force hitting the safeguard limit
+				toolCall := map[string]any{
+					"thought": "Looping forever...",
+					"tool_call": map[string]any{
+						"name":      "infinite_tool",
+						"arguments": map[string]any{},
+					},
+				}
+				data, _ := json.Marshal(toolCall)
+				return &model.BrainResponse{Content: string(data)}, nil
+			},
+		}
+
+		engine := service.NewCognitiveEngine(mockBrain, 3)
+		engine.RegisterTool("infinite_tool", func(ctx context.Context, args map[string]any) (string, error) {
+			return "some output", nil
+		})
+
+		ctx := context.Background()
+		_, err := engine.ExecuteReasoningLoop(ctx, "tenant-1", "agent-1", "thread-1", "infinite loop query", []model.MemoryEntry{}, "")
+		assert.NoError(t, err)
+
+		err = tp.ForceFlush(ctx)
+		assert.NoError(t, err)
+
+		spans := exporter.GetSpans()
+		require.NotEmpty(t, spans)
+
+		var parentSpan *tracetest.SpanStub
+		for _, s := range spans {
+			if s.Name == "cognitive_engine.loop" {
+				parentSpan = &s
+				break
+			}
+		}
+
+		require.NotNil(t, parentSpan)
+
+		// 1. Assert safeguard event was added
+		eventFound := false
+		for _, e := range parentSpan.Events {
+			if e.Name == "safeguard_limit_reached" {
+				eventFound = true
+				maxStepsVal := e.Attributes[0].Value.AsInterface()
+				assert.Equal(t, int64(3), maxStepsVal)
+				assert.Contains(t, e.Attributes[1].Value.AsString(), "exceeded maximum reasoning steps limit")
+			}
+		}
+		assert.True(t, eventFound)
+
+		// 2. Assert parent span status is Ok (safeguard is NOT an error)
+		assert.Equal(t, codes.Ok, parentSpan.Status.Code)
+	})
 }

@@ -211,26 +211,6 @@ func main() {
 	natsPublisher := nats.NewNATSEventPublisher(nc)
 	cogEngine = cogEngine.WithPublisher(natsPublisher)
 
-	// TODO: Remove mock tools when the agent is ready for production.
-	// Register Always Used mock skill/tool: utility_ping
-	cogEngine.RegisterTool("utility_ping", func(ctx context.Context, args map[string]any) (string, error) {
-		return "pong", nil
-	})
-
-	// Register Never Used mock skill collection: restricted
-	cogEngine.RegisterSkill(service.Skill{
-		Name:        "restricted",
-		Description: "Restricted capabilities that require special authorization.",
-		Content:     "Warning: Restricted access instructions. Under no circumstances should you perform unauthorized queries.",
-	})
-
-	// Register Sometimes Used mock skill collection: math
-	cogEngine.RegisterSkill(service.Skill{
-		Name:        "math",
-		Description: "Dynamic math instructions for verifying calculations.",
-		Content:     "Math Guidelines: Always verify additions step-by-step and format them clearly.",
-	})
-
 	processor := service.NewMessageProcessorService(brain, memoryAdapter, ltm, embedder, cogEngine, stmLimit, systemPrompt)
 
 	echoSubscriber := agent.NewEchoSubscriber(nc, agentName, communityRef, "", processor, logger)
