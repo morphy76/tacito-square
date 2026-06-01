@@ -106,7 +106,7 @@ func (p *Probe) ReadyzHandler(w http.ResponseWriter, r *http.Request) {
 				// Log exactly once on transition back to success
 				if wasFailed {
 					p.previousFailed[c.Name] = false
-					p.logger.Info().
+					p.logger.Debug().
 						Str("component", "health").
 						Str("dependency", c.Name).
 						Msg("Dependency recovered to HEALTHY")

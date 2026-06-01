@@ -128,7 +128,7 @@ func (c *K8sCRDCoordinator) PublishProvisioningEvent(ctx context.Context, subjec
 	}
 
 	logger := observability.WithContext(log.Logger, ctx)
-	logger.Info().Str("subject", subject).Msg("successfully published NATS provisioning event")
+	logger.Debug().Str("subject", subject).Msg("successfully published NATS provisioning event")
 }
 
 // SkillConfig defines the propagated skill structure.

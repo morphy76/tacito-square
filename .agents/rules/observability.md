@@ -1,6 +1,5 @@
 ---
 trigger: always_on
-glob: **/*.{go,ts}
 description: Systems observability standards, including Prometheus metrics, OpenTelemetry distributed tracing, and zerolog/winston structured JSON logging.
 ---
 
@@ -43,6 +42,20 @@ Ensure all application logs are highly structured and machine-readable:
   - Inject a configurable set of JWT claims (e.g., `sub`, `email`) configured at build time in `LogClaimsKeys`.
 - **Log Levels:** Adhere to standardized levels: `trace`, `debug`, `info`, `warn`, `error` (default to `info`). Suppress logging below the configured severity level.
 - **Startup:** Log the component build/version at application startup.
+
+Log levels:
+
+- errors for unexpected conditions, they are blocking at business flow level or technical level
+- warnings for recoverable conditions or non blocking at business level
+- troubleshooting messages has to be at trace level
+- info is for business logic that "is done" 
+- debug is for business logic related to undestanding the business flow
+
+Here it is an example for business logic logging criteria:
+
+- a private method can contain just warning or debug levels
+- a public method uses debug level when entering, debug level when branching, info level for mutations and info level for completion, it can contain error levels
+- trace level is allowed everywhere
 
 ---
 

@@ -71,11 +71,11 @@ func NewAdapter(cfg Config) *Adapter {
 
 func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.BrainResponse, error) {
 	logger := zerolog.Ctx(ctx)
-	logger.Info().
+	logger.Debug().
 		Str("model", a.cfg.Model).
 		Str("endpoint", a.cfg.Endpoint).
 		Interface("request_body", req). // TODO: REMOVE ME (Temporary debug log)
-		Msg("sending chat completion request to Ollama")
+		Msg("entering Generate: sending chat completion request to Ollama")
 
 	if err := req.Validate(); err != nil {
 		logger.Error().Err(err).Msg("invalid brain request payload")
@@ -139,7 +139,7 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 		var promptEvalCount int
 		var evalCount int
 
-		logger.Info().Msg("initiating Ollama chat wire call (with backoff retry)")
+		logger.Trace().Msg("initiating Ollama chat wire call (with backoff retry)")
 		start := time.Now()
 		err := retry.Do(runCtx, b, func(ctx context.Context) error {
 			var err error
@@ -162,7 +162,7 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 			return err
 		}
 
-		logger.Info().
+		logger.Debug().
 			Dur("duration_ms", duration).
 			Int("prompt_tokens", promptEvalCount).
 			Int("completion_tokens", evalCount).
@@ -224,7 +224,7 @@ func (a *Adapter) GenerateStream(ctx context.Context, req model.BrainRequest) (<
 // CreateEmbedding generates a high-dimensional dense vector for the given text.
 func (a *Adapter) CreateEmbedding(ctx context.Context, text string) ([]float32, error) {
 	logger := zerolog.Ctx(ctx)
-	logger.Info().Str("model", a.cfg.Model).Msg("generating text embedding via Ollama")
+	logger.Debug().Str("model", a.cfg.Model).Msg("entering CreateEmbedding: generating text embedding via Ollama")
 
 	var result []float32
 
@@ -286,7 +286,7 @@ func (a *Adapter) CreateEmbedding(ctx context.Context, text string) ([]float32, 
 // CreateEmbeddingsBatch generates dense vectors for a slice of texts in parallel.
 func (a *Adapter) CreateEmbeddingsBatch(ctx context.Context, texts []string) ([][]float32, error) {
 	logger := zerolog.Ctx(ctx)
-	logger.Info().Str("model", a.cfg.Model).Int("batch_size", len(texts)).Msg("generating batch text embeddings via Ollama")
+	logger.Debug().Str("model", a.cfg.Model).Int("batch_size", len(texts)).Msg("entering CreateEmbeddingsBatch: generating batch text embeddings via Ollama")
 
 	var result [][]float32
 

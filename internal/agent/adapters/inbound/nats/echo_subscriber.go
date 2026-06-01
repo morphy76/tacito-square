@@ -41,6 +41,7 @@ func NewEchoSubscriber(nc *natsclient.Conn, agentName, communityID, tenantID str
 
 // Start subscribes to the agent's echo subject. Returns an error if subscription fails.
 func (s *EchoSubscriber) Start(_ context.Context) error {
+	s.logger.Debug().Msg("entering Start")
 	subject := fmt.Sprintf(echoSubjectFormat, s.communityID, s.agentName)
 	sub, err := s.nc.Subscribe(subject,
 		observability.WrapNATSHandler("nats.echo_handler", s.logger, s.handleEcho))
@@ -54,6 +55,7 @@ func (s *EchoSubscriber) Start(_ context.Context) error {
 
 // Stop drains and unsubscribes.
 func (s *EchoSubscriber) Stop() error {
+	s.logger.Debug().Msg("entering Stop")
 	if s.sub != nil {
 		err := s.sub.Drain()
 		s.sub = nil
@@ -71,7 +73,7 @@ func (s *EchoSubscriber) handleEcho(ctx context.Context, logger zerolog.Logger, 
 
 	sanitized := model.SanitizeMessage(req.Message)
 
-	logger.Info().
+	logger.Debug().
 		Str("agent_name", s.agentName).
 		Str("community_id", s.communityID).
 		Str("tenant_id", req.TenantID).
@@ -93,7 +95,7 @@ func (s *EchoSubscriber) handleEcho(ctx context.Context, logger zerolog.Logger, 
 	// Trigger the message processing framework pipeline (Brain reasoning engine)
 	brainResult, err := s.processor.ProcessIncomingMessage(ctx, req.TenantID, s.agentName, threadID, req.Message)
 	if err != nil {
-		logger.Error().Err(err).Msg("echo subscriber: message processing failed")
+		logger.Warn().Err(err).Msg("echo subscriber: message processing failed")
 		return fmt.Errorf("process incoming message: %w", err)
 	}
 
@@ -108,12 +110,12 @@ func (s *EchoSubscriber) handleEcho(ctx context.Context, logger zerolog.Logger, 
 
 	data, err := json.Marshal(reply)
 	if err != nil {
-		logger.Error().Err(err).Msg("echo subscriber: failed to marshal reply")
+		logger.Warn().Err(err).Msg("echo subscriber: failed to marshal reply")
 		return fmt.Errorf("marshal echo reply: %w", err)
 	}
 
 	if err := msg.Respond(data); err != nil {
-		logger.Error().Err(err).Msg("echo subscriber: failed to send reply")
+		logger.Warn().Err(err).Msg("echo subscriber: failed to send reply")
 		return fmt.Errorf("respond to echo request: %w", err)
 	}
 

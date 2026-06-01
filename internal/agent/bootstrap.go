@@ -32,13 +32,13 @@ func ConnectNATS(url string, logger zerolog.Logger) (*natsclient.Conn, error) {
 			}
 		}),
 		natsclient.ReconnectHandler(func(_ *natsclient.Conn) {
-			logger.Info().Msg("NATS reconnected")
+			logger.Trace().Msg("NATS reconnected")
 		}),
 	)
 	if err != nil {
 		return nil, err
 	}
-	logger.Info().Str("nats.url", url).Msg("NATS connection established")
+	logger.Debug().Str("nats.url", url).Msg("NATS connection established")
 	return nc, nil
 }
 

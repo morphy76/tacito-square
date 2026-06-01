@@ -53,7 +53,7 @@ func (s *MessageProcessorService) ProcessIncomingMessage(ctx context.Context, te
 		Logger()
 	ctx = logger.WithContext(ctx)
 
-	logger.Info().Str("payload", payload).Msg("processing incoming message via brain reasoning engine with STM and LTM")
+	logger.Debug().Str("payload", payload).Msg("entering ProcessIncomingMessage: processing incoming message via brain reasoning engine with STM and LTM")
 
 	// Step 1: Append User Turn to STM
 	userEntry := model.MemoryEntry{
@@ -63,6 +63,8 @@ func (s *MessageProcessorService) ProcessIncomingMessage(ctx context.Context, te
 	}
 	if err := s.memory.Append(ctx, tenantID, agentID, threadID, userEntry); err != nil {
 		logger.Warn().Err(err).Msg("failed to append user message to short-term memory (graceful degradation)")
+	} else {
+		logger.Info().Msg("appended user message to short-term memory successfully")
 	}
 
 	// Step 2: Fetch active sliding window history from STM
@@ -87,6 +89,8 @@ func (s *MessageProcessorService) ProcessIncomingMessage(ctx context.Context, te
 	}
 	if err := s.memory.Append(ctx, tenantID, agentID, threadID, assistantEntry); err != nil {
 		logger.Warn().Err(err).Msg("failed to append assistant response to short-term memory (graceful degradation)")
+	} else {
+		logger.Info().Msg("appended assistant response to short-term memory successfully")
 	}
 
 	// Step 5: Passive Memory Consolidation on Eviction
@@ -117,7 +121,7 @@ func (s *MessageProcessorService) triggerMemoryConsolidation(ctx context.Context
 	count := len(history) - s.limit
 	evictedTurns := history[:count]
 
-	logger.Info().Int("evicted_turns_count", count).Msg("STM limit exceeded, initiating passive memory consolidation")
+	logger.Debug().Int("evicted_turns_count", count).Msg("STM limit exceeded, initiating passive memory consolidation")
 
 	// Trigger consolidation asynchronously in a separate context to avoid blocking the reasoning reply loop
 	bgCtx := context.WithoutCancel(ctx)
@@ -125,7 +129,7 @@ func (s *MessageProcessorService) triggerMemoryConsolidation(ctx context.Context
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				logger.Error().Interface("recover", r).Msg("panic recovered in async memory consolidator")
+				logger.Warn().Interface("recover", r).Msg("panic recovered in async memory consolidator")
 			}
 		}()
 
@@ -172,6 +176,6 @@ func (s *MessageProcessorService) triggerMemoryConsolidation(ctx context.Context
 			return
 		}
 
-		logger.Info().Str("memory_id", ltmEntry.ID).Msg("passive memory consolidation successfully executed and saved to Qdrant LTM")
+		logger.Debug().Str("memory_id", ltmEntry.ID).Msg("passive memory consolidation successfully executed and saved to Qdrant LTM")
 	}()
 }

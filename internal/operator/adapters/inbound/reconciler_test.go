@@ -67,7 +67,7 @@ func TestReconcile_NotFound(t *testing.T) {
 		},
 	}
 	logBuf := &bytes.Buffer{}
-	logger := zerolog.New(logBuf).Level(zerolog.InfoLevel)
+	logger := zerolog.New(logBuf).Level(zerolog.DebugLevel)
 
 	r := inbound.NewTacitoAgentReconciler(fakeClient, scheme, mockSvc, logger)
 

@@ -21,7 +21,7 @@ func RunMigrations(ctx context.Context, cfg *pgxpool.Config, migrationsDir strin
 		}
 	}
 
-	logger.Info().Str("dir", migrationsDir).Msg("starting database migrations via goose")
+	logger.Debug().Str("dir", migrationsDir).Msg("starting database migrations via goose")
 
 	// Standard sql.DB opened using the exact pgx.ConnConfig parsed at boot time
 	var db *sql.DB = stdlib.OpenDB(*cfg.ConnConfig)
@@ -37,6 +37,6 @@ func RunMigrations(ctx context.Context, cfg *pgxpool.Config, migrationsDir strin
 		return fmt.Errorf("goose database migrations failed: %w", err)
 	}
 
-	logger.Info().Msg("all database migrations applied successfully via goose")
+	logger.Debug().Msg("all database migrations applied successfully via goose")
 	return nil
 }

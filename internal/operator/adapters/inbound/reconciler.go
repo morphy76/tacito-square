@@ -100,7 +100,7 @@ func (r *TacitoAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	err := r.client.Get(ctx, req.NamespacedName, agent)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Info().
+			r.logger.Debug().
 				Str("namespace", req.Namespace).
 				Str("name", req.Name).
 				Msg("TacitoAgent resource not found, ignoring since object must be deleted")

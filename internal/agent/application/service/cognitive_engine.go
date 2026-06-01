@@ -132,6 +132,8 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 		Str("thread_id", threadID).
 		Logger()
 
+	logger.Debug().Msg("entering ExecuteReasoningLoop")
+
 	// Try to parse systemPrompt as a structured JSON PropagatedAgentConfig
 	var parsedConfig PropagatedAgentConfig
 	isStructured := json.Unmarshal([]byte(systemPrompt), &parsedConfig) == nil
@@ -191,10 +193,12 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			logger.Error().Err(err).Int("step", step).Msg("LLM generation failed in reasoning loop")
 			return "", err
 		}
 		if !shouldContinue {
 			span.SetStatus(codes.Ok, "")
+			logger.Info().Str("final_answer", finalAnswer).Msg("ExecuteReasoningLoop completed successfully")
 			return finalAnswer, nil
 		}
 	}
@@ -247,7 +251,6 @@ func (e *CognitiveEngine) executeStep(
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		logger.Error().Err(err).Int("step", step).Msg("LLM generation failed in reasoning loop")
 		return "", false, "", err
 	}
 
@@ -369,7 +372,7 @@ func (e *CognitiveEngine) executeStep(
 
 func (e *CognitiveEngine) logStep(ctx context.Context, tenantID, agentID, threadID string, payload model.AgentReasoningStepPayload) {
 	logger := zerolog.Ctx(ctx)
-	logger.Info().
+	logger.Debug().
 		Int("reasoning_step_index", payload.StepIndex).
 		Str("tenant_id", tenantID).
 		Str("agent_id", agentID).

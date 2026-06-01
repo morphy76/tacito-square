@@ -51,12 +51,12 @@ func NewReconcileAgentService(c client.Client, logger zerolog.Logger, cfg *viper
 
 // Reconcile coordinates the reconciliation of a TacitoAgent.
 func (s *ReconcileAgentServiceImpl) Reconcile(ctx context.Context, agent *v1alpha1.TacitoAgent) error {
-	s.logger.Info().
+	s.logger.Debug().
 		Str("namespace", agent.Namespace).
 		Str("name", agent.Name).
 		Str("tenant_id", agent.Spec.TenantID).
 		Str("agent_name", agent.Spec.AgentName).
-		Msg("reconciling tacito agent resource")
+		Msg("entering Reconcile: reconciling tacito agent resource")
 
 	// 1. Reconcile the Deployment
 	existingDep := &appsv1.Deployment{}
@@ -72,6 +72,7 @@ func (s *ReconcileAgentServiceImpl) Reconcile(ctx context.Context, agent *v1alph
 				s.logger.Error().Err(createErr).Msg("failed to create Deployment")
 				return createErr
 			}
+			s.logger.Info().Str("namespace", agent.Namespace).Str("name", agent.Name).Msg("Deployment created successfully")
 			existingDep = dep
 		} else {
 			s.logger.Error().Err(err).Msg("failed to get Deployment")
@@ -89,6 +90,7 @@ func (s *ReconcileAgentServiceImpl) Reconcile(ctx context.Context, agent *v1alph
 			s.logger.Error().Err(updateErr).Msg("failed to update Deployment")
 			return updateErr
 		}
+		s.logger.Info().Str("namespace", agent.Namespace).Str("name", agent.Name).Msg("Deployment updated successfully")
 	}
 
 	// 2. Reconcile the headless Service
@@ -105,6 +107,7 @@ func (s *ReconcileAgentServiceImpl) Reconcile(ctx context.Context, agent *v1alph
 				s.logger.Error().Err(createErr).Msg("failed to create headless Service")
 				return createErr
 			}
+			s.logger.Info().Str("namespace", agent.Namespace).Str("name", agent.Name).Msg("headless Service created successfully")
 			existingSvc = svc
 		} else {
 			s.logger.Error().Err(err).Msg("failed to get headless Service")
@@ -124,6 +127,7 @@ func (s *ReconcileAgentServiceImpl) Reconcile(ctx context.Context, agent *v1alph
 			s.logger.Error().Err(updateErr).Msg("failed to update headless Service")
 			return updateErr
 		}
+		s.logger.Info().Str("namespace", agent.Namespace).Str("name", agent.Name).Msg("headless Service updated successfully")
 	}
 
 	// 3. Check Deployment ready replicas and update TacitoAgent status
@@ -182,12 +186,21 @@ func (s *ReconcileAgentServiceImpl) Reconcile(ctx context.Context, agent *v1alph
 		s.logger.Error().Err(statusErr).Msg("failed to update agent status")
 		return statusErr
 	}
+	s.logger.Info().Str("namespace", agent.Namespace).Str("name", agent.Name).Msg("agent status updated successfully")
+
+	s.logger.Info().
+		Str("namespace", agent.Namespace).
+		Str("name", agent.Name).
+		Str("tenant_id", agent.Spec.TenantID).
+		Str("agent_name", agent.Spec.AgentName).
+		Msg("reconciled tacito agent resource successfully")
 
 	return nil
 }
 
 // BuildDeployment constructs the Kubernetes Deployment specification for the agent.
 func (s *ReconcileAgentServiceImpl) BuildDeployment(ctx context.Context, agent *v1alpha1.TacitoAgent) (*appsv1.Deployment, error) {
+	s.logger.Debug().Str("namespace", agent.Namespace).Str("name", agent.Name).Msg("entering BuildDeployment")
 	// 1. Resolve configurations from Viper with proper fallbacks
 	image := s.getAgentSetting("agent.image", defaultAgentImage)
 	logLevel := s.getAgentSetting("agent.logLevel", defaultAgentLogLevel)
@@ -331,6 +344,7 @@ func (s *ReconcileAgentServiceImpl) BuildDeployment(ctx context.Context, agent *
 
 // BuildHeadlessService constructs the headless cluster Service specification for the agent.
 func (s *ReconcileAgentServiceImpl) BuildHeadlessService(ctx context.Context, agent *v1alpha1.TacitoAgent) (*corev1.Service, error) {
+	s.logger.Debug().Str("namespace", agent.Namespace).Str("name", agent.Name).Msg("entering BuildHeadlessService")
 	portStr := s.getAgentSetting("agent.port", defaultAgentPort)
 	port, err := strconv.Atoi(portStr)
 	if err != nil {

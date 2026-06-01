@@ -76,11 +76,11 @@ func NewAdapter(cfg Config) *Adapter {
 
 func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.BrainResponse, error) {
 	logger := zerolog.Ctx(ctx)
-	logger.Info().
+	logger.Debug().
 		Str("model", a.cfg.Model).
 		Str("endpoint", a.cfg.Endpoint).
 		Interface("request_body", req). // TODO: REMOVE ME (Temporary debug log)
-		Msg("sending chat completion request to OpenAI")
+		Msg("entering Generate: sending chat completion request to OpenAI")
 
 	if err := req.Validate(); err != nil {
 		logger.Error().Err(err).Msg("invalid brain request payload")
@@ -130,7 +130,7 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 		b := retry.NewExponential(10 * time.Millisecond)
 		b = retry.WithMaxRetries(3, b)
 
-		logger.Info().Msg("initiating chat completion wire call (with backoff retry)")
+		logger.Trace().Msg("initiating chat completion wire call (with backoff retry)")
 		var chatComp *openai.ChatCompletion
 		start := time.Now()
 		err := retry.Do(runCtx, b, func(ctx context.Context) error {
@@ -153,7 +153,7 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 			return errors.New("empty choices from openai response")
 		}
 
-		logger.Info().
+		logger.Debug().
 			Dur("duration_ms", duration).
 			Int("prompt_tokens", int(chatComp.Usage.PromptTokens)).
 			Int("completion_tokens", int(chatComp.Usage.CompletionTokens)).
@@ -215,7 +215,7 @@ func (a *Adapter) GenerateStream(ctx context.Context, req model.BrainRequest) (<
 // CreateEmbedding generates a high-dimensional dense vector for the given text.
 func (a *Adapter) CreateEmbedding(ctx context.Context, text string) ([]float32, error) {
 	logger := zerolog.Ctx(ctx)
-	logger.Info().Str("model", a.cfg.Model).Msg("generating text embedding")
+	logger.Debug().Str("model", a.cfg.Model).Msg("entering CreateEmbedding: generating text embedding")
 
 	var result []float32
 
@@ -279,7 +279,7 @@ func (a *Adapter) CreateEmbedding(ctx context.Context, text string) ([]float32, 
 // CreateEmbeddingsBatch generates dense vectors for a slice of texts in parallel.
 func (a *Adapter) CreateEmbeddingsBatch(ctx context.Context, texts []string) ([][]float32, error) {
 	logger := zerolog.Ctx(ctx)
-	logger.Info().Str("model", a.cfg.Model).Int("batch_size", len(texts)).Msg("generating batch text embeddings")
+	logger.Debug().Str("model", a.cfg.Model).Int("batch_size", len(texts)).Msg("entering CreateEmbeddingsBatch: generating batch text embeddings")
 
 	var result [][]float32
 
