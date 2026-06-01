@@ -10,7 +10,7 @@ dependencies:
   version: 1.6.3
 - name: qdrant
   repository: https://qdrant.to/helm
-  version: 1.18.0
+  version: 1.18.1
 - name: opentelemetry-collector
   repository: https://open-telemetry.github.io/opentelemetry-helm-charts
   version: 0.108.1
@@ -20,11 +20,5 @@ dependencies:
 - name: minio
   repository: https://charts.min.io/
   version: 5.4.0
-- name: zipkin
-  repository: https://zipkin.io/zipkin-helm
-  version: 0.5.0
-- name: prometheus
-  repository: https://prometheus-community.github.io/helm-charts
-  version: 29.9.0
-digest: sha256:808ec753c26553595b38e2a5e55e39990845462e7086d8377be29db9d08fe513
-generated: "2026-05-29T20:16:29.485421+02:00"
+digest: sha256:bf610e3cd6a26e444162db0f37be97d3ad297820d3d099a25352ad5727f9982a
+generated: "2026-06-01T14:03:25.417095+02:00"

@@ -82,6 +82,23 @@ for entry in "${SUBCHART_CHECKS[@]}"; do
   fi
 done
 
+# ── 4b. New Service presence in template output ───────────
+section "New Custom Telemetry Services Presence"
+
+TELEMETRY_SERVICES=(
+  "tempo"
+  "mimir"
+  "grafana"
+)
+
+for service in "${TELEMETRY_SERVICES[@]}"; do
+  if grep -qi "tacito-square-infra/templates/${service}.yaml" "${TEMPLATE_FILE}"; then
+    pass "telemetry service '${service}' present in template output"
+  else
+    fail "telemetry service '${service}' present in template output"
+  fi
+done
+
 # ── 5. Conditional toggling ─────────────────────────────
 section "Conditional Toggling"
 
@@ -109,6 +126,21 @@ for entry in "${TOGGLEABLE[@]}"; do
   fi
   rm -f "${toggle_file}"
 done
+
+# ── 5b. New Service Conditional Toggling ──────────────────
+section "New Service Conditional Toggling"
+
+for service in "${TELEMETRY_SERVICES[@]}"; do
+  toggle_file=$(mktemp)
+  helm template "${RELEASE}" "${INFRA_CHART}" --set "${service}.enabled=false" > "${toggle_file}" 2>/dev/null || true
+  if grep -qi "tacito-square-infra/templates/${service}.yaml" "${toggle_file}"; then
+    fail "disabling '${service}' removes it from output"
+  else
+    pass "disabling '${service}' removes it from output"
+  fi
+  rm -f "${toggle_file}"
+done
+
 
 # ── 6. Application chart has no infrastructure deps ─────
 section "Application Chart Isolation"

@@ -1,0 +1,97 @@
+{{- if .Values.mimir.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ts-infra-mimir-config
+  labels:
+    {{- include "tacito-square-infra.labels" . | nindent 4 }}
+data:
+  mimir.yaml: |
+    multitenancy_enabled: false
+
+    server:
+      http_listen_port: 9009
+      grpc_listen_port: 9095
+
+    common:
+      storage:
+        backend: filesystem
+        filesystem:
+          dir: /data/mimir
+
+    blocks_storage:
+      backend: filesystem
+      filesystem:
+        dir: /data/mimir/blocks
+      tsdb:
+        dir: /data/mimir/tsdb
+
+    compactor:
+      data_dir: /data/mimir/compactor
+
+    distributor:
+      ring:
+        instance_id: localhost
+        kvstore:
+          store: inmemory
+
+    ingester:
+      ring:
+        instance_id: localhost
+        kvstore:
+          store: inmemory
+        replication_factor: 1
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ts-infra-mimir
+  labels:
+    {{- include "tacito-square-infra.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ts-infra-mimir
+  template:
+    metadata:
+      labels:
+        app: ts-infra-mimir
+    spec:
+      containers:
+        - name: mimir
+          image: "{{ .Values.mimir.image.repository }}:{{ .Values.mimir.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          args:
+            - "-config.file=/etc/mimir/mimir.yaml"
+          ports:
+            - name: http
+              containerPort: 9009
+          volumeMounts:
+            - name: config
+              mountPath: /etc/mimir
+            - name: storage
+              mountPath: /data
+      volumes:
+        - name: config
+          configMap:
+            name: ts-infra-mimir-config
+        - name: storage
+          emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ts-infra-mimir
+  labels:
+    {{- include "tacito-square-infra.labels" . | nindent 4 }}
+spec:
+  ports:
+    - name: http
+      port: 9009
+      targetPort: 9009
+  selector:
+    app: ts-infra-mimir
+{{- end }}

@@ -3,7 +3,7 @@
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
 | ID            | BUG-M4.4                                                           |
-| Status        | OPEN                                                               |
+| Status        | CLOSED                                                             |
 | Severity      | MEDIUM                                                             |
 | Milestone     | M4 — Operator Core                                                 |
 | Affects       | tools/helm/tacito-square-infra/                                    |
@@ -57,3 +57,22 @@ Furthermore, the boundary between the application and infrastructure observabili
 3. The `otel-collector` pipelines are updated to push metrics via the `otlp` (or `prometheusremotewrite`) exporter directly to the Mimir endpoint.
 4. Grafana is provisioned and configured with data sources pointing to Mimir and Tempo.
 5. All local application services successfully transmit traces and metrics to the OTel Collector, which successfully dispatches them to their respective OTLP sinks.
+
+## Work Items
+
+1. **RED Phase (Validation & Preparation)**:
+   - Establish current lint and template baseline by running `make helm-infra-lint` and `make helm-infra-template`.
+   - Confirm the presence of `zipkin` and `prometheus` sub-charts in the original `Chart.yaml`.
+
+2. **GREEN Phase (Telemetry Stack Migration)**:
+   - Remove `zipkin` and `prometheus` from `Chart.yaml`.
+   - Update `values.yaml` to disable/remove references to `zipkin` and `prometheus` and add sections for `tempo`, `mimir`, and `grafana`.
+   - Update the `otel-collector` pipeline config in `values.yaml` to route traces to Tempo using the standard `otlp` gRPC exporter and metrics to Mimir using `prometheusremotewrite`.
+   - Implement `tempo.yaml`, `mimir.yaml`, and `grafana.yaml` inside `tools/helm/tacito-square-infra/templates/` with monolithic, single-binary configurations and proper services.
+   - Run `make helm-infra-deps` to fetch any remaining dependencies and update `Chart.lock`.
+   - Run `make helm-infra-lint` and `make helm-infra-template` to verify the refactored chart validates and renders without error.
+
+3. **REFACTOR Phase (Optimization & Standards Compliance)**:
+   - Refactor labels, resource limits, and environment variable bindings in `tempo.yaml`, `mimir.yaml`, and `grafana.yaml` templates to conform to the standard `tacito-square-infra` conventions.
+   - Verify zero references to Broadcom/Bitnami in the newly added configuration blocks or files.
+
