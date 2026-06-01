@@ -1,12 +1,12 @@
-# TASK-M2.8.2: Create CI workflow and Dependabot config (GREEN)
+# TASK-M8.10.2: Create CI workflow and Dependabot config (GREEN)
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
-| ID            | TASK-M2.8.2                                 |
+| ID            | TASK-M8.10.2                                |
 | Status        | TODO                                        |
-| Spec          | SPEC-FR-M2.8                                |
+| Spec          | SPEC-FR-M8.10                               |
 | Phase         | GREEN                                       |
-| Depends On    | TASK-M2.8.1                                 |
+| Depends On    | TASK-M8.10.1                                |
 
 ## Description
 

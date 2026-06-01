@@ -1,10 +1,10 @@
-# TASK-M2.8.1: CI workflow validation (RED)
+# TASK-M8.10.1: CI workflow validation (RED)
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
-| ID            | TASK-M2.8.1                                 |
+| ID            | TASK-M8.10.1                                |
 | Status        | TODO                                        |
-| Spec          | SPEC-FR-M2.8                                |
+| Spec          | SPEC-FR-M8.10                               |
 | Phase         | RED                                         |
 | Depends On    | none                                        |
 

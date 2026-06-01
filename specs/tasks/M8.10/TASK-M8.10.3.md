@@ -1,12 +1,12 @@
-# TASK-M2.8.3: Validate CI workflow syntax (REFACTOR)
+# TASK-M8.10.3: Validate CI workflow syntax (REFACTOR)
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
-| ID            | TASK-M2.8.3                                 |
+| ID            | TASK-M8.10.3                                |
 | Status        | TODO                                        |
-| Spec          | SPEC-FR-M2.8                                |
+| Spec          | SPEC-FR-M8.10                               |
 | Phase         | REFACTOR                                    |
-| Depends On    | TASK-M2.8.2                                 |
+| Depends On    | TASK-M8.10.2                                |
 
 ## Description
 

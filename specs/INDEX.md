@@ -36,7 +36,6 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | SPEC-FR-M2.5 | Operator Hello World | IMPLEMENTED | operator | [SPEC-FR-M2.5](functional/M2/SPEC-FR-M2.5.md) |
 | SPEC-FR-M2.6 | BFF Hello World | IMPLEMENTED | bff | [SPEC-FR-M2.6](functional/M2/SPEC-FR-M2.6.md) |
 | SPEC-FR-M2.7 | Container Images (distroless, multi-stage) | IMPLEMENTED | build | [SPEC-FR-M2.7](functional/M2/SPEC-FR-M2.7.md) |
-| SPEC-FR-M2.8 | Continuous Integration (GitHub Actions) | ACCEPTED | build | [SPEC-FR-M2.8](functional/M2/SPEC-FR-M2.8.md) |
 | SPEC-FR-M2.9 | Project Documentation | IMPLEMENTED | docs | [SPEC-FR-M2.9](functional/M2/SPEC-FR-M2.9.md) |
 | SPEC-FR-M2.10 | Avoid Bitnami (Leverage Free & Non-Commercial Infrastructural Dependencies) | IMPLEMENTED | deploy | [SPEC-FR-M2.10](functional/M2/SPEC-FR-M2.10.md) |
 | SPEC-FR-M2.11 | Secured Infrastructure Provisioning (Initial Provisioning & TLS Enforcement) | IMPLEMENTED | deploy | [SPEC-FR-M2.11](functional/M2/SPEC-FR-M2.11.md) |
@@ -164,6 +163,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | SPEC-FR-M8.7 | Prompt Management (CRUD + versioning) | DRAFT | keeper | [SPEC-FR-M8.7](functional/M8/SPEC-FR-M8.7.md) |
 | SPEC-FR-M8.8 | Skills Management (CRUD + MCP attach) | DRAFT | keeper | [SPEC-FR-M8.8](functional/M8/SPEC-FR-M8.8.md) |
 | SPEC-FR-M8.9 | Zero-Scaling Support | ACCEPTED | operator | [SPEC-FR-M8.9](functional/M8/SPEC-FR-M8.9.md) |
+| SPEC-FR-M8.10 | Continuous Integration (GitHub Actions) | ACCEPTED | build | [SPEC-FR-M8.10](functional/M8/SPEC-FR-M8.10.md) |
 
 ### M8: Bugs
 
@@ -201,13 +201,13 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | Milestone | Title | Status | Specs | File |
 |-----------|-------|--------|-------|------|
 | M1 | Infrastructure Helm Chart | ✔️ IMPLEMENTED | 2 | [M1](milestones/M1-infrastructure.md) |
-| M2 | Application Helm Chart & Component Scaffolding | ✔️ IMPLEMENTED | 11 | [M2](milestones/M2-packaging.md) |
+| M2 | Application Helm Chart & Component Scaffolding | ✔️ IMPLEMENTED | 10 | [M2](milestones/M2-packaging.md) |
 | M3 | Keeper Core | ✔️ IMPLEMENTED | 8 | [M3](milestones/M3-keeper-core.md) |
 | M4 | Operator Core | ✔️ IMPLEMENTED | 5 | [M4](milestones/M4-operator-core.md) |
 | M5 | Agent Core | ⏳ IN_PROGRESS | 9 | [M5](milestones/M5-agent-core.md) |
 | M6 | Communities & Messaging | ⬜ PLANNED | 7 | [M6](milestones/M6-communities.md) |
 | M7 | BFF & UIs | ⬜ PLANNED | 4 | [M7](milestones/M7-bff-uis.md) |
-| M8 | Governance | ⬜ PLANNED | 9 | [M8](milestones/M8-governance.md) |
+| M8 | Governance | ⬜ PLANNED | 10 | [M8](milestones/M8-governance.md) |
 | M9 | Hardening | ⬜ PLANNED | 7 | [M9](milestones/M9-hardening.md) |
 | M10 | Federation | ⬜ PLANNED | 2 | [M10](milestones/M10-federation.md) |
 

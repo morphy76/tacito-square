@@ -25,3 +25,4 @@ OIDC/JWT Authentication → role-based access → quota-enforced agent spawning 
 | SPEC-FR-M8.7 | Prompt Management (CRUD + versioning) | keeper | SPEC-FR-M3.8, SPEC-FR-M3.4 |
 | SPEC-FR-M8.8 | Skills Management (CRUD + MCP attach) | keeper | SPEC-FR-M3.8, SPEC-FR-M3.3 |
 | SPEC-FR-M8.9 | Zero-Scaling Support | operator | SPEC-FR-M4.3 |
+| SPEC-FR-M8.10 | Continuous Integration (GitHub Actions) | build | SPEC-FR-M2.7 |

@@ -1,10 +1,10 @@
-# SPEC-FR-M2.8: Continuous Integration (GitHub Actions)
+# SPEC-FR-M8.10: Continuous Integration (GitHub Actions)
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
-| ID            | SPEC-FR-M2.8                                |
-| Status        | ACCEPTED                                       |
-| Milestone     | M2                                          |
+| ID            | SPEC-FR-M8.10                               |
+| Status        | ACCEPTED                                    |
+| Milestone     | M8                                          |
 | Component     | build                                       |
 | Depends On    | SPEC-FR-M2.7                                |
 | Supersedes    | none                                        |
