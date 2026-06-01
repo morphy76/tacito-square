@@ -1,5 +1,6 @@
 # Brainstorming
 
+- I will wait for the test run to finish. The system will automatically wake me up once the execution completes.
 - nats non sta nell'health dell'agente, verifica anche il keeper
 - documented test use cases: ingestion, chat, search
 - tracing across crd reconciliation: e.g. request of agent assignment and operator activities

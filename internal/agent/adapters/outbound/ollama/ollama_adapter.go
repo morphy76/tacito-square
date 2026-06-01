@@ -74,6 +74,7 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 	logger.Info().
 		Str("model", a.cfg.Model).
 		Str("endpoint", a.cfg.Endpoint).
+		Interface("request_body", req). // TODO: REMOVE ME (Temporary debug log)
 		Msg("sending chat completion request to Ollama")
 
 	if err := req.Validate(); err != nil {

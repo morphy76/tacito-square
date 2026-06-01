@@ -121,7 +121,11 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | SPEC-FR-M5.7 | Standalone Agent Deployment Helm Chart | VERIFIED | deploy | [SPEC-FR-M5.7](functional/M5/SPEC-FR-M5.7.md) |
 | SPEC-FR-M5.8 | Benchmark Suite & Integration Coverage Verification | ACCEPTED | test | [SPEC-FR-M5.8](functional/M5/SPEC-FR-M5.8.md) |
 | SPEC-FR-M5.9 | Flexible Agent Runtime Tiers & Deployment Customization | ACCEPTED | keeper, operator, deploy | [SPEC-FR-M5.9](functional/M5/SPEC-FR-M5.9.md) |
-| SPEC-FR-M5.10 | Agent Cognitive Architecture & Reasoning Loop | ACCEPTED | agent | [SPEC-FR-M5.10](functional/M5/SPEC-FR-M5.10.md) |
+| SPEC-FR-M5.10 | Agent Cognitive Architecture & Reasoning Loop | VERIFIED | agent | [SPEC-FR-M5.10](functional/M5/SPEC-FR-M5.10.md) |
+
+
+
+
 
 
 
