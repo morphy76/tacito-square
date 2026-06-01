@@ -1,4 +1,4 @@
-# BUG-M5.2: Skills Misinterpreted as Tool Collections Instead of Dynamic Procedural Knowledge Sources
+# BUG-M5.2: Unified Skills and Prompts Misinterpretation and Flattened Keeper-Agent Interface
 
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
@@ -6,50 +6,77 @@
 | Status        | OPEN                                                               |
 | Severity      | HIGH                                                               |
 | Milestone     | M5 — Agent Core                                                    |
-| Affects       | `internal/agent/application/service/cognitive_engine.go`           |
-| Violates      | SPEC-FR-M3.3, SPEC-FR-M5.10                                        |
-| Discovered    | Architectural review and clarification of dynamic skills execution |
+| Affects       | `internal/agent/application/service/cognitive_engine.go`, `internal/keeper/adapters/outbound/crd/crd_coordinator.go` |
+| Violates      | SPEC-FR-M3.3, SPEC-FR-M3.4, SPEC-FR-M5.1, SPEC-FR-M5.10            |
+| Discovered    | Architectural review and interface propagation alignment           |
 
 ## Problem Statement
 
-In the current implementation of Milestone 5 (`CognitiveEngine` reasoning loop), "skills" have been interpreted and implemented as collections of executable tools (specifically in `RegisterSkillCollection` and the `enable_skill` tool handler). This implementation conflates skills with MCP tools and contradicts their conceptual definition.
+The implementation of "skills" and "prompts" in Milestone 5 suffers from a unified architectural misinterpretation and interface flattening bottleneck. It is impossible to resolve one without addressing the other:
 
-Per the correct architectural design:
-1. **MCP Tools** are interactive I/O capabilities provided via Model Context Protocol (MCP) server bindings.
-2. **Skills** are procedural knowledge sources (consisting of a name, description, and full procedural prompt/content) that dynamically enrich the LLM's reasoning context.
-3. The reasoning loop should expose all available skills and their descriptions to the brain.
-4. The brain should decide which skill is needed based on those descriptions, then dynamically load just the full procedural content of the needed skill(s) to enrich the context, rather than loading all skill contents at once.
+1. **Skills Misinterpreted as Tools**: Skills are currently implemented as collections of programmatic tool handlers (`skillPool map[string]map[string]ToolHandler`). This conflates procedural knowledge with interactive MCP tools, polluting the core reasoning layer.
+2. **Flattened Interface Bottleneck**: The keeper-agent interface, managed by `K8sCRDCoordinator.ResolveAndSynthesizeSystemPrompt`, flattens all prompt templates and assigned skill name listings out-of-band at deploy-time into a single concatenated unstructured text block set as `Spec.SystemPrompt`.
+3. **Missing Procedural Skill Content**: Because the interface is flattened, the actual procedural guidelines/content (`Content` of the skill) are completely omitted. Since the agent pod runs in stateless isolation, it has no access to the skill's instructions, making dynamic loading non-functional.
+4. **No Support for Prompt Sets**: The agent receives a single pre-compiled prompt string, eliminating the ability to dynamically resolve, reference, or swap prompts within a "prompt set" based on execution context.
+
+## Proposed Resolution Design (Structured Propagation)
+
+To resolve these gaps without introducing runtime database/network dependencies, the keeper-agent interface must transition to a **structured document propagation pattern**.
+
+```mermaid
+graph TD
+    subgraph Keeper
+        DB[(PostgreSQL)] -->|Skills & Prompts| Coord[CRD Coordinator]
+    end
+    Coord -->|Structured JSON/XML/Markdown Spec| CRD[TacitoAgent CRD]
+    subgraph Agent Pod
+        CRD -->|Propagated Env| Engine[Cognitive Engine]
+        Engine -->|Parses| StructDoc[Structured Document]
+        StructDoc -->|Exposes Descriptions Only| Brain[Reasoning Brain]
+        Brain -->|enable_skill| Engine
+        Engine -->|Resolves Full Content| StructDoc
+        Engine -->|Injects Content| Brain
+    end
+```
+
+Rather than propagating unstructured text, the operator will pass a single flattened but **structured document** (e.g. JSON, XML, or Markdown with explicit tag boundaries) containing:
+- The active **prompt sets** (system prompt, behavioral templates, personality guidelines).
+- The list of **skills** (names, descriptions, and their complete **procedural guidelines/contents**).
+
+The agent's `CognitiveEngine` parses this structured document at startup. During execution:
+1. It exposes only the prompt directives and the list of available skill names and descriptions to the brain.
+2. The brain decides which skill is needed based on the descriptions.
+3. The brain calls the `enable_skill` tool, passing the skill name.
+4. The `CognitiveEngine` looks up the skill inside the parsed structured document and dynamically loads its full procedural `Content` to enrich the reasoning loop's subsequent history/context, keeping the context window minimal and clean.
 
 ## Affected Components and Files
 
 | Component / File | Location | Issue |
 |------------------|----------|-------|
-| Agent Cognitive Engine | `internal/agent/application/service/cognitive_engine.go` | Implements `skillPool` as `map[string]map[string]ToolHandler` and registers skills as collections of tools. The `enable_skill` handler registers tools rather than loading procedural knowledge content. |
-| Agent Cognitive Engine Tests | `internal/agent/application/service/dynamic_skills_test.go` | Asserts the incorrect dynamic tool registration behavior instead of dynamic procedural knowledge loading. |
-| Agent Main Bootstrap | `cmd/agent/main.go` | Sets up and registers mock skill collections as tools. |
+| K8s CRD Coordinator | `internal/keeper/adapters/outbound/crd/crd_coordinator.go` | `ResolveAndSynthesizeSystemPrompt` flattens templates and skill lists into unstructured text. |
+| TacitoAgent CRD | `pkg/kubernetes/apis/tacito/v1alpha1/tacitoagent_types.go` | `TacitoAgentSpec` only has a flat `SystemPrompt` field and lacks structured configuration fields. |
+| Agent Cognitive Engine | `internal/agent/application/service/cognitive_engine.go` | Implements `skillPool` as `ToolHandler` maps and lacks parser logic for structured keeper specifications. |
+| Agent Main Bootstrap | `cmd/agent/main.go` | Registers mock skill collections as executable tools. |
 
 ## Impact
 
-1. **Incorrect conceptual model**: Treats skills as programmatic tools rather than specialized knowledge extensions, violating their design.
-2. **Context inflation**: Without dynamic procedural knowledge loading, either all guidelines must be pre-loaded into the system prompt (inflating context window and costs) or they cannot be utilized dynamically by the reasoning brain.
-3. **Integration mismatch**: Interferes with the upcoming MCP tool integration by overlapping tool execution pathways under different names.
+1. **Broken Dynamic Skills**: The agent has no access to the raw instructions/contents of assigned skills, preventing the brain from dynamically applying procedural guidelines.
+2. **Rigid Prompting**: The agent cannot dynamically adapt its system prompt or swap between prompt templates within a set.
+3. **Architecture Pollution**: Conflates skills with interactive MCP tools, interfering with decoupled tool execution.
 
 ## Expected Behaviour
 
-1. The `CognitiveEngine` MUST represent a Skill as a procedural knowledge structure containing:
-   - `Name`: Unique string identifier (e.g. `math`).
-   - `Description`: High-level summary of when/why to use the skill.
-   - `Content`: The full procedural guidelines/instructions to inject when loaded.
-2. The `CognitiveEngine` MUST allow registering Skills via a clean registration method (e.g. `RegisterSkill(skill Skill)`).
-3. The cognitive loop system prompt or history context MUST expose available skill names and descriptions to the brain at the start of execution so it can make an informed decision on which skill(s) are needed.
-4. The `enable_skill` (or `load_skill`) tool MUST be registered to allow the brain to load a specific skill. When called, it MUST retrieve the full `Content` of that skill and return it as the tool observation to dynamically enrich the conversation/reasoning context for subsequent steps.
-5. Only the content of the selected skill(s) should be loaded; other registered skills' contents must remain unloaded.
+1. The keeper-agent propagation channel MUST utilize a single structured document format (JSON, XML, or tagged Markdown) containing both prompt configurations and complete skill definitions (including raw procedural contents).
+2. The `CognitiveEngine` MUST parse this structured document at bootstrap.
+3. The `CognitiveEngine` MUST register a skill-loading tool (e.g. `enable_skill`). When called, it retrieves the corresponding skill content from the parsed structured document and returns it as a tool observation to enrich the context dynamically.
+4. All computational and programmatic tool execution must be decoupled and handled exclusively by MCP servers.
 
 ## Acceptance Criteria
 
-1. **Procedural Knowledge Loading**:
-   - The brain can see names and descriptions of registered skills.
-   - When the brain invokes the skill-loading tool, the exact procedural instructions/guidelines of the selected skill are injected into the reasoning loop's trace context.
-2. **Clean TDD Execution**:
-   - Tests in `dynamic_skills_test.go` demonstrate a mock brain identifying a needed skill, loading it dynamically, and utilizing the newly loaded procedural content to answer a query.
-   - All tests pass cleanly.
+1. **Structured Propagation**:
+   - The generated CRD spec includes a structured format representing prompt templates and full skill contents.
+   - The agent successfully parses this structured document at startup.
+2. **Dynamic Procedural Enrichment**:
+   - A mock brain observes available skills (names and descriptions).
+   - The brain invokes the skill-loading tool, and the exact procedural instructions from the structured document are injected dynamically into the context.
+   - No mock programmatic tool handlers remain compiled in the agent core binary.
