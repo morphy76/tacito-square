@@ -125,7 +125,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 |----|-------|--------|----------|------|
 | BUG-M5.2 | Unified Skills and Prompts Misinterpretation and Flattened Keeper-Agent Interface | CLOSED | HIGH | [BUG-M5.2](tasks/M5.BUG2/BUG-M5.2.md) |
 | BUG-M5.4 | Agent Tooling Violates MCP-First Architecture due to Mock Tools Embedded in Core Engine | CLOSED | MEDIUM | [BUG-M5.4](tasks/M5.BUG4/BUG-M5.4.md) |
-| BUG-M5.5 | Agent Component Does Not Export Prometheus Metrics | IMPLEMENTED | HIGH | [BUG-M5.5](tasks/M5.BUG5/BUG-M5.5.md) |
+| BUG-M5.5 | Agent Component Does Not Export Prometheus Metrics | CLOSED | HIGH | [BUG-M5.5](tasks/M5.BUG5/BUG-M5.5.md) |
 
 
 

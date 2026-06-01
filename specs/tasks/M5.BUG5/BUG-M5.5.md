@@ -3,7 +3,7 @@
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
 | ID            | BUG-M5.5                                                           |
-| Status        | IMPLEMENTED                                                         |
+| Status        | VERIFIED                                                           |
 | Severity      | HIGH                                                               |
 | Milestone     | M5 — Agent Core                                                    |
 | Affects       | [bootstrap.go](file:///Users/R.Pasquini/Projects/side/tacito-square/internal/agent/bootstrap.go), [main.go](file:///Users/R.Pasquini/Projects/side/tacito-square/cmd/agent/main.go) |
