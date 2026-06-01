@@ -8,49 +8,49 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMCPServer_Validation(t *testing.T) {
-	validStdio := MCPServer{
+func TestMCPClient_Validation(t *testing.T) {
+	validStdio := MCPClient{
 		ID:          uuid.New(),
 		TenantID:    "test-tenant.com",
 		Name:        "sqlite-mcp",
-		Description: "SQLite MCP server",
+		Description: "SQLite MCP client",
 		Transport:   TransportStdio,
 		Command:     "/usr/local/bin/mcp-sqlite",
 		Args:        []string{"--db", "test.db"},
 		Env:         map[string]string{"DEBUG": "true"},
-		Status:      MCPServerStatusActive,
+		Status:      MCPClientStatusActive,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
 
-	validSSE := MCPServer{
+	validSSE := MCPClient{
 		ID:          uuid.New(),
 		TenantID:    "test-tenant.com",
 		Name:        "github-mcp",
-		Description: "GitHub MCP server",
+		Description: "GitHub MCP client",
 		Transport:   TransportSSE,
 		URL:         "https://mcp.github.com/events",
-		Status:      MCPServerStatusActive,
+		Status:      MCPClientStatusActive,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
 
 	tests := []struct {
 		name    string
-		server  MCPServer
+		client  MCPClient
 		wantErr string
 	}{
 		{
-			name:   "Valid stdio server",
-			server: validStdio,
+			name:   "Valid stdio client",
+			client: validStdio,
 		},
 		{
-			name:   "Valid sse server",
-			server: validSSE,
+			name:   "Valid sse client",
+			client: validSSE,
 		},
 		{
 			name: "Missing Tenant ID",
-			server: func() MCPServer {
+			client: func() MCPClient {
 				s := validStdio
 				s.TenantID = ""
 				return s
@@ -59,7 +59,7 @@ func TestMCPServer_Validation(t *testing.T) {
 		},
 		{
 			name: "Missing ID",
-			server: func() MCPServer {
+			client: func() MCPClient {
 				s := validStdio
 				s.ID = uuid.Nil
 				return s
@@ -68,7 +68,7 @@ func TestMCPServer_Validation(t *testing.T) {
 		},
 		{
 			name: "Missing name",
-			server: func() MCPServer {
+			client: func() MCPClient {
 				s := validStdio
 				s.Name = ""
 				return s
@@ -77,7 +77,7 @@ func TestMCPServer_Validation(t *testing.T) {
 		},
 		{
 			name: "Invalid transport",
-			server: func() MCPServer {
+			client: func() MCPClient {
 				s := validStdio
 				s.Transport = Transport("invalid")
 				return s
@@ -86,16 +86,16 @@ func TestMCPServer_Validation(t *testing.T) {
 		},
 		{
 			name: "Invalid status",
-			server: func() MCPServer {
+			client: func() MCPClient {
 				s := validStdio
-				s.Status = MCPServerStatus("invalid")
+				s.Status = MCPClientStatus("invalid")
 				return s
 			}(),
 			wantErr: "invalid status",
 		},
 		{
 			name: "Stdio transport missing command",
-			server: func() MCPServer {
+			client: func() MCPClient {
 				s := validStdio
 				s.Command = ""
 				return s
@@ -104,7 +104,7 @@ func TestMCPServer_Validation(t *testing.T) {
 		},
 		{
 			name: "Stdio transport having URL",
-			server: func() MCPServer {
+			client: func() MCPClient {
 				s := validStdio
 				s.URL = "http://localhost:8080"
 				return s
@@ -113,7 +113,7 @@ func TestMCPServer_Validation(t *testing.T) {
 		},
 		{
 			name: "SSE transport missing URL",
-			server: func() MCPServer {
+			client: func() MCPClient {
 				s := validSSE
 				s.URL = ""
 				return s
@@ -122,7 +122,7 @@ func TestMCPServer_Validation(t *testing.T) {
 		},
 		{
 			name: "SSE transport invalid URL format",
-			server: func() MCPServer {
+			client: func() MCPClient {
 				s := validSSE
 				s.URL = "invalid-url"
 				return s
@@ -131,7 +131,7 @@ func TestMCPServer_Validation(t *testing.T) {
 		},
 		{
 			name: "SSE transport having command",
-			server: func() MCPServer {
+			client: func() MCPClient {
 				s := validSSE
 				s.Command = "node"
 				return s
@@ -142,7 +142,7 @@ func TestMCPServer_Validation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.server.Validate()
+			err := tt.client.Validate()
 			if tt.wantErr != "" {
 				assert.EqualError(t, err, tt.wantErr)
 			} else {

@@ -39,6 +39,34 @@ type LLMConfig struct {
 	MaxTokens *int32 `json:"maxTokens,omitempty"`
 }
 
+// MCPClientSpec defines the configuration of an attached MCP client gateway.
+type MCPClientSpec struct {
+	// Name is the unique identifier of the MCP client config.
+	Name string `json:"name"`
+
+	// Transport is the protocol transport type ("stdio" or "sse").
+	Transport string `json:"transport"`
+
+	// Command is the subprocess execution command (for stdio).
+	// +optional
+	Command string `json:"command,omitempty"`
+
+	// Args is the command-line arguments (for stdio).
+	// +optional
+	Args []string `json:"args,omitempty"`
+
+	// Env is the custom environment overrides (for stdio).
+	// +optional
+	Env map[string]string `json:"env,omitempty"`
+
+	// URL is the SSE event connection endpoint (for sse).
+	// +optional
+	URL string `json:"url,omitempty"`
+
+	// AllowedTools is the whitelist of tool names permitted for execution.
+	AllowedTools []string `json:"allowedTools"`
+}
+
 // TacitoAgentSpec defines the desired state of a TacitoAgent.
 type TacitoAgentSpec struct {
 	// TenantID is the identifier of the tenant owning this agent.
@@ -59,6 +87,10 @@ type TacitoAgentSpec struct {
 	// SystemPrompt is the fully synthesized system prompt for the agent.
 	// +optional
 	SystemPrompt string `json:"systemPrompt,omitempty"`
+
+	// MCPClients holds the list of configured MCP client connections.
+	// +optional
+	MCPClients []MCPClientSpec `json:"mcpClients,omitempty"`
 
 	// Replicas is the desired number of agent pod replicas.
 	// +optional

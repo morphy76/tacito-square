@@ -16,12 +16,12 @@ type LLMBindingUseCase interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
-// MCPServerUseCase defines the driving operations for managing MCP Server configurations.
-type MCPServerUseCase interface {
-	Create(ctx context.Context, server *model.MCPServer) error
-	GetByID(ctx context.Context, id uuid.UUID) (*model.MCPServer, error)
-	List(ctx context.Context) ([]*model.MCPServer, error)
-	Update(ctx context.Context, server *model.MCPServer) error
+// MCPClientUseCase defines the driving operations for managing MCP Client configurations.
+type MCPClientUseCase interface {
+	Create(ctx context.Context, client *model.MCPClient) error
+	GetByID(ctx context.Context, id uuid.UUID) (*model.MCPClient, error)
+	List(ctx context.Context) ([]*model.MCPClient, error)
+	Update(ctx context.Context, client *model.MCPClient) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 

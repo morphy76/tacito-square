@@ -43,11 +43,12 @@ type LongTermMemoryConfig struct {
 	VectorDimension int    `json:"vector_dimension"`
 }
 
-// MCPClientConfig encapsulates custom configurations for attached MCP servers.
+// MCPClientConfig encapsulates custom configurations for attached MCP clients.
 type MCPClientConfig struct {
-	ServerID   uuid.UUID         `json:"server_id"`
-	CustomEnv  map[string]string `json:"custom_env"`
-	CustomArgs []string          `json:"custom_args"`
+	ClientID     uuid.UUID         `json:"client_id"`
+	CustomEnv    map[string]string `json:"custom_env"`
+	CustomArgs   []string          `json:"custom_args"`
+	AllowedTools []string          `json:"allowed_tools"`
 }
 
 // Agent represents the aggregate root for an Agent Template within Keeper.
@@ -122,8 +123,8 @@ func (a Agent) Validate() error {
 
 	// MCPClients validations
 	for _, mcp := range a.MCPClients {
-		if mcp.ServerID == uuid.Nil {
-			return errors.New("mcp client server id is required")
+		if mcp.ClientID == uuid.Nil {
+			return errors.New("mcp client id is required")
 		}
 	}
 

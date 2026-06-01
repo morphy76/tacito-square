@@ -17,18 +17,18 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// MCPServerHandler implements the HTTP controllers for MCP servers CRUD operations.
-type MCPServerHandler struct {
-	repo inbound.MCPServerUseCase
+// MCPClientHandler implements the HTTP controllers for MCP clients CRUD operations.
+type MCPClientHandler struct {
+	repo inbound.MCPClientUseCase
 }
 
-// NewMCPServerHandler creates a new instance of MCPServerHandler.
-func NewMCPServerHandler(repo inbound.MCPServerUseCase) *MCPServerHandler {
-	return &MCPServerHandler{repo: repo}
+// NewMCPClientHandler creates a new instance of MCPClientHandler.
+func NewMCPClientHandler(repo inbound.MCPClientUseCase) *MCPClientHandler {
+	return &MCPClientHandler{repo: repo}
 }
 
-// CreateMCPServerRequest defines the request payload for creating an MCP server.
-type CreateMCPServerRequest struct {
+// CreateMCPClientRequest defines the request payload for creating an MCP client.
+type CreateMCPClientRequest struct {
 	Name          string            `json:"name" binding:"required"`
 	Description   string            `json:"description"`
 	Transport     string            `json:"transport" binding:"required,oneof=stdio sse"`
@@ -39,8 +39,8 @@ type CreateMCPServerRequest struct {
 	AuthSecretRef string            `json:"auth_secret_ref"`
 }
 
-// UpdateMCPServerRequest defines the request payload for updating an MCP server.
-type UpdateMCPServerRequest struct {
+// UpdateMCPClientRequest defines the request payload for updating an MCP client.
+type UpdateMCPClientRequest struct {
 	Name          string            `json:"name" binding:"required"`
 	Description   string            `json:"description"`
 	Transport     string            `json:"transport" binding:"required,oneof=stdio sse"`
@@ -51,12 +51,12 @@ type UpdateMCPServerRequest struct {
 	AuthSecretRef string            `json:"auth_secret_ref"`
 }
 
-// Create handles POST /api/v1/mcp-servers
-func (h *MCPServerHandler) Create(c *gin.Context) {
+// Create handles POST /api/v1/mcp-clients
+func (h *MCPClientHandler) Create(c *gin.Context) {
 	ctx, cancel := context.WithCancel(c.Request.Context())
 	defer cancel()
 
-	ctx, span := otel.Tracer("keeper").Start(ctx, "http.create_mcp_server", trace.WithSpanKind(trace.SpanKindServer))
+	ctx, span := otel.Tracer("keeper").Start(ctx, "http.create_mcp_client", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
@@ -69,13 +69,13 @@ func (h *MCPServerHandler) Create(c *gin.Context) {
 		return
 	}
 
-	var req CreateMCPServerRequest
+	var req CreateMCPClientRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	server := &model.MCPServer{
+	client := &model.MCPClient{
 		ID:            uuid.New(),
 		TenantID:      ten.FullName(),
 		Name:          req.Name,
@@ -86,34 +86,34 @@ func (h *MCPServerHandler) Create(c *gin.Context) {
 		Env:           req.Env,
 		URL:           req.URL,
 		AuthSecretRef: req.AuthSecretRef,
-		Status:        model.MCPServerStatusActive,
+		Status:        model.MCPClientStatusActive,
 		CreatedAt:     time.Now().UTC(),
 		UpdatedAt:     time.Now().UTC(),
 	}
 
-	if err := server.Validate(); err != nil {
+	if err := client.Validate(); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := h.repo.Create(ctx, server); err != nil {
-		reqLogger.Error().Err(err).Msg("failed to create mcp server")
+	if err := h.repo.Create(ctx, client); err != nil {
+		reqLogger.Error().Err(err).Msg("failed to create mcp client")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	reqLogger.Info().
 		Str("tenant_id", ten.FullName()).
-		Str("mcp_server_id", server.ID.String()).
-		Msg("MCP server template created successfully")
+		Str("mcp_client_id", client.ID.String()).
+		Msg("MCP client template created successfully")
 
-	c.Header("Location", "/api/v1/mcp-servers/"+server.ID.String())
+	c.Header("Location", "/api/v1/mcp-clients/"+client.ID.String())
 	c.Status(http.StatusCreated)
 }
 
-// GetByID handles GET /api/v1/mcp-servers/:id
-func (h *MCPServerHandler) GetByID(c *gin.Context) {
-	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.get_mcp_server", trace.WithSpanKind(trace.SpanKindServer))
+// GetByID handles GET /api/v1/mcp-clients/:id
+func (h *MCPClientHandler) GetByID(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.get_mcp_client", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
@@ -133,7 +133,7 @@ func (h *MCPServerHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	server, err := h.repo.GetByID(ctx, id)
+	client, err := h.repo.GetByID(ctx, id)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -143,12 +143,12 @@ func (h *MCPServerHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, server)
+	c.JSON(http.StatusOK, client)
 }
 
-// List handles GET /api/v1/mcp-servers
-func (h *MCPServerHandler) List(c *gin.Context) {
-	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.list_mcp_servers", trace.WithSpanKind(trace.SpanKindServer))
+// List handles GET /api/v1/mcp-clients
+func (h *MCPClientHandler) List(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.list_mcp_clients", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
@@ -161,21 +161,21 @@ func (h *MCPServerHandler) List(c *gin.Context) {
 		return
 	}
 
-	servers, err := h.repo.List(ctx)
+	clients, err := h.repo.List(ctx)
 	if err != nil {
-		reqLogger.Error().Err(err).Msg("failed to list mcp servers")
+		reqLogger.Error().Err(err).Msg("failed to list mcp clients")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	if servers == nil {
-		servers = make([]*model.MCPServer, 0)
+	if clients == nil {
+		clients = make([]*model.MCPClient, 0)
 	}
-	c.JSON(http.StatusOK, servers)
+	c.JSON(http.StatusOK, clients)
 }
 
-// Update handles PUT /api/v1/mcp-servers/:id
-func (h *MCPServerHandler) Update(c *gin.Context) {
-	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.update_mcp_server", trace.WithSpanKind(trace.SpanKindServer))
+// Update handles PUT /api/v1/mcp-clients/:id
+func (h *MCPClientHandler) Update(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.update_mcp_client", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
@@ -195,7 +195,7 @@ func (h *MCPServerHandler) Update(c *gin.Context) {
 		return
 	}
 
-	var req UpdateMCPServerRequest
+	var req UpdateMCPClientRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -212,7 +212,7 @@ func (h *MCPServerHandler) Update(c *gin.Context) {
 	}
 
 	// Capture previous state
-	previousValue := model.MCPServer{
+	previousValue := model.MCPClient{
 		ID:            existing.ID,
 		TenantID:      existing.TenantID,
 		Name:          existing.Name,
@@ -249,22 +249,22 @@ func (h *MCPServerHandler) Update(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
-		reqLogger.Error().Err(err).Msg("failed to update mcp server")
+		reqLogger.Error().Err(err).Msg("failed to update mcp client")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	reqLogger.Info().
 		Str("tenant_id", ten.FullName()).
-		Str("mcp_server_id", existing.ID.String()).
-		Msg("MCP server template updated successfully")
+		Str("mcp_client_id", existing.ID.String()).
+		Msg("MCP client template updated successfully")
 
 	c.JSON(http.StatusOK, previousValue)
 }
 
-// Delete handles DELETE /api/v1/mcp-servers/:id
-func (h *MCPServerHandler) Delete(c *gin.Context) {
-	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.delete_mcp_server", trace.WithSpanKind(trace.SpanKindServer))
+// Delete handles DELETE /api/v1/mcp-clients/:id
+func (h *MCPClientHandler) Delete(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.delete_mcp_client", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	logger := observability.NewLogger("info", os.Stdout)
@@ -289,15 +289,15 @@ func (h *MCPServerHandler) Delete(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
-		reqLogger.Error().Err(err).Msg("failed to delete mcp server")
+		reqLogger.Error().Err(err).Msg("failed to delete mcp client")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	reqLogger.Info().
 		Str("tenant_id", ten.FullName()).
-		Str("mcp_server_id", id.String()).
-		Msg("MCP server template deleted successfully")
+		Str("mcp_client_id", id.String()).
+		Msg("MCP client template deleted successfully")
 
 	c.Status(http.StatusNoContent)
 }

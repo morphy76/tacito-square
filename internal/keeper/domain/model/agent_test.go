@@ -33,7 +33,7 @@ func TestAgent_Validation(t *testing.T) {
 		PromptTemplate: uuid.New(),
 		MCPClients: []MCPClientConfig{
 			{
-				ServerID: uuid.New(),
+				ClientID: uuid.New(),
 			},
 		},
 		Status:    AgentStatusDefined,
@@ -171,10 +171,10 @@ func TestAgent_Validation(t *testing.T) {
 			name: "Invalid MCP client server ID",
 			agent: func() Agent {
 				a := validAgent
-				a.MCPClients = []MCPClientConfig{{ServerID: uuid.Nil}}
+				a.MCPClients = []MCPClientConfig{{ClientID: uuid.Nil}}
 				return a
 			}(),
-			wantErr: "mcp client server id is required",
+			wantErr: "mcp client id is required",
 		},
 		{
 			name: "Valid Agent with Community ID",

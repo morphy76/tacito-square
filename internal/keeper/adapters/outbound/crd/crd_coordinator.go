@@ -30,6 +30,7 @@ type K8sCRDCoordinator struct {
 	namespace  string
 	promptRepo outbound.PromptRepository
 	skillRepo  outbound.SkillRepository
+	mcpRepo    outbound.MCPClientRepository
 	natsConn   *nats.Conn
 }
 
@@ -40,6 +41,7 @@ func NewK8sCRDCoordinator(
 	config *rest.Config,
 	promptRepo outbound.PromptRepository,
 	skillRepo outbound.SkillRepository,
+	mcpRepo outbound.MCPClientRepository,
 	nc *nats.Conn,
 ) (*K8sCRDCoordinator, error) {
 	scheme := runtime.NewScheme()
@@ -57,6 +59,7 @@ func NewK8sCRDCoordinator(
 		namespace:  "tacito",
 		promptRepo: promptRepo,
 		skillRepo:  skillRepo,
+		mcpRepo:    mcpRepo,
 		natsConn:   nc,
 	}, nil
 }
@@ -67,6 +70,7 @@ func NewK8sCRDCoordinatorWithClient(
 	namespace string,
 	promptRepo outbound.PromptRepository,
 	skillRepo outbound.SkillRepository,
+	mcpRepo outbound.MCPClientRepository,
 	nc *nats.Conn,
 ) *K8sCRDCoordinator {
 	if namespace == "" {
@@ -77,6 +81,7 @@ func NewK8sCRDCoordinatorWithClient(
 		namespace:  namespace,
 		promptRepo: promptRepo,
 		skillRepo:  skillRepo,
+		mcpRepo:    mcpRepo,
 		natsConn:   nc,
 	}
 }
@@ -223,6 +228,37 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 		communityRef = agent.CommunityID.String()
 	}
 
+	var mcpClientSpecs []v1alpha1.MCPClientSpec
+	for _, mcpConfig := range agent.MCPClients {
+		if c.mcpRepo != nil {
+			clientCfg, err := c.mcpRepo.GetByID(ctx, mcpConfig.ClientID)
+			if err != nil {
+				return fmt.Errorf("resolving mcp client config %s: %w", mcpConfig.ClientID, err)
+			}
+
+			env := make(map[string]string)
+			for k, v := range clientCfg.Env {
+				env[k] = v
+			}
+			for k, v := range mcpConfig.CustomEnv {
+				env[k] = v
+			}
+
+			args := append([]string(nil), clientCfg.Args...)
+			args = append(args, mcpConfig.CustomArgs...)
+
+			mcpClientSpecs = append(mcpClientSpecs, v1alpha1.MCPClientSpec{
+				Name:         clientCfg.Name,
+				Transport:    string(clientCfg.Transport),
+				Command:      clientCfg.Command,
+				Args:         args,
+				Env:          env,
+				URL:          clientCfg.URL,
+				AllowedTools: mcpConfig.AllowedTools,
+			})
+		}
+	}
+
 	key := types.NamespacedName{Namespace: c.namespace, Name: "u-" + strings.ToLower(agent.ID.String())}
 	existing := &v1alpha1.TacitoAgent{}
 
@@ -245,6 +281,7 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 						Temperature: temp,
 						MaxTokens:   maxTokens,
 					},
+					MCPClients: mcpClientSpecs,
 				},
 			}
 			return c.client.Create(deadlineCtx, crdObj)
@@ -266,6 +303,7 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 		latest.Spec.LLMConfig.Model = agent.Brain.Model
 		latest.Spec.LLMConfig.Temperature = temp
 		latest.Spec.LLMConfig.MaxTokens = maxTokens
+		latest.Spec.MCPClients = mcpClientSpecs
 
 		return c.client.Update(deadlineCtx, latest)
 	})

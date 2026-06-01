@@ -87,7 +87,7 @@ func NewServer(pool *pgxpool.Pool, nc *nats.Conn, k8sConfig *rest.Config) *gin.E
 
 	// Outbound Repositories
 	repo := postgres.NewLLMBindingRepository(pool)
-	mcpRepo := postgres.NewMCPServerRepository(pool)
+	mcpRepo := postgres.NewMCPClientRepository(pool)
 	skillRepo := postgres.NewSkillRepository(pool)
 	promptRepo := postgres.NewPromptRepository(pool)
 	agentRepo := postgres.NewAgentRepository(pool)
@@ -95,12 +95,12 @@ func NewServer(pool *pgxpool.Pool, nc *nats.Conn, k8sConfig *rest.Config) *gin.E
 
 	// Application Services (orchestrators)
 	llmService := service.NewLLMBindingService(repo)
-	mcpService := service.NewMCPServerService(mcpRepo)
+	mcpService := service.NewMCPClientService(mcpRepo)
 	skillService := service.NewSkillService(skillRepo)
 	promptService := service.NewPromptService(promptRepo)
 	var crdCoord outbound.CRDCoordinator = &noOpCRDCoordinator{}
 	if k8sConfig != nil {
-		crdC, err := crd.NewK8sCRDCoordinator(k8sConfig, promptRepo, skillRepo, nc)
+		crdC, err := crd.NewK8sCRDCoordinator(k8sConfig, promptRepo, skillRepo, mcpRepo, nc)
 		if err == nil {
 			crdCoord = crdC
 		}
@@ -116,7 +116,7 @@ func NewServer(pool *pgxpool.Pool, nc *nats.Conn, k8sConfig *rest.Config) *gin.E
 
 	// Inbound Handlers (Gin adapters depending strictly on inboundports / services)
 	handler := httpAdapter.NewLLMBindingHandler(llmService)
-	mcpHandler := httpAdapter.NewMCPServerHandler(mcpService)
+	mcpHandler := httpAdapter.NewMCPClientHandler(mcpService)
 	skillHandler := httpAdapter.NewSkillHandler(skillService)
 	promptHandler := httpAdapter.NewPromptHandler(promptService)
 	agentHandler := httpAdapter.NewAgentHandler(agentService)
@@ -135,11 +135,11 @@ func NewServer(pool *pgxpool.Pool, nc *nats.Conn, k8sConfig *rest.Config) *gin.E
 		v1.PUT("/llm-bindings/:id", handler.Update)
 		v1.DELETE("/llm-bindings/:id", handler.Delete)
 
-		v1.POST("/mcp-servers", mcpHandler.Create)
-		v1.GET("/mcp-servers", mcpHandler.List)
-		v1.GET("/mcp-servers/:id", mcpHandler.GetByID)
-		v1.PUT("/mcp-servers/:id", mcpHandler.Update)
-		v1.DELETE("/mcp-servers/:id", mcpHandler.Delete)
+		v1.POST("/mcp-clients", mcpHandler.Create)
+		v1.GET("/mcp-clients", mcpHandler.List)
+		v1.GET("/mcp-clients/:id", mcpHandler.GetByID)
+		v1.PUT("/mcp-clients/:id", mcpHandler.Update)
+		v1.DELETE("/mcp-clients/:id", mcpHandler.Delete)
 
 		v1.POST("/skills", skillHandler.Create)
 		v1.GET("/skills", skillHandler.List)
