@@ -1,0 +1,79 @@
+{{- if .Values.grafana.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ts-infra-grafana-datasources
+  labels:
+    {{- include "tacito-square-infra.labels" . | nindent 4 }}
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Mimir
+        type: prometheus
+        access: proxy
+        url: http://ts-infra-mimir:9009
+        isDefault: true
+        jsonData:
+          httpMethod: POST
+          exemplarTraceIdDestinations:
+            - name: trace_id
+              datasourceUid: tempo
+      - name: Tempo
+        type: tempo
+        access: proxy
+        url: http://ts-infra-tempo:3200
+        uid: tempo
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ts-infra-grafana
+  labels:
+    {{- include "tacito-square-infra.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ts-infra-grafana
+  template:
+    metadata:
+      labels:
+        app: ts-infra-grafana
+    spec:
+      containers:
+        - name: grafana
+          image: "{{ .Values.grafana.image.repository }}:{{ .Values.grafana.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: GF_AUTH_ANONYMOUS_ENABLED
+              value: "true"
+            - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+              value: Admin
+          volumeMounts:
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+      volumes:
+        - name: datasources
+          configMap:
+            name: ts-infra-grafana-datasources
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ts-infra-grafana
+  labels:
+    {{- include "tacito-square-infra.labels" . | nindent 4 }}
+spec:
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+  selector:
+    app: ts-infra-grafana
+{{- end }}

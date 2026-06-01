@@ -153,7 +153,7 @@ minio:
   persistence:
     size: 2Gi
 
-# ── OpenTelemetry Collector (tracing) ───────────────────
+# ── OpenTelemetry Collector (telemetry boundary) ────────
 otel-collector:
   enabled: true
   mode: deployment
@@ -166,62 +166,42 @@ otel-collector:
           grpc:
             endpoint: 0.0.0.0:4317
     exporters:
-      zipkin:
-        endpoint: "http://ts-infra-zipkin:9411/api/v2/spans"
-        format: proto
-        default_service_name: tacito-square
-      prometheus:
-        endpoint: "0.0.0.0:8889"
-        namespace: "ts"
+      otlp:
+        endpoint: ts-infra-tempo:4317
+        tls:
+          insecure: true
+      prometheusremotewrite:
+        endpoint: http://ts-infra-mimir:9009/api/v1/push
     service:
       pipelines:
         traces:
           receivers:
             - otlp
           exporters:
-            - zipkin
+            - otlp
         metrics:
           receivers:
             - otlp
           exporters:
-            - prometheus
+            - prometheusremotewrite
 
-# ── Zipkin (tracing) ───────────────────────────────
-zipkin:
+# ── Tempo (tracing backend) ─────────────────────────────
+tempo:
   enabled: true
+  image:
+    repository: grafana/tempo
+    tag: 2.4.1
 
-# ── Prometheus (monitoring) ───────────────────────────────
-prometheus:
+# ── Mimir (metrics backend) ─────────────────────────────
+mimir:
   enabled: true
-  scrapeConfigs:
-    prometheus:
-      enabled: false
-    kubernetes-api-servers:
-      enabled: false
-    kubernetes-nodes:
-      enabled: false
-    kubernetes-nodes-cadvisor:
-      enabled: false
-    kubernetes-service-endpoints:
-      enabled: false
-    kubernetes-service-endpoints-slow:
-      enabled: false
-    prometheus-pushgateway:
-      enabled: false
-    kubernetes-services:
-      enabled: false
-    kubernetes-pods:
-      enabled: false
-    kubernetes-pods-slow:
-      enabled: false
-    otel-collector:
-      enabled: true
-      job_name: "otel-collector"
-      static_configs:
-        - targets:
-            - "ts-infra-otel-collector:8889"
-    dyna-tacito:
-      enabled: true
-      job_name: "dyna-tacito"
-      kubernetes_sd_configs:
-        - role: pod
+  image:
+    repository: grafana/mimir
+    tag: 2.12.0
+
+# ── Grafana (dashboards) ────────────────────────────────
+grafana:
+  enabled: true
+  image:
+    repository: grafana/grafana
+    tag: 10.4.2
