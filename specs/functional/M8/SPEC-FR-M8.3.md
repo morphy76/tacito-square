@@ -1,4 +1,4 @@
-# SPEC-FR-M8.3: Quota Enforcement (Redis counters)
+# SPEC-FR-M8.3: Usage Quotas (community + agent)
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
@@ -6,21 +6,20 @@
 | Status        | DRAFT                                       |
 | Milestone     | M8                                          |
 | Component     | keeper                                      |
-| Depends On    | SPEC-FR-M8.2, SPEC-NFR-CACHE               |
+| Depends On    | SPEC-FR-M3.6                                |
 | Supersedes    | none                                        |
 
 ## Context
 
-Quotas are enforced in real-time using Redis atomic counters for low-latency checks.
+Communities and agents have configurable usage limits to prevent resource exhaustion.
 
 ## Specification
 
-1. The system MUST use Redis atomic counters for real-time quota tracking.
-2. Counter keys MUST follow `ts:keeper:quota:{type}:{id}:{period}`.
-3. Message quota checks MUST be performed before agent message delivery.
-4. LLM token quota checks MUST be performed before LLM API calls.
-5. Quota exceeded responses MUST return HTTP 429 with retry-after header.
-6. Counters MUST reset automatically using Redis TTL.
+1. The system MUST define a `Quota` value object: maxAgents (per community), maxMessages (per agent/hour), maxLLMTokens (per agent/day).
+2. Quotas MUST be configurable per community and per agent definition.
+3. The system MUST expose quota CRUD via `GET/PUT /api/v1/communities/{id}/quotas` and `GET/PUT /api/v1/agents/{id}/quotas`.
+4. Default quotas MUST be applied when none are explicitly configured.
+5. Quota configuration MUST be persisted in PostgreSQL.
 
 ## Acceptance Criteria
 

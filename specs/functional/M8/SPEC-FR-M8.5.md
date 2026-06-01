@@ -1,26 +1,27 @@
-# SPEC-FR-M8.5: Audit Trail (events + queries)
+# SPEC-FR-M8.5: HITL Yield & Callback Flows
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M8.5                                |
 | Status        | DRAFT                                       |
 | Milestone     | M8                                          |
-| Component     | keeper                                      |
-| Depends On    | SPEC-FR-M3.8                                |
+| Component     | agent, keeper                               |
+| Depends On    | SPEC-FR-M5.2, SPEC-FR-M6.4                 |
 | Supersedes    | none                                        |
 
 ## Context
 
-All significant events must be recorded for accountability, compliance, and debugging.
+Agents can yield to a human during reasoning for input, approval, or clarification. HITL pauses reasoning, notifies the human, and resumes on response.
 
 ## Specification
 
-1. The system MUST define an `AuditEvent` entity: ID, timestamp, actor, action, target, details (JSON), trace ID.
-2. Audit events MUST be stored in an append-only PostgreSQL table.
-3. Events MUST be emitted for: agent CRUD, community CRUD, assignments, CRD submissions, HITL, login/logout.
-4. Query API: `GET /api/v1/audit?actor=&action=&target=&from=&to=` with pagination.
-5. Audit events MUST NOT be deletable via API (append-only).
-6. Records MUST include OpenTelemetry trace ID for correlation.
+1. An agent MUST yield to a human by emitting a HITL yield event via NATS.
+2. Keeper MUST persist the HITL callback in PostgreSQL.
+3. The callback MUST be exposed via `GET /api/v1/threads/{id}/hitl` and `POST /api/v1/threads/{id}/hitl/{callback_id}/respond`.
+4. Keeper MUST relay the human response to the agent via NATS.
+5. The agent MUST resume reasoning with the human response as additional context.
+6. Unanswered callbacks MUST escalate after configurable TTL (default: 1 hour).
+7. The Agent Card MUST indicate HITL capability via a `humanInTheLoop` flag.
 
 ## Acceptance Criteria
 

@@ -1,25 +1,25 @@
-# SPEC-FR-M8.2: Usage Quotas (community + agent)
+# SPEC-FR-M8.2: RBAC Role Model & Route Protection
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M8.2                                |
 | Status        | DRAFT                                       |
 | Milestone     | M8                                          |
-| Component     | keeper                                      |
-| Depends On    | SPEC-FR-M3.6                                |
+| Component     | keeper, shared                              |
+| Depends On    | SPEC-FR-M3.9, SPEC-FR-M8.1                  |
 | Supersedes    | none                                        |
 
 ## Context
 
-Communities and agents have configurable usage limits to prevent resource exhaustion.
+Keeper API endpoints must enforce role-based access control using Keycloak roles from JWT tokens.
 
 ## Specification
 
-1. The system MUST define a `Quota` value object: maxAgents (per community), maxMessages (per agent/hour), maxLLMTokens (per agent/day).
-2. Quotas MUST be configurable per community and per agent definition.
-3. The system MUST expose quota CRUD via `GET/PUT /api/v1/communities/{id}/quotas` and `GET/PUT /api/v1/agents/{id}/quotas`.
-4. Default quotas MUST be applied when none are explicitly configured.
-5. Quota configuration MUST be persisted in PostgreSQL.
+1. The system MUST define role-to-permission mappings: `keeper-admin` (full CRUD), `keeper-viewer` (read-only), `agent-spawner` (create agents + assign), `user` (interact via threads).
+2. The system MUST implement a Gin authorization middleware checking required roles per route.
+3. Route protection MUST be declarative (configuration-based, not hardcoded).
+4. Unauthorized requests MUST return 403 with standard error response.
+5. Principal identity (subject + roles) MUST be logged with every request.
 
 ## Acceptance Criteria
 

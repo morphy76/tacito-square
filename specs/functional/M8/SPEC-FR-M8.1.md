@@ -1,4 +1,4 @@
-# SPEC-FR-M8.1: RBAC Role Model & Route Protection
+# SPEC-FR-M8.1: OIDC/JWT Authentication
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
@@ -6,20 +6,20 @@
 | Status        | DRAFT                                       |
 | Milestone     | M8                                          |
 | Component     | keeper, shared                              |
-| Depends On    | SPEC-FR-M3.9                                |
+| Depends On    | SPEC-FR-M2.2                                |
 | Supersedes    | none                                        |
 
 ## Context
 
-Keeper API endpoints must enforce role-based access control using Keycloak roles from JWT tokens.
+All keeper API endpoints must be protected by OIDC/JWT tokens issued by Keycloak. The authentication middleware lives in the shared library and is reusable across components.
 
 ## Specification
 
-1. The system MUST define role-to-permission mappings: `keeper-admin` (full CRUD), `keeper-viewer` (read-only), `agent-spawner` (create agents + assign), `user` (interact via threads).
-2. The system MUST implement a Gin authorization middleware checking required roles per route.
-3. Route protection MUST be declarative (configuration-based, not hardcoded).
-4. Unauthorized requests MUST return 403 with standard error response.
-5. Principal identity (subject + roles) MUST be logged with every request.
+1. The system MUST implement a Gin middleware for JWT validation using the Zitadel OIDC library (per SPEC-NFR-STACK).
+2. The middleware MUST discover JWKS endpoints automatically from the OIDC issuer URL.
+3. The middleware MUST extract roles from JWT claims and make them available to downstream handlers.
+4. The Keycloak `tacito` realm MUST be pre-configured with roles: `keeper-admin`, `keeper-viewer`, `user`, `agent-spawner`.
+5. JWT claims (subject, roles) MUST be logged with every request (per SPEC-NFR-LOG).
 
 ## Acceptance Criteria
 

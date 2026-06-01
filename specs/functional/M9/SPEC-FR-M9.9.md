@@ -1,10 +1,10 @@
-# SPEC-FR-M5.8: Benchmark Suite & Integration Coverage Verification
+# SPEC-FR-M9.9: Benchmark Suite & Integration Coverage Verification
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
-| ID            | SPEC-FR-M5.8                                |
+| ID            | SPEC-FR-M9.9                                |
 | Status        | ACCEPTED                                    |
-| Milestone     | M5                                          |
+| Milestone     | M9                                          |
 | Component     | test                                        |
 | Depends On    | none                                        |
 | Supersedes    | none                                        |

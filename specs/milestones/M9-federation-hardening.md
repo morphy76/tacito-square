@@ -23,3 +23,4 @@ External agent federation via A2A protocol. Prometheus dashboards, validated Ope
 | SPEC-FR-M9.5 | E2E & Benchmark Tests | test | all M1-M8 |
 | SPEC-FR-M9.6 | Production Helm & Hardening | deploy | SPEC-FR-M2.1 |
 | SPEC-FR-M9.7 | K8s NetworkPolicies | operator | SPEC-FR-M4.3, SPEC-FR-M6.3 |
+| SPEC-FR-M9.9 | Benchmark Suite & Integration Coverage Verification | test | none |

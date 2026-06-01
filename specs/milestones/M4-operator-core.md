@@ -22,6 +22,5 @@ Communities are **not** deployable Kubernetes units and have no CRD. Community l
 | ~~SPEC-FR-M4.2~~ | ~~AgentCommunity CRD Definition~~ | ~~operator~~ | _REJECTED — communities are Keeper DB entities, not K8s CRDs_ |
 | SPEC-FR-M4.3 | Reconciliation Controller | operator | SPEC-FR-M4.1 |
 | SPEC-FR-M4.4 | Zero-Scaling Support | operator | SPEC-FR-M4.3 |
-| SPEC-FR-M4.5 | OIDC/JWT Authentication | keeper, shared | SPEC-FR-M2.2 |
 | SPEC-FR-M4.6 | Agent CRD Submission | keeper | SPEC-FR-M3.7, SPEC-FR-M4.1 |
 | SPEC-FR-M4.7 | Agent & Community Lifecycle Management REST API | keeper, operator | SPEC-FR-M3.7, SPEC-FR-M4.1, SPEC-FR-M4.6 |
