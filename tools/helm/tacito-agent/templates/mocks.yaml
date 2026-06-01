@@ -12,8 +12,8 @@ data:
           "method": "POST",
           "path": "/v1/chat/completions",
           "body": {
-            "type": "SUBSTRING",
-            "substring": "Reasoning Guidelines"
+            "type": "REGEX",
+            "regex": "(?s).*Reasoning Guidelines.*"
           }
         },
         "httpResponse": {
@@ -29,8 +29,8 @@ data:
           "method": "POST",
           "path": "/v1/chat/completions",
           "body": {
-            "type": "SUBSTRING",
-            "substring": "reason"
+            "type": "REGEX",
+            "regex": "(?s).*reason.*"
           }
         },
         "httpResponse": {
@@ -46,8 +46,8 @@ data:
           "method": "POST",
           "path": "/v1/chat/completions",
           "body": {
-            "type": "SUBSTRING",
-            "substring": "brin"
+            "type": "REGEX",
+            "regex": "(?s).*brin.*"
           }
         },
         "httpResponse": {
@@ -63,8 +63,8 @@ data:
           "method": "POST",
           "path": "/v1/chat/completions",
           "body": {
-            "type": "SUBSTRING",
-            "substring": "Math Guidelines"
+            "type": "REGEX",
+            "regex": "(?s).*Math Guidelines.*"
           }
         },
         "httpResponse": {
