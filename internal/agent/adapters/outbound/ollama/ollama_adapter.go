@@ -9,10 +9,13 @@ import (
 
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/resiliency"
 	"github.com/morphy76/tacito-square/internal/agent/domain/model"
+	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/ollama/ollama/api"
 	"github.com/rs/zerolog"
 	"github.com/sethvargo/go-retry"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/attribute"
+	otelmetric "go.opentelemetry.io/otel/metric"
 )
 
 type Config struct {
@@ -25,6 +28,7 @@ type Config struct {
 	RecoveryTimeout  time.Duration
 	FallbackMessage  string
 	HTTPClient       *http.Client
+	AgentName        string
 }
 
 type Adapter struct {
@@ -159,6 +163,13 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 
 		if err != nil {
 			logger.Error().Err(err).Dur("duration_ms", duration).Msg("all Ollama chat retries exhausted")
+			brainAttrsWithStatus := otelmetric.WithAttributes(
+				attribute.String("agent", a.cfg.AgentName),
+				attribute.String("provider", "ollama"),
+				attribute.String("model", modelName),
+				attribute.String("status", "error"),
+			)
+			observability.AgentBrainRequestsTotal.Add(ctx, 1, brainAttrsWithStatus)
 			return err
 		}
 
@@ -167,6 +178,36 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 			Int("prompt_tokens", promptEvalCount).
 			Int("completion_tokens", evalCount).
 			Msg("Ollama chat wire call completed successfully")
+
+		// Record agent brain metrics
+		brainAttrs := otelmetric.WithAttributes(
+			attribute.String("agent", a.cfg.AgentName),
+			attribute.String("provider", "ollama"),
+			attribute.String("model", modelName),
+		)
+		brainAttrsWithStatus := otelmetric.WithAttributes(
+			attribute.String("agent", a.cfg.AgentName),
+			attribute.String("provider", "ollama"),
+			attribute.String("model", modelName),
+			attribute.String("status", "success"),
+		)
+		observability.AgentBrainRequestsTotal.Add(ctx, 1, brainAttrsWithStatus)
+		observability.AgentBrainRequestDuration.Record(ctx, duration.Seconds(), brainAttrs)
+
+		observability.AgentBrainTokensTotal.Add(ctx, int64(promptEvalCount),
+			otelmetric.WithAttributes(
+				attribute.String("agent", a.cfg.AgentName),
+				attribute.String("direction", "sent"),
+				attribute.String("model", modelName),
+			),
+		)
+		observability.AgentBrainTokensTotal.Add(ctx, int64(evalCount),
+			otelmetric.WithAttributes(
+				attribute.String("agent", a.cfg.AgentName),
+				attribute.String("direction", "received"),
+				attribute.String("model", modelName),
+			),
+		)
 
 		result = &model.BrainResponse{
 			Content: responseText,

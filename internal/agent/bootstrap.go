@@ -7,6 +7,7 @@ import (
 	agentnats "github.com/morphy76/tacito-square/internal/agent/adapters/inbound/nats"
 	"github.com/morphy76/tacito-square/internal/agent/application/ports/inbound"
 	"github.com/morphy76/tacito-square/internal/shared/health"
+	"github.com/morphy76/tacito-square/internal/shared/observability"
 	natsclient "github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
 )
@@ -48,12 +49,16 @@ func NewServer(checkers ...health.Checker) *gin.Engine {
 
 	r := gin.New()
 	r.Use(gin.Recovery())
+	r.Use(observability.TracingMiddleware("agent"))
+	r.Use(observability.MetricsMiddleware())
+	r.Use(observability.LoggingMiddleware())
 
 	// Hello world health check probe with optional dependency checkers.
 	probe := health.NewProbe(5 * time.Second, checkers...)
 
 	r.GET("/healthz", gin.WrapF(probe.LivezHandler))
 	r.GET("/readyz", gin.WrapF(probe.ReadyzHandler))
+	r.GET("/metrics", observability.MetricsHandler())
 
 	return r
 }

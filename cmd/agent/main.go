@@ -125,6 +125,7 @@ func main() {
 			RecoveryTimeout:  recoveryTimeout,
 			FallbackMessage:  "ollama brain fallback response",
 			HTTPClient:       sharedHTTPClient,
+			AgentName:        agentName,
 		})
 	default:
 		brain = openai.NewAdapter(openai.Config{
@@ -138,6 +139,7 @@ func main() {
 			RecoveryTimeout:  recoveryTimeout,
 			FallbackMessage:  "openai brain fallback response",
 			HTTPClient:       sharedHTTPClient,
+			AgentName:        agentName,
 		})
 	}
 

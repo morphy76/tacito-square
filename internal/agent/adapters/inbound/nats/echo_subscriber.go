@@ -11,6 +11,8 @@ import (
 	"github.com/morphy76/tacito-square/internal/shared/observability"
 	natsclient "github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel/attribute"
+	otelmetric "go.opentelemetry.io/otel/metric"
 )
 
 const echoSubjectFormat = "ts.community.%s.agent.%s"
@@ -65,6 +67,7 @@ func (s *EchoSubscriber) Stop() error {
 }
 
 func (s *EchoSubscriber) handleEcho(ctx context.Context, logger zerolog.Logger, msg *natsclient.Msg) error {
+	start := time.Now()
 	var req model.EchoRequest
 	if err := json.Unmarshal(msg.Data, &req); err != nil {
 		logger.Warn().Err(err).Msg("echo subscriber: malformed payload, ignoring")
@@ -94,6 +97,30 @@ func (s *EchoSubscriber) handleEcho(ctx context.Context, logger zerolog.Logger, 
 
 	// Trigger the message processing framework pipeline (Brain reasoning engine)
 	brainResult, err := s.processor.ProcessIncomingMessage(ctx, req.TenantID, s.agentName, threadID, req.Message)
+
+	// Record metrics
+	duration := time.Since(start).Seconds()
+	statusAttr := "success"
+	if err != nil {
+		statusAttr = "error"
+	}
+	subject := msg.Subject
+
+	attrs := otelmetric.WithAttributes(
+		attribute.String("agent", s.agentName),
+		attribute.String("community", s.communityID),
+		attribute.String("subject", subject),
+	)
+	attrsWithStatus := otelmetric.WithAttributes(
+		attribute.String("agent", s.agentName),
+		attribute.String("community", s.communityID),
+		attribute.String("subject", subject),
+		attribute.String("status", statusAttr),
+	)
+
+	observability.AgentNATSMessagesProcessedTotal.Add(ctx, 1, attrsWithStatus)
+	observability.AgentNATSProcessingDuration.Record(ctx, duration, attrs)
+
 	if err != nil {
 		logger.Warn().Err(err).Msg("echo subscriber: message processing failed")
 		return fmt.Errorf("process incoming message: %w", err)

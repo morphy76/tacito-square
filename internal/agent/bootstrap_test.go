@@ -8,7 +8,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/gin-gonic/gin"
 	"github.com/morphy76/tacito-square/internal/shared/health"
+	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -101,4 +103,34 @@ func TestReadyz_Returns503_WhenQdrantUnhealthy(t *testing.T) {
 		}
 	}
 	assert.True(t, foundQdrant)
+}
+
+func TestMetrics_Returns200AndPrometheusFormat(t *testing.T) {
+	ctx := context.Background()
+	shutdown, err := observability.InitTracer(ctx, "agent-test", "1.0.0", "")
+	require.NoError(t, err)
+	defer shutdown(ctx)
+
+	srv := NewServer()
+
+	// Register a dummy endpoint that will trigger the metrics middleware
+	srv.GET("/test-endpoint", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	// Request the test route
+	reqTest := httptest.NewRequest(http.MethodGet, "/test-endpoint", nil)
+	wTest := httptest.NewRecorder()
+	srv.ServeHTTP(wTest, reqTest)
+	assert.Equal(t, http.StatusOK, wTest.Code)
+
+	// Scrape metrics
+	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	body := w.Body.String()
+	assert.Contains(t, body, "go_goroutines")
+	assert.Contains(t, body, "http_requests_total")
 }
