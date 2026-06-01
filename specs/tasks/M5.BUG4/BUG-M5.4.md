@@ -3,7 +3,7 @@
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
 | ID            | BUG-M5.4                                                           |
-| Status        | OPEN                                                               |
+| Status        | CLOSED                                                             |
 | Severity      | MEDIUM                                                             |
 | Milestone     | M5 — Agent Core                                                    |
 | Affects       | `internal/agent/application/service/cognitive_engine.go`           |
@@ -43,3 +43,12 @@ This violates the decoupled, MCP-first architectural boundary:
    - The cognitive engine only executes interactive actions by delegating to connected MCP servers over the standard Model Context Protocol.
 2. **Mocks Removal**:
    - No programmatic tool handlers remain compiled in `cmd/agent/main.go`.
+
+## Resolution Details
+
+The bug is fully resolved and no longer actual. The mock tools have been completely removed and the cognitive engine reasoning loop has been aligned with MCP-first decoupled architecture:
+1. **Mock Tools Cleanup**: The local hardcoded mock tools such as `restricted_access`, `math_add`, and `utility_ping` have been completely removed from `cmd/agent/main.go` and the agent's bootstrap files.
+2. **Cognitive Engine Decoupling**: The local tool handlers have been removed from the cognitive engine. The engine registers only dynamic/infrastructural tools (`enable_skill` and `recall_memory` if long-term memory is active), and delegates all other business and computational tools to external Model Context Protocol (MCP) servers.
+
+Closed: 2026-06-01
+Approver: USER (approved synchronization after pull from main)
