@@ -36,6 +36,10 @@ spec:
               value: {{ .Values.port | toString | quote }}
             - name: TS_AGENT_LOG_LEVEL
               value: {{ .Values.logLevel | quote }}
+            {{- if .Values.mcpClients }}
+            - name: TS_AGENT_MCP_CLIENTS
+              value: {{ .Values.mcpClients | toJson | quote }}
+            {{- end }}
             {{- $secretName := "" }}
             {{- if .Values.agent.llm.credentialsSecret }}
               {{- $secretName = .Values.agent.llm.credentialsSecret }}

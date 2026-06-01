@@ -46,5 +46,18 @@ if ! echo "$RENDERED" | grep -q "TS_AGENT_OTEL_ENDPOINT"; then
     exit 1
 fi
 
+echo "Checking for TS_AGENT_MCP_CLIENTS rendering..."
+RENDERED_WITH_MCP=$(helm template my-agent "$CHART_DIR" --set "mcpClients[0].name=sqlite-mcp,mcpClients[0].transport=stdio,mcpClients[0].command=npx,mcpClients[0].allowedTools[0]=query")
+
+if ! echo "$RENDERED_WITH_MCP" | grep -q "TS_AGENT_MCP_CLIENTS"; then
+    echo "FAIL: TS_AGENT_MCP_CLIENTS not found when mcpClients is supplied in values"
+    exit 1
+fi
+
+if ! echo "$RENDERED_WITH_MCP" | grep -q "sqlite-mcp"; then
+    echo "FAIL: sqlite-mcp config not serialized inside TS_AGENT_MCP_CLIENTS value"
+    exit 1
+fi
+
 echo "PASS: Standalone Agent Chart template validation successful!"
 exit 0

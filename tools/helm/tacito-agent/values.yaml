@@ -130,3 +130,6 @@ nodeSelector: {}
 tolerations: []
 affinity: {}
 
+# --- Model Context Protocol Clients ---
+mcpClients: []
+
