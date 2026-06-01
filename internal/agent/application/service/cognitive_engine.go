@@ -57,6 +57,7 @@ type CognitiveEngine struct {
 	embedder     outbound.Embedder
 	ltm          outbound.LongTermMemory
 	publisher    outbound.EventPublisher
+	mcpExecutor  outbound.ToolExecutor
 	toolRegistry map[string]ToolHandler
 	skills       map[string]Skill
 	tracer       trace.Tracer
@@ -98,6 +99,11 @@ func (e *CognitiveEngine) WithLTM(embedder outbound.Embedder, ltm outbound.LongT
 
 func (e *CognitiveEngine) WithPublisher(publisher outbound.EventPublisher) *CognitiveEngine {
 	e.publisher = publisher
+	return e
+}
+
+func (e *CognitiveEngine) WithToolExecutor(mcpExecutor outbound.ToolExecutor) *CognitiveEngine {
+	e.mcpExecutor = mcpExecutor
 	return e
 }
 
@@ -165,6 +171,23 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 	activeTools := make(map[string]ToolHandler)
 	for name, handler := range e.toolRegistry {
 		activeTools[name] = handler
+	}
+
+	if e.mcpExecutor != nil {
+		mcpTools, err := e.mcpExecutor.ListAllowedTools(ctx)
+		if err == nil && len(mcpTools) > 0 {
+			var sb strings.Builder
+			sb.WriteString("\n\nAvailable External Tools:\n")
+			for _, tool := range mcpTools {
+				tName := tool.Name
+				activeTools[tName] = func(ctx context.Context, args map[string]any) (string, error) {
+					return e.mcpExecutor.Execute(ctx, tName, args)
+				}
+				schemaJSON, _ := json.Marshal(tool.InputSchema)
+				sb.WriteString(fmt.Sprintf("- Name: %s\n  Description: %s\n  Parameters: %s\n", tool.Name, tool.Description, string(schemaJSON)))
+			}
+			activeSystemPrompt = activeSystemPrompt + sb.String()
+		}
 	}
 
 	// Inject tenant, agent metadata and thread-scoped active tools/parsed skills into context
