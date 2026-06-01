@@ -134,7 +134,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | ID | Title | Status | Severity | File |
 |----|-------|--------|----------|------|
 | BUG-M5.1 | Missing Horizontal Pod Autoscaler in Standalone Agent Chart | OPEN | MEDIUM | [BUG-M5.1](tasks/M5.BUG1/BUG-M5.1.md) |
-| BUG-M5.2 | Unified Skills and Prompts Misinterpretation and Flattened Keeper-Agent Interface | OPEN | HIGH | [BUG-M5.2](tasks/M5.BUG2/BUG-M5.2.md) |
+| BUG-M5.2 | Unified Skills and Prompts Misinterpretation and Flattened Keeper-Agent Interface | CLOSED | HIGH | [BUG-M5.2](tasks/M5.BUG2/BUG-M5.2.md) |
 | BUG-M5.4 | Agent Tooling Violates MCP-First Architecture due to Mock Tools Embedded in Core Engine | OPEN | MEDIUM | [BUG-M5.4](tasks/M5.BUG4/BUG-M5.4.md) |
 
 

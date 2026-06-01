@@ -131,6 +131,20 @@ func (c *K8sCRDCoordinator) PublishProvisioningEvent(ctx context.Context, subjec
 	logger.Info().Str("subject", subject).Msg("successfully published NATS provisioning event")
 }
 
+// SkillConfig defines the propagated skill structure.
+type SkillConfig struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Content     string `json:"content"`
+}
+
+// PropagatedAgentConfig defines the structured keeper-agent context format.
+type PropagatedAgentConfig struct {
+	Description string        `json:"description"`
+	Directives  string        `json:"directives"`
+	Skills      []SkillConfig `json:"skills"`
+}
+
 // ResolveAndSynthesizeSystemPrompt fetches templates and skills out-of-band and compiles them into a system prompt.
 func (c *K8sCRDCoordinator) ResolveAndSynthesizeSystemPrompt(ctx context.Context, agent *model.Agent) (string, error) {
 	var directives string
@@ -142,16 +156,31 @@ func (c *K8sCRDCoordinator) ResolveAndSynthesizeSystemPrompt(ctx context.Context
 		directives = tpl.Content
 	}
 
-	var skillsList string
+	var skillsList []SkillConfig
 	for _, skillID := range agent.Skills {
 		skill, err := c.skillRepo.GetByID(ctx, skillID)
 		if err != nil {
 			return "", fmt.Errorf("fetching skill: %w", err)
 		}
-		skillsList += fmt.Sprintf("- %s: %s\n", skill.Name, skill.Description)
+		skillsList = append(skillsList, SkillConfig{
+			Name:        skill.Name,
+			Description: skill.Description,
+			Content:     skill.Content,
+		})
 	}
 
-	return fmt.Sprintf("Description: %s\n\nDirectives:\n%s\n\nSkills:\n%s", agent.Description, directives, skillsList), nil
+	config := PropagatedAgentConfig{
+		Description: agent.Description,
+		Directives:  directives,
+		Skills:      skillsList,
+	}
+
+	data, err := json.Marshal(config)
+	if err != nil {
+		return "", fmt.Errorf("marshaling system prompt structured json: %w", err)
+	}
+
+	return string(data), nil
 }
 
 // SubmitAgentCRD constructs and registers a TacitoAgent custom resource in the K8s cluster.

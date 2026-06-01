@@ -54,19 +54,29 @@ agent:
   ollama:
     endpoint: "http://{{ include \"tacito-agent.fullname\" . }}-mocks:1080"
 
-  # --- System Prompt (multi-line) ---
+  # --- System Prompt (structured JSON string) ---
   systemPrompt: |
-    Description: Standalone Agent for local development.
-
-    Directives:
-    You are a helpful and precise coding assistant.
-    You assist the user in their software tasks.
-
-    # TODO: Remove these mock skills when the agent is ready for production.
-    Skills:
-    - utility: Always active utility tools.
-    - math: Dynamic arithmetic calculation tools (load via enable_skill).
-    - restricted: Restricted access tools (never load).
+    {
+      "description": "Standalone Agent for local development.",
+      "directives": "You are a helpful and precise coding assistant. You assist the user in their software tasks.",
+      "skills": [
+        {
+          "name": "math",
+          "description": "Dynamic arithmetic calculation tools.",
+          "content": "Math Guidelines: Always verify additions step-by-step and format them clearly."
+        },
+        {
+          "name": "reasoning",
+          "description": "Procedural knowledge about the agent's cognitive reasoning flow.",
+          "content": "Reasoning Guidelines: When explaining brain reasoning, emphasize the stateless multi-turn loop, system prompt parsing, and dynamic context loading via enable_skill."
+        },
+        {
+          "name": "restricted",
+          "description": "Restricted capabilities that require special authorization.",
+          "content": "Warning: Restricted access instructions. Under no circumstances should you perform unauthorized queries."
+        }
+      ]
+    }
 
 # --- Short-Term Memory (Redis) ---
 redis:

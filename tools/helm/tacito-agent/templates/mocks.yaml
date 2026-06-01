@@ -10,6 +10,74 @@ data:
       {
         "httpRequest": {
           "method": "POST",
+          "path": "/v1/chat/completions",
+          "body": {
+            "type": "SUBSTRING",
+            "string": "Reasoning Guidelines"
+          }
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "headers": {
+            "Content-Type": ["application/json"]
+          },
+          "body": "{\"id\":\"chatcmpl-mock-3\",\"object\":\"chat.completion\",\"created\":1677652290,\"model\":\"gpt-4o\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"thought\\\":\\\"I have loaded the reasoning guidelines. I will now explain the cognitive loop.\\\",\\\"final_answer\\\":\\\"Brain reasoning in Tacito is an iterative, multi-turn cognitive process. The agent parses a structured system prompt JSON to discover available skills, then dynamically loads their guidelines on-demand via the enable_skill tool to enrich its working context.\\\"}\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":30,\"completion_tokens\":25,\"total_tokens\":55}}"
+        }
+      },
+      {
+        "httpRequest": {
+          "method": "POST",
+          "path": "/v1/chat/completions",
+          "body": {
+            "type": "SUBSTRING",
+            "string": "reason"
+          }
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "headers": {
+            "Content-Type": ["application/json"]
+          },
+          "body": "{\"id\":\"chatcmpl-mock-4\",\"object\":\"chat.completion\",\"created\":1677652291,\"model\":\"gpt-4o\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"thought\\\":\\\"The user is asking about brain reasoning. I should load the reasoning guidelines.\\\",\\\"tool_call\\\":{\\\"name\\\":\\\"enable_skill\\\",\\\"arguments\\\":{\\\"skill_name\\\":\\\"reasoning\\\"}}}\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":15,\"completion_tokens\":15,\"total_tokens\":30}}"
+        }
+      },
+      {
+        "httpRequest": {
+          "method": "POST",
+          "path": "/v1/chat/completions",
+          "body": {
+            "type": "SUBSTRING",
+            "string": "brin"
+          }
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "headers": {
+            "Content-Type": ["application/json"]
+          },
+          "body": "{\"id\":\"chatcmpl-mock-5\",\"object\":\"chat.completion\",\"created\":1677652292,\"model\":\"gpt-4o\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"thought\\\":\\\"The user is asking about brin reasoning. I should load the reasoning guidelines.\\\",\\\"tool_call\\\":{\\\"name\\\":\\\"enable_skill\\\",\\\"arguments\\\":{\\\"skill_name\\\":\\\"reasoning\\\"}}}\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":15,\"completion_tokens\":15,\"total_tokens\":30}}"
+        }
+      },
+      {
+        "httpRequest": {
+          "method": "POST",
+          "path": "/v1/chat/completions",
+          "body": {
+            "type": "SUBSTRING",
+            "string": "Math Guidelines"
+          }
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "headers": {
+            "Content-Type": ["application/json"]
+          },
+          "body": "{\"id\":\"chatcmpl-mock-2\",\"object\":\"chat.completion\",\"created\":1677652289,\"model\":\"gpt-4o\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"thought\\\":\\\"I have the math guidelines. The calculations are verified.\\\",\\\"final_answer\\\":\\\"Verified total pool size is 50.\\\"}\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":25,\"completion_tokens\":20,\"total_tokens\":45}}"
+        }
+      },
+      {
+        "httpRequest": {
+          "method": "POST",
           "path": "/v1/chat/completions"
         },
         "httpResponse": {
@@ -17,7 +85,7 @@ data:
           "headers": {
             "Content-Type": ["application/json"]
           },
-          "body": "{\"id\":\"chatcmpl-mock\",\"object\":\"chat.completion\",\"created\":1677652288,\"model\":\"gpt-4o\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"Hello from local developer mock OpenAI server!\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":15,\"total_tokens\":25}}"
+          "body": "{\"id\":\"chatcmpl-mock-1\",\"object\":\"chat.completion\",\"created\":1677652288,\"model\":\"gpt-4o\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"thought\\\":\\\"I need to calculate pool size. Let me load the math guidelines.\\\",\\\"tool_call\\\":{\\\"name\\\":\\\"enable_skill\\\",\\\"arguments\\\":{\\\"skill_name\\\":\\\"math\\\"}}}\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":15,\"total_tokens\":25}}"
         }
       },
       {

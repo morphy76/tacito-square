@@ -131,6 +131,7 @@ func TestSkillHandlers_Create(t *testing.T) {
 		payload := map[string]interface{}{
 			"name":        "web-search",
 			"description": "Google search and URL extraction tools",
+			"content":     "Dynamic google search guidelines.",
 			"status":      "active",
 		}
 
@@ -283,6 +284,7 @@ func TestSkillHandlers_Update(t *testing.T) {
 		payload := map[string]interface{}{
 			"name":        "web-search-v2",
 			"description": "Updated description",
+			"content":     "Updated dynamic google search guidelines.",
 			"status":      "active",
 		}
 

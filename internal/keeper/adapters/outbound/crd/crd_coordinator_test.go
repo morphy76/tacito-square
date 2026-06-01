@@ -494,11 +494,13 @@ func TestResolveAndSynthesizeSystemPrompt_Success(t *testing.T) {
 				ID:          skillID1,
 				Name:        "WebSearch",
 				Description: "Search the web",
+				Content:     "WebSearch guidelines",
 			},
 			skillID2: {
 				ID:          skillID2,
 				Name:        "Calculations",
 				Description: "Perform math operations",
+				Content:     "Calculations guidelines",
 			},
 		},
 	}
@@ -515,8 +517,19 @@ func TestResolveAndSynthesizeSystemPrompt_Success(t *testing.T) {
 	synthesized, err := coordinator.ResolveAndSynthesizeSystemPrompt(context.Background(), agent)
 	require.NoError(t, err)
 
-	expected := "Description: A helpful AI assistant\n\nDirectives:\nAlways be professional.\n\nSkills:\n- WebSearch: Search the web\n- Calculations: Perform math operations\n"
-	assert.Equal(t, expected, synthesized)
+	var config crdadapter.PropagatedAgentConfig
+	err = json.Unmarshal([]byte(synthesized), &config)
+	require.NoError(t, err)
+
+	assert.Equal(t, "A helpful AI assistant", config.Description)
+	assert.Equal(t, "Always be professional.", config.Directives)
+	require.Len(t, config.Skills, 2)
+	assert.Equal(t, "WebSearch", config.Skills[0].Name)
+	assert.Equal(t, "Search the web", config.Skills[0].Description)
+	assert.Equal(t, "WebSearch guidelines", config.Skills[0].Content)
+	assert.Equal(t, "Calculations", config.Skills[1].Name)
+	assert.Equal(t, "Perform math operations", config.Skills[1].Description)
+	assert.Equal(t, "Calculations guidelines", config.Skills[1].Content)
 }
 
 func TestSubmitAgentCRD_SynthesizedPromptAndTenantMapped(t *testing.T) {
@@ -541,6 +554,7 @@ func TestSubmitAgentCRD_SynthesizedPromptAndTenantMapped(t *testing.T) {
 				ID:          skillID,
 				Name:        "Math",
 				Description: "Solves arithmetic",
+				Content:     "Math guidelines",
 			},
 		},
 	}
@@ -570,9 +584,17 @@ func TestSubmitAgentCRD_SynthesizedPromptAndTenantMapped(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, "tenant-crd-tenant", fetched.Spec.TenantID)
-	assert.Contains(t, fetched.Spec.SystemPrompt, "Description: Direct assistant")
-	assert.Contains(t, fetched.Spec.SystemPrompt, "Directives:\nBe short.")
-	assert.Contains(t, fetched.Spec.SystemPrompt, "Skills:\n- Math: Solves arithmetic")
+
+	var config crdadapter.PropagatedAgentConfig
+	err = json.Unmarshal([]byte(fetched.Spec.SystemPrompt), &config)
+	require.NoError(t, err)
+
+	assert.Equal(t, "Direct assistant", config.Description)
+	assert.Equal(t, "Be short.", config.Directives)
+	require.Len(t, config.Skills, 1)
+	assert.Equal(t, "Math", config.Skills[0].Name)
+	assert.Equal(t, "Solves arithmetic", config.Skills[0].Description)
+	assert.Equal(t, "Math guidelines", config.Skills[0].Content)
 }
 
 func TestResolveAndSynthesizeSystemPrompt_MissingResources(t *testing.T) {
