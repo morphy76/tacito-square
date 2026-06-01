@@ -20,20 +20,6 @@ data:
             http:
               endpoint: 0.0.0.0:4318
 
-    ingester:
-      lifecycler:
-        ring:
-          kvstore:
-            store: inmemory
-          replication_factor: 1
-        final_sleep: 0s
-      concurrent_flushes: 4
-
-    compactor:
-      ring:
-        kvstore:
-          store: inmemory
-
     storage:
       trace:
         backend: local

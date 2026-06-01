@@ -12,15 +12,12 @@ data:
       - name: Mimir
         type: prometheus
         access: proxy
-        url: http://ts-infra-mimir:9009
-        isDefault: true
+        url: http://ts-infra-mimir:9009/prometheus
         jsonData:
           httpMethod: POST
-          exemplarTraceIdDestinations:
-            - name: trace_id
-              datasourceUid: tempo
       - name: Tempo
         type: tempo
+        isDefault: true
         access: proxy
         url: http://ts-infra-tempo:3200
         uid: tempo

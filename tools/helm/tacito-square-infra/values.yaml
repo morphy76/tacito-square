@@ -91,7 +91,7 @@ qdrant:
 
 # ── Keycloak (OIDC provider) ────────────────────────────
 keycloak:
-  enabled: true
+  enabled: false
   command:
     - "/opt/keycloak/bin/kc.sh"
   args:
@@ -134,7 +134,7 @@ keycloak:
 
 # ── MinIO (S3-compatible) ───────────────────────────────
 minio:
-  enabled: true
+  enabled: false
   mode: standalone
   resources:
     requests:
@@ -170,8 +170,8 @@ otel-collector:
         endpoint: ts-infra-tempo:4317
         tls:
           insecure: true
-      prometheusremotewrite:
-        endpoint: http://ts-infra-mimir:9009/api/v1/push
+      otlphttp:
+        endpoint: "http://ts-infra-mimir:9009/otlp"
     service:
       pipelines:
         traces:
@@ -183,25 +183,25 @@ otel-collector:
           receivers:
             - otlp
           exporters:
-            - prometheusremotewrite
+            - otlphttp
 
 # ── Tempo (tracing backend) ─────────────────────────────
 tempo:
   enabled: true
   image:
     repository: grafana/tempo
-    tag: 2.4.1
+    tag: r255-830657f
 
 # ── Mimir (metrics backend) ─────────────────────────────
 mimir:
   enabled: true
   image:
     repository: grafana/mimir
-    tag: 2.12.0
+    tag: r397-b71a23f4
 
 # ── Grafana (dashboards) ────────────────────────────────
 grafana:
   enabled: true
   image:
     repository: grafana/grafana
-    tag: 10.4.2
+    tag: main-distroless-slim
