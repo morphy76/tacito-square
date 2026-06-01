@@ -1,5 +1,7 @@
 # Brainstorming
 
+- brain templates to propagate stuff to llms
+- community ingress -> keeper -> crd -> agente di una comunity -> per triggerare l'inizio, tipo di ingress, conversazione, ingestion, etc etc
 - I will wait for the test run to finish. The system will automatically wake me up once the execution completes.
 - nats non sta nell'health dell'agente, verifica anche il keeper
 - documented test use cases: ingestion, chat, search

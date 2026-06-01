@@ -9,10 +9,12 @@ import (
 
 	"github.com/morphy76/tacito-square/internal/agent/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/agent/domain/model"
+	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -180,8 +182,32 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 			sb.WriteString("\n\nAvailable External Tools:\n")
 			for _, tool := range mcpTools {
 				tName := tool.Name
+				// Safety check: protect built-in tools against hijack
+				if _, exists := activeTools[tName]; exists {
+					continue
+				}
+
 				activeTools[tName] = func(ctx context.Context, args map[string]any) (string, error) {
-					return e.mcpExecutor.Execute(ctx, tName, args)
+					start := time.Now()
+
+					resp, err := e.mcpExecutor.Execute(ctx, tName, args)
+
+					duration := time.Since(start).Seconds()
+
+					statusStr := "success"
+					if err != nil || strings.Contains(resp, `"error":`) {
+						statusStr = "error"
+					}
+
+					attrs := metric.WithAttributes(
+						attribute.String("tool", tName),
+						attribute.String("status", statusStr),
+					)
+
+					observability.AgentMCPRequestsTotal.Add(ctx, 1, attrs)
+					observability.AgentMCPRequestDuration.Record(ctx, duration, attrs)
+
+					return resp, err
 				}
 				schemaJSON, _ := json.Marshal(tool.InputSchema)
 				sb.WriteString(fmt.Sprintf("- Name: %s\n  Description: %s\n  Parameters: %s\n", tool.Name, tool.Description, string(schemaJSON)))

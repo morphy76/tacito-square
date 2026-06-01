@@ -134,3 +134,26 @@ func TestMetrics_Returns200AndPrometheusFormat(t *testing.T) {
 	assert.Contains(t, body, "go_goroutines")
 	assert.Contains(t, body, "http_requests_total")
 }
+
+func TestMetrics_ContainsMCPMetrics(t *testing.T) {
+	ctx := context.Background()
+	shutdown, err := observability.InitTracer(ctx, "agent-test", "1.0.0", "")
+	require.NoError(t, err)
+	defer shutdown(ctx)
+
+	srv := NewServer()
+
+	// Trigger MCP metric recordings to ensure they are registered in Prometheus registry
+	observability.AgentMCPRequestsTotal.Add(ctx, 1)
+	observability.AgentMCPRequestDuration.Record(ctx, 0.45)
+
+	// Scrape metrics
+	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	body := w.Body.String()
+	assert.Contains(t, body, "ts_agent_mcp_requests_total")
+	assert.Contains(t, body, "ts_agent_mcp_request_duration_seconds")
+}
