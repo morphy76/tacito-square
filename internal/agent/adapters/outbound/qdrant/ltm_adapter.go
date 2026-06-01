@@ -201,6 +201,19 @@ func (a *QdrantLTMAdapter) Save(ctx context.Context, tenantID, agentID string, e
 		),
 	)
 
+	// Record agent ltm metrics
+	ltmAttrs := otelmetric.WithAttributes(
+		attribute.String("agent", agentID),
+		attribute.String("operation", "upsert"),
+	)
+	ltmAttrsWithStatus := otelmetric.WithAttributes(
+		attribute.String("agent", agentID),
+		attribute.String("operation", "upsert"),
+		attribute.String("status", status),
+	)
+	observability.AgentLTMOperationsTotal.Add(ctx, int64(len(entries)), ltmAttrsWithStatus)
+	observability.AgentLTMOperationDuration.Record(ctx, duration, ltmAttrs)
+
 	if err != nil {
 		return fmt.Errorf("qdrant upsert failed: %w", err)
 	}
@@ -257,6 +270,19 @@ func (a *QdrantLTMAdapter) Search(ctx context.Context, tenantID, agentID string,
 			attribute.String("status", status),
 		),
 	)
+
+	// Record agent ltm metrics
+	ltmAttrs := otelmetric.WithAttributes(
+		attribute.String("agent", agentID),
+		attribute.String("operation", "search"),
+	)
+	ltmAttrsWithStatus := otelmetric.WithAttributes(
+		attribute.String("agent", agentID),
+		attribute.String("operation", "search"),
+		attribute.String("status", status),
+	)
+	observability.AgentLTMOperationsTotal.Add(ctx, 1, ltmAttrsWithStatus)
+	observability.AgentLTMOperationDuration.Record(ctx, duration, ltmAttrs)
 
 	if err != nil {
 		return nil, fmt.Errorf("qdrant search failed: %w", err)
@@ -337,6 +363,19 @@ func (a *QdrantLTMAdapter) Delete(ctx context.Context, tenantID, agentID string,
 			attribute.String("status", status),
 		),
 	)
+
+	// Record agent ltm metrics
+	ltmAttrs := otelmetric.WithAttributes(
+		attribute.String("agent", agentID),
+		attribute.String("operation", "delete"),
+	)
+	ltmAttrsWithStatus := otelmetric.WithAttributes(
+		attribute.String("agent", agentID),
+		attribute.String("operation", "delete"),
+		attribute.String("status", status),
+	)
+	observability.AgentLTMOperationsTotal.Add(ctx, 1, ltmAttrsWithStatus)
+	observability.AgentLTMOperationDuration.Record(ctx, duration, ltmAttrs)
 
 	if err != nil {
 		return fmt.Errorf("qdrant delete failed: %w", err)

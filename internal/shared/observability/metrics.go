@@ -68,6 +68,60 @@ var (
 		"outbound_dependency_duration_seconds",
 		otelmetric.WithDescription("Duration of outbound request to external dependencies in seconds."),
 	)
+
+	// AgentNATSMessagesProcessedTotal collects total NATS messages processed.
+	AgentNATSMessagesProcessedTotal, _ = meter.Int64Counter(
+		"agent_nats_messages_processed_total",
+		otelmetric.WithDescription("Total NATS messages processed by the agent."),
+	)
+
+	// AgentNATSProcessingDuration collects processing durations for NATS messages.
+	AgentNATSProcessingDuration, _ = meter.Float64Histogram(
+		"agent_nats_processing_duration_seconds",
+		otelmetric.WithDescription("Time taken to process and reply to a NATS message."),
+	)
+
+	// AgentSTMOperationsTotal collects total short-term memory operations.
+	AgentSTMOperationsTotal, _ = meter.Int64Counter(
+		"agent_stm_operations_total",
+		otelmetric.WithDescription("Total short-term memory operations."),
+	)
+
+	// AgentSTMOperationDuration collects STM operation durations.
+	AgentSTMOperationDuration, _ = meter.Float64Histogram(
+		"agent_stm_operation_duration_seconds",
+		otelmetric.WithDescription("Short-term memory operation duration."),
+	)
+
+	// AgentLTMOperationsTotal collects total long-term memory operations.
+	AgentLTMOperationsTotal, _ = meter.Int64Counter(
+		"agent_ltm_operations_total",
+		otelmetric.WithDescription("Total long-term memory operations."),
+	)
+
+	// AgentLTMOperationDuration collects LTM operation durations.
+	AgentLTMOperationDuration, _ = meter.Float64Histogram(
+		"agent_ltm_operation_duration_seconds",
+		otelmetric.WithDescription("Long-term memory operation duration."),
+	)
+
+	// AgentBrainRequestsTotal collects total brain requests.
+	AgentBrainRequestsTotal, _ = meter.Int64Counter(
+		"agent_brain_requests_total",
+		otelmetric.WithDescription("Total execution requests dispatched to the LLM backend."),
+	)
+
+	// AgentBrainRequestDuration collects brain request durations.
+	AgentBrainRequestDuration, _ = meter.Float64Histogram(
+		"agent_brain_request_duration_seconds",
+		otelmetric.WithDescription("Duration of brain request to LLM backend."),
+	)
+
+	// AgentBrainTokensTotal collects total brain tokens.
+	AgentBrainTokensTotal, _ = meter.Int64Counter(
+		"agent_brain_tokens_total",
+		otelmetric.WithDescription("Total brain tokens processed."),
+	)
 )
 
 // initInstruments initializes all OpenTelemetry metrics instruments.
@@ -114,6 +168,51 @@ func initInstruments() {
 	OutboundDependencyDuration, _ = meter.Float64Histogram(
 		"outbound_dependency_duration_seconds",
 		otelmetric.WithDescription("Duration of outbound request to external dependencies in seconds."),
+	)
+
+	AgentNATSMessagesProcessedTotal, _ = meter.Int64Counter(
+		"agent_nats_messages_processed_total",
+		otelmetric.WithDescription("Total NATS messages processed by the agent."),
+	)
+
+	AgentNATSProcessingDuration, _ = meter.Float64Histogram(
+		"agent_nats_processing_duration_seconds",
+		otelmetric.WithDescription("Time taken to process and reply to a NATS message."),
+	)
+
+	AgentSTMOperationsTotal, _ = meter.Int64Counter(
+		"agent_stm_operations_total",
+		otelmetric.WithDescription("Total short-term memory operations."),
+	)
+
+	AgentSTMOperationDuration, _ = meter.Float64Histogram(
+		"agent_stm_operation_duration_seconds",
+		otelmetric.WithDescription("Short-term memory operation duration."),
+	)
+
+	AgentLTMOperationsTotal, _ = meter.Int64Counter(
+		"agent_ltm_operations_total",
+		otelmetric.WithDescription("Total long-term memory operations."),
+	)
+
+	AgentLTMOperationDuration, _ = meter.Float64Histogram(
+		"agent_ltm_operation_duration_seconds",
+		otelmetric.WithDescription("Long-term memory operation duration."),
+	)
+
+	AgentBrainRequestsTotal, _ = meter.Int64Counter(
+		"agent_brain_requests_total",
+		otelmetric.WithDescription("Total execution requests dispatched to the LLM backend."),
+	)
+
+	AgentBrainRequestDuration, _ = meter.Float64Histogram(
+		"agent_brain_request_duration_seconds",
+		otelmetric.WithDescription("Duration of brain request to LLM backend."),
+	)
+
+	AgentBrainTokensTotal, _ = meter.Int64Counter(
+		"agent_brain_tokens_total",
+		otelmetric.WithDescription("Total brain tokens processed."),
 	)
 }
 

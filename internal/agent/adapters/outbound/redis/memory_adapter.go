@@ -135,6 +135,19 @@ func (a *RedisMemoryAdapter) Append(ctx context.Context, tenantID, agentID, thre
 		),
 	)
 
+	// Record agent stm metrics
+	stmAttrs := otelmetric.WithAttributes(
+		attribute.String("agent", agentID),
+		attribute.String("operation", "write"),
+	)
+	stmAttrsWithStatus := otelmetric.WithAttributes(
+		attribute.String("agent", agentID),
+		attribute.String("operation", "write"),
+		attribute.String("status", status),
+	)
+	observability.AgentSTMOperationsTotal.Add(ctx, 1, stmAttrsWithStatus)
+	observability.AgentSTMOperationDuration.Record(ctx, duration, stmAttrs)
+
 	if err != nil {
 		return fmt.Errorf("redis pipe exec failed: %w", err)
 	}
@@ -200,6 +213,19 @@ func (a *RedisMemoryAdapter) Get(ctx context.Context, tenantID, agentID, threadI
 			attribute.String("status", status),
 		),
 	)
+
+	// Record agent stm metrics
+	stmAttrs := otelmetric.WithAttributes(
+		attribute.String("agent", agentID),
+		attribute.String("operation", "read"),
+	)
+	stmAttrsWithStatus := otelmetric.WithAttributes(
+		attribute.String("agent", agentID),
+		attribute.String("operation", "read"),
+		attribute.String("status", status),
+	)
+	observability.AgentSTMOperationsTotal.Add(ctx, 1, stmAttrsWithStatus)
+	observability.AgentSTMOperationDuration.Record(ctx, duration, stmAttrs)
 
 	if err != nil {
 		return nil, fmt.Errorf("redis lrange failed: %w", err)
@@ -267,6 +293,19 @@ func (a *RedisMemoryAdapter) Clear(ctx context.Context, tenantID, agentID, threa
 			attribute.String("status", status),
 		),
 	)
+
+	// Record agent stm metrics
+	stmAttrs := otelmetric.WithAttributes(
+		attribute.String("agent", agentID),
+		attribute.String("operation", "delete"),
+	)
+	stmAttrsWithStatus := otelmetric.WithAttributes(
+		attribute.String("agent", agentID),
+		attribute.String("operation", "delete"),
+		attribute.String("status", status),
+	)
+	observability.AgentSTMOperationsTotal.Add(ctx, 1, stmAttrsWithStatus)
+	observability.AgentSTMOperationDuration.Record(ctx, duration, stmAttrs)
 
 	if err != nil {
 		return fmt.Errorf("redis del failed: %w", err)
