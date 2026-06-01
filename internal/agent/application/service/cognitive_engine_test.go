@@ -50,7 +50,7 @@ func TestCognitiveEngine_ExecuteReasoningLoop(t *testing.T) {
 			},
 		}
 
-		engine := service.NewCognitiveEngine(mockBrain)
+		engine := service.NewCognitiveEngine(mockBrain, 5)
 
 		// Register mock tool executor for recall_memory
 		toolExecuted := false
@@ -89,8 +89,7 @@ func TestCognitiveEngine_ExecuteReasoningLoop(t *testing.T) {
 			},
 		}
 
-		t.Setenv("TS_AGENT_MAX_REASONING_STEPS", "3")
-		engine := service.NewCognitiveEngine(mockBrain)
+		engine := service.NewCognitiveEngine(mockBrain, 3)
 		engine.RegisterTool("infinite_tool", func(ctx context.Context, args map[string]any) (string, error) {
 			return "infinite tool output", nil
 		})
@@ -113,7 +112,7 @@ func TestCognitiveEngine_ExecuteReasoningLoop(t *testing.T) {
 			},
 		}
 
-		engine := service.NewCognitiveEngine(mockBrain)
+		engine := service.NewCognitiveEngine(mockBrain, 5)
 		ctx := context.Background()
 		finalResp, err := engine.ExecuteReasoningLoop(ctx, "tenant-1", "agent-1", "thread-1", "Direct query", []model.MemoryEntry{}, "")
 		assert.NoError(t, err)

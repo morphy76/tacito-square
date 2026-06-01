@@ -60,7 +60,7 @@ func TestDynamicSkills_Execution(t *testing.T) {
 			},
 		}
 
-		engine := service.NewCognitiveEngine(mockBrain)
+		engine := service.NewCognitiveEngine(mockBrain, 5)
 
 		// Register a skill collection (pool of tools not active initially)
 		addExecuted := false
@@ -112,7 +112,7 @@ func TestDynamicSkills_Execution(t *testing.T) {
 			},
 		}
 
-		engine := service.NewCognitiveEngine(mockBrain)
+		engine := service.NewCognitiveEngine(mockBrain, 5)
 		ctx := context.Background()
 		finalAnswer, err := engine.ExecuteReasoningLoop(ctx, "tenant-1", "agent-1", "thread-1", "Activate forbidden", []model.MemoryEntry{}, "")
 		assert.NoError(t, err)

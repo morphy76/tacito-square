@@ -3,8 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -15,12 +13,13 @@ import (
 )
 
 type MessageProcessorService struct {
-	brain     outbound.Brain
-	memory    outbound.ShortTermMemory
-	ltm       outbound.LongTermMemory
-	embed     outbound.Embedder
-	cogEngine *CognitiveEngine
-	limit     int
+	brain        outbound.Brain
+	memory       outbound.ShortTermMemory
+	ltm          outbound.LongTermMemory
+	embed        outbound.Embedder
+	cogEngine    *CognitiveEngine
+	limit        int
+	systemPrompt string
 }
 
 func NewMessageProcessorService(
@@ -29,20 +28,20 @@ func NewMessageProcessorService(
 	ltm outbound.LongTermMemory,
 	embed outbound.Embedder,
 	cogEngine *CognitiveEngine,
+	limit int,
+	systemPrompt string,
 ) *MessageProcessorService {
-	limit := 10
-	if envLimitVal := os.Getenv("TS_AGENT_STM_LIMIT"); envLimitVal != "" {
-		if val, err := strconv.Atoi(envLimitVal); err == nil && val > 0 {
-			limit = val
-		}
+	if limit <= 0 {
+		limit = 10
 	}
 	return &MessageProcessorService{
-		brain:     brain,
-		memory:    memory,
-		ltm:       ltm,
-		embed:     embed,
-		cogEngine: cogEngine,
-		limit:     limit,
+		brain:        brain,
+		memory:       memory,
+		ltm:          ltm,
+		embed:        embed,
+		cogEngine:    cogEngine,
+		limit:        limit,
+		systemPrompt: systemPrompt,
 	}
 }
 
@@ -74,7 +73,7 @@ func (s *MessageProcessorService) ProcessIncomingMessage(ctx context.Context, te
 	}
 
 	// Step 3: Trigger active reasoning loop engine
-	respContent, err := s.cogEngine.ExecuteReasoningLoop(ctx, tenantID, agentID, threadID, payload, history, "")
+	respContent, err := s.cogEngine.ExecuteReasoningLoop(ctx, tenantID, agentID, threadID, payload, history, s.systemPrompt)
 	if err != nil {
 		logger.Error().Err(err).Msg("message processing failed in cognitive loop engine")
 		return "", err

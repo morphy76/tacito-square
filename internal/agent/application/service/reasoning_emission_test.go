@@ -49,7 +49,7 @@ func TestReasoningEmission_PublisherIntegration(t *testing.T) {
 
 		mockPublisher := &MockPublisher{}
 
-		engine := service.NewCognitiveEngine(mockBrain).WithPublisher(mockPublisher)
+		engine := service.NewCognitiveEngine(mockBrain, 5).WithPublisher(mockPublisher)
 
 		ctx := context.Background()
 		// Limit loop execution by invoking recall_memory tool execution that returns error/unavailable

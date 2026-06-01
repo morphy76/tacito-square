@@ -56,8 +56,17 @@ agent:
 
   # --- System Prompt (multi-line) ---
   systemPrompt: |
+    Description: Standalone Agent for local development.
+
+    Directives:
     You are a helpful and precise coding assistant.
     You assist the user in their software tasks.
+
+    # TODO: Remove these mock skills when the agent is ready for production.
+    Skills:
+    - utility: Always active utility tools.
+    - math: Dynamic arithmetic calculation tools (load via enable_skill).
+    - restricted: Restricted access tools (never load).
 
 # --- Short-Term Memory (Redis) ---
 redis:

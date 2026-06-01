@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -60,12 +58,9 @@ type toolCallDetail struct {
 	Arguments map[string]any `json:"arguments"`
 }
 
-func NewCognitiveEngine(brain outbound.Brain) *CognitiveEngine {
-	maxSteps := 5
-	if envVal := os.Getenv("TS_AGENT_MAX_REASONING_STEPS"); envVal != "" {
-		if val, err := strconv.Atoi(envVal); err == nil && val > 0 {
-			maxSteps = val
-		}
+func NewCognitiveEngine(brain outbound.Brain, maxSteps int) *CognitiveEngine {
+	if maxSteps <= 0 {
+		maxSteps = 5
 	}
 	engine := &CognitiveEngine{
 		brain:        brain,

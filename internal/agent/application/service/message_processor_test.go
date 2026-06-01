@@ -149,9 +149,9 @@ func TestMessageProcessorService_ProcessIncomingMessage(t *testing.T) {
 		mockLTM := &MockLongTermMemory{}
 		mockEmbed := &MockEmbedder{}
 
-		cogEngine := service.NewCognitiveEngine(mockBrain).WithLTM(mockEmbed, mockLTM)
+		cogEngine := service.NewCognitiveEngine(mockBrain, 5).WithLTM(mockEmbed, mockLTM)
 
-		var processor inbound.MessageProcessor = service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine)
+		var processor inbound.MessageProcessor = service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine, 10, "")
 
 		res, err := processor.ProcessIncomingMessage(context.Background(), "tenant-1", "agent-1", "thread-123", "Hello, world")
 		assert.NoError(t, err)
@@ -191,9 +191,9 @@ func TestMessageProcessorService_ProcessIncomingMessage(t *testing.T) {
 		mockLTM := &MockLongTermMemory{}
 		mockEmbed := &MockEmbedder{}
 
-		cogEngine := service.NewCognitiveEngine(mockBrain).WithLTM(mockEmbed, mockLTM)
+		cogEngine := service.NewCognitiveEngine(mockBrain, 5).WithLTM(mockEmbed, mockLTM)
 
-		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine)
+		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine, 10, "")
 
 		// Service must not fail even if memory fails
 		res, err := processor.ProcessIncomingMessage(context.Background(), "tenant-1", "agent-1", "thread-123", "Hello, world")
@@ -212,9 +212,9 @@ func TestMessageProcessorService_ProcessIncomingMessage(t *testing.T) {
 		mockLTM := &MockLongTermMemory{}
 		mockEmbed := &MockEmbedder{}
 
-		cogEngine := service.NewCognitiveEngine(mockBrain).WithLTM(mockEmbed, mockLTM)
+		cogEngine := service.NewCognitiveEngine(mockBrain, 5).WithLTM(mockEmbed, mockLTM)
 
-		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine)
+		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine, 10, "")
 		_, err := processor.ProcessIncomingMessage(context.Background(), "tenant-1", "agent-1", "thread-123", "Hello")
 		assert.ErrorIs(t, err, mockErr)
 	})
@@ -286,9 +286,8 @@ func TestMessageProcessorService_ProcessIncomingMessage(t *testing.T) {
 			},
 		}
 
-		t.Setenv("TS_AGENT_STM_LIMIT", "3")
-		cogEngine := service.NewCognitiveEngine(mockBrain).WithLTM(mockEmbed, mockLTM)
-		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine)
+		cogEngine := service.NewCognitiveEngine(mockBrain, 5).WithLTM(mockEmbed, mockLTM)
+		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine, 3, "")
 
 		res, err := processor.ProcessIncomingMessage(context.Background(), "tenant-1", "agent-1", "thread-123", "Hello")
 		assert.NoError(t, err)
@@ -348,8 +347,8 @@ func TestMessageProcessorService_ProcessIncomingMessage(t *testing.T) {
 			},
 		}
 
-		cogEngine := service.NewCognitiveEngine(mockBrain).WithLTM(mockEmbed, mockLTM)
-		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine)
+		cogEngine := service.NewCognitiveEngine(mockBrain, 5).WithLTM(mockEmbed, mockLTM)
+		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine, 10, "")
 
 		res, err := processor.ProcessIncomingMessage(context.Background(), "tenant-1", "agent-1", "thread-123", "Hello")
 		assert.NoError(t, err)

@@ -67,7 +67,7 @@ func TestRecallMemoryTool_Execution(t *testing.T) {
 			},
 		}
 
-		engine := service.NewCognitiveEngine(mockBrain).WithLTM(mockEmbed, mockLTM)
+		engine := service.NewCognitiveEngine(mockBrain, 5).WithLTM(mockEmbed, mockLTM)
 
 		ctx := context.Background()
 		finalAnswer, err := engine.ExecuteReasoningLoop(ctx, "tenant-1", "agent-1", "thread-1", "Find config info", []model.MemoryEntry{}, "")
@@ -112,7 +112,7 @@ func TestRecallMemoryTool_Execution(t *testing.T) {
 		}
 		mockLTM := &MockLongTermMemory{}
 
-		engine := service.NewCognitiveEngine(mockBrain).WithLTM(mockEmbed, mockLTM)
+		engine := service.NewCognitiveEngine(mockBrain, 5).WithLTM(mockEmbed, mockLTM)
 
 		ctx := context.Background()
 		finalAnswer, err := engine.ExecuteReasoningLoop(ctx, "tenant-1", "agent-1", "thread-1", "Broken query", []model.MemoryEntry{}, "")

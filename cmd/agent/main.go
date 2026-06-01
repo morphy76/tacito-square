@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -38,6 +39,9 @@ func main() {
 	v.SetDefault("port", "8081")
 	v.SetDefault("qdrant.collection.name", "ts_agent_memories")
 	v.SetDefault("qdrant.vector.dimension", 1536)
+	v.SetDefault("max.reasoning.steps", 5)
+	v.SetDefault("stm.limit", 10)
+	v.SetDefault("system.prompt", "")
 
 	port := v.GetString("port")
 	logLevel := v.GetString("log.level")
@@ -197,14 +201,64 @@ func main() {
 	}
 
 	// 5c. Initialize Cognitive reasoning engine loop
-	cogEngine := service.NewCognitiveEngine(brain)
+	maxReasoningSteps := v.GetInt("max.reasoning.steps")
+	stmLimit := v.GetInt("stm.limit")
+	systemPrompt := v.GetString("system.prompt")
+
+	cogEngine := service.NewCognitiveEngine(brain, maxReasoningSteps)
 	if hasQdrant {
 		cogEngine = cogEngine.WithLTM(embedder, ltm)
 	}
 	natsPublisher := nats.NewNATSEventPublisher(nc)
 	cogEngine = cogEngine.WithPublisher(natsPublisher)
 
-	processor := service.NewMessageProcessorService(brain, memoryAdapter, ltm, embedder, cogEngine)
+	// TODO: Remove mock tools when the agent is ready for production.
+	// Register Always Used mock skill/tool: utility_ping
+	cogEngine.RegisterTool("utility_ping", func(ctx context.Context, args map[string]any) (string, error) {
+		return "pong", nil
+	})
+
+	// Register Never Used mock skill collection: restricted
+	restrictedTools := map[string]service.ToolHandler{
+		"restricted_access": func(ctx context.Context, args map[string]any) (string, error) {
+			return "Access Denied: restricted skill is not authorized", nil
+		},
+	}
+	cogEngine.RegisterSkillCollection("restricted", restrictedTools)
+
+	// Register Sometimes Used mock skill collection: math
+	mathTools := map[string]service.ToolHandler{
+		"math_add": func(ctx context.Context, args map[string]any) (string, error) {
+			a, okA := args["a"].(float64)
+			b, okB := args["b"].(float64)
+			if !okA || !okB {
+				// Fallback to reading from string representation if parsed differently
+				var floatA, floatB float64
+				var err error
+				if valA, ok := args["a"].(string); ok {
+					floatA, err = strconv.ParseFloat(valA, 64)
+					if err != nil {
+						return "", fmt.Errorf("invalid argument a: %v", args["a"])
+					}
+				} else {
+					return "", fmt.Errorf("missing or invalid argument a")
+				}
+				if valB, ok := args["b"].(string); ok {
+					floatB, err = strconv.ParseFloat(valB, 64)
+					if err != nil {
+						return "", fmt.Errorf("invalid argument b: %v", args["b"])
+					}
+				} else {
+					return "", fmt.Errorf("missing or invalid argument b")
+				}
+				return fmt.Sprintf("Result: %f", floatA+floatB), nil
+			}
+			return fmt.Sprintf("Result: %f", a+b), nil
+		},
+	}
+	cogEngine.RegisterSkillCollection("math", mathTools)
+
+	processor := service.NewMessageProcessorService(brain, memoryAdapter, ltm, embedder, cogEngine, stmLimit, systemPrompt)
 
 	echoSubscriber := agent.NewEchoSubscriber(nc, agentName, communityRef, "", processor, logger)
 	if err := echoSubscriber.Start(ctx); err != nil {
