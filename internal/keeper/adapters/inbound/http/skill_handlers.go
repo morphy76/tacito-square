@@ -31,12 +31,14 @@ func NewSkillHandler(repo inbound.SkillUseCase) *SkillHandler {
 type CreateSkillRequest struct {
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description"`
+	Content     string `json:"content"`
 }
 
 // UpdateSkillRequest defines the request payload for updating a Skill.
 type UpdateSkillRequest struct {
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description"`
+	Content     string `json:"content"`
 }
 
 // CreateSkillCollectionRequest defines the payload for creating a Skill Collection.
@@ -82,6 +84,7 @@ func (h *SkillHandler) Create(c *gin.Context) {
 		TenantID:    ten.FullName(),
 		Name:        req.Name,
 		Description: req.Description,
+		Content:     req.Content,
 		Status:      model.SkillStatusActive,
 		CreatedAt:   time.Now().UTC(),
 		UpdatedAt:   time.Now().UTC(),
@@ -213,6 +216,7 @@ func (h *SkillHandler) Update(c *gin.Context) {
 	existing.TenantID = ten.FullName()
 	existing.Name = req.Name
 	existing.Description = req.Description
+	existing.Content = req.Content
 	existing.UpdatedAt = time.Now().UTC()
 
 	if err := existing.Validate(); err != nil {

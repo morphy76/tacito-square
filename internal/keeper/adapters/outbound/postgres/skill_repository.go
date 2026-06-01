@@ -32,11 +32,11 @@ func (r *SkillRepository) Create(ctx context.Context, s *model.Skill) error {
 	s.TenantID = ten.FullName()
 
 	query := `INSERT INTO skills (
-		id, tenant_id, name, description, status, created_at, updated_at
-	) VALUES ($1, $2, $3, $4, $5, $6, $7)`
+		id, tenant_id, name, description, content, status, created_at, updated_at
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 
 	_, err := r.pool.Exec(ctx, query,
-		s.ID, s.TenantID, s.Name, s.Description, s.Status, s.CreatedAt, s.UpdatedAt,
+		s.ID, s.TenantID, s.Name, s.Description, s.Content, s.Status, s.CreatedAt, s.UpdatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("insert skill: %w", err)
@@ -51,12 +51,12 @@ func (r *SkillRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Ski
 		return nil, errors.New("tenant resolution failed")
 	}
 
-	query := `SELECT id, tenant_id, name, description, status, created_at, updated_at
+	query := `SELECT id, tenant_id, name, description, content, status, created_at, updated_at
 		FROM skills WHERE id = $1 AND tenant_id = $2`
 
 	var s model.Skill
 	err := r.pool.QueryRow(ctx, query, id, ten.FullName()).Scan(
-		&s.ID, &s.TenantID, &s.Name, &s.Description, &s.Status, &s.CreatedAt, &s.UpdatedAt,
+		&s.ID, &s.TenantID, &s.Name, &s.Description, &s.Content, &s.Status, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -75,12 +75,12 @@ func (r *SkillRepository) GetByName(ctx context.Context, name string) (*model.Sk
 		return nil, errors.New("tenant resolution failed")
 	}
 
-	query := `SELECT id, tenant_id, name, description, status, created_at, updated_at
+	query := `SELECT id, tenant_id, name, description, content, status, created_at, updated_at
 		FROM skills WHERE name = $1 AND tenant_id = $2`
 
 	var s model.Skill
 	err := r.pool.QueryRow(ctx, query, name, ten.FullName()).Scan(
-		&s.ID, &s.TenantID, &s.Name, &s.Description, &s.Status, &s.CreatedAt, &s.UpdatedAt,
+		&s.ID, &s.TenantID, &s.Name, &s.Description, &s.Content, &s.Status, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -99,7 +99,7 @@ func (r *SkillRepository) List(ctx context.Context) ([]*model.Skill, error) {
 		return nil, errors.New("tenant resolution failed")
 	}
 
-	query := `SELECT id, tenant_id, name, description, status, created_at, updated_at
+	query := `SELECT id, tenant_id, name, description, content, status, created_at, updated_at
 		FROM skills WHERE tenant_id = $1 ORDER BY name ASC`
 
 	rows, err := r.pool.Query(ctx, query, ten.FullName())
@@ -112,7 +112,7 @@ func (r *SkillRepository) List(ctx context.Context) ([]*model.Skill, error) {
 	for rows.Next() {
 		var s model.Skill
 		err := rows.Scan(
-			&s.ID, &s.TenantID, &s.Name, &s.Description, &s.Status, &s.CreatedAt, &s.UpdatedAt,
+			&s.ID, &s.TenantID, &s.Name, &s.Description, &s.Content, &s.Status, &s.CreatedAt, &s.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan skill: %w", err)
@@ -133,12 +133,12 @@ func (r *SkillRepository) Update(ctx context.Context, s *model.Skill) error {
 	}
 	s.TenantID = ten.FullName()
 
-	query := `UPDATE skills SET name = $1, description = $2, status = $3, updated_at = $4
-		WHERE id = $5 AND tenant_id = $6`
+	query := `UPDATE skills SET name = $1, description = $2, content = $3, status = $4, updated_at = $5
+		WHERE id = $6 AND tenant_id = $7`
 
 	s.UpdatedAt = time.Now().UTC()
 	cmdTag, err := r.pool.Exec(ctx, query,
-		s.Name, s.Description, s.Status, s.UpdatedAt, s.ID, s.TenantID,
+		s.Name, s.Description, s.Content, s.Status, s.UpdatedAt, s.ID, s.TenantID,
 	)
 	if err != nil {
 		return fmt.Errorf("update skill: %w", err)
@@ -212,7 +212,7 @@ func (r *SkillRepository) ListSkillsByAgent(ctx context.Context, agentID uuid.UU
 		return nil, errors.New("tenant resolution failed")
 	}
 
-	query := `SELECT s.id, s.tenant_id, s.name, s.description, s.status, s.created_at, s.updated_at
+	query := `SELECT s.id, s.tenant_id, s.name, s.description, s.content, s.status, s.created_at, s.updated_at
 		FROM skills s
 		JOIN agent_skills ags ON s.id = ags.skill_id
 		WHERE ags.agent_id = $1 AND s.tenant_id = $2
@@ -228,7 +228,7 @@ func (r *SkillRepository) ListSkillsByAgent(ctx context.Context, agentID uuid.UU
 	for rows.Next() {
 		var s model.Skill
 		err := rows.Scan(
-			&s.ID, &s.TenantID, &s.Name, &s.Description, &s.Status, &s.CreatedAt, &s.UpdatedAt,
+			&s.ID, &s.TenantID, &s.Name, &s.Description, &s.Content, &s.Status, &s.CreatedAt, &s.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan skill by agent: %w", err)
@@ -397,7 +397,7 @@ func (r *SkillRepository) ResolveCollectionSkills(ctx context.Context, collectio
 		return nil, errors.New("tenant resolution failed")
 	}
 
-	query := `SELECT s.id, s.tenant_id, s.name, s.description, s.status, s.created_at, s.updated_at
+	query := `SELECT s.id, s.tenant_id, s.name, s.description, s.content, s.status, s.created_at, s.updated_at
 		FROM skills s
 		JOIN skill_collection_skills scs ON s.id = scs.skill_id
 		WHERE scs.skill_collection_id = $1 AND s.tenant_id = $2 AND s.status = $3
@@ -411,7 +411,7 @@ func (r *SkillRepository) ResolveCollectionSkills(ctx context.Context, collectio
 	var resolved []*model.Skill
 	for rows.Next() {
 		var s model.Skill
-		err := rows.Scan(&s.ID, &s.TenantID, &s.Name, &s.Description, &s.Status, &s.CreatedAt, &s.UpdatedAt)
+		err := rows.Scan(&s.ID, &s.TenantID, &s.Name, &s.Description, &s.Content, &s.Status, &s.CreatedAt, &s.UpdatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("scan resolved skill: %w", err)
 		}

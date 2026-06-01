@@ -3,7 +3,7 @@
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
 | ID            | BUG-M5.2                                                           |
-| Status        | OPEN                                                               |
+| Status        | CLOSED                                                             |
 | Severity      | HIGH                                                               |
 | Milestone     | M5 — Agent Core                                                    |
 | Affects       | `internal/agent/application/service/cognitive_engine.go`, `internal/keeper/adapters/outbound/crd/crd_coordinator.go` |

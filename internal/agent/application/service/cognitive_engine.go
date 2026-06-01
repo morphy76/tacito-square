@@ -36,15 +36,31 @@ func GetAgentID(ctx context.Context) string {
 	return ""
 }
 
+// Skill represents a dynamic procedural knowledge source.
+type Skill struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Content     string `json:"content"`
+}
+
+// PropagatedAgentConfig defines the structured keeper-agent context format.
+type PropagatedAgentConfig struct {
+	Description string  `json:"description"`
+	Directives  string  `json:"directives"`
+	Skills      []Skill `json:"skills"`
+}
+
+type parsedSkillsKey struct{}
+
 type CognitiveEngine struct {
-	brain         outbound.Brain
-	embedder      outbound.Embedder
-	ltm           outbound.LongTermMemory
-	publisher     outbound.EventPublisher
-	toolRegistry  map[string]ToolHandler
-	skillPool     map[string]map[string]ToolHandler
-	tracer        trace.Tracer
-	maxSteps      int
+	brain        outbound.Brain
+	embedder     outbound.Embedder
+	ltm          outbound.LongTermMemory
+	publisher    outbound.EventPublisher
+	toolRegistry map[string]ToolHandler
+	skills       map[string]Skill
+	tracer       trace.Tracer
+	maxSteps     int
 }
 
 type parsedResponse struct {
@@ -65,7 +81,7 @@ func NewCognitiveEngine(brain outbound.Brain, maxSteps int) *CognitiveEngine {
 	engine := &CognitiveEngine{
 		brain:        brain,
 		toolRegistry: make(map[string]ToolHandler),
-		skillPool:    make(map[string]map[string]ToolHandler),
+		skills:       make(map[string]Skill),
 		tracer:       otel.Tracer("cognitive_engine"),
 		maxSteps:     maxSteps,
 	}
@@ -89,8 +105,8 @@ func (e *CognitiveEngine) RegisterTool(name string, handler ToolHandler) {
 	e.toolRegistry[name] = handler
 }
 
-func (e *CognitiveEngine) RegisterSkillCollection(name string, tools map[string]ToolHandler) {
-	e.skillPool[name] = tools
+func (e *CognitiveEngine) RegisterSkill(s Skill) {
+	e.skills[s.Name] = s
 }
 
 func (e *CognitiveEngine) ExecuteReasoningLoop(
@@ -100,11 +116,48 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 	history []model.MemoryEntry,
 	systemPrompt string,
 ) (string, error) {
+	ctx, span := e.tracer.Start(ctx, "cognitive_engine.loop",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(
+			attribute.String("tenant_id", tenantID),
+			attribute.String("agent_id", agentID),
+			attribute.String("thread_id", threadID),
+		),
+	)
+	defer span.End()
+
 	logger := zerolog.Ctx(ctx).With().
 		Str("tenant_id", tenantID).
 		Str("agent_id", agentID).
 		Str("thread_id", threadID).
 		Logger()
+
+	// Try to parse systemPrompt as a structured JSON PropagatedAgentConfig
+	var parsedConfig PropagatedAgentConfig
+	isStructured := json.Unmarshal([]byte(systemPrompt), &parsedConfig) == nil
+
+	var activeSystemPrompt string
+	var skillsMap map[string]Skill
+
+	if isStructured {
+		activeSystemPrompt = parsedConfig.Directives
+		
+		// If skills exist, format names and descriptions for the brain
+		var skillDescs []string
+		skillsMap = make(map[string]Skill)
+		for _, s := range parsedConfig.Skills {
+			skillDescs = append(skillDescs, fmt.Sprintf("- Name: %s\n  Description: %s", s.Name, s.Description))
+			skillsMap[s.Name] = s
+		}
+		
+		if len(skillDescs) > 0 {
+			skillsList := "\n\nAvailable Skills (use 'enable_skill' tool to load their guidelines):\n" + strings.Join(skillDescs, "\n")
+			activeSystemPrompt = activeSystemPrompt + skillsList
+		}
+	} else {
+		// Fallback for raw text prompt templates
+		activeSystemPrompt = systemPrompt
+	}
 
 	// Instantiate request-scoped, thread-safe active tools map
 	activeTools := make(map[string]ToolHandler)
@@ -112,10 +165,13 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 		activeTools[name] = handler
 	}
 
-	// Inject tenant, agent metadata and thread-scoped active tools into context
+	// Inject tenant, agent metadata and thread-scoped active tools/parsed skills into context
 	ctx = context.WithValue(ctx, tenantCtxKey{}, tenantID)
 	ctx = context.WithValue(ctx, agentCtxKey{}, agentID)
 	ctx = context.WithValue(ctx, activeToolsKey{}, activeTools)
+	if isStructured {
+		ctx = context.WithValue(ctx, parsedSkillsKey{}, skillsMap)
+	}
 
 	// Ephemeral trace context is represented as virtual conversation turns appended to history context
 	activeHistory := make([]model.MemoryEntry, len(history))
@@ -126,21 +182,30 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 	for step := 1; step <= e.maxSteps; step++ {
 		finalAnswer, shouldContinue, lastParsedThought, err := e.executeStep(
 			ctx, step, tenantID, agentID, threadID,
-			userQuery, systemPrompt, &activeHistory,
+			userQuery, activeSystemPrompt, &activeHistory,
 			activeTools, logger,
 		)
 		if lastParsedThought != "" {
 			lastThought = lastParsedThought
 		}
 		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
 			return "", err
 		}
 		if !shouldContinue {
+			span.SetStatus(codes.Ok, "")
 			return finalAnswer, nil
 		}
 	}
 
 	logger.Warn().Int("max_steps", e.maxSteps).Msg("exceeded maximum reasoning steps limit without yielding final answer")
+	span.AddEvent("safeguard_limit_reached", trace.WithAttributes(
+		attribute.Int("max_steps", e.maxSteps),
+		attribute.String("message", "exceeded maximum reasoning steps limit without yielding final answer"),
+	))
+	span.SetStatus(codes.Ok, "")
+
 	if lastThought != "" {
 		return "Thought: " + lastThought, nil
 	}
@@ -401,23 +466,21 @@ func (e *CognitiveEngine) handleEnableSkill(ctx context.Context, args map[string
 		return "Error: skill_name parameter must be a non-empty string", nil
 	}
 
-	tools, exists := e.skillPool[skillName]
+	// Try request-scoped parsed skills first
+	var skill Skill
+	var exists bool
+	if skills, ok := ctx.Value(parsedSkillsKey{}).(map[string]Skill); ok {
+		skill, exists = skills[skillName]
+	}
+	// Fallback to static registered engine skills
 	if !exists {
-		logger.Warn().Str("skill", skillName).Msg("enable_skill requested for unauthorized or non-existent skill collection")
+		skill, exists = e.skills[skillName]
+	}
+
+	if !exists {
+		logger.Warn().Str("skill", skillName).Msg("enable_skill requested for unauthorized or non-existent skill")
 		return "Skill unauthorized or not found.", nil
 	}
 
-	// Retrieve dynamic request-scoped active tools map from context
-	active, ok := ctx.Value(activeToolsKey{}).(map[string]ToolHandler)
-	if !ok {
-		logger.Error().Msg("unable to retrieve request-scoped active tools map from context")
-		return "Error: engine execution context mismatch.", nil
-	}
-
-	for name, handler := range tools {
-		active[name] = handler
-		logger.Debug().Str("tool", name).Str("skill", skillName).Msg("dynamically registered tool for thread execution")
-	}
-
-	return fmt.Sprintf("Skill %s enabled successfully.", skillName), nil
+	return fmt.Sprintf("Skill %s enabled successfully. Procedural Guidelines:\n%s", skillName, skill.Content), nil
 }

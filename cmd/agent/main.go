@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -211,52 +210,6 @@ func main() {
 	}
 	natsPublisher := nats.NewNATSEventPublisher(nc)
 	cogEngine = cogEngine.WithPublisher(natsPublisher)
-
-	// TODO: Remove mock tools when the agent is ready for production.
-	// Register Always Used mock skill/tool: utility_ping
-	cogEngine.RegisterTool("utility_ping", func(ctx context.Context, args map[string]any) (string, error) {
-		return "pong", nil
-	})
-
-	// Register Never Used mock skill collection: restricted
-	restrictedTools := map[string]service.ToolHandler{
-		"restricted_access": func(ctx context.Context, args map[string]any) (string, error) {
-			return "Access Denied: restricted skill is not authorized", nil
-		},
-	}
-	cogEngine.RegisterSkillCollection("restricted", restrictedTools)
-
-	// Register Sometimes Used mock skill collection: math
-	mathTools := map[string]service.ToolHandler{
-		"math_add": func(ctx context.Context, args map[string]any) (string, error) {
-			a, okA := args["a"].(float64)
-			b, okB := args["b"].(float64)
-			if !okA || !okB {
-				// Fallback to reading from string representation if parsed differently
-				var floatA, floatB float64
-				var err error
-				if valA, ok := args["a"].(string); ok {
-					floatA, err = strconv.ParseFloat(valA, 64)
-					if err != nil {
-						return "", fmt.Errorf("invalid argument a: %v", args["a"])
-					}
-				} else {
-					return "", fmt.Errorf("missing or invalid argument a")
-				}
-				if valB, ok := args["b"].(string); ok {
-					floatB, err = strconv.ParseFloat(valB, 64)
-					if err != nil {
-						return "", fmt.Errorf("invalid argument b: %v", args["b"])
-					}
-				} else {
-					return "", fmt.Errorf("missing or invalid argument b")
-				}
-				return fmt.Sprintf("Result: %f", floatA+floatB), nil
-			}
-			return fmt.Sprintf("Result: %f", a+b), nil
-		},
-	}
-	cogEngine.RegisterSkillCollection("math", mathTools)
 
 	processor := service.NewMessageProcessorService(brain, memoryAdapter, ltm, embedder, cogEngine, stmLimit, systemPrompt)
 
