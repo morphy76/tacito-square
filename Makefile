@@ -22,7 +22,7 @@ GOLINT         := $(shell which golangci-lint 2>/dev/null || echo "$(shell go en
 
 NERDCTL_ADDR   := /var/run/docker/containerd/containerd.sock
 
-.PHONY: all build test test-integration test-operator test-e2e test-bench test-race test-contract lint generate \
+.PHONY: all build test test-integration test-operator test-e2e test-bench test-race test-contract check-test-tags lint generate \
         escape-analysis escape-agent escape-keeper escape-operator escape-bff \
         docker-build docker-push \
         docker-load docker-load-agent docker-load-keeper docker-load-operator docker-load-bff \
@@ -55,8 +55,18 @@ build-bff: ## Build bff binary
 
 ## —— Test ———————————————————————————————————————————————
 
-test: ## Run unit tests with race detector
+test: check-test-tags ## Run unit tests with race detector
 	$(GOTEST) ./internal/... -count=1 -race -v
+
+check-test-tags: ## Fail if a test file imports testcontainers/dockertest without //go:build integration
+	@bad=$$(grep -lE '"github.com/(testcontainers/testcontainers-go|ory/dockertest)' \
+		$$(find . -path ./vendor -prune -o -name '*_test.go' -print) 2>/dev/null \
+		| xargs -I{} sh -c 'head -n1 "{}" | grep -q "^//go:build integration" || echo "{}"'); \
+	if [ -n "$$bad" ]; then \
+		echo "ERROR: test files import testcontainers/dockertest without '//go:build integration':"; \
+		echo "$$bad" | sed 's/^/  - /'; \
+		exit 1; \
+	fi
 
 test-integration: ## Run integration tests (requires Docker for testcontainers)
 	$(GOTEST) ./... -tags=integration -count=1 -v
