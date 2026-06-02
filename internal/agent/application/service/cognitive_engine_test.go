@@ -5,9 +5,14 @@ import (
 	"encoding/json"
 	"testing"
 
+	"errors"
+	"io"
+	"strings"
+
 	"github.com/morphy76/tacito-square/internal/agent/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/agent/application/service"
 	"github.com/morphy76/tacito-square/internal/agent/domain/model"
+	sharedoutbound "github.com/morphy76/tacito-square/internal/shared/ports/outbound"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -279,4 +284,138 @@ func (m *mockToolExecutor) Close(ctx context.Context) error {
 		return m.CloseFunc(ctx)
 	}
 	return nil
+}
+
+type mockBlobStore struct {
+	getFunc func(ctx context.Context, key string) (io.ReadCloser, error)
+}
+
+var _ sharedoutbound.BlobStore = (*mockBlobStore)(nil)
+
+func (m *mockBlobStore) Put(ctx context.Context, key string, data io.Reader, contentType string) (string, error) {
+	return "", nil
+}
+
+func (m *mockBlobStore) Get(ctx context.Context, key string) (io.ReadCloser, error) {
+	if m.getFunc != nil {
+		return m.getFunc(ctx, key)
+	}
+	return nil, nil
+}
+
+func (m *mockBlobStore) Delete(ctx context.Context, key string) error {
+	return nil
+}
+
+func (m *mockBlobStore) Exists(ctx context.Context, key string) (bool, error) {
+	return false, nil
+}
+
+func TestCognitiveEngine_ReadLargePayload(t *testing.T) {
+	t.Run("happy path: read_large_payload tool returns S3 content observations", func(t *testing.T) {
+		stepCount := 0
+		mockBrain := &MockBrain{
+			GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
+				stepCount++
+				if stepCount == 1 {
+					toolCall := map[string]any{
+						"thought": "I need to read the large S3 offloaded payload.",
+						"tool_call": map[string]any{
+							"name": "read_large_payload",
+							"arguments": map[string]any{
+								"key": "comm-1/ingress/agent-1/thread-1/largefile.txt",
+							},
+						},
+					}
+					data, _ := json.Marshal(toolCall)
+					return &model.BrainResponse{
+						Content:      string(data),
+						FinishReason: "stop",
+					}, nil
+				}
+
+				// Verify observation is passed in history
+				assert.Contains(t, request.History[2].Content, "large file content in S3 stream")
+
+				finalAnswer := map[string]any{
+					"thought":      "I read the large file content. answering now.",
+					"final_answer": "The file contains offloaded data.",
+				}
+				data, _ := json.Marshal(finalAnswer)
+				return &model.BrainResponse{
+					Content:      string(data),
+					FinishReason: "stop",
+				}, nil
+			},
+		}
+
+		engine := service.NewCognitiveEngine(mockBrain, 5)
+
+		bs := &mockBlobStore{
+			getFunc: func(ctx context.Context, key string) (io.ReadCloser, error) {
+				assert.Equal(t, "comm-1/ingress/agent-1/thread-1/largefile.txt", key)
+				return io.NopCloser(strings.NewReader("large file content in S3 stream")), nil
+			},
+		}
+		engine.WithBlobStore(bs, 5*1024*1024, 32*1024)
+
+		ctx := context.Background()
+		finalResp, err := engine.ExecuteReasoningLoop(ctx, "tenant-1", "agent-1", "thread-1", "Read large file", []model.MemoryEntry{}, "")
+		assert.NoError(t, err)
+		assert.Equal(t, "The file contains offloaded data.", finalResp)
+		assert.Equal(t, 2, stepCount)
+	})
+
+	t.Run("outage path: tool fails gracefully when S3 is down", func(t *testing.T) {
+		stepCount := 0
+		mockBrain := &MockBrain{
+			GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
+				stepCount++
+				if stepCount == 1 {
+					toolCall := map[string]any{
+						"thought": "Let me read the large payload.",
+						"tool_call": map[string]any{
+							"name": "read_large_payload",
+							"arguments": map[string]any{
+								"key": "comm-1/ingress/agent-1/thread-1/missing.txt",
+							},
+						},
+					}
+					data, _ := json.Marshal(toolCall)
+					return &model.BrainResponse{
+						Content:      string(data),
+						FinishReason: "stop",
+					}, nil
+				}
+
+				// Verify observation is error block
+				assert.Contains(t, request.History[2].Content, `{"error": "Object storage temporarily unavailable."}`)
+
+				finalAnswer := map[string]any{
+					"thought":      "Object storage was offline, I will degrade gracefully.",
+					"final_answer": "Sorry, storage offline.",
+				}
+				data, _ := json.Marshal(finalAnswer)
+				return &model.BrainResponse{
+					Content:      string(data),
+					FinishReason: "stop",
+				}, nil
+			},
+		}
+
+		engine := service.NewCognitiveEngine(mockBrain, 5)
+
+		bs := &mockBlobStore{
+			getFunc: func(ctx context.Context, key string) (io.ReadCloser, error) {
+				return nil, errors.New("S3 connection timeout")
+			},
+		}
+		engine.WithBlobStore(bs, 5*1024*1024, 32*1024)
+
+		ctx := context.Background()
+		finalResp, err := engine.ExecuteReasoningLoop(ctx, "tenant-1", "agent-1", "thread-1", "Read missing file", []model.MemoryEntry{}, "")
+		assert.NoError(t, err)
+		assert.Equal(t, "Sorry, storage offline.", finalResp)
+		assert.Equal(t, 2, stepCount)
+	})
 }

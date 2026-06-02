@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
 	"github.com/morphy76/tacito-square/internal/agent/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/agent/domain/model"
 	"github.com/morphy76/tacito-square/internal/shared/observability"
+	sharedoutbound "github.com/morphy76/tacito-square/internal/shared/ports/outbound"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -60,10 +62,13 @@ type CognitiveEngine struct {
 	ltm          outbound.LongTermMemory
 	publisher    outbound.EventPublisher
 	mcpExecutor  outbound.ToolExecutor
+	blobStore    sharedoutbound.BlobStore
 	toolRegistry map[string]ToolHandler
 	skills       map[string]Skill
 	tracer       trace.Tracer
 	maxSteps     int
+	maxReadSize  int
+	chunkSize    int
 }
 
 type parsedResponse struct {
@@ -87,6 +92,8 @@ func NewCognitiveEngine(brain outbound.Brain, maxSteps int) *CognitiveEngine {
 		skills:       make(map[string]Skill),
 		tracer:       otel.Tracer("cognitive_engine"),
 		maxSteps:     maxSteps,
+		maxReadSize:  5 * 1024 * 1024,
+		chunkSize:    32 * 1024,
 	}
 	engine.RegisterTool("enable_skill", engine.handleEnableSkill)
 	return engine
@@ -107,6 +114,61 @@ func (e *CognitiveEngine) WithPublisher(publisher outbound.EventPublisher) *Cogn
 func (e *CognitiveEngine) WithToolExecutor(mcpExecutor outbound.ToolExecutor) *CognitiveEngine {
 	e.mcpExecutor = mcpExecutor
 	return e
+}
+
+func (e *CognitiveEngine) WithBlobStore(blobStore sharedoutbound.BlobStore, maxReadSize, chunkSize int) *CognitiveEngine {
+	e.blobStore = blobStore
+	if maxReadSize > 0 {
+		e.maxReadSize = maxReadSize
+	}
+	if chunkSize > 0 {
+		e.chunkSize = chunkSize
+	}
+	e.RegisterTool("read_large_payload", e.handleReadLargePayload)
+	return e
+}
+
+func (e *CognitiveEngine) handleReadLargePayload(ctx context.Context, args map[string]any) (string, error) {
+	logger := zerolog.Ctx(ctx)
+
+	if e.blobStore == nil {
+		logger.Warn().Msg("read_large_payload called but blobStore is nil")
+		return `{"error": "Object storage temporarily unavailable."}`, nil
+	}
+
+	key, ok := args["key"].(string)
+	if !ok || key == "" {
+		return "Error: key parameter must be a non-empty string", nil
+	}
+
+	// Read from S3 using the shared BlobStore
+	reader, err := e.blobStore.Get(ctx, key)
+	if err != nil {
+		logger.Warn().Err(err).Str("key", key).Msg("failed to read from object storage")
+		return `{"error": "Object storage temporarily unavailable."}`, nil
+	}
+	defer reader.Close()
+
+	// Implement stream-buffered reading from S3 protected by maxReadSize safety limits
+	limitedReader := io.LimitReader(reader, int64(e.maxReadSize))
+
+	var sb strings.Builder
+	buf := make([]byte, e.chunkSize)
+	for {
+		nr, er := limitedReader.Read(buf)
+		if nr > 0 {
+			sb.Write(buf[:nr])
+		}
+		if er != nil {
+			if er == io.EOF {
+				break
+			}
+			logger.Warn().Err(er).Str("key", key).Msg("failed during buffered read from S3")
+			return `{"error": "Object storage temporarily unavailable."}`, nil
+		}
+	}
+
+	return sb.String(), nil
 }
 
 func (e *CognitiveEngine) RegisterTool(name string, handler ToolHandler) {
