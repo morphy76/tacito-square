@@ -1,5 +1,6 @@
 # Brainstorming
 
+- STM cleanup on ?
 - compare ancora qua e la la dicitura mcp server usata al posto di mcp client
 - reduce startup time
 - UIs wizard-like e non come form per la creazione di agenti, skill, prompt, etc. Questo rende l'esperienza più guidata e meno tecnica, permettendo anche a utenti non esperti di creare e gestire agenti in modo efficace. modalità advanced per utenti più esperti che vogliono avere un controllo più fine sui dettagli tecnici.
