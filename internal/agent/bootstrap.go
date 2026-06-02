@@ -8,6 +8,7 @@ import (
 	"github.com/morphy76/tacito-square/internal/agent/application/ports/inbound"
 	"github.com/morphy76/tacito-square/internal/shared/health"
 	"github.com/morphy76/tacito-square/internal/shared/observability"
+	"github.com/morphy76/tacito-square/internal/shared/ports/outbound"
 	natsclient "github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
 )
@@ -17,8 +18,8 @@ type EchoSubscriber = agentnats.EchoSubscriber
 
 // NewEchoSubscriber constructs a new EchoSubscriber for the given agent identity.
 // The tenantID may be empty for pre-auth milestones.
-func NewEchoSubscriber(nc *natsclient.Conn, agentName, communityID, tenantID string, processor inbound.MessageProcessor, logger zerolog.Logger) *EchoSubscriber {
-	return agentnats.NewEchoSubscriber(nc, agentName, communityID, tenantID, processor, logger)
+func NewEchoSubscriber(nc *natsclient.Conn, agentName, communityID, tenantID string, processor inbound.MessageProcessor, blobStore outbound.BlobStore, logger zerolog.Logger) *EchoSubscriber {
+	return agentnats.NewEchoSubscriber(nc, agentName, communityID, tenantID, processor, blobStore, logger)
 }
 
 // ConnectNATS establishes a NATS connection with default reconnect options and logs the outcome.

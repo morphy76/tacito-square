@@ -251,7 +251,7 @@ func main() {
 
 	processor := service.NewMessageProcessorService(brain, memoryAdapter, ltm, embedder, cogEngine, stmLimit, systemPrompt)
 
-	echoSubscriber := agent.NewEchoSubscriber(nc, agentName, communityRef, "", processor, logger)
+	echoSubscriber := agent.NewEchoSubscriber(nc, agentName, communityRef, "", processor, nil, logger)
 	if err := echoSubscriber.Start(ctx); err != nil {
 		logger.Fatal().Err(err).Msg("failed to start echo subscriber")
 	}
