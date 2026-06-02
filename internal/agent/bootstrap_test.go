@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/morphy76/tacito-square/internal/shared/health"
@@ -156,4 +158,68 @@ func TestMetrics_ContainsMCPMetrics(t *testing.T) {
 	body := w.Body.String()
 	assert.Contains(t, body, "ts_agent_mcp_requests_total")
 	assert.Contains(t, body, "ts_agent_mcp_request_duration_seconds")
+}
+
+func TestReadyz_WithSSEMCPClientChecker(t *testing.T) {
+	// 1. Setup mock HTTP server representing the SSE MCP Client
+	var mockServerStatus int = http.StatusOK
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(mockServerStatus)
+	}))
+	defer ts.Close()
+
+	// 2. Setup health check function targeting mock server URL
+	mcpSSEChecker := health.Checker{
+		Name: "mcp-sse-mock-server",
+		Check: func(ctx context.Context) error {
+			req, err := http.NewRequestWithContext(ctx, http.MethodHead, ts.URL, nil)
+			if err != nil {
+				return err
+			}
+			client := &http.Client{Timeout: 2 * time.Second}
+			resp, err := client.Do(req)
+			if err != nil {
+				// Fallback to GET
+				reqGet, errGet := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, nil)
+				if errGet != nil {
+					return errGet
+				}
+				resp, err = client.Do(reqGet)
+				if err != nil {
+					return err
+				}
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode >= 500 {
+				return fmt.Errorf("server returned error status: %d", resp.StatusCode)
+			}
+			return nil
+		},
+	}
+
+	srv := NewServer(mcpSSEChecker)
+
+	// 3. Test scenario: mock server is healthy (status 200 OK) -> readyz should return 200 OK
+	mockServerStatus = http.StatusOK
+	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var body map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &body)
+	require.NoError(t, err)
+	assert.Equal(t, "ready", body["status"])
+
+	// 4. Test scenario: mock server is unhealthy (status 500 Internal Server Error) -> readyz should return 503
+	mockServerStatus = http.StatusInternalServerError
+	req503 := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	w503 := httptest.NewRecorder()
+	srv.ServeHTTP(w503, req503)
+	assert.Equal(t, http.StatusServiceUnavailable, w503.Code)
+
+	var body503 map[string]interface{}
+	err = json.Unmarshal(w503.Body.Bytes(), &body503)
+	require.NoError(t, err)
+	assert.Equal(t, "not_ready", body503["status"])
 }
