@@ -46,9 +46,10 @@ type CreateLongTermRequest struct {
 }
 
 type CreateMCPClient struct {
-	ServerID   string            `json:"server_id" binding:"required,uuid"`
-	CustomEnv  map[string]string `json:"custom_env"`
-	CustomArgs []string          `json:"custom_args"`
+	ClientID     string            `json:"client_id" binding:"required,uuid"`
+	CustomEnv    map[string]string `json:"custom_env"`
+	CustomArgs   []string          `json:"custom_args"`
+	AllowedTools []string          `json:"allowed_tools"`
 }
 
 type CreateAgentRequest struct {
@@ -128,15 +129,16 @@ func (h *AgentHandler) Create(c *gin.Context) {
 
 	var mcpClients []model.MCPClientConfig
 	for _, mcpReq := range req.MCPClients {
-		mcpUUID, err := uuid.Parse(mcpReq.ServerID)
+		mcpUUID, err := uuid.Parse(mcpReq.ClientID)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid mcp server id uuid"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid mcp client id uuid"})
 			return
 		}
 		mcpClients = append(mcpClients, model.MCPClientConfig{
-			ServerID:   mcpUUID,
-			CustomEnv:  mcpReq.CustomEnv,
-			CustomArgs: mcpReq.CustomArgs,
+			ClientID:     mcpUUID,
+			CustomEnv:    mcpReq.CustomEnv,
+			CustomArgs:   mcpReq.CustomArgs,
+			AllowedTools: mcpReq.AllowedTools,
 		})
 	}
 
@@ -343,15 +345,16 @@ func (h *AgentHandler) Update(c *gin.Context) {
 
 	var mcpClients []model.MCPClientConfig
 	for _, mcpReq := range req.MCPClients {
-		mcpUUID, err := uuid.Parse(mcpReq.ServerID)
+		mcpUUID, err := uuid.Parse(mcpReq.ClientID)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid mcp server id uuid"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid mcp client id uuid"})
 			return
 		}
 		mcpClients = append(mcpClients, model.MCPClientConfig{
-			ServerID:   mcpUUID,
-			CustomEnv:  mcpReq.CustomEnv,
-			CustomArgs: mcpReq.CustomArgs,
+			ClientID:     mcpUUID,
+			CustomEnv:    mcpReq.CustomEnv,
+			CustomArgs:   mcpReq.CustomArgs,
+			AllowedTools: mcpReq.AllowedTools,
 		})
 	}
 

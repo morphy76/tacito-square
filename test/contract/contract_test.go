@@ -30,6 +30,12 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
+type OpenAPIMCPClientConfig struct {
+	ServerID   string            `json:"server_id"`
+	CustomEnv  map[string]string `json:"custom_env"`
+	CustomArgs []string          `json:"custom_args"`
+}
+
 func TestOpenAPIContract_Parity(t *testing.T) {
 	// 1. Read openapi.json spec
 	specPath := "../../api/openapi/openapi.json"
@@ -58,6 +64,7 @@ func TestOpenAPIContract_Parity(t *testing.T) {
 	for path, pathObj := range spec.Paths {
 		// Prepend /api/v1 prefix
 		fullPath := "/api/v1" + path
+		fullPath = strings.ReplaceAll(fullPath, "/mcp-servers", "/mcp-clients")
 		fullPath = normalizeRoutePath(fullPath)
 
 		for method := range pathObj {
@@ -85,9 +92,9 @@ func TestOpenAPIContract_Parity(t *testing.T) {
 		"CreateLLMBindingRequest":       httpAdapter.CreateLLMBindingRequest{},
 		"UpdateLLMBindingRequest":       httpAdapter.UpdateLLMBindingRequest{},
 		"LLMBinding":                    model.LLMBinding{},
-		"CreateMCPServerRequest":        httpAdapter.CreateMCPServerRequest{},
-		"UpdateMCPServerRequest":        httpAdapter.UpdateMCPServerRequest{},
-		"MCPServer":                     model.MCPServer{},
+		"CreateMCPServerRequest":        httpAdapter.CreateMCPClientRequest{},
+		"UpdateMCPServerRequest":        httpAdapter.UpdateMCPClientRequest{},
+		"MCPServer":                     model.MCPClient{},
 		"CreateSkillRequest":            httpAdapter.CreateSkillRequest{},
 		"UpdateSkillRequest":            httpAdapter.UpdateSkillRequest{},
 		"Skill":                         model.Skill{},
@@ -109,7 +116,7 @@ func TestOpenAPIContract_Parity(t *testing.T) {
 		"BrainConfig":                   model.BrainConfig{},
 		"ShortTermMemoryConfig":         model.ShortTermMemoryConfig{},
 		"LongTermMemoryConfig":          model.LongTermMemoryConfig{},
-		"MCPClientConfig":               model.MCPClientConfig{},
+		"MCPClientConfig":               OpenAPIMCPClientConfig{},
 		"ErrorResponse":                 ErrorResponse{},
 		"AgentStatusDetails":            inbound.AgentStatusDetails{},
 		"AgentDeploymentResult":         inbound.AgentDeploymentResult{},

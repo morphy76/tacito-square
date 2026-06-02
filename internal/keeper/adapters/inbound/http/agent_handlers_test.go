@@ -108,7 +108,7 @@ func TestAgentHandlers_Create(t *testing.T) {
 			"prompt_template": promptID.String(),
 			"mcp_clients": []map[string]interface{}{
 				{
-					"server_id": serverID.String(),
+					"client_id": serverID.String(),
 				},
 			},
 		}

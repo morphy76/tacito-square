@@ -18,7 +18,7 @@ image:
 
 # --- Container configuration ---
 port: 8081
-logLevel: info
+logLevel: trace
 
 # --- Agent Metadata & Identity ---
 agent:
@@ -129,4 +129,24 @@ resources:
 nodeSelector: {}
 tolerations: []
 affinity: {}
+
+# --- Model Context Protocol Clients ---
+mcpClients:
+  - name: "sqlite-server"
+    transport: "stdio"
+    command: "npx"
+    args:
+      - "-y"
+      - "@modelcontextprotocol/server-sqlite"
+      - "--db"
+      - "/data/mcp.db"
+    allowed_tools:
+      - "query"
+      - "schema"
+  - name: "weather-service"
+    transport: "sse"
+    url: "http://weather-mcp.default.svc.cluster.local:8080/sse"
+    allowed_tools:
+      - "get-forecast"
+      - "get-alerts"
 

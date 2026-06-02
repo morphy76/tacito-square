@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/morphy76/tacito-square/internal/agent"
+	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/mcp"
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/nats"
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/ollama"
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/openai"
@@ -41,6 +43,10 @@ func main() {
 	v.SetDefault("max.reasoning.steps", 5)
 	v.SetDefault("stm.limit", 10)
 	v.SetDefault("system.prompt", "")
+	v.SetDefault("mcp.timeout.seconds", 10)
+	v.SetDefault("mcp.cb.failure.threshold", 5)
+	v.SetDefault("mcp.cb.recovery.timeout.seconds", 15)
+	v.SetDefault("mcp.clients", "")
 
 	port := v.GetString("port")
 	logLevel := v.GetString("log.level")
@@ -201,12 +207,42 @@ func main() {
 		}
 	}
 
+	// 5bb. Initialize MCP adapter if clients are configured
+	mcpClientsJSON := v.GetString("mcp.clients")
+	var mcpClients []outbound.MCPClientInfo
+	if mcpClientsJSON != "" {
+		if err := json.Unmarshal([]byte(mcpClientsJSON), &mcpClients); err != nil {
+			logger.Error().Err(err).Msg("failed to parse TS_AGENT_MCP_CLIENTS JSON")
+		}
+	}
+
+	var mcpAdapter *mcp.MCPAdapter
+	if len(mcpClients) > 0 {
+		mcpTimeoutSecs := v.GetInt("mcp.timeout.seconds")
+		mcpTimeout := time.Duration(mcpTimeoutSecs) * time.Second
+
+		mcpCBThreshold := v.GetInt("mcp.cb.failure.threshold")
+		mcpCBRecoverySecs := v.GetInt("mcp.cb.recovery.timeout.seconds")
+		mcpCBRecovery := time.Duration(mcpCBRecoverySecs) * time.Second
+
+		mcpAdapter = mcp.NewMCPAdapter(mcpClients, mcpTimeout).
+			WithCircuitBreakerParams(mcpCBThreshold, mcpCBRecovery)
+
+		mgr.Register("mcp-client-executor", func(ctx context.Context) error {
+			logger.Info().Msg("closing MCP adapter connections")
+			return mcpAdapter.Close(ctx)
+		})
+	}
+
 	// 5c. Initialize Cognitive reasoning engine loop
 	maxReasoningSteps := v.GetInt("max.reasoning.steps")
 	stmLimit := v.GetInt("stm.limit")
 	systemPrompt := v.GetString("system.prompt")
 
 	cogEngine := service.NewCognitiveEngine(brain, maxReasoningSteps)
+	if mcpAdapter != nil {
+		cogEngine = cogEngine.WithToolExecutor(mcpAdapter)
+	}
 	if hasQdrant {
 		cogEngine = cogEngine.WithLTM(embedder, ltm)
 	}

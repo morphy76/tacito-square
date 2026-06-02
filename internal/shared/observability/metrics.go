@@ -122,6 +122,18 @@ var (
 		"agent_brain_tokens_total",
 		otelmetric.WithDescription("Total brain tokens processed."),
 	)
+
+	// AgentMCPRequestsTotal collects total MCP tool requests.
+	AgentMCPRequestsTotal, _ = meter.Int64Counter(
+		"ts_agent_mcp_requests_total",
+		otelmetric.WithDescription("Total number of MCP tool requests."),
+	)
+
+	// AgentMCPRequestDuration collects MCP tool request latency.
+	AgentMCPRequestDuration, _ = meter.Float64Histogram(
+		"ts_agent_mcp_request_duration_seconds",
+		otelmetric.WithDescription("Duration of MCP tool executions in seconds."),
+	)
 )
 
 // initInstruments initializes all OpenTelemetry metrics instruments.
@@ -213,6 +225,16 @@ func initInstruments() {
 	AgentBrainTokensTotal, _ = meter.Int64Counter(
 		"agent_brain_tokens_total",
 		otelmetric.WithDescription("Total brain tokens processed."),
+	)
+
+	AgentMCPRequestsTotal, _ = meter.Int64Counter(
+		"ts_agent_mcp_requests_total",
+		otelmetric.WithDescription("Total number of MCP tool requests."),
+	)
+
+	AgentMCPRequestDuration, _ = meter.Float64Histogram(
+		"ts_agent_mcp_request_duration_seconds",
+		otelmetric.WithDescription("Duration of MCP tool executions in seconds."),
 	)
 }
 

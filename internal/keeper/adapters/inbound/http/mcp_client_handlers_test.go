@@ -16,60 +16,60 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockMCPServerUseCase is a mock implementation of inbound.MCPServerUseCase.
-type MockMCPServerUseCase struct {
+// MockMCPClientUseCase is a mock implementation of inbound.MCPClientUseCase.
+type MockMCPClientUseCase struct {
 	mock.Mock
 }
 
-func (m *MockMCPServerUseCase) Create(ctx context.Context, server *model.MCPServer) error {
-	args := m.Called(ctx, server)
+func (m *MockMCPClientUseCase) Create(ctx context.Context, client *model.MCPClient) error {
+	args := m.Called(ctx, client)
 	return args.Error(0)
 }
 
-func (m *MockMCPServerUseCase) GetByID(ctx context.Context, id uuid.UUID) (*model.MCPServer, error) {
+func (m *MockMCPClientUseCase) GetByID(ctx context.Context, id uuid.UUID) (*model.MCPClient, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*model.MCPServer), args.Error(1)
+	return args.Get(0).(*model.MCPClient), args.Error(1)
 }
 
-func (m *MockMCPServerUseCase) GetByName(ctx context.Context, name string) (*model.MCPServer, error) {
+func (m *MockMCPClientUseCase) GetByName(ctx context.Context, name string) (*model.MCPClient, error) {
 	args := m.Called(ctx, name)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*model.MCPServer), args.Error(1)
+	return args.Get(0).(*model.MCPClient), args.Error(1)
 }
 
-func (m *MockMCPServerUseCase) List(ctx context.Context) ([]*model.MCPServer, error) {
+func (m *MockMCPClientUseCase) List(ctx context.Context) ([]*model.MCPClient, error) {
 	args := m.Called(ctx)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).([]*model.MCPServer), args.Error(1)
+	return args.Get(0).([]*model.MCPClient), args.Error(1)
 }
 
-func (m *MockMCPServerUseCase) Update(ctx context.Context, server *model.MCPServer) error {
-	args := m.Called(ctx, server)
+func (m *MockMCPClientUseCase) Update(ctx context.Context, client *model.MCPClient) error {
+	args := m.Called(ctx, client)
 	return args.Error(0)
 }
 
-func (m *MockMCPServerUseCase) Delete(ctx context.Context, id uuid.UUID) error {
+func (m *MockMCPClientUseCase) Delete(ctx context.Context, id uuid.UUID) error {
 	args := m.Called(ctx, id)
 	return args.Error(0)
 }
 
-func TestMCPServerHandlers_Create(t *testing.T) {
+func TestMCPClientHandlers_Create(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	t.Run("Create Stdio MCP Server Successfully", func(t *testing.T) {
-		repo := new(MockMCPServerUseCase)
-		handler := NewMCPServerHandler(repo)
+	t.Run("Create Stdio MCP Client Successfully", func(t *testing.T) {
+		repo := new(MockMCPClientUseCase)
+		handler := NewMCPClientHandler(repo)
 
 		r := gin.New()
 		r.Use(testTenantMiddleware())
-		r.POST("/api/v1/mcp-servers", handler.Create)
+		r.POST("/api/v1/mcp-clients", handler.Create)
 
 		payload := map[string]interface{}{
 			"name":        "sqlite-mcp",
@@ -81,34 +81,34 @@ func TestMCPServerHandlers_Create(t *testing.T) {
 		}
 
 		var capturedCtx context.Context
-		var capturedServerID uuid.UUID
-		repo.On("Create", mock.Anything, mock.AnythingOfType("*model.MCPServer")).Return(nil).Run(func(args mock.Arguments) {
+		var capturedClientID uuid.UUID
+		repo.On("Create", mock.Anything, mock.AnythingOfType("*model.MCPClient")).Return(nil).Run(func(args mock.Arguments) {
 			capturedCtx = args.Get(0).(context.Context)
-			capturedServerID = args.Get(1).(*model.MCPServer).ID
+			capturedClientID = args.Get(1).(*model.MCPClient).ID
 		})
 
 		body, _ := json.Marshal(payload)
-		req, _ := http.NewRequest(http.MethodPost, "/api/v1/mcp-servers", bytes.NewBuffer(body))
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/mcp-clients", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 		resp := httptest.NewRecorder()
 
 		r.ServeHTTP(resp, req)
 
 		assert.Equal(t, http.StatusCreated, resp.Code)
-		assert.Equal(t, "/api/v1/mcp-servers/"+capturedServerID.String(), resp.Header().Get("Location"))
+		assert.Equal(t, "/api/v1/mcp-clients/"+capturedClientID.String(), resp.Header().Get("Location"))
 		assert.Empty(t, resp.Body.String())
 		if assert.NotNil(t, capturedCtx) {
 			assert.ErrorIs(t, capturedCtx.Err(), context.Canceled)
 		}
 	})
 
-	t.Run("Create SSE MCP Server Successfully", func(t *testing.T) {
-		repo := new(MockMCPServerUseCase)
-		handler := NewMCPServerHandler(repo)
+	t.Run("Create SSE MCP Client Successfully", func(t *testing.T) {
+		repo := new(MockMCPClientUseCase)
+		handler := NewMCPClientHandler(repo)
 
 		r := gin.New()
 		r.Use(testTenantMiddleware())
-		r.POST("/api/v1/mcp-servers", handler.Create)
+		r.POST("/api/v1/mcp-clients", handler.Create)
 
 		payload := map[string]interface{}{
 			"name":        "github-mcp",
@@ -118,34 +118,34 @@ func TestMCPServerHandlers_Create(t *testing.T) {
 		}
 
 		var capturedCtx context.Context
-		var capturedServerID uuid.UUID
-		repo.On("Create", mock.Anything, mock.AnythingOfType("*model.MCPServer")).Return(nil).Run(func(args mock.Arguments) {
+		var capturedClientID uuid.UUID
+		repo.On("Create", mock.Anything, mock.AnythingOfType("*model.MCPClient")).Return(nil).Run(func(args mock.Arguments) {
 			capturedCtx = args.Get(0).(context.Context)
-			capturedServerID = args.Get(1).(*model.MCPServer).ID
+			capturedClientID = args.Get(1).(*model.MCPClient).ID
 		})
 
 		body, _ := json.Marshal(payload)
-		req, _ := http.NewRequest(http.MethodPost, "/api/v1/mcp-servers", bytes.NewBuffer(body))
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/mcp-clients", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 		resp := httptest.NewRecorder()
 
 		r.ServeHTTP(resp, req)
 
 		assert.Equal(t, http.StatusCreated, resp.Code)
-		assert.Equal(t, "/api/v1/mcp-servers/"+capturedServerID.String(), resp.Header().Get("Location"))
+		assert.Equal(t, "/api/v1/mcp-clients/"+capturedClientID.String(), resp.Header().Get("Location"))
 		assert.Empty(t, resp.Body.String())
 		if assert.NotNil(t, capturedCtx) {
 			assert.ErrorIs(t, capturedCtx.Err(), context.Canceled)
 		}
 	})
 
-	t.Run("Create MCP Server Transport Invariant Failure (SSE missing URL)", func(t *testing.T) {
-		repo := new(MockMCPServerUseCase)
-		handler := NewMCPServerHandler(repo)
+	t.Run("Create MCP Client Transport Invariant Failure (SSE missing URL)", func(t *testing.T) {
+		repo := new(MockMCPClientUseCase)
+		handler := NewMCPClientHandler(repo)
 
 		r := gin.New()
 		r.Use(testTenantMiddleware())
-		r.POST("/api/v1/mcp-servers", handler.Create)
+		r.POST("/api/v1/mcp-clients", handler.Create)
 
 		payload := map[string]interface{}{
 			"name":      "github-mcp",
@@ -154,7 +154,7 @@ func TestMCPServerHandlers_Create(t *testing.T) {
 		}
 
 		body, _ := json.Marshal(payload)
-		req, _ := http.NewRequest(http.MethodPost, "/api/v1/mcp-servers", bytes.NewBuffer(body))
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/mcp-clients", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 		resp := httptest.NewRecorder()
 
@@ -165,31 +165,31 @@ func TestMCPServerHandlers_Create(t *testing.T) {
 	})
 }
 
-func TestMCPServerHandlers_GetByID(t *testing.T) {
+func TestMCPClientHandlers_GetByID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	t.Run("Get MCP Server Found", func(t *testing.T) {
-		repo := new(MockMCPServerUseCase)
-		handler := NewMCPServerHandler(repo)
+	t.Run("Get MCP Client Found", func(t *testing.T) {
+		repo := new(MockMCPClientUseCase)
+		handler := NewMCPClientHandler(repo)
 
 		r := gin.New()
 		r.Use(testTenantMiddleware())
-		r.GET("/api/v1/mcp-servers/:id", handler.GetByID)
+		r.GET("/api/v1/mcp-clients/:id", handler.GetByID)
 
 		id := uuid.New()
-		server := &model.MCPServer{
+		clientObj := &model.MCPClient{
 			ID:        id,
 			Name:      "github-mcp",
 			Transport: model.TransportSSE,
 			URL:       "https://mcp.github.com/events",
-			Status:    model.MCPServerStatusActive,
+			Status:    model.MCPClientStatusActive,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		}
 
-		repo.On("GetByID", mock.Anything, id).Return(server, nil)
+		repo.On("GetByID", mock.Anything, id).Return(clientObj, nil)
 
-		req, _ := http.NewRequest(http.MethodGet, "/api/v1/mcp-servers/"+id.String(), nil)
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/mcp-clients/"+id.String(), nil)
 		resp := httptest.NewRecorder()
 
 		r.ServeHTTP(resp, req)
@@ -202,30 +202,30 @@ func TestMCPServerHandlers_GetByID(t *testing.T) {
 	})
 }
 
-func TestMCPServerHandlers_List(t *testing.T) {
+func TestMCPClientHandlers_List(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	t.Run("List MCP Servers Successfully", func(t *testing.T) {
-		repo := new(MockMCPServerUseCase)
-		handler := NewMCPServerHandler(repo)
+	t.Run("List MCP Clients Successfully", func(t *testing.T) {
+		repo := new(MockMCPClientUseCase)
+		handler := NewMCPClientHandler(repo)
 
 		r := gin.New()
 		r.Use(testTenantMiddleware())
-		r.GET("/api/v1/mcp-servers", handler.List)
+		r.GET("/api/v1/mcp-clients", handler.List)
 
-		servers := []*model.MCPServer{
+		clients := []*model.MCPClient{
 			{
 				ID:        uuid.New(),
 				Name:      "sqlite-mcp",
 				Transport: model.TransportStdio,
 				Command:   "sqlite-mcp",
-				Status:    model.MCPServerStatusActive,
+				Status:    model.MCPClientStatusActive,
 			},
 		}
 
-		repo.On("List", mock.Anything).Return(servers, nil)
+		repo.On("List", mock.Anything).Return(clients, nil)
 
-		req, _ := http.NewRequest(http.MethodGet, "/api/v1/mcp-servers", nil)
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/mcp-clients", nil)
 		resp := httptest.NewRecorder()
 
 		r.ServeHTTP(resp, req)
@@ -233,17 +233,17 @@ func TestMCPServerHandlers_List(t *testing.T) {
 		assert.Equal(t, http.StatusOK, resp.Code)
 	})
 
-	t.Run("List MCP Servers Returns Empty Array When Nil", func(t *testing.T) {
-		repo := new(MockMCPServerUseCase)
-		handler := NewMCPServerHandler(repo)
+	t.Run("List MCP Clients Returns Empty Array When Nil", func(t *testing.T) {
+		repo := new(MockMCPClientUseCase)
+		handler := NewMCPClientHandler(repo)
 
 		r := gin.New()
 		r.Use(testTenantMiddleware())
-		r.GET("/api/v1/mcp-servers", handler.List)
+		r.GET("/api/v1/mcp-clients", handler.List)
 
-		repo.On("List", mock.Anything).Return(([]*model.MCPServer)(nil), nil)
+		repo.On("List", mock.Anything).Return(([]*model.MCPClient)(nil), nil)
 
-		req, _ := http.NewRequest(http.MethodGet, "/api/v1/mcp-servers", nil)
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/mcp-clients", nil)
 		resp := httptest.NewRecorder()
 
 		r.ServeHTTP(resp, req)
@@ -253,25 +253,25 @@ func TestMCPServerHandlers_List(t *testing.T) {
 	})
 }
 
-func TestMCPServerHandlers_Update(t *testing.T) {
+func TestMCPClientHandlers_Update(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	t.Run("Update MCP Server Returns Previous Unmodified State", func(t *testing.T) {
-		repo := new(MockMCPServerUseCase)
-		handler := NewMCPServerHandler(repo)
+	t.Run("Update MCP Client Returns Previous Unmodified State", func(t *testing.T) {
+		repo := new(MockMCPClientUseCase)
+		handler := NewMCPClientHandler(repo)
 
 		r := gin.New()
 		r.Use(testTenantMiddleware())
-		r.PUT("/api/v1/mcp-servers/:id", handler.Update)
+		r.PUT("/api/v1/mcp-clients/:id", handler.Update)
 
 		id := uuid.New()
-		existing := &model.MCPServer{
+		existing := &model.MCPClient{
 			ID:        id,
 			TenantID:  "test-tenant.com",
 			Name:      "sqlite-mcp",
 			Transport: model.TransportStdio,
 			Command:   "sqlite-mcp",
-			Status:    model.MCPServerStatusActive,
+			Status:    model.MCPClientStatusActive,
 		}
 
 		payload := map[string]interface{}{
@@ -282,10 +282,10 @@ func TestMCPServerHandlers_Update(t *testing.T) {
 		}
 
 		repo.On("GetByID", mock.Anything, id).Return(existing, nil)
-		repo.On("Update", mock.Anything, mock.AnythingOfType("*model.MCPServer")).Return(nil)
+		repo.On("Update", mock.Anything, mock.AnythingOfType("*model.MCPClient")).Return(nil)
 
 		body, _ := json.Marshal(payload)
-		req, _ := http.NewRequest(http.MethodPut, "/api/v1/mcp-servers/"+id.String(), bytes.NewBuffer(body))
+		req, _ := http.NewRequest(http.MethodPut, "/api/v1/mcp-clients/"+id.String(), bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 		resp := httptest.NewRecorder()
 
@@ -301,21 +301,21 @@ func TestMCPServerHandlers_Update(t *testing.T) {
 	})
 }
 
-func TestMCPServerHandlers_Delete(t *testing.T) {
+func TestMCPClientHandlers_Delete(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	t.Run("Delete MCP Server Successfully", func(t *testing.T) {
-		repo := new(MockMCPServerUseCase)
-		handler := NewMCPServerHandler(repo)
+	t.Run("Delete MCP Client Successfully", func(t *testing.T) {
+		repo := new(MockMCPClientUseCase)
+		handler := NewMCPClientHandler(repo)
 
 		r := gin.New()
 		r.Use(testTenantMiddleware())
-		r.DELETE("/api/v1/mcp-servers/:id", handler.Delete)
+		r.DELETE("/api/v1/mcp-clients/:id", handler.Delete)
 
 		id := uuid.New()
 		repo.On("Delete", mock.Anything, id).Return(nil)
 
-		req, _ := http.NewRequest(http.MethodDelete, "/api/v1/mcp-servers/"+id.String(), nil)
+		req, _ := http.NewRequest(http.MethodDelete, "/api/v1/mcp-clients/"+id.String(), nil)
 		resp := httptest.NewRecorder()
 
 		r.ServeHTTP(resp, req)

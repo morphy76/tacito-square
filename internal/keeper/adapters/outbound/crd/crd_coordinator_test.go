@@ -33,7 +33,7 @@ func TestSubmitAgentCRD_CreateSuccess(t *testing.T) {
 	require.NoError(t, err)
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
 
 	agentID := uuid.New()
 	communityID := uuid.New()
@@ -93,7 +93,7 @@ func TestSubmitAgentCRD_UpdateSuccess(t *testing.T) {
 	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(existing).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
 
 	// Mapped model updates name and model
 	agent := &model.Agent{
@@ -162,7 +162,7 @@ func TestSubmitAgentCRD_ConflictResolution(t *testing.T) {
 		}).
 		Build()
 
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
 
 	agent := &model.Agent{
 		ID:          agentID,
@@ -221,7 +221,7 @@ func TestSubmitAgentCRD_Timeout(t *testing.T) {
 		}).
 		Build()
 
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
 
 	agent := &model.Agent{
 		ID:       agentID,
@@ -252,7 +252,7 @@ func TestTeardownAgentCRD_Success(t *testing.T) {
 	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(existing).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
 
 	agent := &model.Agent{
 		ID: agentID,
@@ -327,6 +327,23 @@ func (m *mockSkillRepository) GetByID(ctx context.Context, id uuid.UUID) (*model
 	return s, nil
 }
 
+type mockMCPClientRepository struct {
+	outbound.MCPClientRepository
+	clients map[uuid.UUID]*model.MCPClient
+	getErr  error
+}
+
+func (m *mockMCPClientRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.MCPClient, error) {
+	if m.getErr != nil {
+		return nil, m.getErr
+	}
+	c, ok := m.clients[id]
+	if !ok {
+		return nil, fmt.Errorf("mcp client not found: %s", id)
+	}
+	return c, nil
+}
+
 type ProvisioningEvent struct {
 	TenantID    string `json:"tenant_id"`
 	AgentID     string `json:"agent_id"`
@@ -345,7 +362,7 @@ func TestSubmitAgentCRD_NATSProgressionStarted(t *testing.T) {
 	require.NoError(t, err)
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nc)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nc)
 
 	agentID := uuid.New()
 	communityID := uuid.New()
@@ -390,7 +407,7 @@ func TestSubmitAgentCRD_NATSProgressionCompleted(t *testing.T) {
 	require.NoError(t, err)
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nc)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nc)
 
 	agentID := uuid.New()
 	agent := &model.Agent{
@@ -442,7 +459,7 @@ func TestSubmitAgentCRD_NATSProgressionFailed(t *testing.T) {
 		}).
 		Build()
 
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nc)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nc)
 
 	agentID := uuid.New()
 	agent := &model.Agent{
@@ -505,7 +522,7 @@ func TestResolveAndSynthesizeSystemPrompt_Success(t *testing.T) {
 		},
 	}
 
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(nil, "tacito", promptRepo, skillRepo, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(nil, "tacito", promptRepo, skillRepo, nil, nil)
 
 	agent := &model.Agent{
 		ID:             uuid.New(),
@@ -560,7 +577,7 @@ func TestSubmitAgentCRD_SynthesizedPromptAndTenantMapped(t *testing.T) {
 	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", promptRepo, skillRepo, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", promptRepo, skillRepo, nil, nil)
 
 	agentID := uuid.New()
 	agent := &model.Agent{
@@ -614,7 +631,7 @@ func TestResolveAndSynthesizeSystemPrompt_MissingResources(t *testing.T) {
 		},
 	}
 
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(nil, "tacito", promptRepoMissing, skillRepo, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(nil, "tacito", promptRepoMissing, skillRepo, nil, nil)
 	agent := &model.Agent{
 		ID:             uuid.New(),
 		PromptTemplate: promptID,
@@ -636,7 +653,7 @@ func TestResolveAndSynthesizeSystemPrompt_MissingResources(t *testing.T) {
 		skills: map[uuid.UUID]*model.Skill{},
 	}
 
-	coordinator = crdadapter.NewK8sCRDCoordinatorWithClient(nil, "tacito", promptRepo, skillRepoMissing, nil)
+	coordinator = crdadapter.NewK8sCRDCoordinatorWithClient(nil, "tacito", promptRepo, skillRepoMissing, nil, nil)
 	agent = &model.Agent{
 		ID:             uuid.New(),
 		PromptTemplate: promptID,
@@ -674,7 +691,7 @@ func TestGetAgentCRDStatus_Existing(t *testing.T) {
 	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(existing).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
 
 	status, err := coordinator.GetAgentCRDStatus(context.Background(), agentID)
 	assert.NoError(t, err)
@@ -691,7 +708,7 @@ func TestGetAgentCRDStatus_NonExistent(t *testing.T) {
 	require.NoError(t, err)
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
 
 	agentID := uuid.New()
 	status, err := coordinator.GetAgentCRDStatus(context.Background(), agentID)
@@ -718,7 +735,7 @@ func TestGetAgentCRDStatus_Timeout(t *testing.T) {
 		}).
 		Build()
 
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -728,3 +745,66 @@ func TestGetAgentCRDStatus_Timeout(t *testing.T) {
 	assert.True(t, errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded))
 }
 
+func TestSubmitAgentCRD_WithMCPClients(t *testing.T) {
+	scheme := runtime.NewScheme()
+	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	clientID := uuid.New()
+	mcpRepo := &mockMCPClientRepository{
+		clients: map[uuid.UUID]*model.MCPClient{
+			clientID: {
+				ID:        clientID,
+				TenantID:  "tenant-1",
+				Name:      "my-mcp-client",
+				Transport: model.TransportStdio,
+				Command:   "node",
+				Args:      []string{"server.js"},
+				Env:       map[string]string{"ENV_VAR": "value"},
+				Status:    model.MCPClientStatusActive,
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, mcpRepo, nil)
+
+	agentID := uuid.New()
+	agent := &model.Agent{
+		ID:       agentID,
+		TenantID: "tenant-1",
+		Name:     "agent-with-mcp",
+		Brain: model.BrainConfig{
+			Model: "gpt-4",
+		},
+		MCPClients: []model.MCPClientConfig{
+			{
+				ClientID:     clientID,
+				AllowedTools: []string{"tool1", "tool2"},
+				CustomEnv:    map[string]string{"ENV_VAR": "override", "NEW_VAR": "new"},
+				CustomArgs:   []string{"extra-arg"},
+			},
+		},
+	}
+
+	err = coordinator.SubmitAgentCRD(context.Background(), agent)
+	assert.NoError(t, err)
+
+	fetched := &v1alpha1.TacitoAgent{}
+	key := types.NamespacedName{Namespace: "tacito", Name: "u-" + agentID.String()}
+	err = fakeClient.Get(context.Background(), key, fetched)
+	assert.NoError(t, err)
+
+	require.Len(t, fetched.Spec.MCPClients, 1)
+	spec := fetched.Spec.MCPClients[0]
+	assert.Equal(t, "my-mcp-client", spec.Name)
+	assert.Equal(t, "stdio", spec.Transport)
+	assert.Equal(t, "node", spec.Command)
+	// Base args + custom args
+	assert.Equal(t, []string{"server.js", "extra-arg"}, spec.Args)
+	// Base env + custom overrides
+	assert.Equal(t, "override", spec.Env["ENV_VAR"])
+	assert.Equal(t, "new", spec.Env["NEW_VAR"])
+	// Allowed tools whitelisting
+	assert.Equal(t, []string{"tool1", "tool2"}, spec.AllowedTools)
+}

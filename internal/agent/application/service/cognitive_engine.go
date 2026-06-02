@@ -9,10 +9,12 @@ import (
 
 	"github.com/morphy76/tacito-square/internal/agent/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/agent/domain/model"
+	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -57,6 +59,7 @@ type CognitiveEngine struct {
 	embedder     outbound.Embedder
 	ltm          outbound.LongTermMemory
 	publisher    outbound.EventPublisher
+	mcpExecutor  outbound.ToolExecutor
 	toolRegistry map[string]ToolHandler
 	skills       map[string]Skill
 	tracer       trace.Tracer
@@ -98,6 +101,11 @@ func (e *CognitiveEngine) WithLTM(embedder outbound.Embedder, ltm outbound.LongT
 
 func (e *CognitiveEngine) WithPublisher(publisher outbound.EventPublisher) *CognitiveEngine {
 	e.publisher = publisher
+	return e
+}
+
+func (e *CognitiveEngine) WithToolExecutor(mcpExecutor outbound.ToolExecutor) *CognitiveEngine {
+	e.mcpExecutor = mcpExecutor
 	return e
 }
 
@@ -165,6 +173,47 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 	activeTools := make(map[string]ToolHandler)
 	for name, handler := range e.toolRegistry {
 		activeTools[name] = handler
+	}
+
+	if e.mcpExecutor != nil {
+		mcpTools, err := e.mcpExecutor.ListAllowedTools(ctx)
+		if err == nil && len(mcpTools) > 0 {
+			var sb strings.Builder
+			sb.WriteString("\n\nAvailable External Tools:\n")
+			for _, tool := range mcpTools {
+				tName := tool.Name
+				// Safety check: protect built-in tools against hijack
+				if _, exists := activeTools[tName]; exists {
+					continue
+				}
+
+				activeTools[tName] = func(ctx context.Context, args map[string]any) (string, error) {
+					start := time.Now()
+
+					resp, err := e.mcpExecutor.Execute(ctx, tName, args)
+
+					duration := time.Since(start).Seconds()
+
+					statusStr := "success"
+					if err != nil || strings.Contains(resp, `"error":`) {
+						statusStr = "error"
+					}
+
+					attrs := metric.WithAttributes(
+						attribute.String("tool", tName),
+						attribute.String("status", statusStr),
+					)
+
+					observability.AgentMCPRequestsTotal.Add(ctx, 1, attrs)
+					observability.AgentMCPRequestDuration.Record(ctx, duration, attrs)
+
+					return resp, err
+				}
+				schemaJSON, _ := json.Marshal(tool.InputSchema)
+				sb.WriteString(fmt.Sprintf("- Name: %s\n  Description: %s\n  Parameters: %s\n", tool.Name, tool.Description, string(schemaJSON)))
+			}
+			activeSystemPrompt = activeSystemPrompt + sb.String()
+		}
 	}
 
 	// Inject tenant, agent metadata and thread-scoped active tools/parsed skills into context

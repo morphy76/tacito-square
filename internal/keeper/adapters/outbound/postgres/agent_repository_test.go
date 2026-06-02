@@ -89,7 +89,7 @@ func TestAgentRepository_Lifecycle(t *testing.T) {
 		PromptTemplate: pt.ID,
 		MCPClients: []model.MCPClientConfig{
 			{
-				ServerID: uuid.New(),
+				ClientID: uuid.New(),
 			},
 		},
 		Status:    model.AgentStatusDefined,
@@ -118,7 +118,7 @@ func TestAgentRepository_Lifecycle(t *testing.T) {
 		}
 		assert.Equal(t, len(agent.MCPClients), len(fetched.MCPClients))
 		if len(fetched.MCPClients) > 0 {
-			assert.Equal(t, agent.MCPClients[0].ServerID, fetched.MCPClients[0].ServerID)
+			assert.Equal(t, agent.MCPClients[0].ClientID, fetched.MCPClients[0].ClientID)
 		}
 	})
 
@@ -147,7 +147,7 @@ func TestAgentRepository_Lifecycle(t *testing.T) {
 		agent.Brain.Temperature = 0.9
 		agent.Status = model.AgentStatusActive
 		agent.Skills = []uuid.UUID{} // Clear skills
-		agent.MCPClients = append(agent.MCPClients, model.MCPClientConfig{ServerID: uuid.New()})
+		agent.MCPClients = append(agent.MCPClients, model.MCPClientConfig{ClientID: uuid.New()})
 
 		err := repo.Update(ctx, agent)
 		require.NoError(t, err)

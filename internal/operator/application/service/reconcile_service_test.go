@@ -2,6 +2,7 @@ package service_test
 
 import (
 	"context"
+	"encoding/json"
 	"strconv"
 	"testing"
 
@@ -356,4 +357,62 @@ func TestReconcile_StatusTransitions(t *testing.T) {
 	assert.Equal(t, int32(0), updatedAgent.Status.Replicas)
 	assert.Equal(t, metav1.ConditionFalse, updatedAgent.Status.Conditions[0].Status)
 	assert.Equal(t, "ScaleToZero", updatedAgent.Status.Conditions[0].Reason)
+}
+
+func TestBuildDeployment_WithMCPClients(t *testing.T) {
+	logger := zerolog.Nop()
+	cfg := viper.New()
+	fakeClient := fake.NewClientBuilder().Build()
+	svc := service.NewReconcileAgentService(fakeClient, logger, cfg)
+
+	agent := &v1alpha1.TacitoAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "mcp-agent",
+			Namespace: "tacito",
+		},
+		Spec: v1alpha1.TacitoAgentSpec{
+			TenantID:     "tenant-1",
+			AgentName:    "mcp-agent-1",
+			CommunityRef: "comm-1",
+			LLMConfig: v1alpha1.LLMConfig{
+				Model: "gpt-4",
+			},
+			MCPClients: []v1alpha1.MCPClientSpec{
+				{
+					Name:         "sqlite-mcp",
+					Transport:    "stdio",
+					Command:      "npx",
+					Args:         []string{"@modelcontextprotocol/server-sqlite", "--db", "test.db"},
+					Env:          map[string]string{"DEBUG": "true"},
+					AllowedTools: []string{"query_db", "get_schema"},
+				},
+			},
+		},
+	}
+
+	dep, err := svc.BuildDeployment(context.Background(), agent)
+	assert.NoError(t, err)
+	require.NotNil(t, dep)
+
+	container := dep.Spec.Template.Spec.Containers[0]
+	envMap := make(map[string]string)
+	for _, env := range container.Env {
+		envMap[env.Name] = env.Value
+	}
+
+	val, exists := envMap["TS_AGENT_MCP_CLIENTS"]
+	require.True(t, exists, "Expected TS_AGENT_MCP_CLIENTS environment variable to exist")
+
+	var clients []v1alpha1.MCPClientSpec
+	err = json.Unmarshal([]byte(val), &clients)
+	require.NoError(t, err, "Expected TS_AGENT_MCP_CLIENTS value to be valid JSON")
+	require.Len(t, clients, 1)
+
+	clientSpec := clients[0]
+	assert.Equal(t, "sqlite-mcp", clientSpec.Name)
+	assert.Equal(t, "stdio", clientSpec.Transport)
+	assert.Equal(t, "npx", clientSpec.Command)
+	assert.Equal(t, []string{"@modelcontextprotocol/server-sqlite", "--db", "test.db"}, clientSpec.Args)
+	assert.Equal(t, "true", clientSpec.Env["DEBUG"])
+	assert.Equal(t, []string{"query_db", "get_schema"}, clientSpec.AllowedTools)
 }

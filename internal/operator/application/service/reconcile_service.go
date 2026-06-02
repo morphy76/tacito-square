@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -260,6 +261,14 @@ func (s *ReconcileAgentServiceImpl) BuildDeployment(ctx context.Context, agent *
 
 	if agent.Spec.SystemPrompt != "" {
 		env = append(env, corev1.EnvVar{Name: "TS_AGENT_SYSTEM_PROMPT", Value: agent.Spec.SystemPrompt})
+	}
+
+	if len(agent.Spec.MCPClients) > 0 {
+		mcpJSON, err := json.Marshal(agent.Spec.MCPClients)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal mcp clients to JSON: %w", err)
+		}
+		env = append(env, corev1.EnvVar{Name: "TS_AGENT_MCP_CLIENTS", Value: string(mcpJSON)})
 	}
 
 	// 5. Construct container resource constraints

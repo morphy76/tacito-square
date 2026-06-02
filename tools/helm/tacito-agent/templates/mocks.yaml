@@ -100,6 +100,63 @@ data:
           },
           "body": "{\"model\":\"llama3\",\"created_at\":\"2026-05-31T09:20:00Z\",\"message\":{\"role\":\"assistant\",\"content\":\"Hello from local developer mock Ollama server!\"},\"done\":true,\"prompt_eval_count\":8,\"eval_count\":12}"
         }
+      },
+      {
+        "httpRequest": {
+          "method": "GET",
+          "path": "/sse"
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "headers": {
+            "Content-Type": ["text/event-stream"],
+            "Cache-Control": ["no-cache"],
+            "Connection": ["keep-alive"]
+          },
+          "body": "event: endpoint\ndata: /mcp/message?sessionId=test-session\n\n"
+        }
+      },
+      {
+        "httpRequest": {
+          "method": "POST",
+          "path": "/mcp/message",
+          "queryStringParameters": {
+            "sessionId": ["test-session"]
+          },
+          "body": {
+            "type": "JSON",
+            "json": "{\"method\": \"tools/list\"}",
+            "matchType": "ONLY_MATCHING_FIELDS"
+          }
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "headers": {
+            "Content-Type": ["application/json"]
+          },
+          "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"tools\":[{\"name\":\"mock-mcp-tool\",\"description\":\"A mock tool provided by mock MCP server.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"param1\":{\"type\":\"string\"}},\"required\":[\"param1\"]}}]}}"
+        }
+      },
+      {
+        "httpRequest": {
+          "method": "POST",
+          "path": "/mcp/message",
+          "queryStringParameters": {
+            "sessionId": ["test-session"]
+          },
+          "body": {
+            "type": "JSON",
+            "json": "{\"method\": \"tools/call\", \"params\": {\"name\": \"mock-mcp-tool\"}}",
+            "matchType": "ONLY_MATCHING_FIELDS"
+          }
+        },
+        "httpResponse": {
+          "statusCode": 200,
+          "headers": {
+            "Content-Type": ["application/json"]
+          },
+          "body": "{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Mock tool execution successful! Received param1 value.\"}]}}"
+        }
       }
     ]
 
