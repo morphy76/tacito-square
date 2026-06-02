@@ -296,40 +296,6 @@ func main() {
 		})
 	}
 
-	// MCP SSE Checkers
-	for _, info := range mcpClients {
-		if info.Transport == "sse" {
-			clientURL := info.URL
-			clientName := info.Name
-			checkers = append(checkers, health.Checker{
-				Name: fmt.Sprintf("mcp-sse-%s", clientName),
-				Check: func(ctx context.Context) error {
-					req, err := http.NewRequestWithContext(ctx, http.MethodHead, clientURL, nil)
-					if err != nil {
-						return err
-					}
-					resp, err := sharedHTTPClient.Do(req)
-					if err != nil {
-						// Fallback to GET if HEAD fails/is not supported by server
-						reqGet, errGet := http.NewRequestWithContext(ctx, http.MethodGet, clientURL, nil)
-						if errGet != nil {
-							return errGet
-						}
-						resp, err = sharedHTTPClient.Do(reqGet)
-						if err != nil {
-							return err
-						}
-					}
-					defer resp.Body.Close()
-					if resp.StatusCode >= 500 {
-						return fmt.Errorf("server returned error status: %d", resp.StatusCode)
-					}
-					return nil
-				},
-			})
-		}
-	}
-
 	router := agent.NewServer(checkers...)
 
 	srv := &http.Server{
