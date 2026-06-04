@@ -3,7 +3,7 @@
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
 | ID            | BUG-M5.6                                                           |
-| Status        | OPEN                                                               |
+| Status        | CLOSED                                                             |
 | Severity      | HIGH                                                               |
 | Milestone     | M5 — Agent Core                                                    |
 | Affects       | `internal/agent/adapters/inbound/nats/echo_subscriber.go`, `internal/agent/application/service/cognitive_engine.go` |

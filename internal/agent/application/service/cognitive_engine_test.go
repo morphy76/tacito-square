@@ -287,12 +287,16 @@ func (m *mockToolExecutor) Close(ctx context.Context) error {
 }
 
 type mockBlobStore struct {
+	putFunc func(ctx context.Context, key string, data io.Reader, contentType string) (string, error)
 	getFunc func(ctx context.Context, key string) (io.ReadCloser, error)
 }
 
 var _ sharedoutbound.BlobStore = (*mockBlobStore)(nil)
 
 func (m *mockBlobStore) Put(ctx context.Context, key string, data io.Reader, contentType string) (string, error) {
+	if m.putFunc != nil {
+		return m.putFunc(ctx, key, data, contentType)
+	}
 	return "", nil
 }
 
@@ -416,6 +420,141 @@ func TestCognitiveEngine_ReadLargePayload(t *testing.T) {
 		finalResp, err := engine.ExecuteReasoningLoop(ctx, "tenant-1", "agent-1", "thread-1", "Read missing file", []model.MemoryEntry{}, "")
 		assert.NoError(t, err)
 		assert.Equal(t, "Sorry, storage offline.", finalResp)
+		assert.Equal(t, 2, stepCount)
+	})
+}
+
+func TestCognitiveEngine_WriteLargePayload(t *testing.T) {
+	t.Run("happy path: write_large_payload tool offloads content streamingly to S3", func(t *testing.T) {
+		stepCount := 0
+		mockBrain := &MockBrain{
+			GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
+				stepCount++
+				if stepCount == 1 {
+					toolCall := map[string]any{
+						"thought": "I need to write large generated payload to S3.",
+						"tool_call": map[string]any{
+							"name": "write_large_payload",
+							"arguments": map[string]any{
+								"content":      "my generated content that is large",
+								"content_type": "text/plain",
+							},
+						},
+					}
+					data, _ := json.Marshal(toolCall)
+					return &model.BrainResponse{
+						Content:      string(data),
+						FinishReason: "stop",
+					}, nil
+				}
+
+				// Verify observation is JSON s3_reference block in history
+				var s3Ref struct {
+					Type        string `json:"_type"`
+					Bucket      string `json:"bucket"`
+					Key         string `json:"key"`
+					SizeBytes   int64  `json:"size_bytes"`
+					ContentType string `json:"content_type"`
+				}
+				err := json.Unmarshal([]byte(request.History[2].Content), &s3Ref)
+				assert.NoError(t, err)
+				assert.Equal(t, "s3_reference", s3Ref.Type)
+				assert.Equal(t, "tenant-1", s3Ref.Bucket)
+				assert.Contains(t, s3Ref.Key, "comm-1/output/agent-1/thread-1/")
+				assert.Equal(t, int64(len("my generated content that is large")), s3Ref.SizeBytes)
+				assert.Equal(t, "text/plain", s3Ref.ContentType)
+
+				finalAnswer := map[string]any{
+					"thought":      "I wrote the file and got the reference. answering now.",
+					"final_answer": "I have successfully written the payload.",
+				}
+				data, _ := json.Marshal(finalAnswer)
+				return &model.BrainResponse{
+					Content:      string(data),
+					FinishReason: "stop",
+				}, nil
+			},
+		}
+
+		engine := service.NewCognitiveEngine(mockBrain, 5)
+
+		s3PutTriggered := false
+		bs := &mockBlobStore{
+			putFunc: func(ctx context.Context, key string, data io.Reader, contentType string) (string, error) {
+				s3PutTriggered = true
+				assert.Contains(t, key, "comm-1/output/agent-1/thread-1/")
+				assert.Equal(t, "text/plain", contentType)
+				
+				content, err := io.ReadAll(data)
+				assert.NoError(t, err)
+				assert.Equal(t, "my generated content that is large", string(content))
+				return "http://mock-s3/tenant-1/" + key, nil
+			},
+		}
+		
+		engine.WithCommunityID("comm-1")
+		engine.WithBlobStore(bs, 5*1024*1024, 32*1024)
+
+		ctx := context.Background()
+		finalResp, err := engine.ExecuteReasoningLoop(ctx, "tenant-1", "agent-1", "thread-1", "Write file", []model.MemoryEntry{}, "")
+		assert.NoError(t, err)
+		assert.Equal(t, "I have successfully written the payload.", finalResp)
+		assert.True(t, s3PutTriggered)
+		assert.Equal(t, 2, stepCount)
+	})
+
+	t.Run("outage path: write tool fails gracefully when S3 Put is offline", func(t *testing.T) {
+		stepCount := 0
+		mockBrain := &MockBrain{
+			GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
+				stepCount++
+				if stepCount == 1 {
+					toolCall := map[string]any{
+						"thought": "Let me write the large payload.",
+						"tool_call": map[string]any{
+							"name": "write_large_payload",
+							"arguments": map[string]any{
+								"content": "some text",
+							},
+						},
+					}
+					data, _ := json.Marshal(toolCall)
+					return &model.BrainResponse{
+						Content:      string(data),
+						FinishReason: "stop",
+					}, nil
+				}
+
+				// Verify observation is error block
+				assert.Contains(t, request.History[2].Content, `{"error": "Object storage temporarily unavailable."}`)
+
+				finalAnswer := map[string]any{
+					"thought":      "Failed to write, S3 is offline.",
+					"final_answer": "Failed writing.",
+				}
+				data, _ := json.Marshal(finalAnswer)
+				return &model.BrainResponse{
+					Content:      string(data),
+					FinishReason: "stop",
+				}, nil
+			},
+		}
+
+		engine := service.NewCognitiveEngine(mockBrain, 5)
+
+		bs := &mockBlobStore{
+			putFunc: func(ctx context.Context, key string, data io.Reader, contentType string) (string, error) {
+				return "", errors.New("S3 upload timeout")
+			},
+		}
+		
+		engine.WithCommunityID("comm-1")
+		engine.WithBlobStore(bs, 5*1024*1024, 32*1024)
+
+		ctx := context.Background()
+		finalResp, err := engine.ExecuteReasoningLoop(ctx, "tenant-1", "agent-1", "thread-1", "Write offline", []model.MemoryEntry{}, "")
+		assert.NoError(t, err)
+		assert.Equal(t, "Failed writing.", finalResp)
 		assert.Equal(t, 2, stepCount)
 	})
 }

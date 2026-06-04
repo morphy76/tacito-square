@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/morphy76/tacito-square/internal/agent/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/agent/domain/model"
 	"github.com/morphy76/tacito-square/internal/shared/observability"
@@ -24,6 +25,7 @@ type ToolHandler func(ctx context.Context, args map[string]any) (string, error)
 
 type tenantCtxKey struct{}
 type agentCtxKey struct{}
+type threadCtxKey struct{}
 type activeToolsKey struct{}
 
 func GetTenantID(ctx context.Context) string {
@@ -35,6 +37,13 @@ func GetTenantID(ctx context.Context) string {
 
 func GetAgentID(ctx context.Context) string {
 	if v, ok := ctx.Value(agentCtxKey{}).(string); ok {
+		return v
+	}
+	return ""
+}
+
+func GetThreadID(ctx context.Context) string {
+	if v, ok := ctx.Value(threadCtxKey{}).(string); ok {
 		return v
 	}
 	return ""
@@ -66,6 +75,7 @@ type CognitiveEngine struct {
 	toolRegistry map[string]ToolHandler
 	skills       map[string]Skill
 	tracer       trace.Tracer
+	communityID  string
 	maxSteps     int
 	maxReadSize  int
 	chunkSize    int
@@ -116,6 +126,11 @@ func (e *CognitiveEngine) WithToolExecutor(mcpExecutor outbound.ToolExecutor) *C
 	return e
 }
 
+func (e *CognitiveEngine) WithCommunityID(communityID string) *CognitiveEngine {
+	e.communityID = communityID
+	return e
+}
+
 func (e *CognitiveEngine) WithBlobStore(blobStore sharedoutbound.BlobStore, maxReadSize, chunkSize int) *CognitiveEngine {
 	e.blobStore = blobStore
 	if maxReadSize > 0 {
@@ -125,6 +140,7 @@ func (e *CognitiveEngine) WithBlobStore(blobStore sharedoutbound.BlobStore, maxR
 		e.chunkSize = chunkSize
 	}
 	e.RegisterTool("read_large_payload", e.handleReadLargePayload)
+	e.RegisterTool("write_large_payload", e.handleWriteLargePayload)
 	return e
 }
 
@@ -169,6 +185,101 @@ func (e *CognitiveEngine) handleReadLargePayload(ctx context.Context, args map[s
 	}
 
 	return sb.String(), nil
+}
+
+func (e *CognitiveEngine) handleWriteLargePayload(ctx context.Context, args map[string]any) (string, error) {
+	logger := zerolog.Ctx(ctx)
+
+	if e.blobStore == nil {
+		logger.Warn().Msg("write_large_payload called but blobStore is nil")
+		return `{"error": "Object storage temporarily unavailable."}`, nil
+	}
+
+	content, ok := args["content"].(string)
+	if !ok || content == "" {
+		return "Error: content parameter must be a non-empty string", nil
+	}
+
+	contentType, _ := args["content_type"].(string)
+	if contentType == "" {
+		contentType = "text/plain"
+	}
+
+	tenantID := GetTenantID(ctx)
+	agentID := GetAgentID(ctx)
+	threadID := GetThreadID(ctx)
+
+	if tenantID == "" {
+		tenantID = "default"
+	}
+	if agentID == "" {
+		agentID = "default"
+	}
+	if threadID == "" {
+		threadID = "default"
+	}
+
+	normalizedBucket := normalizeBucketName(tenantID)
+	objectID := uuid.New().String()
+
+	commID := e.communityID
+	if commID == "" {
+		commID = "default"
+	}
+
+	s3Key := fmt.Sprintf("%s/output/%s/%s/%s", commID, agentID, threadID, objectID)
+
+	reader := strings.NewReader(content)
+
+	ctx, span := e.tracer.Start(ctx, "cognitive_engine.write_large_payload",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(
+			attribute.String("s3.bucket", normalizedBucket),
+			attribute.String("s3.key", s3Key),
+			attribute.Int64("s3.size_bytes", int64(len(content))),
+		),
+	)
+	defer span.End()
+
+	_, err := e.blobStore.Put(ctx, s3Key, reader, contentType)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		logger.Warn().Err(err).Str("key", s3Key).Msg("failed to write to object storage")
+		return `{"error": "Object storage temporarily unavailable."}`, nil
+	}
+
+	ref := map[string]any{
+		"_type":        "s3_reference",
+		"bucket":       normalizedBucket,
+		"key":          s3Key,
+		"size_bytes":   int64(len(content)),
+		"content_type": contentType,
+	}
+	refJSON, _ := json.Marshal(ref)
+	return string(refJSON), nil
+}
+
+func normalizeBucketName(tenantName string) string {
+	name := strings.ToLower(tenantName)
+	var sb strings.Builder
+	for _, r := range name {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
+			sb.WriteRune(r)
+		} else {
+			sb.WriteRune('-')
+		}
+	}
+	name = sb.String()
+	for strings.Contains(name, "--") {
+		name = strings.ReplaceAll(name, "--", "-")
+	}
+	name = strings.Trim(name, "-")
+	if len(name) > 63 {
+		name = name[:63]
+		name = strings.TrimSuffix(name, "-")
+	}
+	return name
 }
 
 func (e *CognitiveEngine) RegisterTool(name string, handler ToolHandler) {
@@ -281,6 +392,7 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 	// Inject tenant, agent metadata and thread-scoped active tools/parsed skills into context
 	ctx = context.WithValue(ctx, tenantCtxKey{}, tenantID)
 	ctx = context.WithValue(ctx, agentCtxKey{}, agentID)
+	ctx = context.WithValue(ctx, threadCtxKey{}, threadID)
 	ctx = context.WithValue(ctx, activeToolsKey{}, activeTools)
 	if isStructured {
 		ctx = context.WithValue(ctx, parsedSkillsKey{}, skillsMap)

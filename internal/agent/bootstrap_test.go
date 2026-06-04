@@ -105,11 +105,45 @@ func TestReadyz_Returns503_WhenQdrantUnhealthy(t *testing.T) {
 	assert.True(t, foundQdrant)
 }
 
+func TestReadyz_Returns503_WhenMinioUnhealthy(t *testing.T) {
+	minioChecker := health.Checker{
+		Name: "minio",
+		Check: func(ctx context.Context) error {
+			return errors.New("minio connection refused")
+		},
+	}
+	srv := NewServer(minioChecker)
+
+	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+
+	var body map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &body)
+	require.NoError(t, err)
+	assert.Equal(t, "not_ready", body["status"])
+
+	checks := body["checks"].([]interface{})
+	foundMinio := false
+	for _, ch := range checks {
+		chMap := ch.(map[string]interface{})
+		if chMap["name"] == "minio" {
+			assert.Equal(t, "unhealthy", chMap["status"])
+			assert.Equal(t, "minio connection refused", chMap["error"])
+			foundMinio = true
+		}
+	}
+	assert.True(t, foundMinio)
+}
+
+
 func TestMetrics_Returns200AndPrometheusFormat(t *testing.T) {
 	ctx := context.Background()
 	shutdown, err := observability.InitTracer(ctx, "agent-test", "1.0.0", "")
 	require.NoError(t, err)
-	defer shutdown(ctx)
+	defer func() { _ = shutdown(ctx) }()
 
 	srv := NewServer()
 
@@ -139,7 +173,7 @@ func TestMetrics_ContainsMCPMetrics(t *testing.T) {
 	ctx := context.Background()
 	shutdown, err := observability.InitTracer(ctx, "agent-test", "1.0.0", "")
 	require.NoError(t, err)
-	defer shutdown(ctx)
+	defer func() { _ = shutdown(ctx) }()
 
 	srv := NewServer()
 
