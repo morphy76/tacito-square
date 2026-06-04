@@ -55,6 +55,9 @@ spec:
             - name: ca-cert
               mountPath: /etc/ssl/tacito
               readOnly: true
+            - name: agent-tiers
+              mountPath: /etc/tacito/tiers
+              readOnly: true
       volumes:
         - name: ca-cert
           configMap:
@@ -62,4 +65,7 @@ spec:
             items:
               - key: {{ .Values.global.caTrustBundle.key }}
                 path: ca.crt
+        - name: agent-tiers
+          configMap:
+            name: ts-agent-tiers
 {{- end }}

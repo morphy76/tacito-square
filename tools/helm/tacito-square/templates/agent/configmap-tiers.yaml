@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ts-agent-tiers
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "tacito-square.labels" (dict "component" "operator" "context" .) | nindent 4 }}
+data:
+  tiers.yaml: |
+    {{- toYaml .Values.agentTiers.configs | nindent 4 }}

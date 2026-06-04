@@ -101,6 +101,29 @@ agent:
     tls:
       caCertPath: "/etc/ssl/tacito/ca.crt"
 
+# --- Agent Tiers ---
+agentTiers:
+  configs:
+    heavy:
+      image:
+        registry: ""
+        name: tacito-square/agent
+        tag: "0.1.0"
+        pullPolicy: Always
+      resources:
+        requests:
+          cpu: 500m
+          memory: 512Mi
+        limits:
+          cpu: 2000m
+          memory: 2Gi
+      livenessProbe:
+        initialDelaySeconds: 15
+        periodSeconds: 20
+      readinessProbe:
+        initialDelaySeconds: 15
+        periodSeconds: 20
+
 # --- Operator ---
 operator:
   enabled: true
