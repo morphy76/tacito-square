@@ -72,7 +72,7 @@ To solve this, this specification introduces **Flexible Agent Runtime Tiers**. T
 ### Keeper (Domain, REST, and DB)
 * `[MODIFY] internal/keeper/domain/model/agent.go` — Add `Tier string` field.
 * `[MODIFY] internal/keeper/adapters/inbound/http/agent_handlers.go` — Add optional `deployment.tier` to `CreateAgentRequest` and `UpdateAgentRequest`.
-* `[NEW] deploy/postgres/migrations/00002_add_agent_tier.sql` — Goose migration to add `tier VARCHAR(50) NOT NULL DEFAULT ''` to the `agents` table.
+* `[MODIFY] deploy/postgres/migrations/00001_init.sql` — Add `tier VARCHAR(50) NOT NULL DEFAULT ''` to the `agents` table (inline, no separate migration needed at this stage).
 * `[MODIFY] internal/keeper/adapters/outbound/postgres/agent_repository.go` — Include `tier` in all SELECT/INSERT/UPDATE queries.
 * `[MODIFY] internal/keeper/openapi.json` — Document the new optional `deployment.tier` field on Agent create and update schemas.
 

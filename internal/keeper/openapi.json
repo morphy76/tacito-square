@@ -3861,6 +3861,17 @@
               "$ref": "#/components/schemas/MCPClientConfig"
             },
             "description": "Array of MCP client configurations. Why: Enables the agent to execute specific external tools."
+          },
+          "deployment": {
+            "type": "object",
+            "properties": {
+              "tier": {
+                "type": "string",
+                "example": "heavy",
+                "description": "Logical runtime tier name (e.g. 'standard', 'heavy', 'gpu-optimized'). The Operator maps this to container resources and image settings. If omitted or unknown, the implicit default profile is used."
+              }
+            },
+            "description": "Deployment configuration options. Why: Decouples infrastructure sizing from the agent definition, allowing operators to define resource profiles independently."
           }
         },
         "description": "Request payload to define an Agent template. Why: Packages the cognitive blueprint (LLM, memory policies, skills, prompts, and tool attachments) for creation."
@@ -3915,6 +3926,17 @@
               "$ref": "#/components/schemas/MCPClientConfig"
             },
             "description": "Updated array of mounted MCP server configurations."
+          },
+          "deployment": {
+            "type": "object",
+            "properties": {
+              "tier": {
+                "type": "string",
+                "example": "gpu-optimized",
+                "description": "Updated logical runtime tier name. Operator will apply the new tier profile on the next reconciliation after agent reassignment."
+              }
+            },
+            "description": "Updated deployment configuration options."
           }
         },
         "description": "Request payload to modify an existing Agent template. Why: Supports hot-updating memory policies, prompt templates, or skill configurations."
@@ -4001,6 +4023,10 @@
             "type": "string",
             "format": "uuid",
             "description": "UUID of the assigned community. Why: Null if unassigned; binds the agent to a secure logical network domain."
+          },
+          "tier": {
+            "type": "string",
+            "description": "Logical runtime tier name assigned to this agent (empty string if using the implicit default)."
           }
         },
         "description": "Blueprint configuration of an autonomous agent. Why: Serves as the authoritative source of truth detailing the cognitive architecture of an agent model."

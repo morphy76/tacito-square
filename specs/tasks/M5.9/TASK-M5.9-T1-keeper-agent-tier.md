@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | TASK-M5.9-T1                                |
-| Status        | DRAFT                                       |
+| Status        | IMPLEMENTED                                 |
 | Spec          | SPEC-FR-M5.9                                |
 | Depends On    | none                                        |
 
@@ -18,7 +18,7 @@ Upgrades the Keeper component's Agent model, database migrations, pgx repository
    - Verify that the tests fail when run against the existing codebase.
 2. **GREEN Phase**:
    - Add `Tier string` field (`json:"tier"`) to the `Agent` domain model in [agent.go](file:///Users/R.Pasquini/Projects/side/tacito-square/internal/keeper/domain/model/agent.go).
-   - Create a new goose SQL migration [00002_add_agent_tier.sql](file:///Users/R.Pasquini/Projects/side/tacito-square/deploy/postgres/migrations/00002_add_agent_tier.sql) adding `tier VARCHAR(50) NOT NULL DEFAULT ''` to the `agents` table.
+   - Add `tier VARCHAR(50) NOT NULL DEFAULT ''` directly to the `agents` table in [00001_init.sql](file:///Users/R.Pasquini/Projects/side/tacito-square/deploy/postgres/migrations/00001_init.sql) (early-stage project, no live schema to migrate).
    - Add a `DeploymentRequest` sub-struct with a `Tier` field to `CreateAgentRequest` and `UpdateAgentRequest` in [agent_handlers.go](file:///Users/R.Pasquini/Projects/side/tacito-square/internal/keeper/adapters/inbound/http/agent_handlers.go); map it through to the `Agent` domain model.
    - Update all SELECT, INSERT, and UPDATE queries in [agent_repository.go](file:///Users/R.Pasquini/Projects/side/tacito-square/internal/keeper/adapters/outbound/postgres/agent_repository.go) to include the `tier` column.
    - Update the Agent create/update schema in [openapi.json](file:///Users/R.Pasquini/Projects/side/tacito-square/internal/keeper/openapi.json) to document the optional `deployment.tier` property.
