@@ -17,6 +17,11 @@ keeper:
 operator:
   image:
     pullPolicy: Never
+  config:
+    otel:
+      endpoint: "ts-infra-otel-collector:4317"
+    nats:
+      url: "nats://ts-infra-nats-headless:4222"
 agent:
   config:
     otel:

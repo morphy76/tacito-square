@@ -96,16 +96,24 @@ func TestBuildDeployment_LLMDefaultsAndOverrides(t *testing.T) {
 
 	assert.Equal(t, "0.7", envMap["TS_AGENT_BRAIN_TEMPERATURE"])
 	assert.Equal(t, "2048", envMap["TS_AGENT_BRAIN_MAX_TOKENS"])
+	_, hasEndpoint := envMap["TS_AGENT_OPENAI_ENDPOINT"]
+	assert.False(t, hasEndpoint)
+	_, hasAPIKey := envMap["TS_AGENT_OPENAI_API_KEY"]
+	assert.False(t, hasAPIKey)
 
 	// Test 2: Overrides
 	tempVal := "0.3"
 	maxTokensVal := int32(4096)
+	endpointVal := "https://api.openai.com/v1"
+	secretVal := "my-openai-key-secret"
 	agentOverrides := &v1alpha1.TacitoAgent{
 		Spec: v1alpha1.TacitoAgentSpec{
 			LLMConfig: v1alpha1.LLMConfig{
-				Model:       "gpt-4o",
-				Temperature: &tempVal,
-				MaxTokens:   &maxTokensVal,
+				Model:             "gpt-4o",
+				Temperature:       &tempVal,
+				MaxTokens:         &maxTokensVal,
+				Endpoint:          &endpointVal,
+				CredentialsSecret: &secretVal,
 			},
 			SystemPrompt: "Be extremely friendly.",
 		},
@@ -121,8 +129,21 @@ func TestBuildDeployment_LLMDefaultsAndOverrides(t *testing.T) {
 	assert.Equal(t, "0.3", envMapOverrides["TS_AGENT_BRAIN_TEMPERATURE"])
 	assert.Equal(t, "4096", envMapOverrides["TS_AGENT_BRAIN_MAX_TOKENS"])
 	assert.Equal(t, "Be extremely friendly.", envMapOverrides["TS_AGENT_SYSTEM_PROMPT"])
-}
+	assert.Equal(t, "https://api.openai.com/v1", envMapOverrides["TS_AGENT_OPENAI_ENDPOINT"])
 
+	var foundAPIKey bool
+	for _, env := range depOverrides.Spec.Template.Spec.Containers[0].Env {
+		if env.Name == "TS_AGENT_OPENAI_API_KEY" {
+			foundAPIKey = true
+			assert.Empty(t, env.Value)
+			assert.NotNil(t, env.ValueFrom)
+			assert.NotNil(t, env.ValueFrom.SecretKeyRef)
+			assert.Equal(t, "my-openai-key-secret", env.ValueFrom.SecretKeyRef.Name)
+			assert.Equal(t, "api-key", env.ValueFrom.SecretKeyRef.Key)
+		}
+	}
+	assert.True(t, foundAPIKey, "TS_AGENT_OPENAI_API_KEY environment variable was not set")
+}
 
 func TestBuildDeployment_OwnerReference(t *testing.T) {
 	logger := zerolog.Nop()
@@ -437,4 +458,3 @@ func TestBuildDeployment_TierResolution(t *testing.T) {
 	assert.Equal(t, "100m", containerDefault.Resources.Requests.Cpu().String())
 	assert.Equal(t, "256Mi", containerDefault.Resources.Limits.Memory().String())
 }
-

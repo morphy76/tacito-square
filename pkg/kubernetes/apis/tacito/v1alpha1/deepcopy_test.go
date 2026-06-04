@@ -12,10 +12,14 @@ import (
 func TestLLMConfig_DeepCopy(t *testing.T) {
 	temp := "0.7"
 	tokens := int32(100)
+	endpoint := "https://custom-openai.api"
+	secret := "custom-secret-name"
 	original := &LLMConfig{
-		Model:       "gpt-4",
-		Temperature: &temp,
-		MaxTokens:   &tokens,
+		Model:             "gpt-4",
+		Temperature:       &temp,
+		MaxTokens:         &tokens,
+		Endpoint:          &endpoint,
+		CredentialsSecret: &secret,
 	}
 
 	copied := original.DeepCopy()
@@ -26,6 +30,8 @@ func TestLLMConfig_DeepCopy(t *testing.T) {
 	assert.NotSame(t, original, copied)
 	assert.NotSame(t, original.Temperature, copied.Temperature)
 	assert.NotSame(t, original.MaxTokens, copied.MaxTokens)
+	assert.NotSame(t, original.Endpoint, copied.Endpoint)
+	assert.NotSame(t, original.CredentialsSecret, copied.CredentialsSecret)
 
 	// Modifying clone must not affect original
 	newTemp := "0.9"
@@ -35,6 +41,14 @@ func TestLLMConfig_DeepCopy(t *testing.T) {
 	newTokens := int32(200)
 	*copied.MaxTokens = newTokens
 	assert.Equal(t, int32(100), *original.MaxTokens)
+
+	newEndpoint := "https://other.api"
+	*copied.Endpoint = newEndpoint
+	assert.Equal(t, "https://custom-openai.api", *original.Endpoint)
+
+	newSecret := "other-secret"
+	*copied.CredentialsSecret = newSecret
+	assert.Equal(t, "custom-secret-name", *original.CredentialsSecret)
 
 	// Nil pointers
 	nilConfig := (*LLMConfig)(nil)

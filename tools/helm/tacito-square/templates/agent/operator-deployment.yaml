@@ -45,6 +45,16 @@ spec:
               value: {{ .Values.operator.config.tls.caCertPath | quote }}
             - name: TS_OPERATOR_AGENT_TLS_CA_CERT_PATH
               value: {{ .Values.agent.config.tls.caCertPath | quote }}
+            - name: TS_OPERATOR_AGENT_REDIS_URL
+              value: {{ .Values.agent.config.redis.url | quote }}
+            - name: TS_OPERATOR_AGENT_QDRANT_URL
+              value: {{ .Values.agent.config.qdrant.url | quote }}
+            - name: TS_OPERATOR_AGENT_S3_ENDPOINT
+              value: {{ .Values.agent.config.s3.endpoint | quote }}
+            - name: TS_OPERATOR_AGENT_S3_BUCKET
+              value: {{ .Values.agent.config.s3.bucket | quote }}
+            - name: TS_OPERATOR_AGENT_S3_REGION
+              value: {{ .Values.agent.config.s3.region | quote }}
           livenessProbe:
             {{- toYaml .Values.operator.livenessProbe | nindent 12 }}
           readinessProbe:

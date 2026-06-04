@@ -15,6 +15,7 @@ import (
 	"github.com/morphy76/tacito-square/pkg/kubernetes/apis/tacito/v1alpha1"
 	"github.com/nats-io/nats.go"
 	"github.com/rs/zerolog/log"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -45,6 +46,9 @@ func NewK8sCRDCoordinator(
 	nc *nats.Conn,
 ) (*K8sCRDCoordinator, error) {
 	scheme := runtime.NewScheme()
+	if err := corev1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
 	if err := v1alpha1.AddToScheme(scheme); err != nil {
 		return nil, err
 	}
@@ -223,6 +227,17 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 		maxTokens = &mt
 	}
 
+	var endpoint *string
+	if agent.Brain.Endpoint != "" {
+		endpoint = &agent.Brain.Endpoint
+	}
+
+	var credsSecret *string
+	if agent.Brain.CredentialsSecret != "" {
+		sName := "s-" + strings.ToLower(agent.ID.String())
+		credsSecret = &sName
+	}
+
 	var communityRef string
 	if agent.CommunityID != nil {
 		communityRef = agent.CommunityID.String()
@@ -277,15 +292,21 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 					CommunityRef: communityRef,
 					SystemPrompt: systemPrompt,
 					LLMConfig: v1alpha1.LLMConfig{
-						Model:       agent.Brain.Model,
-						Temperature: temp,
-						MaxTokens:   maxTokens,
+						Model:             agent.Brain.Model,
+						Temperature:       temp,
+						MaxTokens:         maxTokens,
+						Endpoint:          endpoint,
+						CredentialsSecret: credsSecret,
 					},
 					MCPClients: mcpClientSpecs,
 					Tier:       agent.Tier,
 				},
 			}
-			return c.client.Create(deadlineCtx, crdObj)
+			err = c.client.Create(deadlineCtx, crdObj)
+			if err != nil {
+				return err
+			}
+			return c.reconcileCredentialsSecret(deadlineCtx, agent, crdObj)
 		}
 		return fmt.Errorf("getting TacitoAgent CRD: %w", getErr)
 	}
@@ -304,11 +325,72 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 		latest.Spec.LLMConfig.Model = agent.Brain.Model
 		latest.Spec.LLMConfig.Temperature = temp
 		latest.Spec.LLMConfig.MaxTokens = maxTokens
+		latest.Spec.LLMConfig.Endpoint = endpoint
+		latest.Spec.LLMConfig.CredentialsSecret = credsSecret
 		latest.Spec.MCPClients = mcpClientSpecs
 		latest.Spec.Tier = agent.Tier
 
-		return c.client.Update(deadlineCtx, latest)
+		err = c.client.Update(deadlineCtx, latest)
+		if err != nil {
+			return err
+		}
+		return c.reconcileCredentialsSecret(deadlineCtx, agent, latest)
 	})
+}
+
+// reconcileCredentialsSecret creates or updates the Kubernetes Secret s-<agentId> containing the LLM API credentials.
+func (c *K8sCRDCoordinator) reconcileCredentialsSecret(ctx context.Context, agent *model.Agent, owner *v1alpha1.TacitoAgent) error {
+	if agent.Brain.CredentialsSecret == "" {
+		return nil
+	}
+
+	secretName := "s-" + strings.ToLower(agent.ID.String())
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: c.namespace,
+		},
+	}
+
+	// We set owner reference to the TacitoAgent CRD so K8s GC deletes it
+	ownerRef := metav1.OwnerReference{
+		APIVersion: owner.APIVersion,
+		Kind:       owner.Kind,
+		Name:       owner.Name,
+		UID:        owner.UID,
+	}
+	if ownerRef.APIVersion == "" {
+		ownerRef.APIVersion = "tacito.square.io/v1alpha1"
+	}
+	if ownerRef.Kind == "" {
+		ownerRef.Kind = "TacitoAgent"
+	}
+	isController := true
+	blockOwnerDeletion := true
+	ownerRef.Controller = &isController
+	ownerRef.BlockOwnerDeletion = &blockOwnerDeletion
+
+	key := types.NamespacedName{Namespace: c.namespace, Name: secretName}
+	existingSecret := &corev1.Secret{}
+	err := c.client.Get(ctx, key, existingSecret)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			secret.OwnerReferences = []metav1.OwnerReference{ownerRef}
+			secret.Data = map[string][]byte{
+				"api-key": []byte(agent.Brain.CredentialsSecret),
+			}
+			return c.client.Create(ctx, secret)
+		}
+		return err
+	}
+
+	// Update existing secret with new API key if changed
+	existingSecret.OwnerReferences = []metav1.OwnerReference{ownerRef}
+	if existingSecret.Data == nil {
+		existingSecret.Data = make(map[string][]byte)
+	}
+	existingSecret.Data["api-key"] = []byte(agent.Brain.CredentialsSecret)
+	return c.client.Update(ctx, existingSecret)
 }
 
 // TeardownAgentCRD deletes the corresponding TacitoAgent custom resource safely.

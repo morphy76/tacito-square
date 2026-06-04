@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"strings"
+
 	"github.com/google/uuid"
 	crdadapter "github.com/morphy76/tacito-square/internal/keeper/adapters/outbound/crd"
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/outbound"
@@ -17,6 +19,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -31,6 +34,8 @@ func TestSubmitAgentCRD_CreateSuccess(t *testing.T) {
 	scheme := runtime.NewScheme()
 	err := v1alpha1.AddToScheme(scheme)
 	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
+	require.NoError(t, err)
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
@@ -43,9 +48,11 @@ func TestSubmitAgentCRD_CreateSuccess(t *testing.T) {
 		Name:        "agent-1",
 		Description: "A helpful assistant",
 		Brain: model.BrainConfig{
-			Model:       "gpt-4",
-			Temperature: 0.5,
-			MaxTokens:   1000,
+			Model:             "gpt-4",
+			Temperature:       0.5,
+			MaxTokens:         1000,
+			Endpoint:          "https://custom-endpoint.com/v1",
+			CredentialsSecret: "my-zitadel-secret",
 		},
 		CommunityID: &communityID,
 	}
@@ -66,11 +73,24 @@ func TestSubmitAgentCRD_CreateSuccess(t *testing.T) {
 	assert.Equal(t, "gpt-4", fetched.Spec.LLMConfig.Model)
 	assert.Equal(t, "0.5", *fetched.Spec.LLMConfig.Temperature)
 	assert.Equal(t, int32(1000), *fetched.Spec.LLMConfig.MaxTokens)
+	assert.Equal(t, "https://custom-endpoint.com/v1", *fetched.Spec.LLMConfig.Endpoint)
+	assert.Equal(t, "s-"+strings.ToLower(agentID.String()), *fetched.Spec.LLMConfig.CredentialsSecret)
+
+	// Fetch generated secret from fake client
+	fetchedSecret := &corev1.Secret{}
+	secretKey := types.NamespacedName{Namespace: "tacito", Name: "s-" + strings.ToLower(agentID.String())}
+	err = fakeClient.Get(context.Background(), secretKey, fetchedSecret)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte("my-zitadel-secret"), fetchedSecret.Data["api-key"])
+	assert.Len(t, fetchedSecret.OwnerReferences, 1)
+	assert.Equal(t, fetched.Name, fetchedSecret.OwnerReferences[0].Name)
 }
 
 func TestSubmitAgentCRD_UpdateSuccess(t *testing.T) {
 	scheme := runtime.NewScheme()
 	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
 	require.NoError(t, err)
 
 	agentID := uuid.New()
@@ -102,9 +122,11 @@ func TestSubmitAgentCRD_UpdateSuccess(t *testing.T) {
 		Name:        "new-agent-name",
 		Description: "A helpful assistant",
 		Brain: model.BrainConfig{
-			Model:       "gpt-4",
-			Temperature: 0.7,
-			MaxTokens:   2000,
+			Model:             "gpt-4",
+			Temperature:       0.7,
+			MaxTokens:         2000,
+			Endpoint:          "https://new-endpoint.com/v1",
+			CredentialsSecret: "new-zitadel-secret",
 		},
 		CommunityID: &communityID,
 	}
@@ -122,11 +144,24 @@ func TestSubmitAgentCRD_UpdateSuccess(t *testing.T) {
 	assert.Equal(t, "gpt-4", fetched.Spec.LLMConfig.Model)
 	assert.Equal(t, "0.7", *fetched.Spec.LLMConfig.Temperature)
 	assert.Equal(t, int32(2000), *fetched.Spec.LLMConfig.MaxTokens)
+	assert.Equal(t, "https://new-endpoint.com/v1", *fetched.Spec.LLMConfig.Endpoint)
+	assert.Equal(t, "s-"+strings.ToLower(agentID.String()), *fetched.Spec.LLMConfig.CredentialsSecret)
+
+	// Fetch generated secret from fake client
+	fetchedSecret := &corev1.Secret{}
+	secretKey := types.NamespacedName{Namespace: "tacito", Name: "s-" + strings.ToLower(agentID.String())}
+	err = fakeClient.Get(context.Background(), secretKey, fetchedSecret)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte("new-zitadel-secret"), fetchedSecret.Data["api-key"])
+	assert.Len(t, fetchedSecret.OwnerReferences, 1)
+	assert.Equal(t, fetched.Name, fetchedSecret.OwnerReferences[0].Name)
 }
 
 func TestSubmitAgentCRD_ConflictResolution(t *testing.T) {
 	scheme := runtime.NewScheme()
 	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
 	require.NoError(t, err)
 
 	agentID := uuid.New()
@@ -195,6 +230,8 @@ func TestSubmitAgentCRD_Timeout(t *testing.T) {
 	scheme := runtime.NewScheme()
 	err := v1alpha1.AddToScheme(scheme)
 	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
+	require.NoError(t, err)
 
 	agentID := uuid.New()
 
@@ -241,6 +278,8 @@ func TestSubmitAgentCRD_Timeout(t *testing.T) {
 func TestTeardownAgentCRD_Success(t *testing.T) {
 	scheme := runtime.NewScheme()
 	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
 	require.NoError(t, err)
 
 	agentID := uuid.New()
@@ -360,6 +399,8 @@ func TestSubmitAgentCRD_NATSProgressionStarted(t *testing.T) {
 	scheme := runtime.NewScheme()
 	err := v1alpha1.AddToScheme(scheme)
 	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
+	require.NoError(t, err)
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nc)
@@ -405,6 +446,8 @@ func TestSubmitAgentCRD_NATSProgressionCompleted(t *testing.T) {
 	scheme := runtime.NewScheme()
 	err := v1alpha1.AddToScheme(scheme)
 	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
+	require.NoError(t, err)
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nc)
@@ -447,6 +490,8 @@ func TestSubmitAgentCRD_NATSProgressionFailed(t *testing.T) {
 
 	scheme := runtime.NewScheme()
 	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
 	require.NoError(t, err)
 
 	// Inject error in Create operation to trigger failure
@@ -552,6 +597,8 @@ func TestResolveAndSynthesizeSystemPrompt_Success(t *testing.T) {
 func TestSubmitAgentCRD_SynthesizedPromptAndTenantMapped(t *testing.T) {
 	scheme := runtime.NewScheme()
 	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
 	require.NoError(t, err)
 
 	promptID := uuid.New()
@@ -669,6 +716,8 @@ func TestGetAgentCRDStatus_Existing(t *testing.T) {
 	scheme := runtime.NewScheme()
 	err := v1alpha1.AddToScheme(scheme)
 	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
+	require.NoError(t, err)
 
 	agentID := uuid.New()
 	existing := &v1alpha1.TacitoAgent{
@@ -706,6 +755,8 @@ func TestGetAgentCRDStatus_NonExistent(t *testing.T) {
 	scheme := runtime.NewScheme()
 	err := v1alpha1.AddToScheme(scheme)
 	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
+	require.NoError(t, err)
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
@@ -719,6 +770,8 @@ func TestGetAgentCRDStatus_NonExistent(t *testing.T) {
 func TestGetAgentCRDStatus_Timeout(t *testing.T) {
 	scheme := runtime.NewScheme()
 	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
 	require.NoError(t, err)
 
 	fakeClient := fake.NewClientBuilder().
@@ -748,6 +801,8 @@ func TestGetAgentCRDStatus_Timeout(t *testing.T) {
 func TestSubmitAgentCRD_WithMCPClients(t *testing.T) {
 	scheme := runtime.NewScheme()
 	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
 	require.NoError(t, err)
 
 	clientID := uuid.New()
@@ -813,6 +868,8 @@ func TestSubmitAgentCRD_TierPropagated(t *testing.T) {
 	scheme := runtime.NewScheme()
 	err := v1alpha1.AddToScheme(scheme)
 	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
+	require.NoError(t, err)
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
@@ -842,6 +899,8 @@ func TestSubmitAgentCRD_TierPropagated(t *testing.T) {
 func TestSubmitAgentCRD_EmptyTierPropagated(t *testing.T) {
 	scheme := runtime.NewScheme()
 	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
 	require.NoError(t, err)
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()

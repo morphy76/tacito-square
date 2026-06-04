@@ -419,6 +419,27 @@ func (s *ReconcileAgentServiceImpl) BuildDeployment(ctx context.Context, agent *
 		{Name: "TS_AGENT_BRAIN_MAX_TOKENS", Value: maxTokens},
 	}
 
+	if agent.Spec.LLMConfig.Endpoint != nil && *agent.Spec.LLMConfig.Endpoint != "" {
+		env = append(env, corev1.EnvVar{
+			Name:  "TS_AGENT_OPENAI_ENDPOINT",
+			Value: *agent.Spec.LLMConfig.Endpoint,
+		})
+	}
+
+	if agent.Spec.LLMConfig.CredentialsSecret != nil && *agent.Spec.LLMConfig.CredentialsSecret != "" {
+		env = append(env, corev1.EnvVar{
+			Name: "TS_AGENT_OPENAI_API_KEY",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: *agent.Spec.LLMConfig.CredentialsSecret,
+					},
+					Key: "api-key",
+				},
+			},
+		})
+	}
+
 	if agent.Spec.SystemPrompt != "" {
 		env = append(env, corev1.EnvVar{Name: "TS_AGENT_SYSTEM_PROMPT", Value: agent.Spec.SystemPrompt})
 	}

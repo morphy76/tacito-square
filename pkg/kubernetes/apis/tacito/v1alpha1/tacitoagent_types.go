@@ -36,6 +36,14 @@ type LLMConfig struct {
 	// +kubebuilder:validation:Maximum=8192
 	// +kubebuilder:default=2048
 	MaxTokens *int32 `json:"maxTokens,omitempty"`
+
+	// Endpoint is the target LLM API endpoint URL.
+	// +optional
+	Endpoint *string `json:"endpoint,omitempty"`
+
+	// CredentialsSecret is the secret reference or raw secret API key.
+	// +optional
+	CredentialsSecret *string `json:"credentialsSecret,omitempty"`
 }
 
 // MCPClientSpec defines the configuration of an attached MCP client gateway.
