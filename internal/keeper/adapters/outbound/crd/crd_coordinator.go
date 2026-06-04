@@ -282,6 +282,7 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 						MaxTokens:   maxTokens,
 					},
 					MCPClients: mcpClientSpecs,
+					Tier:       agent.Tier,
 				},
 			}
 			return c.client.Create(deadlineCtx, crdObj)
@@ -304,6 +305,7 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 		latest.Spec.LLMConfig.Temperature = temp
 		latest.Spec.LLMConfig.MaxTokens = maxTokens
 		latest.Spec.MCPClients = mcpClientSpecs
+		latest.Spec.Tier = agent.Tier
 
 		return c.client.Update(deadlineCtx, latest)
 	})

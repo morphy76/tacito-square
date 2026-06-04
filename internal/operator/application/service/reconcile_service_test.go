@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -124,35 +123,6 @@ func TestBuildDeployment_LLMDefaultsAndOverrides(t *testing.T) {
 	assert.Equal(t, "Be extremely friendly.", envMapOverrides["TS_AGENT_SYSTEM_PROMPT"])
 }
 
-func TestBuildDeployment_ResourceConstraints(t *testing.T) {
-	logger := zerolog.Nop()
-	cfg := viper.New()
-	fakeClient := fake.NewClientBuilder().Build()
-	svc := service.NewReconcileAgentService(fakeClient, logger, cfg)
-
-	cpuRequest := resource.MustParse("100m")
-	memLimit := resource.MustParse("256Mi")
-
-	agent := &v1alpha1.TacitoAgent{
-		Spec: v1alpha1.TacitoAgentSpec{
-			Resources: &corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceCPU: cpuRequest,
-				},
-				Limits: corev1.ResourceList{
-					corev1.ResourceMemory: memLimit,
-				},
-			},
-		},
-	}
-
-	dep, err := svc.BuildDeployment(context.Background(), agent)
-	assert.NoError(t, err)
-	container := dep.Spec.Template.Spec.Containers[0]
-
-	assert.Equal(t, cpuRequest, container.Resources.Requests[corev1.ResourceCPU])
-	assert.Equal(t, memLimit, container.Resources.Limits[corev1.ResourceMemory])
-}
 
 func TestBuildDeployment_OwnerReference(t *testing.T) {
 	logger := zerolog.Nop()

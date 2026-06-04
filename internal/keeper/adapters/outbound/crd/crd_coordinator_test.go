@@ -808,3 +808,64 @@ func TestSubmitAgentCRD_WithMCPClients(t *testing.T) {
 	// Allowed tools whitelisting
 	assert.Equal(t, []string{"tool1", "tool2"}, spec.AllowedTools)
 }
+
+func TestSubmitAgentCRD_TierPropagated(t *testing.T) {
+	scheme := runtime.NewScheme()
+	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
+
+	agentID := uuid.New()
+	agent := &model.Agent{
+		ID:       agentID,
+		TenantID: "tenant-1",
+		Name:     "tier-agent",
+		Tier:     "heavy",
+		Brain: model.BrainConfig{
+			Model: "gpt-4",
+		},
+	}
+
+	err = coordinator.SubmitAgentCRD(context.Background(), agent)
+	assert.NoError(t, err)
+
+	fetched := &v1alpha1.TacitoAgent{}
+	key := types.NamespacedName{Namespace: "tacito", Name: "u-" + agentID.String()}
+	err = fakeClient.Get(context.Background(), key, fetched)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "heavy", fetched.Spec.Tier)
+}
+
+func TestSubmitAgentCRD_EmptyTierPropagated(t *testing.T) {
+	scheme := runtime.NewScheme()
+	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
+
+	agentID := uuid.New()
+	agent := &model.Agent{
+		ID:       agentID,
+		TenantID: "tenant-1",
+		Name:     "default-tier-agent",
+		// Tier intentionally empty
+		Brain: model.BrainConfig{
+			Model: "gpt-4",
+		},
+	}
+
+	err = coordinator.SubmitAgentCRD(context.Background(), agent)
+	assert.NoError(t, err)
+
+	fetched := &v1alpha1.TacitoAgent{}
+	key := types.NamespacedName{Namespace: "tacito", Name: "u-" + agentID.String()}
+	err = fakeClient.Get(context.Background(), key, fetched)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "", fetched.Spec.Tier)
+}
+

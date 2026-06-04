@@ -140,7 +140,7 @@ func TestTacitoAgentSpec_JSONTags_OptionalFieldsOmitted(t *testing.T) {
 	// Optional fields with omitempty should be absent when zero/nil.
 	assert.NotContains(t, raw, "systemPrompt")
 	assert.NotContains(t, raw, "replicas")
-	assert.NotContains(t, raw, "resources")
+	assert.NotContains(t, raw, "tier")
 
 	llmConfig, ok := raw["llmConfig"].(map[string]interface{})
 	require.True(t, ok)
@@ -151,7 +151,7 @@ func TestTacitoAgentSpec_JSONTags_OptionalFieldsOmitted(t *testing.T) {
 func TestTacitoAgentSpec_DefaultNilForOptionalPointers(t *testing.T) {
 	var spec TacitoAgentSpec
 	assert.Nil(t, spec.Replicas)
-	assert.Nil(t, spec.Resources)
+	assert.Equal(t, "", spec.Tier)
 	assert.Nil(t, spec.LLMConfig.Temperature)
 	assert.Nil(t, spec.LLMConfig.MaxTokens)
 }

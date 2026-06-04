@@ -273,9 +273,7 @@ func (s *ReconcileAgentServiceImpl) BuildDeployment(ctx context.Context, agent *
 
 	// 5. Construct container resource constraints
 	var resources corev1.ResourceRequirements
-	if agent.Spec.Resources != nil {
-		resources = *agent.Spec.Resources
-	}
+	// TODO(M5.9-T4): Resolve resources based on agent.Spec.Tier using Tier Map configmap.
 
 	// 6. Resolve replica counts
 	replicas := int32(1)

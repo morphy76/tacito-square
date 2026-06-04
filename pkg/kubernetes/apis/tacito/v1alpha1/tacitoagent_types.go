@@ -1,7 +1,6 @@
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -99,9 +98,11 @@ type TacitoAgentSpec struct {
 	// +kubebuilder:default=1
 	Replicas *int32 `json:"replicas,omitempty"`
 
-	// Resources defines the CPU and memory resource requirements.
+	// Tier is the logical runtime tier name used by the Operator to select the
+	// appropriate container image, resource requests/limits, and probe timings.
+	// An empty string signals the Operator to apply the implicit default profile.
 	// +optional
-	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+	Tier string `json:"tier,omitempty"`
 }
 
 // TacitoAgentStatus defines the observed state of a TacitoAgent.
