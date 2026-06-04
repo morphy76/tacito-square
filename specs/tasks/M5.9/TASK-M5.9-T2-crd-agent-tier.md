@@ -9,21 +9,22 @@
 
 ## Description
 
-Adds the `tier` field to the Agent CRD schema and updates the Keeper's CRD Coordinator to submit the tier to Kubernetes during deployment.
+Adds the `tier` field to the `TacitoAgentSpec` CRD struct, removes the raw `Resources` field (now determined by tier), and updates the Keeper's CRD Coordinator to propagate the tier value into the Kubernetes CR at submission time.
 
 ## Work Items
 
 1. **RED Phase**:
-   - Write integration tests in [coordinator_test.go](file:///Users/R.Pasquini/Projects/side/tacito-square/internal/keeper/adapters/outbound/crd/coordinator_test.go) asserting that when submitting an Agent with tier `"heavy"`, the generated Custom Resource `Agent` spec has `spec.tier` set to `"heavy"`.
-   - Verify that the tests fail when run against the existing codebase.
+   - Write integration tests in [crd_coordinator_test.go](file:///Users/R.Pasquini/Projects/side/tacito-square/internal/keeper/adapters/outbound/crd/crd_coordinator_test.go) asserting that submitting an Agent with `Tier = "heavy"` generates a CR with `spec.tier = "heavy"`, and that submitting an agent with empty tier generates a CR with an empty `spec.tier`.
+   - Verify that the tests fail against the existing codebase.
 2. **GREEN Phase**:
-   - Modify [agent_types.go](file:///Users/R.Pasquini/Projects/side/tacito-square/pkg/kubernetes/apis/tacito/v1alpha1/agent_types.go) to add `Tier string `json:"tier,omitempty"`` to the `AgentSpec` struct.
-   - Run Operator code-generators (`make generate`) to update CRD manifests if required.
-   - Update the mapping in [coordinator.go](file:///Users/R.Pasquini/Projects/side/tacito-square/internal/keeper/adapters/outbound/crd/coordinator.go) to copy the agent's `Tier` to `AgentSpec.Tier` during custom resource construction.
-   - Verify all tests compile and pass successfully.
+   - In [agent_types.go](file:///Users/R.Pasquini/Projects/side/tacito-square/pkg/kubernetes/apis/tacito/v1alpha1/agent_types.go): add `Tier string` (`// +optional`, `json:"tier,omitempty"`) and **remove** `Resources *corev1.ResourceRequirements` from `TacitoAgentSpec` (resources are now entirely controlled by the Operator tier map).
+   - Run `make generate` to regenerate [zz_generated.deepcopy.go](file:///Users/R.Pasquini/Projects/side/tacito-square/pkg/kubernetes/apis/tacito/v1alpha1/zz_generated.deepcopy.go).
+   - Update [crd_coordinator.go](file:///Users/R.Pasquini/Projects/side/tacito-square/internal/keeper/adapters/outbound/crd/crd_coordinator.go): remove the `Resources` field mapping in `SubmitAgentCRD` and populate `Spec.Tier = agent.Tier` on both create and update paths.
+   - Verify all tests compile and pass.
 3. **REFACTOR Phase**:
-   - Clean up imports, comments, and struct mappings.
+   - Remove any remaining references to `spec.Resources` in CRD tests or fixtures.
 
 ## Acceptance Criteria
 
-1. Submitting an Agent CRD writes `spec.tier` correctly in Kubernetes Custom Resource objects.
+1. Submitting an Agent CRD writes `spec.tier` correctly in Kubernetes CRs.
+2. `TacitoAgentSpec` no longer exposes a `Resources` field — resources are exclusively set by the Operator at reconciliation time.
