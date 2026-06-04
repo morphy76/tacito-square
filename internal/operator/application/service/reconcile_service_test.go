@@ -25,7 +25,7 @@ func TestBuildDeployment_TenantIDAndBasicEnv(t *testing.T) {
 	logger := zerolog.Nop()
 	cfg := viper.New()
 	fakeClient := fake.NewClientBuilder().Build()
-	svc := service.NewReconcileAgentService(fakeClient, logger, cfg)
+	svc := service.NewReconcileAgentService(fakeClient, logger, cfg, nil)
 
 	agent := &v1alpha1.TacitoAgent{
 		ObjectMeta: metav1.ObjectMeta{
@@ -76,7 +76,7 @@ func TestBuildDeployment_LLMDefaultsAndOverrides(t *testing.T) {
 	logger := zerolog.Nop()
 	cfg := viper.New()
 	fakeClient := fake.NewClientBuilder().Build()
-	svc := service.NewReconcileAgentService(fakeClient, logger, cfg)
+	svc := service.NewReconcileAgentService(fakeClient, logger, cfg, nil)
 
 	// Test 1: Defaults fallback
 	agentDefaults := &v1alpha1.TacitoAgent{
@@ -128,7 +128,7 @@ func TestBuildDeployment_OwnerReference(t *testing.T) {
 	logger := zerolog.Nop()
 	cfg := viper.New()
 	fakeClient := fake.NewClientBuilder().Build()
-	svc := service.NewReconcileAgentService(fakeClient, logger, cfg)
+	svc := service.NewReconcileAgentService(fakeClient, logger, cfg, nil)
 
 	agent := &v1alpha1.TacitoAgent{
 		ObjectMeta: metav1.ObjectMeta{
@@ -153,7 +153,7 @@ func TestBuildHeadlessService(t *testing.T) {
 	logger := zerolog.Nop()
 	cfg := viper.New()
 	fakeClient := fake.NewClientBuilder().Build()
-	svc := service.NewReconcileAgentService(fakeClient, logger, cfg)
+	svc := service.NewReconcileAgentService(fakeClient, logger, cfg, nil)
 
 	agent := &v1alpha1.TacitoAgent{
 		ObjectMeta: metav1.ObjectMeta{
@@ -222,7 +222,7 @@ func TestReconcile_CreatesDeploymentAndService(t *testing.T) {
 	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithStatusSubresource(&v1alpha1.TacitoAgent{}).WithObjects(agent).Build()
-	svc := service.NewReconcileAgentService(fakeClient, logger, cfg)
+	svc := service.NewReconcileAgentService(fakeClient, logger, cfg, nil)
 
 	err = svc.Reconcile(context.Background(), agent)
 	assert.NoError(t, err)
@@ -266,7 +266,7 @@ func TestReconcile_StatusTransitions(t *testing.T) {
 	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithStatusSubresource(&v1alpha1.TacitoAgent{}).WithObjects(agent).Build()
-	svc := service.NewReconcileAgentService(fakeClient, logger, cfg)
+	svc := service.NewReconcileAgentService(fakeClient, logger, cfg, nil)
 
 	// 1. Initial Reconcile -> Pending (0 ready replicas)
 	err = svc.Reconcile(context.Background(), agent)
@@ -333,7 +333,7 @@ func TestBuildDeployment_WithMCPClients(t *testing.T) {
 	logger := zerolog.Nop()
 	cfg := viper.New()
 	fakeClient := fake.NewClientBuilder().Build()
-	svc := service.NewReconcileAgentService(fakeClient, logger, cfg)
+	svc := service.NewReconcileAgentService(fakeClient, logger, cfg, nil)
 
 	agent := &v1alpha1.TacitoAgent{
 		ObjectMeta: metav1.ObjectMeta{
@@ -386,3 +386,55 @@ func TestBuildDeployment_WithMCPClients(t *testing.T) {
 	assert.Equal(t, "true", clientSpec.Env["DEBUG"])
 	assert.Equal(t, []string{"query_db", "get_schema"}, clientSpec.AllowedTools)
 }
+
+func TestBuildDeployment_TierResolution(t *testing.T) {
+	logger := zerolog.Nop()
+	cfg := viper.New()
+	// Setup implicit default settings in viper
+	cfg.Set("agent.image", "my-default-agent:latest")
+	cfg.Set("agent.resources.requests.cpu", "100m")
+	cfg.Set("agent.resources.limits.memory", "256Mi")
+
+	tierMap := map[string]service.TierProfile{
+		"heavy": {
+			Image: service.TierImage{
+				Name: "tacito-square/agent-heavy",
+				Tag:  "v1.0.0",
+			},
+			Resources: service.TierResources{
+				Requests: map[string]string{"cpu": "500m"},
+				Limits:   map[string]string{"memory": "1Gi"},
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().Build()
+	svc := service.NewReconcileAgentService(fakeClient, logger, cfg, tierMap)
+
+	// Test 1: Resolve known tier "heavy"
+	agentHeavy := &v1alpha1.TacitoAgent{
+		Spec: v1alpha1.TacitoAgentSpec{
+			Tier: "heavy",
+		},
+	}
+	depHeavy, err := svc.BuildDeployment(context.Background(), agentHeavy)
+	assert.NoError(t, err)
+	containerHeavy := depHeavy.Spec.Template.Spec.Containers[0]
+	assert.Equal(t, "tacito-square/agent-heavy:v1.0.0", containerHeavy.Image)
+	assert.Equal(t, "500m", containerHeavy.Resources.Requests.Cpu().String())
+	assert.Equal(t, "1Gi", containerHeavy.Resources.Limits.Memory().String())
+
+	// Test 2: Fallback on unknown/empty tier
+	agentDefault := &v1alpha1.TacitoAgent{
+		Spec: v1alpha1.TacitoAgentSpec{
+			Tier: "non-existent",
+		},
+	}
+	depDefault, err := svc.BuildDeployment(context.Background(), agentDefault)
+	assert.NoError(t, err)
+	containerDefault := depDefault.Spec.Template.Spec.Containers[0]
+	assert.Equal(t, "my-default-agent:latest", containerDefault.Image)
+	assert.Equal(t, "100m", containerDefault.Resources.Requests.Cpu().String())
+	assert.Equal(t, "256Mi", containerDefault.Resources.Limits.Memory().String())
+}
+

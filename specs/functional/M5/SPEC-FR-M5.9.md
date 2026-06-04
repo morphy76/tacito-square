@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M5.9                                |
-| Status        | ACCEPTED                                    |
+| Status        | VERIFIED                                    |
 | Milestone     | M5                                          |
 | Component     | keeper, operator, deploy                    |
 | Depends On    | SPEC-FR-M4.1, SPEC-FR-M4.3, SPEC-FR-M4.7   |

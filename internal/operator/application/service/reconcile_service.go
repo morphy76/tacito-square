@@ -4,15 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 
 	"github.com/morphy76/tacito-square/internal/operator/application/ports/inbound"
 	"github.com/morphy76/tacito-square/pkg/kubernetes/apis/tacito/v1alpha1"
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v3"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,21 +35,76 @@ const (
 	defaultCaCertPath    = "/etc/ssl/tacito/ca.crt"
 )
 
+// TierImage defines image configuration inside a tier profile.
+type TierImage struct {
+	Registry   string `yaml:"registry"`
+	Name       string `yaml:"name"`
+	Tag        string `yaml:"tag"`
+	PullPolicy string `yaml:"pullPolicy"`
+}
+
+// TierResources defines CPU/memory limits & requests in a tier profile.
+type TierResources struct {
+	Requests map[string]string `yaml:"requests"`
+	Limits   map[string]string `yaml:"limits"`
+}
+
+// ProbeTiming defines probe delay and period in a tier profile.
+type ProbeTiming struct {
+	InitialDelaySeconds int32 `yaml:"initialDelaySeconds"`
+	PeriodSeconds       int32 `yaml:"periodSeconds"`
+}
+
+// TierProfile defines a logical runtime tier's spec overrides.
+type TierProfile struct {
+	Image          TierImage     `yaml:"image"`
+	Resources      TierResources `yaml:"resources"`
+	LivenessProbe  ProbeTiming   `yaml:"livenessProbe"`
+	ReadinessProbe ProbeTiming   `yaml:"readinessProbe"`
+}
+
+// LoadTierMap loads and parses agent tier profiles from a YAML file.
+func LoadTierMap(path string, logger zerolog.Logger) (map[string]TierProfile, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			logger.Warn().Str("path", path).Msg("tier configuration file does not exist, using empty tier map")
+			return make(map[string]TierProfile), nil
+		}
+		return nil, fmt.Errorf("failed to read tier configuration file: %w", err)
+	}
+
+	var tierMap map[string]TierProfile
+	if err := yaml.Unmarshal(data, &tierMap); err != nil {
+		return nil, fmt.Errorf("failed to parse tier configuration YAML: %w", err)
+	}
+
+	logger.Info().Int("count", len(tierMap)).Str("path", path).Msg("successfully loaded agent tier profiles")
+	return tierMap, nil
+}
+
 // ReconcileAgentServiceImpl implements the ReconcileAgentService use case.
 type ReconcileAgentServiceImpl struct {
-	client client.Client
-	logger zerolog.Logger
-	cfg    *viper.Viper
+	client  client.Client
+	logger  zerolog.Logger
+	cfg     *viper.Viper
+	tierMap map[string]TierProfile
 }
 
 var _ inbound.ReconcileAgentService = (*ReconcileAgentServiceImpl)(nil)
 
 // NewReconcileAgentService constructs a new ReconcileAgentServiceImpl.
-func NewReconcileAgentService(c client.Client, logger zerolog.Logger, cfg *viper.Viper) *ReconcileAgentServiceImpl {
+func NewReconcileAgentService(
+	c client.Client,
+	logger zerolog.Logger,
+	cfg *viper.Viper,
+	tierMap map[string]TierProfile,
+) *ReconcileAgentServiceImpl {
 	return &ReconcileAgentServiceImpl{
-		client: c,
-		logger: logger,
-		cfg:    cfg,
+		client:  c,
+		logger:  logger,
+		cfg:     cfg,
+		tierMap: tierMap,
 	}
 }
 
@@ -202,8 +260,110 @@ func (s *ReconcileAgentServiceImpl) Reconcile(ctx context.Context, agent *v1alph
 // BuildDeployment constructs the Kubernetes Deployment specification for the agent.
 func (s *ReconcileAgentServiceImpl) BuildDeployment(ctx context.Context, agent *v1alpha1.TacitoAgent) (*appsv1.Deployment, error) {
 	s.logger.Debug().Str("namespace", agent.Namespace).Str("name", agent.Name).Msg("entering BuildDeployment")
-	// 1. Resolve configurations from Viper with proper fallbacks
-	image := s.getAgentSetting("agent.image", defaultAgentImage)
+
+	// 1. Resolve configurations with tier-based mapping or implicit defaults
+	var tierProfile TierProfile
+	var isTierResolved bool
+
+	if agent.Spec.Tier != "" {
+		if profile, exists := s.tierMap[agent.Spec.Tier]; exists {
+			tierProfile = profile
+			isTierResolved = true
+			s.logger.Info().Str("tier", agent.Spec.Tier).Msg("resolved agent tier configuration profile")
+		} else {
+			s.logger.Warn().Str("tier", agent.Spec.Tier).Msg("requested tier not found in configuration, falling back to implicit default")
+		}
+	}
+
+	// Resolve image & pullPolicy
+	var image string
+	var imagePullPolicy corev1.PullPolicy = corev1.PullIfNotPresent
+
+	if isTierResolved && tierProfile.Image.Name != "" {
+		registry := tierProfile.Image.Registry
+		name := tierProfile.Image.Name
+		tag := tierProfile.Image.Tag
+		if registry != "" {
+			image = fmt.Sprintf("%s/%s:%s", registry, name, tag)
+		} else {
+			image = fmt.Sprintf("%s:%s", name, tag)
+		}
+
+		if tierProfile.Image.PullPolicy != "" {
+			imagePullPolicy = corev1.PullPolicy(tierProfile.Image.PullPolicy)
+		}
+	} else {
+		image = s.getAgentSetting("agent.image", defaultAgentImage)
+		if pullPolicyStr := s.getAgentSetting("agent.image.pullPolicy", ""); pullPolicyStr != "" {
+			imagePullPolicy = corev1.PullPolicy(pullPolicyStr)
+		}
+	}
+
+	// Resolve resources
+	var resources corev1.ResourceRequirements
+	if isTierResolved && (len(tierProfile.Resources.Requests) > 0 || len(tierProfile.Resources.Limits) > 0) {
+		resources.Requests = make(corev1.ResourceList)
+		for k, v := range tierProfile.Resources.Requests {
+			resName := corev1.ResourceName(k)
+			qty, err := resource.ParseQuantity(v)
+			if err == nil {
+				resources.Requests[resName] = qty
+			}
+		}
+		resources.Limits = make(corev1.ResourceList)
+		for k, v := range tierProfile.Resources.Limits {
+			resName := corev1.ResourceName(k)
+			qty, err := resource.ParseQuantity(v)
+			if err == nil {
+				resources.Limits[resName] = qty
+			}
+		}
+	} else {
+		// Build implicit default resources from Viper agent.resources.* values
+		resources.Requests = make(corev1.ResourceList)
+		resources.Limits = make(corev1.ResourceList)
+
+		if reqCPU := s.getAgentSetting("agent.resources.requests.cpu", ""); reqCPU != "" {
+			if qty, err := resource.ParseQuantity(reqCPU); err == nil {
+				resources.Requests[corev1.ResourceCPU] = qty
+			}
+		}
+		if reqMem := s.getAgentSetting("agent.resources.requests.memory", ""); reqMem != "" {
+			if qty, err := resource.ParseQuantity(reqMem); err == nil {
+				resources.Requests[corev1.ResourceMemory] = qty
+			}
+		}
+		if limCPU := s.getAgentSetting("agent.resources.limits.cpu", ""); limCPU != "" {
+			if qty, err := resource.ParseQuantity(limCPU); err == nil {
+				resources.Limits[corev1.ResourceCPU] = qty
+			}
+		}
+		if limMem := s.getAgentSetting("agent.resources.limits.memory", ""); limMem != "" {
+			if qty, err := resource.ParseQuantity(limMem); err == nil {
+				resources.Limits[corev1.ResourceMemory] = qty
+			}
+		}
+	}
+
+	// Resolve liveness & readiness probe timing overrides
+	var livenessInitialDelay int32 = 1
+	var livenessPeriod int32 = 1
+	var readinessInitialDelay int32 = 1
+	var readinessPeriod int32 = 1
+
+	if isTierResolved && tierProfile.LivenessProbe.InitialDelaySeconds > 0 {
+		livenessInitialDelay = tierProfile.LivenessProbe.InitialDelaySeconds
+	}
+	if isTierResolved && tierProfile.LivenessProbe.PeriodSeconds > 0 {
+		livenessPeriod = tierProfile.LivenessProbe.PeriodSeconds
+	}
+	if isTierResolved && tierProfile.ReadinessProbe.InitialDelaySeconds > 0 {
+		readinessInitialDelay = tierProfile.ReadinessProbe.InitialDelaySeconds
+	}
+	if isTierResolved && tierProfile.ReadinessProbe.PeriodSeconds > 0 {
+		readinessPeriod = tierProfile.ReadinessProbe.PeriodSeconds
+	}
+
 	logLevel := s.getAgentSetting("agent.logLevel", defaultAgentLogLevel)
 	portStr := s.getAgentSetting("agent.port", defaultAgentPort)
 	natsURL := s.getAgentSetting("agent.nats.url", defaultNatsURL)
@@ -271,10 +431,6 @@ func (s *ReconcileAgentServiceImpl) BuildDeployment(ctx context.Context, agent *
 		env = append(env, corev1.EnvVar{Name: "TS_AGENT_MCP_CLIENTS", Value: string(mcpJSON)})
 	}
 
-	// 5. Construct container resource constraints
-	var resources corev1.ResourceRequirements
-	// TODO(M5.9-T4): Resolve resources based on agent.Spec.Tier using Tier Map configmap.
-
 	// 6. Resolve replica counts
 	replicas := int32(1)
 	if agent.Spec.Replicas != nil {
@@ -309,7 +465,7 @@ func (s *ReconcileAgentServiceImpl) BuildDeployment(ctx context.Context, agent *
 						{
 							Name:            "agent",
 							Image:           image,
-							ImagePullPolicy: corev1.PullIfNotPresent,
+							ImagePullPolicy: imagePullPolicy,
 							Ports: []corev1.ContainerPort{
 								{
 									Name:          "http",
@@ -326,8 +482,8 @@ func (s *ReconcileAgentServiceImpl) BuildDeployment(ctx context.Context, agent *
 										Port: intstr.FromString("http"),
 									},
 								},
-								InitialDelaySeconds: 5,
-								PeriodSeconds:        10,
+								InitialDelaySeconds: livenessInitialDelay,
+								PeriodSeconds:        livenessPeriod,
 							},
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
@@ -336,8 +492,8 @@ func (s *ReconcileAgentServiceImpl) BuildDeployment(ctx context.Context, agent *
 										Port: intstr.FromString("http"),
 									},
 								},
-								InitialDelaySeconds: 5,
-								PeriodSeconds:        10,
+								InitialDelaySeconds: readinessInitialDelay,
+								PeriodSeconds:        readinessPeriod,
 							},
 						},
 					},
