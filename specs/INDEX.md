@@ -108,7 +108,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | SPEC-FR-M5.3 | Short-Term Memory (Redis) | VERIFIED | agent | [SPEC-FR-M5.3](functional/M5/SPEC-FR-M5.3.md) |
 | SPEC-FR-M5.4 | Long-Term Memory (Qdrant) | VERIFIED | agent | [SPEC-FR-M5.4](functional/M5/SPEC-FR-M5.4.md) |
 | SPEC-FR-M5.5 | Tool Invocation (MCP) | VERIFIED | agent | [SPEC-FR-M5.5](functional/M5/SPEC-FR-M5.5.md) |
-| SPEC-FR-M5.6 | Object Storage (S3/MinIO) | DRAFT | agent | [SPEC-FR-M5.6](functional/M5/SPEC-FR-M5.6.md) |
+| SPEC-FR-M5.6 | Object Storage (S3/MinIO) | VERIFIED | agent | [SPEC-FR-M5.6](functional/M5/SPEC-FR-M5.6.md) |
 | SPEC-FR-M5.7 | Standalone Agent Deployment Helm Chart | VERIFIED | deploy | [SPEC-FR-M5.7](functional/M5/SPEC-FR-M5.7.md) |
 | SPEC-FR-M5.9 | Flexible Agent Runtime Tiers & Deployment Customization | ACCEPTED | keeper, operator, deploy | [SPEC-FR-M5.9](functional/M5/SPEC-FR-M5.9.md) |
 | SPEC-FR-M5.10 | Agent Cognitive Architecture & Reasoning Loop | VERIFIED | agent | [SPEC-FR-M5.10](functional/M5/SPEC-FR-M5.10.md) |
@@ -126,6 +126,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | BUG-M5.2 | Unified Skills and Prompts Misinterpretation and Flattened Keeper-Agent Interface | CLOSED | HIGH | [BUG-M5.2](tasks/M5.BUG2/BUG-M5.2.md) |
 | BUG-M5.4 | Agent Tooling Violates MCP-First Architecture due to Mock Tools Embedded in Core Engine | CLOSED | MEDIUM | [BUG-M5.4](tasks/M5.BUG4/BUG-M5.4.md) |
 | BUG-M5.5 | Agent Component Does Not Export Prometheus Metrics | CLOSED | HIGH | [BUG-M5.5](tasks/M5.BUG5/BUG-M5.5.md) |
+| BUG-M5.6 | Pod Memory Exhaustion and Message Pressure under Large Payload Processing | CLOSED | HIGH | [BUG-M5.6](tasks/M5.BUG6/BUG-M5.6.md) |
 
 
 

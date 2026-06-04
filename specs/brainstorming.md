@@ -1,5 +1,9 @@
 # Brainstorming
 
+- unleash integration
+- s3 use sdk library instead of http client, instrumented
+- opt out flags for each built in tool
+- agenti su gpu con vllm per servire piccoli modelli open direttamente, embeddings per LTM? piccoli llm per semplici task? 
 - STM cleanup on ?
 - compare ancora qua e la la dicitura mcp server usata al posto di mcp client
 - reduce startup time

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 )
 
 // ErrNotFound is returned when a requested object does not exist.
@@ -68,4 +69,13 @@ func (a *BlobStoreAdapter) Exists(ctx context.Context, key string) (bool, error)
 		return false, fmt.Errorf("s3 head %s: %w", key, err)
 	}
 	return exists, nil
+}
+
+// Ping verifies the connectivity to the S3 bucket.
+func (a *BlobStoreAdapter) Ping(ctx context.Context) error {
+	_, err := a.client.HeadObject(ctx, a.bucket, "health-check-dummy-ping-key")
+	if err != nil && !errors.Is(err, ErrNotFound) && !strings.Contains(err.Error(), "404") {
+		return err
+	}
+	return nil
 }

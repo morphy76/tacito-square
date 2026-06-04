@@ -19,9 +19,11 @@ import (
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/redis"
 	"github.com/morphy76/tacito-square/internal/agent/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/agent/application/service"
+	s3adapter "github.com/morphy76/tacito-square/internal/shared/adapters/outbound/s3"
 	"github.com/morphy76/tacito-square/internal/shared/config"
 	"github.com/morphy76/tacito-square/internal/shared/health"
 	"github.com/morphy76/tacito-square/internal/shared/observability"
+	sharedoutbound "github.com/morphy76/tacito-square/internal/shared/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/shared/shutdown"
 	natsclient "github.com/nats-io/nats.go"
 )
@@ -47,6 +49,11 @@ func main() {
 	v.SetDefault("mcp.cb.failure.threshold", 5)
 	v.SetDefault("mcp.cb.recovery.timeout.seconds", 15)
 	v.SetDefault("mcp.clients", "")
+	v.SetDefault("s3.enabled", false)
+	v.SetDefault("s3.endpoint", "http://localhost:9000")
+	v.SetDefault("s3.bucket", "tacito")
+	v.SetDefault("s3.max.read.size", 5*1024*1024)
+	v.SetDefault("s3.chunk.size", 32*1024)
 
 	port := v.GetString("port")
 	logLevel := v.GetString("log.level")
@@ -239,7 +246,9 @@ func main() {
 	stmLimit := v.GetInt("stm.limit")
 	systemPrompt := v.GetString("system.prompt")
 
-	cogEngine := service.NewCognitiveEngine(brain, maxReasoningSteps)
+	cogEngine := service.NewCognitiveEngine(brain, maxReasoningSteps).
+		WithCommunityID(communityRef)
+
 	if mcpAdapter != nil {
 		cogEngine = cogEngine.WithToolExecutor(mcpAdapter)
 	}
@@ -249,9 +258,40 @@ func main() {
 	natsPublisher := nats.NewNATSEventPublisher(nc)
 	cogEngine = cogEngine.WithPublisher(natsPublisher)
 
+	// Initialize S3 adapter if enabled
+	s3Enabled := v.GetBool("s3.enabled")
+	var blobStoreAdapter *s3adapter.BlobStoreAdapter
+	var s3Client *s3adapter.S3HTTPClient
+
+	if s3Enabled {
+		s3Endpoint := v.GetString("s3.endpoint")
+		s3Bucket := v.GetString("s3.bucket")
+		maxReadSize := v.GetInt("s3.max.read.size")
+		chunkSize := v.GetInt("s3.chunk.size")
+
+		logger.Info().
+			Str("s3.endpoint", s3Endpoint).
+			Str("s3.bucket", s3Bucket).
+			Msg("initializing S3/MinIO blob store adapter")
+
+		// Create S3 HTTP Client (using instrumented HTTP client to inject Otel tracing and timeout)
+		s3Client = s3adapter.NewS3HTTPClient(s3Endpoint, sharedHTTPClient)
+
+		// Create S3 BlobStore adapter
+		blobStoreAdapter = s3adapter.NewBlobStoreAdapter(s3Client, s3Bucket, s3Endpoint)
+
+		// Configure BlobStore on cognitive engine
+		cogEngine = cogEngine.WithBlobStore(blobStoreAdapter, maxReadSize, chunkSize)
+	}
+
 	processor := service.NewMessageProcessorService(brain, memoryAdapter, ltm, embedder, cogEngine, stmLimit, systemPrompt)
 
-	echoSubscriber := agent.NewEchoSubscriber(nc, agentName, communityRef, "", processor, logger)
+	var s3BlobStore sharedoutbound.BlobStore
+	if s3Enabled {
+		s3BlobStore = blobStoreAdapter
+	}
+
+	echoSubscriber := agent.NewEchoSubscriber(nc, agentName, communityRef, "", processor, s3BlobStore, logger)
 	if err := echoSubscriber.Start(ctx); err != nil {
 		logger.Fatal().Err(err).Msg("failed to start echo subscriber")
 	}
@@ -293,6 +333,14 @@ func main() {
 		checkers = append(checkers, health.Checker{
 			Name:  "qdrant",
 			Check: qdrantAdapter.Ping,
+		})
+	}
+
+	// MinIO Checker
+	if s3Enabled && blobStoreAdapter != nil {
+		checkers = append(checkers, health.Checker{
+			Name:  "minio",
+			Check: blobStoreAdapter.Ping,
 		})
 	}
 
