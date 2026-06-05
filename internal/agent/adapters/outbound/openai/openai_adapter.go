@@ -162,7 +162,7 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 			})
 		}
 
-		logger.Trace().Interface("messages", messages).Msg("messages for chat completion")
+		logger.Trace().Interface("messages", messages).Interface("tools", sdkTools).Msg("messages and tools for chat completion")
 		params := openai.ChatCompletionNewParams{
 			Messages: messages,
 			Model:    shared.ChatModel(modelName),

@@ -410,25 +410,37 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 		toolsToExpose = append(toolsToExpose, writePayloadDef)
 	}
 
-	// Dynamic enum population for enable_skill based on authorized skill names
+	// Dynamic enum population and description formatting for enable_skill based on authorized skill names
 	var skillNames []any
+	var skillDescriptions []string
 	seenSkills := make(map[string]bool)
 	if isStructured {
 		for _, s := range parsedConfig.Skills {
 			if !seenSkills[s.Name] {
 				seenSkills[s.Name] = true
 				skillNames = append(skillNames, s.Name)
+				desc := s.Description
+				if desc == "" {
+					desc = "No description provided"
+				}
+				skillDescriptions = append(skillDescriptions, s.Name+": "+desc)
 			}
 		}
 	}
-	for name := range e.skills {
+	for name, s := range e.skills {
 		if !seenSkills[name] {
 			seenSkills[name] = true
 			skillNames = append(skillNames, name)
+			desc := s.Description
+			if desc == "" {
+				desc = "No description provided"
+			}
+			skillDescriptions = append(skillDescriptions, name+": "+desc)
 		}
 	}
 
 	if len(skillNames) > 0 {
+		paramDescription := "The name of the skill to enable. Available options:\n" + strings.Join(skillDescriptions, "\n")
 		enableSkillDef := model.ToolDefinition{
 			Name:        "enable_skill",
 			Description: "Enable a specific skill to load its guidelines and instructions when needed for a task.",
@@ -437,7 +449,7 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 				"properties": map[string]any{
 					"skill_name": map[string]any{
 						"type":        "string",
-						"description": "The name of the skill to enable.",
+						"description": paramDescription,
 						"enum":        skillNames,
 					},
 				},

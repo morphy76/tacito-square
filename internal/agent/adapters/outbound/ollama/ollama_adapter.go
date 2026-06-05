@@ -184,7 +184,7 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 			options["num_predict"] = maxToks
 		}
 
-		logger.Trace().Interface("messages", messages).Msg("messages for chat completion")
+		logger.Trace().Interface("messages", messages).Interface("tools", sdkTools).Msg("messages and tools for chat completion")
 		params := &api.ChatRequest{
 			Model:    modelName,
 			Messages: messages,
