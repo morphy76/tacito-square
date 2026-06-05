@@ -103,6 +103,17 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 		if req.SystemPrompt != "" {
 			messages = append(messages, openai.SystemMessage(req.SystemPrompt))
 		}
+		for _, entry := range req.History {
+			switch entry.Role {
+			case "assistant":
+				messages = append(messages, openai.AssistantMessage(entry.Content))
+			case "tool":
+				logger.Debug().Str("role", entry.Role).Msg("TODO: tool role history mapping not yet implemented for OpenAI, falling back to user message")
+				messages = append(messages, openai.UserMessage(entry.Content))
+			default: // "user"
+				messages = append(messages, openai.UserMessage(entry.Content))
+			}
+		}
 		messages = append(messages, openai.UserMessage(req.Prompt))
 
 		modelName := a.cfg.Model

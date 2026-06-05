@@ -100,6 +100,17 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 				Content: req.SystemPrompt,
 			})
 		}
+		for _, entry := range req.History {
+			role := entry.Role
+			if role == "tool" {
+				logger.Debug().Str("role", role).Msg("TODO: tool role history mapping not yet implemented for Ollama, falling back to user message")
+				role = "user"
+			}
+			messages = append(messages, api.Message{
+				Role:    role,
+				Content: entry.Content,
+			})
+		}
 		messages = append(messages, api.Message{
 			Role:    "user",
 			Content: req.Prompt,
