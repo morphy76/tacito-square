@@ -56,7 +56,7 @@ func TestCognitiveEngine_ExecuteReasoningLoop(t *testing.T) {
 			},
 		}
 
-		engine := service.NewCognitiveEngine(mockBrain, 5)
+		engine := service.NewCognitiveEngine(mockBrain, 5, nil)
 
 		// Register mock tool executor for recall_memory
 		toolExecuted := false
@@ -95,7 +95,7 @@ func TestCognitiveEngine_ExecuteReasoningLoop(t *testing.T) {
 			},
 		}
 
-		engine := service.NewCognitiveEngine(mockBrain, 3)
+		engine := service.NewCognitiveEngine(mockBrain, 3, nil)
 		engine.RegisterTool("infinite_tool", func(ctx context.Context, args map[string]any) (string, error) {
 			return "infinite tool output", nil
 		})
@@ -118,7 +118,7 @@ func TestCognitiveEngine_ExecuteReasoningLoop(t *testing.T) {
 			},
 		}
 
-		engine := service.NewCognitiveEngine(mockBrain, 5)
+		engine := service.NewCognitiveEngine(mockBrain, 5, nil)
 		ctx := context.Background()
 		finalResp, err := engine.ExecuteReasoningLoop(ctx, "tenant-1", "agent-1", "thread-1", "Direct query", []model.MemoryEntry{}, "")
 		assert.NoError(t, err)
@@ -186,7 +186,7 @@ func TestCognitiveEngine_ExecuteReasoningLoop(t *testing.T) {
 			},
 		}
 
-		engine := service.NewCognitiveEngine(mockBrain, 5).WithToolExecutor(mcpMock)
+		engine := service.NewCognitiveEngine(mockBrain, 5, nil).WithToolExecutor(mcpMock)
 		ctx := context.Background()
 		finalResp, err := engine.ExecuteReasoningLoop(ctx, "tenant-1", "agent-1", "thread-1", "Calculate 2+2", []model.MemoryEntry{}, "")
 		assert.NoError(t, err)
@@ -245,7 +245,7 @@ func TestCognitiveEngine_ExecuteReasoningLoop(t *testing.T) {
 			},
 		}
 
-		engine := service.NewCognitiveEngine(mockBrain, 5).WithToolExecutor(mcpMock)
+		engine := service.NewCognitiveEngine(mockBrain, 5, nil).WithToolExecutor(mcpMock)
 		engine.RegisterSkill(service.Skill{
 			Name:    "test-skill",
 			Content: "Built-in guidelines content",
@@ -353,7 +353,7 @@ func TestCognitiveEngine_ReadLargePayload(t *testing.T) {
 			},
 		}
 
-		engine := service.NewCognitiveEngine(mockBrain, 5)
+		engine := service.NewCognitiveEngine(mockBrain, 5, nil)
 
 		bs := &mockBlobStore{
 			getFunc: func(ctx context.Context, key string) (io.ReadCloser, error) {
@@ -407,7 +407,7 @@ func TestCognitiveEngine_ReadLargePayload(t *testing.T) {
 			},
 		}
 
-		engine := service.NewCognitiveEngine(mockBrain, 5)
+		engine := service.NewCognitiveEngine(mockBrain, 5, nil)
 
 		bs := &mockBlobStore{
 			getFunc: func(ctx context.Context, key string) (io.ReadCloser, error) {
@@ -476,7 +476,7 @@ func TestCognitiveEngine_WriteLargePayload(t *testing.T) {
 			},
 		}
 
-		engine := service.NewCognitiveEngine(mockBrain, 5)
+		engine := service.NewCognitiveEngine(mockBrain, 5, nil)
 
 		s3PutTriggered := false
 		bs := &mockBlobStore{
@@ -540,7 +540,7 @@ func TestCognitiveEngine_WriteLargePayload(t *testing.T) {
 			},
 		}
 
-		engine := service.NewCognitiveEngine(mockBrain, 5)
+		engine := service.NewCognitiveEngine(mockBrain, 5, nil)
 
 		bs := &mockBlobStore{
 			putFunc: func(ctx context.Context, key string, data io.Reader, contentType string) (string, error) {

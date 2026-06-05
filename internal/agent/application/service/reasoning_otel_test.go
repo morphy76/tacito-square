@@ -49,7 +49,7 @@ func TestReasoningOTel_Instrumentation(t *testing.T) {
 			},
 		}
 
-		engine := service.NewCognitiveEngine(mockBrain, 5)
+		engine := service.NewCognitiveEngine(mockBrain, 5, nil)
 		engine.RegisterTool("recall_memory", func(ctx context.Context, args map[string]any) (string, error) {
 			// Trigger a simulated error in tool to verify RecordError
 			return "", errors.New("simulated database timeout")
@@ -134,7 +134,7 @@ func TestReasoningOTel_Instrumentation(t *testing.T) {
 			},
 		}
 
-		engine := service.NewCognitiveEngine(mockBrain, 3)
+		engine := service.NewCognitiveEngine(mockBrain, 3, nil)
 		engine.RegisterTool("infinite_tool", func(ctx context.Context, args map[string]any) (string, error) {
 			return "some output", nil
 		})

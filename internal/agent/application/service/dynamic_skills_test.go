@@ -57,7 +57,7 @@ func TestDynamicSkills_Execution(t *testing.T) {
 			},
 		}
 
-		engine := service.NewCognitiveEngine(mockBrain, 5)
+		engine := service.NewCognitiveEngine(mockBrain, 5, nil)
 
 		// Structured propagated prompt containing instructions and skills contents
 		config := service.PropagatedAgentConfig{
@@ -108,7 +108,7 @@ func TestDynamicSkills_Execution(t *testing.T) {
 			},
 		}
 
-		engine := service.NewCognitiveEngine(mockBrain, 5)
+		engine := service.NewCognitiveEngine(mockBrain, 5, nil)
 		config := service.PropagatedAgentConfig{
 			Description: "Standalone test assistant",
 			Directives:  "You are an assistant.",
@@ -150,7 +150,7 @@ func TestDynamicSkills_Execution(t *testing.T) {
 			},
 		}
 
-		engine := service.NewCognitiveEngine(mockBrain, 5)
+		engine := service.NewCognitiveEngine(mockBrain, 5, nil)
 		engine.RegisterSkill(service.Skill{
 			Name:        "static-skill",
 			Description: "Static description",

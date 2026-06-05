@@ -8,6 +8,7 @@ import (
 
 	"github.com/morphy76/tacito-square/internal/agent/application/service"
 	"github.com/morphy76/tacito-square/internal/agent/domain/model"
+	"github.com/morphy76/tacito-square/internal/shared/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -67,7 +68,7 @@ func TestRecallMemoryTool_Execution(t *testing.T) {
 			},
 		}
 
-		engine := service.NewCognitiveEngine(mockBrain, 5).WithLTM(mockEmbed, mockLTM)
+		engine := service.NewCognitiveEngine(mockBrain, 5, nil).WithLTM(mockEmbed, mockLTM)
 
 		ctx := context.Background()
 		finalAnswer, err := engine.ExecuteReasoningLoop(ctx, "tenant-1", "agent-1", "thread-1", "Find config info", []model.MemoryEntry{}, "")
@@ -112,7 +113,7 @@ func TestRecallMemoryTool_Execution(t *testing.T) {
 		}
 		mockLTM := &MockLongTermMemory{}
 
-		engine := service.NewCognitiveEngine(mockBrain, 5).WithLTM(mockEmbed, mockLTM)
+		engine := service.NewCognitiveEngine(mockBrain, 5, nil).WithLTM(mockEmbed, mockLTM)
 
 		ctx := context.Background()
 		finalAnswer, err := engine.ExecuteReasoningLoop(ctx, "tenant-1", "agent-1", "thread-1", "Broken query", []model.MemoryEntry{}, "")
@@ -163,7 +164,10 @@ func TestRecallMemoryTool_Execution(t *testing.T) {
 			},
 		}
 
-		engine := service.NewCognitiveEngine(mockBrain, 5).WithLTM(mockEmbed, mockLTM)
+		cfg, err := config.Load("TS_AGENT")
+		assert.NoError(t, err)
+
+		engine := service.NewCognitiveEngine(mockBrain, 5, cfg).WithLTM(mockEmbed, mockLTM)
 
 		ctx := context.Background()
 		finalAnswer, err := engine.ExecuteReasoningLoop(ctx, "tenant-1", "agent-1", "thread-1", "Query", []model.MemoryEntry{}, "")

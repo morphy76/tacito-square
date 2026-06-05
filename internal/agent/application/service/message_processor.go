@@ -10,6 +10,7 @@ import (
 	"github.com/morphy76/tacito-square/internal/agent/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/agent/domain/model"
 	"github.com/rs/zerolog"
+	"github.com/spf13/viper"
 )
 
 type MessageProcessorService struct {
@@ -20,6 +21,7 @@ type MessageProcessorService struct {
 	cogEngine    *CognitiveEngine
 	limit        int
 	systemPrompt string
+	cfg          *viper.Viper
 }
 
 func NewMessageProcessorService(
@@ -30,6 +32,7 @@ func NewMessageProcessorService(
 	cogEngine *CognitiveEngine,
 	limit int,
 	systemPrompt string,
+	cfg *viper.Viper,
 ) *MessageProcessorService {
 	if limit <= 0 {
 		limit = 10
@@ -42,6 +45,7 @@ func NewMessageProcessorService(
 		cogEngine:    cogEngine,
 		limit:        limit,
 		systemPrompt: systemPrompt,
+		cfg:          cfg,
 	}
 }
 
@@ -105,6 +109,15 @@ func (s *MessageProcessorService) ProcessIncomingMessage(ctx context.Context, te
 
 func (s *MessageProcessorService) triggerMemoryConsolidation(ctx context.Context, tenantID, agentID, threadID string) {
 	logger := zerolog.Ctx(ctx)
+
+	bypassLTM := false
+	if s.cfg != nil {
+		bypassLTM = s.cfg.GetBool("bypass.ltm")
+	}
+	if bypassLTM {
+		logger.Debug().Msg("passive memory consolidation bypassed because bypass.ltm is set to true in config")
+		return
+	}
 
 	// Fetch ALL history turns to check if limit is exceeded
 	history, err := s.memory.Get(ctx, tenantID, agentID, threadID, 0)

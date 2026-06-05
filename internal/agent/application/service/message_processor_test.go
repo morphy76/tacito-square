@@ -14,6 +14,7 @@ import (
 	"github.com/morphy76/tacito-square/internal/agent/domain/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/spf13/viper"
 )
 
 // MockBrain is a mock implementation of the Brain outbound port.
@@ -149,9 +150,9 @@ func TestMessageProcessorService_ProcessIncomingMessage(t *testing.T) {
 		mockLTM := &MockLongTermMemory{}
 		mockEmbed := &MockEmbedder{}
 
-		cogEngine := service.NewCognitiveEngine(mockBrain, 5).WithLTM(mockEmbed, mockLTM)
+		cogEngine := service.NewCognitiveEngine(mockBrain, 5, nil).WithLTM(mockEmbed, mockLTM)
 
-		var processor inbound.MessageProcessor = service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine, 10, "")
+		var processor inbound.MessageProcessor = service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine, 10, "", nil)
 
 		res, err := processor.ProcessIncomingMessage(context.Background(), "tenant-1", "agent-1", "thread-123", "Hello, world")
 		assert.NoError(t, err)
@@ -191,9 +192,9 @@ func TestMessageProcessorService_ProcessIncomingMessage(t *testing.T) {
 		mockLTM := &MockLongTermMemory{}
 		mockEmbed := &MockEmbedder{}
 
-		cogEngine := service.NewCognitiveEngine(mockBrain, 5).WithLTM(mockEmbed, mockLTM)
+		cogEngine := service.NewCognitiveEngine(mockBrain, 5, nil).WithLTM(mockEmbed, mockLTM)
 
-		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine, 10, "")
+		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine, 10, "", nil)
 
 		// Service must not fail even if memory fails
 		res, err := processor.ProcessIncomingMessage(context.Background(), "tenant-1", "agent-1", "thread-123", "Hello, world")
@@ -212,9 +213,9 @@ func TestMessageProcessorService_ProcessIncomingMessage(t *testing.T) {
 		mockLTM := &MockLongTermMemory{}
 		mockEmbed := &MockEmbedder{}
 
-		cogEngine := service.NewCognitiveEngine(mockBrain, 5).WithLTM(mockEmbed, mockLTM)
+		cogEngine := service.NewCognitiveEngine(mockBrain, 5, nil).WithLTM(mockEmbed, mockLTM)
 
-		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine, 10, "")
+		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine, 10, "", nil)
 		_, err := processor.ProcessIncomingMessage(context.Background(), "tenant-1", "agent-1", "thread-123", "Hello")
 		assert.ErrorIs(t, err, mockErr)
 	})
@@ -286,8 +287,8 @@ func TestMessageProcessorService_ProcessIncomingMessage(t *testing.T) {
 			},
 		}
 
-		cogEngine := service.NewCognitiveEngine(mockBrain, 5).WithLTM(mockEmbed, mockLTM)
-		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine, 3, "")
+		cogEngine := service.NewCognitiveEngine(mockBrain, 5, nil).WithLTM(mockEmbed, mockLTM)
+		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine, 3, "", nil)
 
 		res, err := processor.ProcessIncomingMessage(context.Background(), "tenant-1", "agent-1", "thread-123", "Hello")
 		assert.NoError(t, err)
@@ -347,11 +348,55 @@ func TestMessageProcessorService_ProcessIncomingMessage(t *testing.T) {
 			},
 		}
 
-		cogEngine := service.NewCognitiveEngine(mockBrain, 5).WithLTM(mockEmbed, mockLTM)
-		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine, 10, "")
+		cogEngine := service.NewCognitiveEngine(mockBrain, 5, nil).WithLTM(mockEmbed, mockLTM)
+		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine, 10, "", nil)
 
 		res, err := processor.ProcessIncomingMessage(context.Background(), "tenant-1", "agent-1", "thread-123", "Hello")
 		assert.NoError(t, err)
 		assert.Equal(t, "Response without LTM", res)
+	})
+
+	t.Run("should bypass memory consolidation on eviction if bypass.ltm is set to true", func(t *testing.T) {
+		mockBrain := &MockBrain{
+			GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
+				return &model.BrainResponse{Content: "Reasoning response content"}, nil
+			},
+		}
+
+		mockMemory := &MockShortTermMemory{
+			GetFunc: func(ctx context.Context, tenantID, agentID, threadID string, limit int) ([]model.MemoryEntry, error) {
+				return []model.MemoryEntry{
+					{Role: "user", Content: "Turn 1", Timestamp: time.Now()},
+					{Role: "assistant", Content: "Resp 1", Timestamp: time.Now()},
+					{Role: "user", Content: "Turn 2", Timestamp: time.Now()},
+					{Role: "assistant", Content: "Resp 2", Timestamp: time.Now()},
+				}, nil
+			},
+		}
+
+		mockLTM := &MockLongTermMemory{}
+		mockEmbed := &MockEmbedder{
+			CreateEmbeddingFunc: func(ctx context.Context, text string) ([]float32, error) {
+				t.Error("Embedder should not be called when bypass.ltm is true")
+				return nil, errors.New("should not be called")
+			},
+		}
+
+		// Configure viper with bypass.ltm set to true
+		cfg := viper.New()
+		cfg.Set("bypass.ltm", true)
+
+		cogEngine := service.NewCognitiveEngine(mockBrain, 5, cfg).WithLTM(mockEmbed, mockLTM)
+		processor := service.NewMessageProcessorService(mockBrain, mockMemory, mockLTM, mockEmbed, cogEngine, 3, "", cfg)
+
+		res, err := processor.ProcessIncomingMessage(context.Background(), "tenant-1", "agent-1", "thread-123", "Hello")
+		assert.NoError(t, err)
+		assert.Equal(t, "Reasoning response content", res)
+
+		// Wait briefly to make sure async goroutine would have run and finished if it wasn't bypassed
+		time.Sleep(50 * time.Millisecond)
+
+		// Assert no calls to Save were made
+		assert.Empty(t, mockLTM.GetSaveCalls())
 	})
 }

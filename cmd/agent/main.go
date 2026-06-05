@@ -54,6 +54,7 @@ func main() {
 	v.SetDefault("s3.bucket", "tacito")
 	v.SetDefault("s3.max.read.size", 5*1024*1024)
 	v.SetDefault("s3.chunk.size", 32*1024)
+	v.SetDefault("bypass.ltm", true)
 
 	port := v.GetString("port")
 	logLevel := v.GetString("log.level")
@@ -246,7 +247,7 @@ func main() {
 	stmLimit := v.GetInt("stm.limit")
 	systemPrompt := v.GetString("system.prompt")
 
-	cogEngine := service.NewCognitiveEngine(brain, maxReasoningSteps).
+	cogEngine := service.NewCognitiveEngine(brain, maxReasoningSteps, v).
 		WithCommunityID(communityRef)
 
 	if mcpAdapter != nil {
@@ -284,7 +285,7 @@ func main() {
 		cogEngine = cogEngine.WithBlobStore(blobStoreAdapter, maxReadSize, chunkSize)
 	}
 
-	processor := service.NewMessageProcessorService(brain, memoryAdapter, ltm, embedder, cogEngine, stmLimit, systemPrompt)
+	processor := service.NewMessageProcessorService(brain, memoryAdapter, ltm, embedder, cogEngine, stmLimit, systemPrompt, v)
 
 	var s3BlobStore sharedoutbound.BlobStore
 	if s3Enabled {

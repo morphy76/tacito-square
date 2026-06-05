@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/morphy76/tacito-square/internal/shared/observability"
 	sharedoutbound "github.com/morphy76/tacito-square/internal/shared/ports/outbound"
 	"github.com/rs/zerolog"
+	"github.com/spf13/viper"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -80,6 +80,7 @@ type CognitiveEngine struct {
 	maxSteps     int
 	maxReadSize  int
 	chunkSize    int
+	cfg          *viper.Viper
 }
 
 type parsedResponse struct {
@@ -93,7 +94,7 @@ type toolCallDetail struct {
 	Arguments map[string]any `json:"arguments"`
 }
 
-func NewCognitiveEngine(brain outbound.Brain, maxSteps int) *CognitiveEngine {
+func NewCognitiveEngine(brain outbound.Brain, maxSteps int, cfg *viper.Viper) *CognitiveEngine {
 	if maxSteps <= 0 {
 		maxSteps = 5
 	}
@@ -105,6 +106,7 @@ func NewCognitiveEngine(brain outbound.Brain, maxSteps int) *CognitiveEngine {
 		maxSteps:     maxSteps,
 		maxReadSize:  5 * 1024 * 1024,
 		chunkSize:    32 * 1024,
+		cfg:          cfg,
 	}
 	engine.RegisterTool("enable_skill", engine.handleEnableSkill)
 	return engine
@@ -629,8 +631,12 @@ func (e *CognitiveEngine) emitStepEvent(ctx context.Context, tenantID, agentID, 
 func (e *CognitiveEngine) handleRecallMemory(ctx context.Context, args map[string]any) (string, error) {
 	logger := zerolog.Ctx(ctx)
 
-	if os.Getenv("TS_AGENT_BYPASS_LTM") == "true" {
-		logger.Debug().Msg("recall_memory bypassed because TS_AGENT_BYPASS_LTM is set to true")
+	bypassLTM := false
+	if e.cfg != nil {
+		bypassLTM = e.cfg.GetBool("bypass.ltm")
+	}
+	if bypassLTM {
+		logger.Debug().Msg("recall_memory bypassed because bypass.ltm is set to true in config")
 		return "No relevant memories found.", nil
 	}
 
