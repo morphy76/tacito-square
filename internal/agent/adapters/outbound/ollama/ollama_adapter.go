@@ -78,8 +78,8 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 	logger.Debug().
 		Str("model", a.cfg.Model).
 		Str("endpoint", a.cfg.Endpoint).
-		Interface("request_body", req). // TODO: REMOVE ME (Temporary debug log)
 		Msg("entering Generate: sending chat completion request to Ollama")
+	logger.Trace().Interface("request_body", req).Msg("full brain request payload")
 
 	if err := req.Validate(); err != nil {
 		logger.Error().Err(err).Msg("invalid brain request payload")
