@@ -364,7 +364,7 @@ func (s *ReconcileAgentServiceImpl) BuildDeployment(ctx context.Context, agent *
 		readinessPeriod = tierProfile.ReadinessProbe.PeriodSeconds
 	}
 
-	logLevel := s.getAgentSetting("agent.logLevel", defaultAgentLogLevel)
+	logLevel := s.getAgentSetting("agent.log.level", defaultAgentLogLevel)
 	portStr := s.getAgentSetting("agent.port", defaultAgentPort)
 	natsURL := s.getAgentSetting("agent.nats.url", defaultNatsURL)
 	redisURL := s.getAgentSetting("agent.redis.url", defaultRedisURL)
