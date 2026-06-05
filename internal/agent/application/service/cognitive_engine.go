@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -627,6 +628,11 @@ func (e *CognitiveEngine) emitStepEvent(ctx context.Context, tenantID, agentID, 
 
 func (e *CognitiveEngine) handleRecallMemory(ctx context.Context, args map[string]any) (string, error) {
 	logger := zerolog.Ctx(ctx)
+
+	if os.Getenv("TS_AGENT_BYPASS_LTM") == "true" {
+		logger.Debug().Msg("recall_memory bypassed because TS_AGENT_BYPASS_LTM is set to true")
+		return "No relevant memories found.", nil
+	}
 
 	if e.embedder == nil || e.ltm == nil {
 		logger.Warn().Msg("recall_memory called but long-term memory or embedder is nil")

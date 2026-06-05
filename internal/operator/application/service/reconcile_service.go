@@ -417,6 +417,7 @@ func (s *ReconcileAgentServiceImpl) BuildDeployment(ctx context.Context, agent *
 		{Name: "TS_AGENT_BRAIN_MODEL", Value: agent.Spec.LLMConfig.Model},
 		{Name: "TS_AGENT_BRAIN_TEMPERATURE", Value: temp},
 		{Name: "TS_AGENT_BRAIN_MAX_TOKENS", Value: maxTokens},
+		{Name: "TS_AGENT_BYPASS_LTM", Value: "true"},
 	}
 
 	if agent.Spec.LLMConfig.Endpoint != nil && *agent.Spec.LLMConfig.Endpoint != "" {
@@ -482,6 +483,15 @@ func (s *ReconcileAgentServiceImpl) BuildDeployment(ctx context.Context, agent *
 					},
 				},
 				Spec: corev1.PodSpec{
+					DNSPolicy: corev1.DNSClusterFirst,
+					DNSConfig: &corev1.PodDNSConfig{
+						Options: []corev1.PodDNSConfigOption{
+							{
+								Name:  "ndots",	
+								Value: new("2"),
+							},
+						},
+					},
 					Containers: []corev1.Container{
 						{
 							Name:            "agent",
