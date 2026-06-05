@@ -169,6 +169,36 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 		}
 		if len(sdkTools) > 0 {
 			params.Tools = sdkTools
+
+			// Force tool choice to "required" if the enable_skill tool is present
+			// and no tool observation turn exists yet for the current user query.
+			hasSkills := false
+			for _, t := range req.Tools {
+				if t.Name == "enable_skill" {
+					hasSkills = true
+					break
+				}
+			}
+			hasToolObservation := false
+			for i := len(req.History) - 1; i >= 0; i-- {
+				if req.History[i].Role == "tool" {
+					hasToolObservation = true
+					break
+				}
+				if req.History[i].Role == "user" {
+					break
+				}
+			}
+			if hasSkills && !hasToolObservation {
+				params.ToolChoice = openai.ChatCompletionToolChoiceOptionUnionParam{
+					OfChatCompletionNamedToolChoice: &openai.ChatCompletionNamedToolChoiceParam{
+						Type: "function",
+						Function: openai.ChatCompletionNamedToolChoiceFunctionParam{
+							Name: "enable_skill",
+						},
+					},
+				}
+			}
 		}
 
 		temp := a.cfg.Temperature
@@ -199,7 +229,7 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 			chatComp, err = a.client.Chat.Completions.New(ctx, params)
 			if err != nil {
 				var openaiErr *openai.Error
-				if errors.As(err, &openaiErr) && openaiErr.StatusCode == http.StatusTooManyRequests {
+				if errors.As(err, &openaiErr) && openaiErr.StatusCode >= 400 && openaiErr.StatusCode < 500 {
 					return err
 				}
 				logger.Warn().Err(err).Msg("chat completion call failed, retrying...")
@@ -360,7 +390,7 @@ func (a *Adapter) CreateEmbedding(ctx context.Context, text string) ([]float32, 
 			resp, err = a.client.Embeddings.New(ctx, params)
 			if err != nil {
 				var openaiErr *openai.Error
-				if errors.As(err, &openaiErr) && openaiErr.StatusCode == http.StatusTooManyRequests {
+				if errors.As(err, &openaiErr) && openaiErr.StatusCode >= 400 && openaiErr.StatusCode < 500 {
 					return err
 				}
 				logger.Warn().Err(err).Msg("embedding call failed, retrying...")
@@ -428,7 +458,7 @@ func (a *Adapter) CreateEmbeddingsBatch(ctx context.Context, texts []string) ([]
 			resp, err = a.client.Embeddings.New(ctx, params)
 			if err != nil {
 				var openaiErr *openai.Error
-				if errors.As(err, &openaiErr) && openaiErr.StatusCode == http.StatusTooManyRequests {
+				if errors.As(err, &openaiErr) && openaiErr.StatusCode >= 400 && openaiErr.StatusCode < 500 {
 					return err
 				}
 				logger.Warn().Err(err).Msg("batch embedding call failed, retrying...")

@@ -100,6 +100,30 @@ func TestOpenAIAdapter_Generate(t *testing.T) {
 		assert.Equal(t, 1, callCount, "should only call the server once (no retries)")
 	})
 
+	t.Run("should not retry on 400 Bad Request error", func(t *testing.T) {
+		callCount := 0
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			callCount++
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"error": {"message": "Invalid request parameters", "type": "invalid_request_error"}}`))
+		}))
+		defer server.Close()
+
+		adapter := openai.NewAdapter(openai.Config{
+			Endpoint:         server.URL,
+			APIKey:           "mock-key",
+			Model:            "gpt-4o",
+			Timeout:          2 * time.Second,
+			FailureThreshold: 10,
+		})
+
+		req := model.BrainRequest{Prompt: "Hi"}
+		res, err := adapter.Generate(context.Background(), req)
+		assert.NoError(t, err)
+		assert.Equal(t, "fallback", res.FinishReason)
+		assert.Equal(t, 1, callCount, "should only call the server once (no retries)")
+	})
+
 	t.Run("should parse native tool calls and convert tool history correctly", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Read request body to verify messages and tools mapping
@@ -221,6 +245,64 @@ func TestOpenAIAdapter_Generate(t *testing.T) {
 		assert.Equal(t, "call_456", res.ToolCalls[0].ID)
 		assert.Equal(t, "another-tool", res.ToolCalls[0].Name)
 		assert.Equal(t, float64(42), res.ToolCalls[0].Arguments["val"])
+	})
+
+	t.Run("should set tool_choice to enable_skill when skills are present and no tool observation exists", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var body struct {
+				ToolChoice map[string]any `json:"tool_choice"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&body)
+
+			// Verify tool_choice is set to {"type": "function", "function": {"name": "enable_skill"}}
+			assert.Equal(t, "function", body.ToolChoice["type"])
+			fn := body.ToolChoice["function"].(map[string]any)
+			assert.Equal(t, "enable_skill", fn["name"])
+
+			resp := map[string]any{
+				"id":      "chatcmpl-123",
+				"object":  "chat.completion",
+				"choices": []map[string]any{
+					{
+						"index": 0,
+						"message": map[string]any{
+							"role":    "assistant",
+							"content": "Running enable_skill",
+						},
+						"finish_reason": "stop",
+					},
+				},
+				"usage": map[string]any{
+					"prompt_tokens":     10,
+					"completion_tokens": 10,
+					"total_tokens":      20,
+				},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+		}))
+		defer server.Close()
+
+		adapter := openai.NewAdapter(openai.Config{
+			Endpoint: server.URL,
+			APIKey:   "mock-key",
+			Model:    "gpt-4o",
+			Timeout:  2 * time.Second,
+		})
+
+		req := model.BrainRequest{
+			Prompt: "Hello",
+			Tools: []model.ToolDefinition{
+				{
+					Name:        "enable_skill",
+					Description: "Enable skill",
+				},
+			},
+		}
+
+		res, err := adapter.Generate(context.Background(), req)
+		assert.NoError(t, err)
+		assert.Equal(t, "Running enable_skill", res.Content)
 	})
 }
 

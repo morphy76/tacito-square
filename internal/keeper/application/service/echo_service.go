@@ -148,7 +148,7 @@ func (s *EchoServiceImpl) EchoCommunity(ctx context.Context, communityID uuid.UU
 		}
 	}
 
-	agentTimeoutSeconds := 10
+	agentTimeoutSeconds := 30
 	if s.cfg != nil && s.cfg.IsSet("keeper.echo.agent_timeout_seconds") {
 		agentTimeoutSeconds = s.cfg.GetInt("keeper.echo.agent_timeout_seconds")
 	}

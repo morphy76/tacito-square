@@ -87,6 +87,29 @@ func TestOllamaAdapter_Generate(t *testing.T) {
 		assert.Equal(t, 1, callCount, "should only call the server once (no retries)")
 	})
 
+	t.Run("should not retry on 400 Bad Request error", func(t *testing.T) {
+		callCount := 0
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			callCount++
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"error": "Bad Request"}`))
+		}))
+		defer server.Close()
+
+		adapter := ollama.NewAdapter(ollama.Config{
+			Endpoint:         server.URL,
+			Model:            "llama3",
+			Timeout:          2 * time.Second,
+			FailureThreshold: 10,
+		})
+
+		req := model.BrainRequest{Prompt: "Hi"}
+		res, err := adapter.Generate(context.Background(), req)
+		assert.NoError(t, err)
+		assert.Equal(t, "fallback", res.FinishReason)
+		assert.Equal(t, 1, callCount, "should only call the server once (no retries)")
+	})
+
 	t.Run("should parse native tool calls and convert tool history correctly", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Assert route

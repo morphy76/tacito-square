@@ -94,10 +94,38 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 		defer cancel()
 
 		var messages []api.Message
-		if req.SystemPrompt != "" {
+		systemPrompt := req.SystemPrompt
+		if len(req.Tools) > 0 {
+			hasSkills := false
+			for _, t := range req.Tools {
+				if t.Name == "enable_skill" {
+					hasSkills = true
+					break
+				}
+			}
+			hasToolObservation := false
+			for i := len(req.History) - 1; i >= 0; i-- {
+				if req.History[i].Role == "tool" {
+					hasToolObservation = true
+					break
+				}
+				if req.History[i].Role == "user" {
+					break
+				}
+			}
+			if hasSkills && !hasToolObservation {
+				if systemPrompt != "" {
+					systemPrompt += "\n\nIMPORTANT: You must execute the enable_skill tool to load the required guidelines before formulating your response."
+				} else {
+					systemPrompt = "You must execute the enable_skill tool to load the required guidelines before formulating your response."
+				}
+			}
+		}
+
+		if systemPrompt != "" {
 			messages = append(messages, api.Message{
 				Role:    "system",
-				Content: req.SystemPrompt,
+				Content: systemPrompt,
 			})
 		}
 		for _, entry := range req.History {
@@ -225,7 +253,7 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 			})
 			if err != nil {
 				var statusErr api.StatusError
-				if errors.As(err, &statusErr) && statusErr.StatusCode == http.StatusTooManyRequests {
+				if errors.As(err, &statusErr) && statusErr.StatusCode >= 400 && statusErr.StatusCode < 500 {
 					return err
 				}
 				logger.Warn().Err(err).Msg("Ollama chat call failed, retrying...")
@@ -372,7 +400,7 @@ func (a *Adapter) CreateEmbedding(ctx context.Context, text string) ([]float32, 
 			resp, err = a.client.Embed(ctx, req)
 			if err != nil {
 				var statusErr api.StatusError
-				if errors.As(err, &statusErr) && statusErr.StatusCode == http.StatusTooManyRequests {
+				if errors.As(err, &statusErr) && statusErr.StatusCode >= 400 && statusErr.StatusCode < 500 {
 					return err
 				}
 				logger.Warn().Err(err).Msg("Ollama embedding call failed, retrying...")
@@ -438,7 +466,7 @@ func (a *Adapter) CreateEmbeddingsBatch(ctx context.Context, texts []string) ([]
 			resp, err = a.client.Embed(ctx, req)
 			if err != nil {
 				var statusErr api.StatusError
-				if errors.As(err, &statusErr) && statusErr.StatusCode == http.StatusTooManyRequests {
+				if errors.As(err, &statusErr) && statusErr.StatusCode >= 400 && statusErr.StatusCode < 500 {
 					return err
 				}
 				logger.Warn().Err(err).Msg("Ollama batch embedding call failed, retrying...")
