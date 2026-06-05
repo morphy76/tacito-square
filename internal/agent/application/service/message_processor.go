@@ -59,23 +59,25 @@ func (s *MessageProcessorService) ProcessIncomingMessage(ctx context.Context, te
 
 	logger.Debug().Str("payload", payload).Msg("entering ProcessIncomingMessage: processing incoming message via brain reasoning engine with STM and LTM")
 
-	// Step 1: Append User Turn to STM
+	// Step 1: Fetch prior conversation history from STM before appending the current turn.
+	// This ensures the history window contains only past turns and avoids duplicating
+	// the current user message, which is already passed separately as the prompt.
 	userEntry := model.MemoryEntry{
 		Role:      "user",
 		Content:   payload,
 		Timestamp: time.Now().UTC(),
 	}
+	history, err := s.memory.Get(ctx, tenantID, agentID, threadID, s.limit)
+	if err != nil {
+		logger.Warn().Err(err).Msg("failed to retrieve short-term memory history (graceful degradation, falling back to empty history)")
+		history = []model.MemoryEntry{}
+	}
+
+	// Step 2: Append current user turn to STM
 	if err := s.memory.Append(ctx, tenantID, agentID, threadID, userEntry); err != nil {
 		logger.Warn().Err(err).Msg("failed to append user message to short-term memory (graceful degradation)")
 	} else {
 		logger.Info().Msg("appended user message to short-term memory successfully")
-	}
-
-	// Step 2: Fetch active sliding window history from STM
-	history, err := s.memory.Get(ctx, tenantID, agentID, threadID, s.limit)
-	if err != nil {
-		logger.Warn().Err(err).Msg("failed to retrieve short-term memory history (graceful degradation, falling back to current turn only)")
-		history = []model.MemoryEntry{userEntry}
 	}
 
 	// Step 3: Trigger active reasoning loop engine

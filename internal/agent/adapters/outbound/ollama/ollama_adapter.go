@@ -79,7 +79,6 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 		Str("model", a.cfg.Model).
 		Str("endpoint", a.cfg.Endpoint).
 		Msg("entering Generate: sending chat completion request to Ollama")
-	logger.Trace().Interface("request_body", req).Msg("full brain request payload")
 
 	if err := req.Validate(); err != nil {
 		logger.Error().Err(err).Msg("invalid brain request payload")
@@ -139,6 +138,7 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 			options["num_predict"] = maxToks
 		}
 
+		logger.Trace().Interface("messages", messages).Msg("messages for chat completion")
 		params := &api.ChatRequest{
 			Model:    modelName,
 			Messages: messages,

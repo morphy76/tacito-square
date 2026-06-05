@@ -85,7 +85,6 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 		Str("model", a.cfg.Model).
 		Str("endpoint", a.cfg.Endpoint).
 		Msg("entering Generate: sending chat completion request to OpenAI")
-	logger.Trace().Interface("request_body", req).Msg("full brain request payload")
 
 	if err := req.Validate(); err != nil {
 		logger.Error().Err(err).Msg("invalid brain request payload")
@@ -121,6 +120,7 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 			modelName = "gpt-4o"
 		}
 
+		logger.Trace().Interface("messages", messages).Msg("messages for chat completion")
 		params := openai.ChatCompletionNewParams{
 			Messages: messages,
 			Model:    shared.ChatModel(modelName),

@@ -170,9 +170,9 @@ func TestMessageProcessorService_ProcessIncomingMessage(t *testing.T) {
 		mockBrain := &MockBrain{
 			GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
 				assert.Equal(t, "Hello, world", request.Prompt)
-				// History fallback should only contain the current user message turn since Get failed
-				require.Len(t, request.History, 1)
-				assert.Equal(t, "Hello, world", request.History[0].Content)
+				// When Get fails, history falls back to empty: the current user message is
+				// already carried by req.Prompt and must not be duplicated in history.
+				assert.Empty(t, request.History)
 
 				return &model.BrainResponse{
 					Content: "Reasoning response content",
