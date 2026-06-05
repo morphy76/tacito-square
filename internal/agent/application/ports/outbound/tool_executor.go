@@ -2,6 +2,8 @@ package outbound
 
 import (
 	"context"
+
+	"github.com/morphy76/tacito-square/internal/agent/domain/model"
 )
 
 // MCPClientInfo defines the configuration details for a single target MCP connection.
@@ -15,17 +17,10 @@ type MCPClientInfo struct {
 	AllowedTools []string          `json:"allowed_tools"`
 }
 
-// ToolDefinition represents a single allowed tool metadata block exposed to the LLM.
-type ToolDefinition struct {
-	Name        string         `json:"name"`
-	Description string         `json:"description"`
-	InputSchema map[string]any `json:"input_schema"` // JSON Schema of parameters
-}
-
 // ToolExecutor abstracts the execution and management of MCP tools.
 type ToolExecutor interface {
 	// ListAllowedTools returns the consolidated list of all whitelisted tools across all configured MCP clients.
-	ListAllowedTools(ctx context.Context) ([]ToolDefinition, error)
+	ListAllowedTools(ctx context.Context) ([]model.ToolDefinition, error)
 
 	// Execute routes and runs a whitelisted tool with the given arguments.
 	Execute(ctx context.Context, toolName string, arguments map[string]any) (string, error)
@@ -33,3 +28,4 @@ type ToolExecutor interface {
 	// Close cleans up all active subprocesses and SSE HTTP connections.
 	Close(ctx context.Context) error
 }
+

@@ -2,6 +2,7 @@ package openai
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"time"
@@ -105,10 +106,40 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 		for _, entry := range req.History {
 			switch entry.Role {
 			case "assistant":
+				if tCallsJSON, exists := entry.Metadata["tool_calls"]; exists && tCallsJSON != "" {
+					var toolCalls []model.ToolCall
+					if err := json.Unmarshal([]byte(tCallsJSON), &toolCalls); err == nil && len(toolCalls) > 0 {
+						var sdkToolCalls []openai.ChatCompletionMessageToolCallParam
+						for _, tc := range toolCalls {
+							argsBytes, _ := json.Marshal(tc.Arguments)
+							sdkToolCalls = append(sdkToolCalls, openai.ChatCompletionMessageToolCallParam{
+								ID: tc.ID,
+								Function: openai.ChatCompletionMessageToolCallFunctionParam{
+									Name:      tc.Name,
+									Arguments: string(argsBytes),
+								},
+							})
+						}
+						asstParam := openai.ChatCompletionAssistantMessageParam{
+							ToolCalls: sdkToolCalls,
+						}
+						if entry.Content != "" {
+							asstParam.Content = openai.ChatCompletionAssistantMessageParamContentUnion{
+								OfString: openai.String(entry.Content),
+							}
+						}
+						messages = append(messages, openai.ChatCompletionMessageParamUnion{OfAssistant: &asstParam})
+						continue
+					}
+				}
 				messages = append(messages, openai.AssistantMessage(entry.Content))
 			case "tool":
-				logger.Debug().Str("role", entry.Role).Msg("TODO: tool role history mapping not yet implemented for OpenAI, falling back to user message")
-				messages = append(messages, openai.UserMessage(entry.Content))
+				toolCallID := entry.Metadata["tool_call_id"]
+				toolParam := openai.ChatCompletionToolMessageParam{
+					ToolCallID: toolCallID,
+					Content:    openai.ChatCompletionToolMessageParamContentUnion{OfString: openai.String(entry.Content)},
+				}
+				messages = append(messages, openai.ChatCompletionMessageParamUnion{OfTool: &toolParam})
 			default: // "user"
 				messages = append(messages, openai.UserMessage(entry.Content))
 			}
@@ -120,10 +151,24 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 			modelName = "gpt-4o"
 		}
 
+		var sdkTools []openai.ChatCompletionToolParam
+		for _, t := range req.Tools {
+			sdkTools = append(sdkTools, openai.ChatCompletionToolParam{
+				Function: shared.FunctionDefinitionParam{
+					Name:        t.Name,
+					Description: openai.String(t.Description),
+					Parameters:  shared.FunctionParameters(t.InputSchema),
+				},
+			})
+		}
+
 		logger.Trace().Interface("messages", messages).Msg("messages for chat completion")
 		params := openai.ChatCompletionNewParams{
 			Messages: messages,
 			Model:    shared.ChatModel(modelName),
+		}
+		if len(sdkTools) > 0 {
+			params.Tools = sdkTools
 		}
 
 		temp := a.cfg.Temperature
@@ -216,6 +261,19 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 			),
 		)
 
+		var responseToolCalls []model.ToolCall
+		if len(chatComp.Choices[0].Message.ToolCalls) > 0 {
+			for _, tc := range chatComp.Choices[0].Message.ToolCalls {
+				var arguments map[string]any
+				_ = json.Unmarshal([]byte(tc.Function.Arguments), &arguments)
+				responseToolCalls = append(responseToolCalls, model.ToolCall{
+					ID:        tc.ID,
+					Name:      tc.Function.Name,
+					Arguments: arguments,
+				})
+			}
+		}
+
 		result = &model.BrainResponse{
 			Content: chatComp.Choices[0].Message.Content,
 			Usage: model.TokenUsage{
@@ -224,6 +282,7 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 				TotalTokens:      int(chatComp.Usage.TotalTokens),
 			},
 			FinishReason: string(chatComp.Choices[0].FinishReason),
+			ToolCalls:    responseToolCalls,
 		}
 
 		return nil

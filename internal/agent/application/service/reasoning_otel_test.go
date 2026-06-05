@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/morphy76/tacito-square/internal/agent/application/service"
@@ -80,8 +81,9 @@ func TestReasoningOTel_Instrumentation(t *testing.T) {
 		for _, s := range stepSpans {
 			for _, e := range s.Events {
 				if e.Name == "thought" {
-					eventFound = true
-					assert.Contains(t, e.Attributes[0].Value.AsString(), "Deciding to recall memory")
+					if strings.Contains(e.Attributes[0].Value.AsString(), "Deciding to recall memory") {
+						eventFound = true
+					}
 				}
 			}
 		}

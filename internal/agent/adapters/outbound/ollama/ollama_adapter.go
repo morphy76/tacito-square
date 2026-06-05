@@ -2,6 +2,7 @@ package ollama
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
@@ -100,15 +101,45 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 			})
 		}
 		for _, entry := range req.History {
-			role := entry.Role
-			if role == "tool" {
-				logger.Debug().Str("role", role).Msg("TODO: tool role history mapping not yet implemented for Ollama, falling back to user message")
-				role = "user"
+			switch entry.Role {
+			case "assistant":
+				var toolCalls []api.ToolCall
+				if tCallsJSON, exists := entry.Metadata["tool_calls"]; exists && tCallsJSON != "" {
+					var modelToolCalls []model.ToolCall
+					if err := json.Unmarshal([]byte(tCallsJSON), &modelToolCalls); err == nil && len(modelToolCalls) > 0 {
+						for _, mtc := range modelToolCalls {
+							args := api.NewToolCallFunctionArguments()
+							for k, v := range mtc.Arguments {
+								args.Set(k, v)
+							}
+							toolCalls = append(toolCalls, api.ToolCall{
+								ID: mtc.ID,
+								Function: api.ToolCallFunction{
+									Name:      mtc.Name,
+									Arguments: args,
+								},
+							})
+						}
+					}
+				}
+				messages = append(messages, api.Message{
+					Role:      "assistant",
+					Content:   entry.Content,
+					ToolCalls: toolCalls,
+				})
+			case "tool":
+				messages = append(messages, api.Message{
+					Role:       "tool",
+					Content:    entry.Content,
+					ToolCallID: entry.Metadata["tool_call_id"],
+					ToolName:   entry.Metadata["tool_name"],
+				})
+			default: // "user"
+				messages = append(messages, api.Message{
+					Role:    "user",
+					Content: entry.Content,
+				})
 			}
-			messages = append(messages, api.Message{
-				Role:    role,
-				Content: entry.Content,
-			})
 		}
 		messages = append(messages, api.Message{
 			Role:    "user",
@@ -118,6 +149,21 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 		modelName := a.cfg.Model
 		if modelName == "" {
 			modelName = "llama3"
+		}
+
+		var sdkTools []api.Tool
+		for _, t := range req.Tools {
+			schemaBytes, _ := json.Marshal(t.InputSchema)
+			var params api.ToolFunctionParameters
+			_ = json.Unmarshal(schemaBytes, &params)
+			sdkTools = append(sdkTools, api.Tool{
+				Type: "function",
+				Function: api.ToolFunction{
+					Name:        t.Name,
+					Description: t.Description,
+					Parameters:  params,
+				},
+			})
 		}
 
 		streamVal := false
@@ -145,6 +191,9 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 			Stream:   &streamVal,
 			Options:  options,
 		}
+		if len(sdkTools) > 0 {
+			params.Tools = sdkTools
+		}
 
 		// Exponential backoff with jitter retry wrapper using sethvargo/go-retry
 		b := retry.NewExponential(10 * time.Millisecond)
@@ -153,6 +202,7 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 		var responseText string
 		var promptEvalCount int
 		var evalCount int
+		var responseToolCalls []model.ToolCall
 
 		logger.Trace().Msg("initiating Ollama chat wire call (with backoff retry)")
 		start := time.Now()
@@ -162,6 +212,15 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 				responseText += resp.Message.Content
 				promptEvalCount = resp.PromptEvalCount
 				evalCount = resp.EvalCount
+				if len(resp.Message.ToolCalls) > 0 {
+					for _, tc := range resp.Message.ToolCalls {
+						responseToolCalls = append(responseToolCalls, model.ToolCall{
+							ID:        tc.ID,
+							Name:      tc.Function.Name,
+							Arguments: tc.Function.Arguments.ToMap(),
+						})
+					}
+				}
 				return nil
 			})
 			if err != nil {
@@ -224,6 +283,11 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 			),
 		)
 
+		finishReason := "stop"
+		if len(responseToolCalls) > 0 {
+			finishReason = "tool_calls"
+		}
+
 		result = &model.BrainResponse{
 			Content: responseText,
 			Usage: model.TokenUsage{
@@ -231,7 +295,8 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 				CompletionTokens: evalCount,
 				TotalTokens:      promptEvalCount + evalCount,
 			},
-			FinishReason: "stop",
+			FinishReason: finishReason,
+			ToolCalls:    responseToolCalls,
 		}
 
 		return nil

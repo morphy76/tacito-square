@@ -86,6 +86,125 @@ func TestOllamaAdapter_Generate(t *testing.T) {
 		assert.Equal(t, "fallback", res.FinishReason)
 		assert.Equal(t, 1, callCount, "should only call the server once (no retries)")
 	})
+
+	t.Run("should parse native tool calls and convert tool history correctly", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Assert route
+			assert.Equal(t, "/api/chat", r.URL.Path)
+
+			// Read request body to verify messages and tools mapping
+			var body struct {
+				Model    string           `json:"model"`
+				Messages []map[string]any `json:"messages"`
+				Tools    []map[string]any `json:"tools"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&body)
+
+			// Assertions on history conversion
+			if len(body.Messages) == 3 {
+				// Assistant message with tool calls
+				asst := body.Messages[0]
+				assert.Equal(t, "assistant", asst["role"])
+				assert.NotNil(t, asst["tool_calls"])
+
+				// Tool message with ToolCallID and ToolName
+				toolMsg := body.Messages[1]
+				assert.Equal(t, "tool", toolMsg["role"])
+				assert.Equal(t, "call_123", toolMsg["tool_call_id"])
+				assert.Equal(t, "my-tool", toolMsg["tool_name"])
+				assert.Equal(t, "observation result", toolMsg["content"])
+
+				// User prompt
+				userMsg := body.Messages[2]
+				assert.Equal(t, "user", userMsg["role"])
+				assert.Equal(t, "Next query", userMsg["content"])
+			}
+
+			// Assertions on tools mapping
+			if assert.Len(t, body.Tools, 1) {
+				assert.Equal(t, "function", body.Tools[0]["type"])
+				fn := body.Tools[0]["function"].(map[string]any)
+				assert.Equal(t, "my-tool", fn["name"])
+				assert.Equal(t, "Execute tool", fn["description"])
+			}
+
+			// Respond with a tool call from the model
+			resp := map[string]any{
+				"model":      "llama3",
+				"created_at": "2026-05-31T09:20:00Z",
+				"message": map[string]any{
+					"role":    "assistant",
+					"content": "",
+					"tool_calls": []map[string]any{
+						{
+							"id":   "call_456",
+							"type": "function",
+							"function": map[string]any{
+								"name": "another-tool",
+								"arguments": map[string]any{
+									"val": float64(42),
+								},
+							},
+						},
+					},
+				},
+				"done":              true,
+				"prompt_eval_count": 15,
+				"eval_count":        20,
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+		}))
+		defer server.Close()
+
+		adapter := ollama.NewAdapter(ollama.Config{
+			Endpoint: server.URL,
+			Model:    "llama3",
+			Timeout:  2 * time.Second,
+		})
+
+		history := []model.MemoryEntry{
+			{
+				Role:    "assistant",
+				Content: "Let me call the tool.",
+				Metadata: map[string]string{
+					"tool_calls": `[{"id": "call_123", "name": "my-tool", "arguments": {"param": "val"}}]`,
+				},
+			},
+			{
+				Role:    "tool",
+				Content: "observation result",
+				Metadata: map[string]string{
+					"tool_call_id": "call_123",
+					"tool_name":    "my-tool",
+				},
+			},
+		}
+
+		tools := []model.ToolDefinition{
+			{
+				Name:        "my-tool",
+				Description: "Execute tool",
+				InputSchema: map[string]any{
+					"type": "object",
+				},
+			},
+		}
+
+		req := model.BrainRequest{
+			Prompt:  "Next query",
+			History: history,
+			Tools:   tools,
+		}
+
+		res, err := adapter.Generate(context.Background(), req)
+		assert.NoError(t, err)
+		assert.Equal(t, "tool_calls", res.FinishReason)
+		require.Len(t, res.ToolCalls, 1)
+		assert.Equal(t, "call_456", res.ToolCalls[0].ID)
+		assert.Equal(t, "another-tool", res.ToolCalls[0].Name)
+		assert.Equal(t, float64(42), res.ToolCalls[0].Arguments["val"])
+	})
 }
 
 func TestOllamaAdapter_Embeddings(t *testing.T) {
