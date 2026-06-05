@@ -17,10 +17,16 @@ func TestDynamicSkills_Execution(t *testing.T) {
 			GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
 				stepCount++
 				if stepCount == 1 {
-					// Assert the brain is presented with the available skills names/descriptions
-					assert.Contains(t, request.SystemPrompt, "Available Skills")
-					assert.Contains(t, request.SystemPrompt, "- Name: math")
-					assert.Contains(t, request.SystemPrompt, "Description: Dynamic math instructions")
+					// Assert the brain is presented with the available skills as a native tool definition
+					assert.Len(t, request.Tools, 1)
+					assert.Equal(t, "enable_skill", request.Tools[0].Name)
+					schema, ok := request.Tools[0].InputSchema["properties"].(map[string]any)
+					assert.True(t, ok)
+					skillProp, ok := schema["skill_name"].(map[string]any)
+					assert.True(t, ok)
+					enumVals, ok := skillProp["enum"].([]any)
+					assert.True(t, ok)
+					assert.Contains(t, enumVals, "math")
 
 					// Step 1: Brain calls enable_skill tool to load math skill
 					toolCall := map[string]any{

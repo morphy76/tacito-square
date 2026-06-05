@@ -327,18 +327,9 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 
 	if isStructured {
 		activeSystemPrompt = parsedConfig.Directives
-		
-		// If skills exist, format names and descriptions for the brain
-		var skillDescs []string
 		skillsMap = make(map[string]Skill)
 		for _, s := range parsedConfig.Skills {
-			skillDescs = append(skillDescs, fmt.Sprintf("- Name: %s\n  Description: %s", s.Name, s.Description))
 			skillsMap[s.Name] = s
-		}
-		
-		if len(skillDescs) > 0 {
-			skillsList := "\n\nAvailable Skills (use 'enable_skill' tool to load their guidelines):\n" + strings.Join(skillDescs, "\n")
-			activeSystemPrompt = activeSystemPrompt + skillsList
 		}
 	} else {
 		// Fallback for raw text prompt templates
@@ -351,11 +342,126 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 		activeTools[name] = handler
 	}
 
+	// Define built-in tool definitions
+	recallMemoryDef := model.ToolDefinition{
+		Name:        "recall_memory",
+		Description: "Recall relevant facts, declarations, and details from the agent's long-term memory.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"query": map[string]any{
+					"type":        "string",
+					"description": "The search query to match against memories.",
+				},
+				"category": map[string]any{
+					"type":        "string",
+					"description": "Optional category filter for semantic retrieval.",
+				},
+				"limit": map[string]any{
+					"type":        "integer",
+					"description": "Optional limit on the number of recalled memories.",
+				},
+			},
+			"required": []any{"query"},
+		},
+	}
+
+	readPayloadDef := model.ToolDefinition{
+		Name:        "read_large_payload",
+		Description: "Read a large payload or file from S3 object storage.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"key": map[string]any{
+					"type":        "string",
+					"description": "The unique S3 object key identifying the file.",
+				},
+			},
+			"required": []any{"key"},
+		},
+	}
+
+	writePayloadDef := model.ToolDefinition{
+		Name:        "write_large_payload",
+		Description: "Write a large payload or file to S3 object storage.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"content": map[string]any{
+					"type":        "string",
+					"description": "The text content or payload to write to S3.",
+				},
+				"content_type": map[string]any{
+					"type":        "string",
+					"description": "Optional MIME content type descriptor.",
+				},
+			},
+			"required": []any{"content"},
+		},
+	}
+
+	var toolsToExpose []model.ToolDefinition
+
+	if e.ltm != nil && e.embedder != nil {
+		toolsToExpose = append(toolsToExpose, recallMemoryDef)
+	}
+	if e.blobStore != nil {
+		toolsToExpose = append(toolsToExpose, readPayloadDef)
+		toolsToExpose = append(toolsToExpose, writePayloadDef)
+	}
+
+	// Dynamic enum population and description formatting for enable_skill based on authorized skill names
+	var skillNames []any
+	var skillDescriptions []string
+	seenSkills := make(map[string]bool)
+	if isStructured {
+		for _, s := range parsedConfig.Skills {
+			if !seenSkills[s.Name] {
+				seenSkills[s.Name] = true
+				skillNames = append(skillNames, s.Name)
+				desc := s.Description
+				if desc == "" {
+					desc = "No description provided"
+				}
+				skillDescriptions = append(skillDescriptions, s.Name+": "+desc)
+			}
+		}
+	}
+	for name, s := range e.skills {
+		if !seenSkills[name] {
+			seenSkills[name] = true
+			skillNames = append(skillNames, name)
+			desc := s.Description
+			if desc == "" {
+				desc = "No description provided"
+			}
+			skillDescriptions = append(skillDescriptions, name+": "+desc)
+		}
+	}
+
+	if len(skillNames) > 0 {
+		paramDescription := "The name of the skill to enable. Available options:\n" + strings.Join(skillDescriptions, "\n")
+		enableSkillDef := model.ToolDefinition{
+			Name:        "enable_skill",
+			Description: "Enable a specific skill to load its guidelines and instructions when needed for a task.",
+			InputSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"skill_name": map[string]any{
+						"type":        "string",
+						"description": paramDescription,
+						"enum":        skillNames,
+					},
+				},
+				"required": []any{"skill_name"},
+			},
+		}
+		toolsToExpose = append(toolsToExpose, enableSkillDef)
+	}
+
 	if e.mcpExecutor != nil {
 		mcpTools, err := e.mcpExecutor.ListAllowedTools(ctx)
 		if err == nil && len(mcpTools) > 0 {
-			var sb strings.Builder
-			sb.WriteString("\n\nAvailable External Tools:\n")
 			for _, tool := range mcpTools {
 				tName := tool.Name
 				// Safety check: protect built-in tools against hijack
@@ -385,10 +491,9 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 
 					return resp, err
 				}
-				schemaJSON, _ := json.Marshal(tool.InputSchema)
-				sb.WriteString(fmt.Sprintf("- Name: %s\n  Description: %s\n  Parameters: %s\n", tool.Name, tool.Description, string(schemaJSON)))
+
+				toolsToExpose = append(toolsToExpose, tool)
 			}
-			activeSystemPrompt = activeSystemPrompt + sb.String()
 		}
 	}
 
@@ -411,7 +516,7 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 		finalAnswer, shouldContinue, lastParsedThought, err := e.executeStep(
 			ctx, step, tenantID, agentID, threadID,
 			userQuery, activeSystemPrompt, &activeHistory,
-			activeTools, logger,
+			activeTools, toolsToExpose, logger,
 		)
 		if lastParsedThought != "" {
 			lastThought = lastParsedThought
@@ -424,7 +529,8 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 		}
 		if !shouldContinue {
 			span.SetStatus(codes.Ok, "")
-			logger.Info().Str("final_answer", finalAnswer).Msg("ExecuteReasoningLoop completed successfully")
+			logger.Info().Msg("ExecuteReasoningLoop completed successfully")
+			logger.Trace().Str("final_answer", finalAnswer).Msg("final answer content")
 			return finalAnswer, nil
 		}
 	}
@@ -450,6 +556,7 @@ func (e *CognitiveEngine) executeStep(
 	systemPrompt string,
 	activeHistory *[]model.MemoryEntry,
 	activeTools map[string]ToolHandler,
+	toolsToExpose []model.ToolDefinition,
 	logger zerolog.Logger,
 ) (string, bool, string, error) {
 	// Start OTel sub-span for this granular reasoning step
@@ -471,6 +578,7 @@ func (e *CognitiveEngine) executeStep(
 		Prompt:       userQuery,
 		SystemPrompt: systemPrompt,
 		History:      *activeHistory,
+		Tools:        toolsToExpose,
 	}
 
 	resp, err := e.brain.Generate(ctx, req)
@@ -480,120 +588,131 @@ func (e *CognitiveEngine) executeStep(
 		return "", false, "", err
 	}
 
-	// 2. Parse brain response
+	// Extract content, tool calls, and thoughts from the brain response
+	var content string = resp.Content
+	var toolCalls []model.ToolCall = resp.ToolCalls
+	var thought string = resp.Content
+
+	// Graceful parsing fallback for ReAct JSON format mocks/compatibility
 	var parsed parsedResponse
-	isJSON := json.Unmarshal([]byte(resp.Content), &parsed) == nil
-
-	if !isJSON {
-		// Fallback: raw text response is immediately treated as final answer
-		span.SetStatus(codes.Ok, "")
-		logger.Debug().Msg("brain returned raw text; treating as final answer")
-		return resp.Content, false, "", nil
-	}
-
-	// Construct Domain Model reasoning step payload
-	payload := model.AgentReasoningStepPayload{
-		StepIndex: step,
-		Thought:   parsed.Thought,
-		Timestamp: time.Now().UTC(),
-	}
-
-	if parsed.Thought != "" {
-		span.AddEvent("thought", trace.WithAttributes(attribute.String("thought", parsed.Thought)))
-		*activeHistory = append(*activeHistory, model.MemoryEntry{
-			Role:      "assistant",
-			Content:   "Thought: " + parsed.Thought,
-			Timestamp: time.Now().UTC(),
-		})
-	}
-
-	// Check if it's a tool call
-	if parsed.ToolCall != nil && parsed.ToolCall.Name != "" {
-		toolName := parsed.ToolCall.Name
-		toolArgs := parsed.ToolCall.Arguments
-
-		payload.Action = &model.ToolCallAction{
-			Tool:  toolName,
-			Input: toolArgs,
+	if len(toolCalls) == 0 && json.Unmarshal([]byte(resp.Content), &parsed) == nil {
+		if parsed.Thought != "" {
+			thought = parsed.Thought
 		}
-
-		span.AddEvent("tool_call", trace.WithAttributes(attribute.String("tool", toolName)))
-
-		// Output proper structured JSON stdout log for Thought + Action
-		e.logStep(ctx, tenantID, agentID, threadID, payload)
-		// Emit intermediate event asynchronously over NATS publisher port
-		e.emitStepEvent(ctx, tenantID, agentID, threadID, payload)
-
-		// Register tool call to active trace history
-		*activeHistory = append(*activeHistory, model.MemoryEntry{
-			Role:      "assistant",
-			Content:   fmt.Sprintf("Call: %s with args %v", toolName, toolArgs),
-			Timestamp: time.Now().UTC(),
-		})
-
-		// Execute the tool from the thread-local active tool map
-		handler, exists := activeTools[toolName]
-		var observation string
-		var toolErr error
-		if !exists {
-			toolErr = fmt.Errorf("tool %s is not registered or allowed", toolName)
-			observation = fmt.Sprintf("Error: tool %s is not registered or allowed", toolName)
-			logger.Warn().Str("tool", toolName).Msg("tool execution requested but tool is not registered")
-		} else {
-			obs, err := handler(ctx, toolArgs)
-			if err != nil {
-				toolErr = err
-				observation = fmt.Sprintf("Error: tool execution failed: %v", err)
-				logger.Warn().Err(err).Str("tool", toolName).Msg("tool execution returned error")
-			} else {
-				observation = obs
+		if parsed.ToolCall != nil && parsed.ToolCall.Name != "" {
+			toolCalls = []model.ToolCall{
+				{
+					ID:        "call_" + uuid.New().String(),
+					Name:      parsed.ToolCall.Name,
+					Arguments: parsed.ToolCall.Arguments,
+				},
 			}
+			content = parsed.Thought
+		} else if parsed.FinalAnswer != "" {
+			content = parsed.FinalAnswer
 		}
+	}
 
-		if toolErr != nil {
-			span.RecordError(toolErr)
-			span.SetStatus(codes.Error, toolErr.Error())
-		} else {
-			span.SetStatus(codes.Ok, "")
-		}
+	if thought != "" {
+		span.AddEvent("thought", trace.WithAttributes(attribute.String("thought", thought)))
+	}
 
-		// Register observation to active trace history
+	// Check if it's a tool call turn
+	if len(toolCalls) > 0 {
+		// Register tool calls metadata to active history
+		tCallsBytes, _ := json.Marshal(toolCalls)
 		*activeHistory = append(*activeHistory, model.MemoryEntry{
-			Role:      "tool",
-			Content:   observation,
+			Role:      "assistant",
+			Content:   content,
 			Timestamp: time.Now().UTC(),
+			Metadata: map[string]string{
+				"tool_calls": string(tCallsBytes),
+			},
 		})
 
-		// Update payload with observation, and publish again
-		payload.Observation = observation
-		payload.Timestamp = time.Now().UTC()
+		for _, tc := range toolCalls {
+			toolName := tc.Name
+			toolArgs := tc.Arguments
 
-		// Output Proper structured JSON log for Action Observation
-		e.logStep(ctx, tenantID, agentID, threadID, payload)
-		// Emit updated intermediate NATS event
-		e.emitStepEvent(ctx, tenantID, agentID, threadID, payload)
+			payload := model.AgentReasoningStepPayload{
+				StepIndex: step,
+				Thought:   thought,
+				Action: &model.ToolCallAction{
+					Tool:  toolName,
+					Input: toolArgs,
+				},
+				Timestamp: time.Now().UTC(),
+			}
 
-		// Continue reasoning loop with tool observation injected
-		return "", true, parsed.Thought, nil
+			span.AddEvent("tool_call", trace.WithAttributes(attribute.String("tool", toolName)))
+
+			// Output proper structured JSON stdout log for Thought + Action
+			e.logStep(ctx, tenantID, agentID, threadID, payload)
+			// Emit intermediate event asynchronously over NATS publisher port
+			e.emitStepEvent(ctx, tenantID, agentID, threadID, payload)
+
+			// Execute the tool from the thread-local active tool map
+			handler, exists := activeTools[toolName]
+			var observation string
+			var toolErr error
+			if !exists {
+				toolErr = fmt.Errorf("tool %s is not registered or allowed", toolName)
+				observation = fmt.Sprintf("Error: tool %s is not registered or allowed", toolName)
+				logger.Warn().Str("tool", toolName).Msg("tool execution requested but tool is not registered")
+			} else {
+				obs, err := handler(ctx, toolArgs)
+				if err != nil {
+					toolErr = err
+					observation = fmt.Sprintf("Error: tool execution failed: %v", err)
+					logger.Warn().Err(err).Str("tool", toolName).Msg("tool execution returned error")
+				} else {
+					observation = obs
+				}
+			}
+
+			if toolErr != nil {
+				span.RecordError(toolErr)
+				span.SetStatus(codes.Error, toolErr.Error())
+			}
+
+			// Register observation to active history with tool metadata
+			*activeHistory = append(*activeHistory, model.MemoryEntry{
+				Role:      "tool",
+				Content:   observation,
+				Timestamp: time.Now().UTC(),
+				Metadata: map[string]string{
+					"tool_call_id": tc.ID,
+					"tool_name":    toolName,
+				},
+			})
+
+			// Update payload with observation, and publish again
+			payload.Observation = observation
+			payload.Timestamp = time.Now().UTC()
+
+			// Output Proper structured JSON log for Action Observation
+			e.logStep(ctx, tenantID, agentID, threadID, payload)
+			// Emit updated intermediate NATS event
+			e.emitStepEvent(ctx, tenantID, agentID, threadID, payload)
+		}
+
+		// Continue reasoning loop with tool observations injected
+		return "", true, thought, nil
 	}
 
 	span.SetStatus(codes.Ok, "")
+	logger.Debug().Msg("brain returned final response (no tool calls)")
 
-	// If no tool call, log and publish thought-only step event
+	// Construct Domain Model reasoning step payload for final response
+	payload := model.AgentReasoningStepPayload{
+		StepIndex: step,
+		Thought:   thought,
+		Timestamp: time.Now().UTC(),
+	}
 	e.logStep(ctx, tenantID, agentID, threadID, payload)
 	e.emitStepEvent(ctx, tenantID, agentID, threadID, payload)
 
-	// Check if final answer is present
-	if parsed.FinalAnswer != "" {
-		logger.Debug().Str("final_answer", parsed.FinalAnswer).Msg("parsed final answer")
-		return parsed.FinalAnswer, false, parsed.Thought, nil
-	}
-
-	// If LLM returned JSON but no tool call and no final answer, default to thought or content
-	if parsed.Thought != "" {
-		return parsed.Thought, false, parsed.Thought, nil
-	}
-	return resp.Content, false, parsed.Thought, nil
+	return content, false, thought, nil
 }
 
 func (e *CognitiveEngine) logStep(ctx context.Context, tenantID, agentID, threadID string, payload model.AgentReasoningStepPayload) {

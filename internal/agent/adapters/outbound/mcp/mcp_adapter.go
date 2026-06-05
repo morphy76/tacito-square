@@ -13,6 +13,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/resiliency"
 	"github.com/morphy76/tacito-square/internal/agent/application/ports/outbound"
+	"github.com/morphy76/tacito-square/internal/agent/domain/model"
 )
 
 type TransportFactory func(info outbound.MCPClientInfo) (mcp.Transport, error)
@@ -133,7 +134,7 @@ func defaultTransportFactory(info outbound.MCPClientInfo) (mcp.Transport, error)
 	return nil, fmt.Errorf("unknown transport: %s", info.Transport)
 }
 
-func (a *MCPAdapter) ListAllowedTools(ctx context.Context) ([]outbound.ToolDefinition, error) {
+func (a *MCPAdapter) ListAllowedTools(ctx context.Context) ([]model.ToolDefinition, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -141,7 +142,7 @@ func (a *MCPAdapter) ListAllowedTools(ctx context.Context) ([]outbound.ToolDefin
 		return nil, err
 	}
 
-	var results []outbound.ToolDefinition
+	var results []model.ToolDefinition
 
 	for _, s := range a.sessions {
 		// If allowedTools is empty, it's a deny-all default (as specified in SPEC-FR-M5.5)
@@ -187,7 +188,7 @@ func (a *MCPAdapter) ListAllowedTools(ctx context.Context) ([]outbound.ToolDefin
 				}
 			}
 
-			results = append(results, outbound.ToolDefinition{
+			results = append(results, model.ToolDefinition{
 				Name:        tool.Name,
 				Description: tool.Description,
 				InputSchema: inputSchema,
@@ -197,6 +198,7 @@ func (a *MCPAdapter) ListAllowedTools(ctx context.Context) ([]outbound.ToolDefin
 
 	return results, nil
 }
+
 
 func (a *MCPAdapter) Execute(ctx context.Context, toolName string, arguments map[string]any) (string, error) {
 	a.mu.Lock()

@@ -99,6 +99,211 @@ func TestOpenAIAdapter_Generate(t *testing.T) {
 		assert.Equal(t, "fallback", res.FinishReason)
 		assert.Equal(t, 1, callCount, "should only call the server once (no retries)")
 	})
+
+	t.Run("should not retry on 400 Bad Request error", func(t *testing.T) {
+		callCount := 0
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			callCount++
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"error": {"message": "Invalid request parameters", "type": "invalid_request_error"}}`))
+		}))
+		defer server.Close()
+
+		adapter := openai.NewAdapter(openai.Config{
+			Endpoint:         server.URL,
+			APIKey:           "mock-key",
+			Model:            "gpt-4o",
+			Timeout:          2 * time.Second,
+			FailureThreshold: 10,
+		})
+
+		req := model.BrainRequest{Prompt: "Hi"}
+		res, err := adapter.Generate(context.Background(), req)
+		assert.NoError(t, err)
+		assert.Equal(t, "fallback", res.FinishReason)
+		assert.Equal(t, 1, callCount, "should only call the server once (no retries)")
+	})
+
+	t.Run("should parse native tool calls and convert tool history correctly", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Read request body to verify messages and tools mapping
+			var body struct {
+				Messages []map[string]any `json:"messages"`
+				Tools    []map[string]any `json:"tools"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&body)
+
+			// Assertions on the request sent to OpenAI
+			// We expect 3 messages: user, assistant (with tool_calls), tool (with tool_call_id)
+			if len(body.Messages) == 3 {
+				// Assistant message
+				asst := body.Messages[0]
+				assert.Equal(t, "assistant", asst["role"])
+				assert.NotNil(t, asst["tool_calls"])
+
+				// Tool message
+				toolMsg := body.Messages[1]
+				assert.Equal(t, "tool", toolMsg["role"])
+				assert.Equal(t, "call_123", toolMsg["tool_call_id"])
+				assert.Equal(t, "observation result", toolMsg["content"])
+
+				// New User query
+				userMsg := body.Messages[2]
+				assert.Equal(t, "user", userMsg["role"])
+				assert.Equal(t, "Next question", userMsg["content"])
+			}
+
+			// We expect 1 tool definition
+			if assert.Len(t, body.Tools, 1) {
+				tool := body.Tools[0]
+				assert.Equal(t, "function", tool["type"])
+				fn := tool["function"].(map[string]any)
+				assert.Equal(t, "my-tool", fn["name"])
+				assert.Equal(t, "Execute tool", fn["description"])
+			}
+
+			// Respond with a tool call from model
+			resp := map[string]any{
+				"id":      "chatcmpl-123",
+				"object":  "chat.completion",
+				"choices": []map[string]any{
+					{
+						"index": 0,
+						"message": map[string]any{
+							"role":    "assistant",
+							"content": nil,
+							"tool_calls": []map[string]any{
+								{
+									"id":   "call_456",
+									"type": "function",
+									"function": map[string]any{
+										"name":      "another-tool",
+										"arguments": `{"val": 42}`,
+									},
+								},
+							},
+						},
+						"finish_reason": "tool_calls",
+					},
+				},
+				"usage": map[string]any{
+					"prompt_tokens":     15,
+					"completion_tokens": 20,
+					"total_tokens":      35,
+				},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+		}))
+		defer server.Close()
+
+		adapter := openai.NewAdapter(openai.Config{
+			Endpoint: server.URL,
+			APIKey:   "mock-key",
+			Model:    "gpt-4o",
+			Timeout:  2 * time.Second,
+		})
+
+		history := []model.MemoryEntry{
+			{
+				Role:    "assistant",
+				Content: "Let me call the tool.",
+				Metadata: map[string]string{
+					"tool_calls": `[{"id": "call_123", "name": "my-tool", "arguments": {"param": "val"}}]`,
+				},
+			},
+			{
+				Role:    "tool",
+				Content: "observation result",
+				Metadata: map[string]string{
+					"tool_call_id": "call_123",
+					"tool_name":    "my-tool",
+				},
+			},
+		}
+
+		tools := []model.ToolDefinition{
+			{
+				Name:        "my-tool",
+				Description: "Execute tool",
+				InputSchema: map[string]any{
+					"type": "object",
+				},
+			},
+		}
+
+		req := model.BrainRequest{
+			Prompt:  "Next question",
+			History: history,
+			Tools:   tools,
+		}
+
+		res, err := adapter.Generate(context.Background(), req)
+		assert.NoError(t, err)
+		assert.Equal(t, "tool_calls", res.FinishReason)
+		require.Len(t, res.ToolCalls, 1)
+		assert.Equal(t, "call_456", res.ToolCalls[0].ID)
+		assert.Equal(t, "another-tool", res.ToolCalls[0].Name)
+		assert.Equal(t, float64(42), res.ToolCalls[0].Arguments["val"])
+	})
+
+	t.Run("should set tool_choice to enable_skill when skills are present and no tool observation exists", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var body struct {
+				ToolChoice map[string]any `json:"tool_choice"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&body)
+
+			// Verify tool_choice is set to {"type": "function", "function": {"name": "enable_skill"}}
+			assert.Equal(t, "function", body.ToolChoice["type"])
+			fn := body.ToolChoice["function"].(map[string]any)
+			assert.Equal(t, "enable_skill", fn["name"])
+
+			resp := map[string]any{
+				"id":      "chatcmpl-123",
+				"object":  "chat.completion",
+				"choices": []map[string]any{
+					{
+						"index": 0,
+						"message": map[string]any{
+							"role":    "assistant",
+							"content": "Running enable_skill",
+						},
+						"finish_reason": "stop",
+					},
+				},
+				"usage": map[string]any{
+					"prompt_tokens":     10,
+					"completion_tokens": 10,
+					"total_tokens":      20,
+				},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+		}))
+		defer server.Close()
+
+		adapter := openai.NewAdapter(openai.Config{
+			Endpoint: server.URL,
+			APIKey:   "mock-key",
+			Model:    "gpt-4o",
+			Timeout:  2 * time.Second,
+		})
+
+		req := model.BrainRequest{
+			Prompt: "Hello",
+			Tools: []model.ToolDefinition{
+				{
+					Name:        "enable_skill",
+					Description: "Enable skill",
+				},
+			},
+		}
+
+		res, err := adapter.Generate(context.Background(), req)
+		assert.NoError(t, err)
+		assert.Equal(t, "Running enable_skill", res.Content)
+	})
 }
 
 func TestOpenAIAdapter_Embeddings(t *testing.T) {
