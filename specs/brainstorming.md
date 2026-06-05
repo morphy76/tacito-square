@@ -1,5 +1,6 @@
 # Brainstorming
 
+- redis: 2026/06/05 17:59:04 pool.go:715: redis: connection pool: failed to dial after 5 attempts: dial tcp 127.0.0.1:6379: connect: connection refused questo log deve essere json
 - new brain adapter type for google https://github.com/googleapis/go-genai
 - agent brain credentials_secret must be stored encrypted
 - unleash integration

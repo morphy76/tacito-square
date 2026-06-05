@@ -154,6 +154,10 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 				return nil
 			})
 			if err != nil {
+				var statusErr api.StatusError
+				if errors.As(err, &statusErr) && statusErr.StatusCode == http.StatusTooManyRequests {
+					return err
+				}
 				logger.Warn().Err(err).Msg("Ollama chat call failed, retrying...")
 				return retry.RetryableError(err)
 			}
@@ -291,6 +295,10 @@ func (a *Adapter) CreateEmbedding(ctx context.Context, text string) ([]float32, 
 			var err error
 			resp, err = a.client.Embed(ctx, req)
 			if err != nil {
+				var statusErr api.StatusError
+				if errors.As(err, &statusErr) && statusErr.StatusCode == http.StatusTooManyRequests {
+					return err
+				}
 				logger.Warn().Err(err).Msg("Ollama embedding call failed, retrying...")
 				return retry.RetryableError(err)
 			}
@@ -353,6 +361,10 @@ func (a *Adapter) CreateEmbeddingsBatch(ctx context.Context, texts []string) ([]
 			var err error
 			resp, err = a.client.Embed(ctx, req)
 			if err != nil {
+				var statusErr api.StatusError
+				if errors.As(err, &statusErr) && statusErr.StatusCode == http.StatusTooManyRequests {
+					return err
+				}
 				logger.Warn().Err(err).Msg("Ollama batch embedding call failed, retrying...")
 				return retry.RetryableError(err)
 			}

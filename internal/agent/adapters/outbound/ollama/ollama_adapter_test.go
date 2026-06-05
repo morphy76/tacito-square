@@ -63,6 +63,29 @@ func TestOllamaAdapter_Generate(t *testing.T) {
 		assert.NoError(t, err) // Fallback handles the error gracefully
 		assert.Equal(t, "ollama fallback text", res.Content)
 	})
+
+	t.Run("should not retry on 429 Too Many Requests error", func(t *testing.T) {
+		callCount := 0
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			callCount++
+			w.WriteHeader(http.StatusTooManyRequests)
+			_, _ = w.Write([]byte(`{"error": "Too Many Requests"}`))
+		}))
+		defer server.Close()
+
+		adapter := ollama.NewAdapter(ollama.Config{
+			Endpoint:         server.URL,
+			Model:            "llama3",
+			Timeout:          2 * time.Second,
+			FailureThreshold: 10,
+		})
+
+		req := model.BrainRequest{Prompt: "Hi"}
+		res, err := adapter.Generate(context.Background(), req)
+		assert.NoError(t, err)
+		assert.Equal(t, "fallback", res.FinishReason)
+		assert.Equal(t, 1, callCount, "should only call the server once (no retries)")
+	})
 }
 
 func TestOllamaAdapter_Embeddings(t *testing.T) {
@@ -124,5 +147,26 @@ func TestOllamaAdapter_Embeddings(t *testing.T) {
 
 		_, err := adapter.CreateEmbedding(context.Background(), "test text")
 		assert.Error(t, err)
+	})
+
+	t.Run("should not retry on 429 Too Many Requests error", func(t *testing.T) {
+		callCount := 0
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			callCount++
+			w.WriteHeader(http.StatusTooManyRequests)
+			_, _ = w.Write([]byte(`{"error": "Too Many Requests"}`))
+		}))
+		defer server.Close()
+
+		adapter := ollama.NewAdapter(ollama.Config{
+			Endpoint:         server.URL,
+			Model:            "nomic-embed-text",
+			Timeout:          2 * time.Second,
+			FailureThreshold: 10,
+		})
+
+		_, err := adapter.CreateEmbedding(context.Background(), "test text")
+		assert.Error(t, err)
+		assert.Equal(t, 1, callCount, "should only call the server once (no retries)")
 	})
 }

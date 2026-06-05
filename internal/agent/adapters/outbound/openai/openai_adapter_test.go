@@ -75,6 +75,30 @@ func TestOpenAIAdapter_Generate(t *testing.T) {
 		assert.NoError(t, err) // Fallback handles the error gracefully
 		assert.Equal(t, "fallback text", res.Content)
 	})
+
+	t.Run("should not retry on 429 Too Many Requests error", func(t *testing.T) {
+		callCount := 0
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			callCount++
+			w.WriteHeader(http.StatusTooManyRequests)
+			_, _ = w.Write([]byte(`{"error": {"message": "Rate limit exceeded", "type": "requests", "code": "rate_limit_exceeded"}}`))
+		}))
+		defer server.Close()
+
+		adapter := openai.NewAdapter(openai.Config{
+			Endpoint:         server.URL,
+			APIKey:           "mock-key",
+			Model:            "gpt-4o",
+			Timeout:          2 * time.Second,
+			FailureThreshold: 10,
+		})
+
+		req := model.BrainRequest{Prompt: "Hi"}
+		res, err := adapter.Generate(context.Background(), req)
+		assert.NoError(t, err)
+		assert.Equal(t, "fallback", res.FinishReason)
+		assert.Equal(t, 1, callCount, "should only call the server once (no retries)")
+	})
 }
 
 func TestOpenAIAdapter_Embeddings(t *testing.T) {
@@ -157,5 +181,27 @@ func TestOpenAIAdapter_Embeddings(t *testing.T) {
 
 		_, err := adapter.CreateEmbedding(context.Background(), "test text")
 		assert.Error(t, err)
+	})
+
+	t.Run("should not retry on 429 Too Many Requests error", func(t *testing.T) {
+		callCount := 0
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			callCount++
+			w.WriteHeader(http.StatusTooManyRequests)
+			_, _ = w.Write([]byte(`{"error": {"message": "Rate limit exceeded", "type": "requests", "code": "rate_limit_exceeded"}}`))
+		}))
+		defer server.Close()
+
+		adapter := openai.NewAdapter(openai.Config{
+			Endpoint:         server.URL,
+			APIKey:           "mock-key",
+			Model:            "text-embedding-3-small",
+			Timeout:          2 * time.Second,
+			FailureThreshold: 10,
+		})
+
+		_, err := adapter.CreateEmbedding(context.Background(), "test text")
+		assert.Error(t, err)
+		assert.Equal(t, 1, callCount, "should only call the server once (no retries)")
 	})
 }

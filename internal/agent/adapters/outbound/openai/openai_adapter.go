@@ -61,6 +61,7 @@ func NewAdapter(cfg Config) *Adapter {
 	opts := []option.RequestOption{
 		option.WithAPIKey(cfg.APIKey),
 		option.WithHTTPClient(httpClient),
+		option.WithMaxRetries(0),
 	}
 	if cfg.Endpoint != "" {
 		opts = append(opts, option.WithBaseURL(cfg.Endpoint))
@@ -141,6 +142,10 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 			var err error
 			chatComp, err = a.client.Chat.Completions.New(ctx, params)
 			if err != nil {
+				var openaiErr *openai.Error
+				if errors.As(err, &openaiErr) && openaiErr.StatusCode == http.StatusTooManyRequests {
+					return err
+				}
 				logger.Warn().Err(err).Msg("chat completion call failed, retrying...")
 				return retry.RetryableError(err)
 			}
@@ -284,6 +289,10 @@ func (a *Adapter) CreateEmbedding(ctx context.Context, text string) ([]float32, 
 			var err error
 			resp, err = a.client.Embeddings.New(ctx, params)
 			if err != nil {
+				var openaiErr *openai.Error
+				if errors.As(err, &openaiErr) && openaiErr.StatusCode == http.StatusTooManyRequests {
+					return err
+				}
 				logger.Warn().Err(err).Msg("embedding call failed, retrying...")
 				return retry.RetryableError(err)
 			}
@@ -348,6 +357,10 @@ func (a *Adapter) CreateEmbeddingsBatch(ctx context.Context, texts []string) ([]
 			var err error
 			resp, err = a.client.Embeddings.New(ctx, params)
 			if err != nil {
+				var openaiErr *openai.Error
+				if errors.As(err, &openaiErr) && openaiErr.StatusCode == http.StatusTooManyRequests {
+					return err
+				}
 				logger.Warn().Err(err).Msg("batch embedding call failed, retrying...")
 				return retry.RetryableError(err)
 			}
