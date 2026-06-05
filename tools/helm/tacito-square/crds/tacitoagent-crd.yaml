@@ -65,6 +65,12 @@ spec:
                       maximum: 8192
                       default: 2048
                       description: Maximum number of tokens the LLM can generate.
+                    endpoint:
+                      type: string
+                      description: Custom target endpoint for OpenAI requests.
+                    credentialsSecret:
+                      type: string
+                      description: Secret reference or raw secret API key.
                 systemPrompt:
                   type: string
                   description: Fully synthesized system prompt for the agent.

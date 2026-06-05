@@ -65,6 +65,7 @@ type Agent struct {
 	MCPClients      []MCPClientConfig     `json:"mcp_clients"`
 	Status          AgentStatus           `json:"status"`
 	CommunityID     *uuid.UUID            `json:"community_id"`
+	Tier            string                `json:"tier"`
 	CreatedAt       time.Time             `json:"created_at"`
 	UpdatedAt       time.Time             `json:"updated_at"`
 }

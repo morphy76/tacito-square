@@ -387,3 +387,135 @@ func TestAgentHandlers_Delete(t *testing.T) {
 		assert.Equal(t, http.StatusNoContent, resp.Code)
 	})
 }
+
+func TestAgentHandlers_Tier(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	basePayload := func() map[string]interface{} {
+		return map[string]interface{}{
+			"name":        "tier-agent",
+			"description": "Agent with tier",
+			"brain": map[string]interface{}{
+				"model":              "gpt-4o",
+				"temperature":        0.7,
+				"max_tokens":         2048,
+				"endpoint":           "https://api.openai.com/v1",
+				"credentials_secret": "secret",
+			},
+			"short_term_memory": map[string]interface{}{
+				"key_namespace": "tier:short",
+				"ttl_seconds":   3600,
+			},
+			"long_term_memory": map[string]interface{}{
+				"collection_name":  "tier-long",
+				"vector_dimension": 1536,
+			},
+		}
+	}
+
+	t.Run("Create Agent with deployment.tier is saved", func(t *testing.T) {
+		repo := new(MockAgentRepository)
+		handler := NewAgentHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.POST("/api/v1/agents", handler.Create)
+
+		payload := basePayload()
+		payload["deployment"] = map[string]interface{}{
+			"tier": "heavy",
+		}
+
+		var capturedAgent *model.Agent
+		repo.On("Create", mock.Anything, mock.AnythingOfType("*model.Agent")).Return(nil).Run(func(args mock.Arguments) {
+			capturedAgent = args.Get(1).(*model.Agent)
+		})
+
+		body, _ := json.Marshal(payload)
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/agents", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusCreated, resp.Code)
+		if assert.NotNil(t, capturedAgent) {
+			assert.Equal(t, "heavy", capturedAgent.Tier)
+		}
+	})
+
+	t.Run("Create Agent without deployment block saves empty tier", func(t *testing.T) {
+		repo := new(MockAgentRepository)
+		handler := NewAgentHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.POST("/api/v1/agents", handler.Create)
+
+		var capturedAgent *model.Agent
+		repo.On("Create", mock.Anything, mock.AnythingOfType("*model.Agent")).Return(nil).Run(func(args mock.Arguments) {
+			capturedAgent = args.Get(1).(*model.Agent)
+		})
+
+		body, _ := json.Marshal(basePayload())
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/agents", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusCreated, resp.Code)
+		if assert.NotNil(t, capturedAgent) {
+			assert.Equal(t, "", capturedAgent.Tier)
+		}
+	})
+
+	t.Run("Update Agent with deployment.tier updates the tier", func(t *testing.T) {
+		repo := new(MockAgentRepository)
+		handler := NewAgentHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.PUT("/api/v1/agents/:id", handler.Update)
+
+		id := uuid.New()
+		existing := &model.Agent{
+			ID:     id,
+			Name:   "tier-agent",
+			Status: model.AgentStatusDefined,
+			Tier:   "standard",
+			Brain: model.BrainConfig{
+				Model:       "gpt-4",
+				Temperature: 0.5,
+				MaxTokens:   1000,
+			},
+			ShortTermMemory: model.ShortTermMemoryConfig{TTLSeconds: 3600},
+			LongTermMemory:  model.LongTermMemoryConfig{VectorDimension: 1536},
+		}
+
+		payload := basePayload()
+		payload["name"] = "tier-agent"
+		payload["deployment"] = map[string]interface{}{
+			"tier": "gpu-optimized",
+		}
+
+		var capturedAgent *model.Agent
+		repo.On("GetByID", mock.Anything, id).Return(existing, nil)
+		repo.On("Update", mock.Anything, mock.AnythingOfType("*model.Agent")).Return(nil).Run(func(args mock.Arguments) {
+			capturedAgent = args.Get(1).(*model.Agent)
+		})
+
+		body, _ := json.Marshal(payload)
+		req, _ := http.NewRequest(http.MethodPut, "/api/v1/agents/"+id.String(), bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
+		if assert.NotNil(t, capturedAgent) {
+			assert.Equal(t, "gpu-optimized", capturedAgent.Tier)
+		}
+	})
+}
+

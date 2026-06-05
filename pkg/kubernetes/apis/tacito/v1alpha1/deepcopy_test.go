@@ -6,18 +6,20 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestLLMConfig_DeepCopy(t *testing.T) {
 	temp := "0.7"
 	tokens := int32(100)
+	endpoint := "https://custom-openai.api"
+	secret := "custom-secret-name"
 	original := &LLMConfig{
-		Model:       "gpt-4",
-		Temperature: &temp,
-		MaxTokens:   &tokens,
+		Model:             "gpt-4",
+		Temperature:       &temp,
+		MaxTokens:         &tokens,
+		Endpoint:          &endpoint,
+		CredentialsSecret: &secret,
 	}
 
 	copied := original.DeepCopy()
@@ -28,6 +30,8 @@ func TestLLMConfig_DeepCopy(t *testing.T) {
 	assert.NotSame(t, original, copied)
 	assert.NotSame(t, original.Temperature, copied.Temperature)
 	assert.NotSame(t, original.MaxTokens, copied.MaxTokens)
+	assert.NotSame(t, original.Endpoint, copied.Endpoint)
+	assert.NotSame(t, original.CredentialsSecret, copied.CredentialsSecret)
 
 	// Modifying clone must not affect original
 	newTemp := "0.9"
@@ -38,6 +42,14 @@ func TestLLMConfig_DeepCopy(t *testing.T) {
 	*copied.MaxTokens = newTokens
 	assert.Equal(t, int32(100), *original.MaxTokens)
 
+	newEndpoint := "https://other.api"
+	*copied.Endpoint = newEndpoint
+	assert.Equal(t, "https://custom-openai.api", *original.Endpoint)
+
+	newSecret := "other-secret"
+	*copied.CredentialsSecret = newSecret
+	assert.Equal(t, "custom-secret-name", *original.CredentialsSecret)
+
 	// Nil pointers
 	nilConfig := (*LLMConfig)(nil)
 	assert.Nil(t, nilConfig.DeepCopy())
@@ -45,8 +57,6 @@ func TestLLMConfig_DeepCopy(t *testing.T) {
 
 func TestTacitoAgentSpec_DeepCopy(t *testing.T) {
 	replicas := int32(3)
-	cpuLimit := resource.MustParse("500m")
-	memLimit := resource.MustParse("512Mi")
 	original := &TacitoAgentSpec{
 		TenantID:     "t-1",
 		AgentName:    "agent-1",
@@ -56,12 +66,7 @@ func TestTacitoAgentSpec_DeepCopy(t *testing.T) {
 		},
 		SystemPrompt: "Hello",
 		Replicas:     &replicas,
-		Resources: &corev1.ResourceRequirements{
-			Limits: corev1.ResourceList{
-				corev1.ResourceCPU:    cpuLimit,
-				corev1.ResourceMemory: memLimit,
-			},
-		},
+		Tier:         "heavy",
 	}
 
 	copied := original.DeepCopy()
@@ -69,16 +74,11 @@ func TestTacitoAgentSpec_DeepCopy(t *testing.T) {
 	assert.Equal(t, original, copied)
 	assert.NotSame(t, original, copied)
 	assert.NotSame(t, original.Replicas, copied.Replicas)
-	assert.NotSame(t, original.Resources, copied.Resources)
+	assert.Equal(t, "heavy", copied.Tier)
 
 	// Modifying replicas in clone
 	*copied.Replicas = 5
 	assert.Equal(t, int32(3), *original.Replicas)
-
-	// Modifying resources in clone
-	newCpuLimit := resource.MustParse("1")
-	copied.Resources.Limits[corev1.ResourceCPU] = newCpuLimit
-	assert.Equal(t, "500m", original.Resources.Limits.Cpu().String())
 
 	// Nil spec
 	nilSpec := (*TacitoAgentSpec)(nil)

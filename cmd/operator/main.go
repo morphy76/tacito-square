@@ -88,8 +88,16 @@ func main() {
 		logger.Fatal().Err(err).Msg("failed to initialize controller manager")
 	}
 
+	// Load agent tier configuration mapping
+	v.SetDefault("tier.map.path", "/etc/tacito/tiers/tiers.yaml")
+	tierMapPath := v.GetString("tier.map.path")
+	tierMap, err := service.LoadTierMap(tierMapPath, logger)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to load agent tier mapping configurations")
+	}
+
 	// 6. Initialize Reconciler Inbound Adapter and Application Service
-	reconcileService := service.NewReconcileAgentService(k8sMgr.GetClient(), logger, v)
+	reconcileService := service.NewReconcileAgentService(k8sMgr.GetClient(), logger, v, tierMap)
 	reconciler := inbound.NewTacitoAgentReconciler(k8sMgr.GetClient(), scheme, reconcileService, logger)
 	if err := reconciler.SetupWithManager(k8sMgr); err != nil {
 		logger.Fatal().Err(err).Msg("failed to setup reconciler with manager")

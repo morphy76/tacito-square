@@ -119,4 +119,55 @@ func TestRecallMemoryTool_Execution(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "I could not retrieve memories, but I will answer best I can.", finalAnswer)
 	})
+
+	t.Run("bypass path: TS_AGENT_BYPASS_LTM is set", func(t *testing.T) {
+		t.Setenv("TS_AGENT_BYPASS_LTM", "true")
+
+		mockBrain := &MockBrain{
+			GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
+				if len(request.History) > 0 {
+					lastTurn := request.History[len(request.History)-1]
+					if lastTurn.Role == "tool" {
+						assert.Contains(t, lastTurn.Content, "No relevant memories found.")
+						finalAnswer := map[string]any{
+							"final_answer": "No memories because it was bypassed.",
+						}
+						data, _ := json.Marshal(finalAnswer)
+						return &model.BrainResponse{Content: string(data)}, nil
+					}
+				}
+
+				toolCall := map[string]any{
+					"tool_call": map[string]any{
+						"name": "recall_memory",
+						"arguments": map[string]any{
+							"query": "some info",
+						},
+					},
+				}
+				data, _ := json.Marshal(toolCall)
+				return &model.BrainResponse{Content: string(data)}, nil
+			},
+		}
+
+		mockEmbed := &MockEmbedder{
+			CreateEmbeddingFunc: func(ctx context.Context, text string) ([]float32, error) {
+				t.Error("Embedder should not be called when LTM is bypassed")
+				return nil, errors.New("should not be called")
+			},
+		}
+		mockLTM := &MockLongTermMemory{
+			SearchFunc: func(ctx context.Context, tenantID, agentID string, vector []float32, filter model.LTMFilter, limit int, threshold float32) ([]model.LTMEntry, error) {
+				t.Error("LTM search should not be called when LTM is bypassed")
+				return nil, errors.New("should not be called")
+			},
+		}
+
+		engine := service.NewCognitiveEngine(mockBrain, 5).WithLTM(mockEmbed, mockLTM)
+
+		ctx := context.Background()
+		finalAnswer, err := engine.ExecuteReasoningLoop(ctx, "tenant-1", "agent-1", "thread-1", "Query", []model.MemoryEntry{}, "")
+		assert.NoError(t, err)
+		assert.Equal(t, "No memories because it was bypassed.", finalAnswer)
+	})
 }

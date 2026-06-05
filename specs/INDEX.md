@@ -103,14 +103,14 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 
 | ID | Title | Status | Component | File |
 |----|-------|--------|-----------|------|
-| SPEC-FR-M5.1 | Agent Configuration from CRD Spec | DRAFT | agent | [SPEC-FR-M5.1](functional/M5/SPEC-FR-M5.1.md) |
+| SPEC-FR-M5.1 | Agent Configuration from CRD Spec | VERIFIED | agent | [SPEC-FR-M5.1](functional/M5/SPEC-FR-M5.1.md) |
 | SPEC-FR-M5.2 | LLM Reasoning (Brain Adapter) | VERIFIED | agent | [SPEC-FR-M5.2](functional/M5/SPEC-FR-M5.2.md) |
 | SPEC-FR-M5.3 | Short-Term Memory (Redis) | VERIFIED | agent | [SPEC-FR-M5.3](functional/M5/SPEC-FR-M5.3.md) |
 | SPEC-FR-M5.4 | Long-Term Memory (Qdrant) | VERIFIED | agent | [SPEC-FR-M5.4](functional/M5/SPEC-FR-M5.4.md) |
 | SPEC-FR-M5.5 | Tool Invocation (MCP) | VERIFIED | agent | [SPEC-FR-M5.5](functional/M5/SPEC-FR-M5.5.md) |
 | SPEC-FR-M5.6 | Object Storage (S3/MinIO) | VERIFIED | agent | [SPEC-FR-M5.6](functional/M5/SPEC-FR-M5.6.md) |
 | SPEC-FR-M5.7 | Standalone Agent Deployment Helm Chart | VERIFIED | deploy | [SPEC-FR-M5.7](functional/M5/SPEC-FR-M5.7.md) |
-| SPEC-FR-M5.9 | Flexible Agent Runtime Tiers & Deployment Customization | ACCEPTED | keeper, operator, deploy | [SPEC-FR-M5.9](functional/M5/SPEC-FR-M5.9.md) |
+| SPEC-FR-M5.9 | Flexible Agent Runtime Tiers & Deployment Customization | VERIFIED | keeper, operator, deploy | [SPEC-FR-M5.9](functional/M5/SPEC-FR-M5.9.md) |
 | SPEC-FR-M5.10 | Agent Cognitive Architecture & Reasoning Loop | VERIFIED | agent | [SPEC-FR-M5.10](functional/M5/SPEC-FR-M5.10.md) |
 
 

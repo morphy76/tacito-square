@@ -1,5 +1,7 @@
 # Brainstorming
 
+- new brain adapter type for google https://github.com/googleapis/go-genai
+- agent brain credentials_secret must be stored encrypted
 - unleash integration
 - s3 use sdk library instead of http client, instrumented
 - opt out flags for each built in tool

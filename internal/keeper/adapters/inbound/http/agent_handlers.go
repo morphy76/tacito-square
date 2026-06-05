@@ -52,6 +52,10 @@ type CreateMCPClient struct {
 	AllowedTools []string          `json:"allowed_tools"`
 }
 
+type DeploymentRequest struct {
+	Tier string `json:"tier"`
+}
+
 type CreateAgentRequest struct {
 	Name            string                 `json:"name" binding:"required"`
 	Description     string                 `json:"description"`
@@ -61,6 +65,7 @@ type CreateAgentRequest struct {
 	Skills          []string               `json:"skills"`
 	PromptTemplate  string                 `json:"prompt_template"`
 	MCPClients      []CreateMCPClient      `json:"mcp_clients"`
+	Deployment      DeploymentRequest      `json:"deployment"`
 }
 
 type UpdateAgentRequest struct {
@@ -72,7 +77,9 @@ type UpdateAgentRequest struct {
 	Skills          []string               `json:"skills"`
 	PromptTemplate  string                 `json:"prompt_template"`
 	MCPClients      []CreateMCPClient      `json:"mcp_clients"`
+	Deployment      DeploymentRequest      `json:"deployment"`
 }
+
 
 // Create handles POST /api/v1/agents
 func (h *AgentHandler) Create(c *gin.Context) {
@@ -165,6 +172,7 @@ func (h *AgentHandler) Create(c *gin.Context) {
 		Skills:         skillUUIDs,
 		PromptTemplate: promptTemplateUUID,
 		MCPClients:     mcpClients,
+		Tier:           req.Deployment.Tier,
 		Status:         model.AgentStatusDefined,
 		CreatedAt:      time.Now().UTC(),
 		UpdatedAt:      time.Now().UTC(),
@@ -379,6 +387,7 @@ func (h *AgentHandler) Update(c *gin.Context) {
 	existing.Skills = skillUUIDs
 	existing.PromptTemplate = promptTemplateUUID
 	existing.MCPClients = mcpClients
+	existing.Tier = req.Deployment.Tier
 	existing.UpdatedAt = time.Now().UTC()
 
 	if err := existing.Validate(); err != nil {

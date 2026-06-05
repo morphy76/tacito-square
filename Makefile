@@ -22,9 +22,9 @@ GOLINT         := $(shell which golangci-lint 2>/dev/null || echo "$(shell go en
 
 NERDCTL_ADDR   := /var/run/docker/containerd/containerd.sock
 
-.PHONY: all build test test-integration test-operator test-e2e test-bench test-race test-contract check-test-tags lint generate \
+.PHONY: all build build-agent build-keeper build-operator build-bff test test-integration test-operator test-e2e test-bench test-race test-contract check-test-tags lint generate \
         escape-analysis escape-agent escape-keeper escape-operator escape-bff \
-        docker-build docker-push \
+        docker-build docker-build-agent docker-build-keeper docker-build-operator docker-build-bff docker-push \
         docker-load docker-load-agent docker-load-keeper docker-load-operator docker-load-bff \
         helm-template helm-install helm-uninstall \
         helm-template-agent helm-install-agent helm-uninstall-agent test-helm-agent \
@@ -119,16 +119,16 @@ escape-bff: ## Run Go escape analysis for the bff component
 docker-build: docker-build-agent docker-build-keeper docker-build-operator docker-build-bff ## Build all Docker images
 
 docker-build-agent: ## Build agent Docker image
-	docker build -f tools/docker/Dockerfile.agent -t $(REGISTRY)tacito-square/agent:$(AGENT_VERSION) .
+	docker build --no-cache -f tools/docker/Dockerfile.agent -t $(REGISTRY)tacito-square/agent:$(AGENT_VERSION) .
 
 docker-build-keeper: ## Build keeper Docker image
-	docker build -f tools/docker/Dockerfile.keeper -t $(REGISTRY)tacito-square/keeper:$(KEEPER_VERSION) .
+	docker build --no-cache -f tools/docker/Dockerfile.keeper -t $(REGISTRY)tacito-square/keeper:$(KEEPER_VERSION) .
 
 docker-build-operator: ## Build operator Docker image
-	docker build -f tools/docker/Dockerfile.operator -t $(REGISTRY)tacito-square/operator:$(OPERATOR_VERSION) .
+	docker build --no-cache -f tools/docker/Dockerfile.operator -t $(REGISTRY)tacito-square/operator:$(OPERATOR_VERSION) .
 
 docker-build-bff: ## Build bff Docker image
-	docker build -f tools/docker/Dockerfile.bff -t $(REGISTRY)tacito-square/bff:$(BFF_VERSION) .
+	docker build --no-cache -f tools/docker/Dockerfile.bff -t $(REGISTRY)tacito-square/bff:$(BFF_VERSION) .
 
 docker-push: ## Push all Docker images
 	docker push $(REGISTRY)tacito-square/agent:$(AGENT_VERSION)

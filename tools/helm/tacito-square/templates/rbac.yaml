@@ -17,6 +17,9 @@ rules:
   - apiGroups: ["tacito.square.io"]
     resources: ["tacitoagents", "tacitoagents/status"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

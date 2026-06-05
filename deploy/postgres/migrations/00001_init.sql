@@ -120,6 +120,7 @@ CREATE TABLE IF NOT EXISTS agents (
     prompt_template UUID REFERENCES prompt_templates(id) ON DELETE SET NULL,
     mcp_clients JSONB NOT NULL,
     status VARCHAR(50) NOT NULL,
+    tier VARCHAR(50) NOT NULL DEFAULT '',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
     community_id UUID REFERENCES communities(id) ON DELETE RESTRICT,
