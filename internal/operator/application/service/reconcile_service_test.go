@@ -29,7 +29,7 @@ func TestBuildDeployment_TenantIDAndBasicEnv(t *testing.T) {
 
 	agent := &v1alpha1.TacitoAgent{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-agent",
+			Name:      "u-test-agent",
 			Namespace: "tacito",
 			UID:       types.UID("agent-uid-123"),
 		},
@@ -48,12 +48,12 @@ func TestBuildDeployment_TenantIDAndBasicEnv(t *testing.T) {
 	assert.NotNil(t, dep)
 
 	// Assert basic metadata
-	assert.Equal(t, "test-agent", dep.Name)
+	assert.Equal(t, "u-test-agent", dep.Name)
 	assert.Equal(t, "tacito", dep.Namespace)
 
 	// Assert labels
 	assert.Equal(t, "tacito-agent", dep.Labels["app.kubernetes.io/name"])
-	assert.Equal(t, "test-agent", dep.Labels["app.kubernetes.io/instance"])
+	assert.Equal(t, "u-test-agent", dep.Labels["app.kubernetes.io/instance"])
 
 	// Assert container specs
 	require := assert.New(t)
@@ -67,6 +67,7 @@ func TestBuildDeployment_TenantIDAndBasicEnv(t *testing.T) {
 	}
 
 	assert.Equal(t, "tenant-abc", envMap["TENANT_ID"])
+	assert.Equal(t, "test-agent", envMap["TS_AGENT_ID"])
 	assert.Equal(t, "my-brainy-agent", envMap["TS_AGENT_NAME"])
 	assert.Equal(t, "community-xyz", envMap["TS_AGENT_COMMUNITY_REF"])
 	assert.Equal(t, "gpt-4o", envMap["TS_AGENT_BRAIN_MODEL"])

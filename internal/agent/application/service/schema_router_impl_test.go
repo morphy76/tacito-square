@@ -277,6 +277,80 @@ func TestSchemaRouter_EndThread_LTM(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestSchemaRouter_EndThread_EmitsHistoryEvent(t *testing.T) {
+	now := time.Now().UTC()
+	mockMemory := &MockShortTermMemory{
+		GetFunc: func(ctx context.Context, tenantID, agentID, threadID string, limit int) ([]model.MemoryEntry, error) {
+			return []model.MemoryEntry{
+				{Role: "user", Content: "Hello", Timestamp: now},
+				{Role: "assistant", Content: "Hi there", Timestamp: now},
+			}, nil
+		},
+		ClearFunc: func(ctx context.Context, tenantID, agentID, threadID string) error {
+			return nil
+		},
+	}
+
+	mockPublisher := &MockEventPublisher{}
+
+	router := service.NewSchemaRouterImpl(
+		"agent-123",
+		"test-agent",
+		nil,
+		mockMemory,
+		nil,
+		nil,
+		nil,
+		mockPublisher,
+	)
+
+	payload := events.EndThreadPayload{
+		ThreadID:    "thread-abc",
+		CommunityID: "community-456",
+		Reason:      "finished",
+	}
+	payloadBytes, err := json.Marshal(payload)
+	require.NoError(t, err)
+
+	evt := events.DomainEvent{
+		EventID:    "evt-1",
+		SchemaRef:  events.SchemaConversationalEndThread,
+		Source:     "keeper",
+		TenantID:   "tenant-1",
+		OccurredAt: time.Now().Format(time.RFC3339Nano),
+		Payload:    payloadBytes,
+	}
+
+	err = router.RouteEvent(context.Background(), evt)
+	assert.NoError(t, err)
+
+	require.Len(t, mockPublisher.Calls, 1)
+	pubCall := mockPublisher.Calls[0]
+	assert.Equal(t, "ts.community.community-456.agent.test-agent.history", pubCall.Subject)
+
+	var publishedEvent events.DomainEvent
+	err = json.Unmarshal(pubCall.Data, &publishedEvent)
+	require.NoError(t, err)
+
+	assert.Equal(t, events.SchemaConversationalThreadHistory, publishedEvent.SchemaRef)
+	assert.Equal(t, "agent/agent-123", publishedEvent.Source)
+	assert.Equal(t, "tenant-1", publishedEvent.TenantID)
+
+	var histPayload events.ThreadHistoryPayload
+	err = json.Unmarshal(publishedEvent.Payload, &histPayload)
+	require.NoError(t, err)
+
+	assert.Equal(t, "thread-abc", histPayload.ThreadID)
+	assert.Equal(t, "community-456", histPayload.CommunityID)
+	require.Len(t, histPayload.History, 2)
+	assert.Equal(t, "user", histPayload.History[0].Role)
+	assert.Equal(t, "Hello", histPayload.History[0].Content)
+	assert.Equal(t, now.Format(time.RFC3339), histPayload.History[0].Timestamp)
+	assert.Equal(t, "assistant", histPayload.History[1].Role)
+	assert.Equal(t, "Hi there", histPayload.History[1].Content)
+	assert.Equal(t, now.Format(time.RFC3339), histPayload.History[1].Timestamp)
+}
+
 func TestSchemaRouter_UnknownSchemaRef(t *testing.T) {
 	router := service.NewSchemaRouterImpl(
 		"agent-123",

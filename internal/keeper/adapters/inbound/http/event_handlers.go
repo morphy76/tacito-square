@@ -87,6 +87,13 @@ func (h *EventHandler) PublishEvent(c *gin.Context) {
 		Str("tenant_id", ten.FullName()).
 		Msg("event published successfully")
 
+	if evt.SchemaRef == events.SchemaConversationalStartThread {
+		var stPayload events.StartThreadPayload
+		if err := json.Unmarshal(evt.Payload, &stPayload); err == nil {
+			c.Header("Location", fmt.Sprintf("/api/v1/communities/%s/threads/%s", stPayload.CommunityID, stPayload.ThreadID))
+		}
+	}
+
 	c.JSON(http.StatusAccepted, evt)
 }
 

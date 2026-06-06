@@ -72,6 +72,59 @@ func TestPublishEvent_Success_Conversational(t *testing.T) {
 	assert.Equal(t, schemaRef, evt.SchemaRef)
 }
 
+func TestPublishEvent_Conversational_StartThread_GenerateThreadID(t *testing.T) {
+	pub := &mockPublisher{}
+	sub := &mockSubscriber{}
+	svc := service.NewEventService(pub, sub)
+
+	schemaRef := "urn:tacito:schema:conversational:start-thread:v1"
+	payload := map[string]any{
+		"community_id": "comm-456",
+		"agent_name":   "agent-alpha",
+	}
+	payloadBytes, _ := json.Marshal(payload)
+
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "tenant_id", "tenant-xyz")
+
+	evt, err := svc.PublishEvent(ctx, schemaRef, payloadBytes)
+	assert.NoError(t, err)
+
+	var parsedPayload events.StartThreadPayload
+	err = json.Unmarshal(evt.Payload, &parsedPayload)
+	assert.NoError(t, err)
+
+	assert.NotEmpty(t, parsedPayload.ThreadID)
+	// Must be a valid UUID
+	assert.Len(t, parsedPayload.ThreadID, 36)
+}
+
+func TestPublishEvent_Conversational_StartThread_PreserveThreadID(t *testing.T) {
+	pub := &mockPublisher{}
+	sub := &mockSubscriber{}
+	svc := service.NewEventService(pub, sub)
+
+	schemaRef := "urn:tacito:schema:conversational:start-thread:v1"
+	payload := map[string]any{
+		"thread_id":    "thread-existing-123",
+		"community_id": "comm-456",
+		"agent_name":   "agent-alpha",
+	}
+	payloadBytes, _ := json.Marshal(payload)
+
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "tenant_id", "tenant-xyz")
+
+	evt, err := svc.PublishEvent(ctx, schemaRef, payloadBytes)
+	assert.NoError(t, err)
+
+	var parsedPayload events.StartThreadPayload
+	err = json.Unmarshal(evt.Payload, &parsedPayload)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "thread-existing-123", parsedPayload.ThreadID)
+}
+
 func TestPublishEvent_InvalidSchemaRef(t *testing.T) {
 	pub := &mockPublisher{}
 	sub := &mockSubscriber{}

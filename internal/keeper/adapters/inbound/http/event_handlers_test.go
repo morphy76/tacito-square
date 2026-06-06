@@ -81,6 +81,7 @@ func TestPublishEvent_HTTP_Success(t *testing.T) {
 	r.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusAccepted, resp.Code)
+	assert.Equal(t, "/api/v1/communities/c1/threads/t1", resp.Header().Get("Location"))
 
 	var out events.DomainEvent
 	err := json.Unmarshal(resp.Body.Bytes(), &out)

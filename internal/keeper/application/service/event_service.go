@@ -9,6 +9,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/google/uuid"
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/shared/tenant"
 	"github.com/morphy76/tacito-square/pkg/events"
@@ -71,6 +72,22 @@ func (s *EventServiceImpl) PublishEvent(ctx context.Context, schemaRef string, p
 		}
 		if routeInfo.AgentName == "" {
 			return events.DomainEvent{}, errors.New("agent_name is required in conversational event payload")
+		}
+
+		// Handle threadID generation if missing in start-thread
+		if schemaRef == events.SchemaConversationalStartThread {
+			var stPayload events.StartThreadPayload
+			if err := json.Unmarshal(payload, &stPayload); err != nil {
+				return events.DomainEvent{}, fmt.Errorf("failed to unmarshal start-thread payload: %w", err)
+			}
+			if stPayload.ThreadID == "" {
+				stPayload.ThreadID = uuid.New().String()
+				updatedPayload, err := json.Marshal(stPayload)
+				if err != nil {
+					return events.DomainEvent{}, fmt.Errorf("failed to marshal updated start-thread payload: %w", err)
+				}
+				payload = json.RawMessage(updatedPayload)
+			}
 		}
 
 		subject = fmt.Sprintf("ts.community.%s.agent.%s", routeInfo.CommunityID, routeInfo.AgentName)

@@ -163,51 +163,92 @@ func (r *SchemaRouterImpl) handleEndThread(ctx context.Context, event events.Dom
 
 	logger.Info().Msg("ending conversation thread and consolidating memory")
 
-	if r.ltm != nil && r.embed != nil && r.brain != nil {
-		// Fetch thread history from STM
-		history, err := r.memory.Get(ctx, event.TenantID, r.agentID, payload.ThreadID, 0)
-		if err != nil {
-			logger.Warn().Err(err).Msg("failed to retrieve short-term memory history for end-thread consolidation")
-		} else if len(history) > 0 {
-			// Compile turns into text block
-			var sb strings.Builder
-			sb.WriteString("Summarize and compress the core facts, declarations, and conversational details from these evicted turns:\n")
-			for _, turn := range history {
-				sb.WriteString(fmt.Sprintf("%s: %s\n", turn.Role, turn.Content))
-			}
+	// 1. Fetch thread history from STM
+	history, err := r.memory.Get(ctx, event.TenantID, r.agentID, payload.ThreadID, 0)
+	if err != nil {
+		logger.Warn().Err(err).Msg("failed to retrieve short-term memory history for end-thread")
+	}
 
-			// Generate summary via reasoning engine
-			summaryResp, err := r.brain.Generate(ctx, model.BrainRequest{
-				Prompt: sb.String(),
+	// 2. Emit the thread history event if history exists and publisher is configured
+	if len(history) > 0 && r.publisher != nil {
+		var turns []events.ThreadTurn
+		for _, turn := range history {
+			turns = append(turns, events.ThreadTurn{
+				Role:      turn.Role,
+				Content:   turn.Content,
+				Timestamp: turn.Timestamp.Format(time.RFC3339),
+				Metadata:  turn.Metadata,
 			})
-			if err != nil {
-				logger.Warn().Err(err).Msg("failed to summarize thread history for memory consolidation")
-			} else {
-				// Generate embedding vector
-				summaryVector, err := r.embed.CreateEmbedding(ctx, summaryResp.Content)
-				if err != nil {
-					logger.Warn().Err(err).Msg("failed to generate embedding vector for memory consolidation")
-				} else {
-					// Save to Qdrant LTM
-					ltmEntry := model.LTMEntry{
-						ID:        uuid.New().String(),
-						Content:   summaryResp.Content,
-						Embedding: summaryVector,
-						Type:      model.EntryTypeConversation,
-						Source:    "thread_consolidator",
-						Timestamp: time.Now().UTC(),
-						Metadata: map[string]string{
-							"visibility": "private",
-							"thread_id":  payload.ThreadID,
-						},
-					}
+		}
+		histPayload := events.ThreadHistoryPayload{
+			ThreadID:    payload.ThreadID,
+			CommunityID: payload.CommunityID,
+			History:     turns,
+		}
 
-					err = r.ltm.Save(ctx, event.TenantID, r.agentID, []model.LTMEntry{ltmEntry})
-					if err != nil {
-						logger.Warn().Err(err).Msg("failed to save consolidated memory to Qdrant LTM")
-					} else {
-						logger.Debug().Str("memory_id", ltmEntry.ID).Msg("thread memory consolidated and saved to Qdrant LTM")
-					}
+		sourceIdentity := fmt.Sprintf("agent/%s", r.agentID)
+		historyEvent, err := events.NewDomainEvent(
+			events.SchemaConversationalThreadHistory,
+			sourceIdentity,
+			event.TenantID,
+			histPayload,
+		)
+		if err != nil {
+			logger.Error().Err(err).Msg("failed to construct thread-history domain event")
+		} else {
+			eventData, err := json.Marshal(historyEvent)
+			if err != nil {
+				logger.Error().Err(err).Msg("failed to marshal thread-history event to JSON")
+			} else {
+				subject := fmt.Sprintf("ts.community.%s.agent.%s.history", payload.CommunityID, r.agentName)
+				logger.Info().Str("subject", subject).Msg("publishing thread-history event")
+				if err := r.publisher.Publish(ctx, subject, eventData); err != nil {
+					logger.Error().Err(err).Msg("failed to publish thread-history event to NATS")
+				}
+			}
+		}
+	}
+
+	// 3. Consolidate to LTM if enabled
+	if r.ltm != nil && r.embed != nil && r.brain != nil && len(history) > 0 {
+		// Compile turns into text block
+		var sb strings.Builder
+		sb.WriteString("Summarize and compress the core facts, declarations, and conversational details from these evicted turns:\n")
+		for _, turn := range history {
+			sb.WriteString(fmt.Sprintf("%s: %s\n", turn.Role, turn.Content))
+		}
+
+		// Generate summary via reasoning engine
+		summaryResp, err := r.brain.Generate(ctx, model.BrainRequest{
+			Prompt: sb.String(),
+		})
+		if err != nil {
+			logger.Warn().Err(err).Msg("failed to summarize thread history for memory consolidation")
+		} else {
+			// Generate embedding vector
+			summaryVector, err := r.embed.CreateEmbedding(ctx, summaryResp.Content)
+			if err != nil {
+				logger.Warn().Err(err).Msg("failed to generate embedding vector for memory consolidation")
+			} else {
+				// Save to Qdrant LTM
+				ltmEntry := model.LTMEntry{
+					ID:        uuid.New().String(),
+					Content:   summaryResp.Content,
+					Embedding: summaryVector,
+					Type:      model.EntryTypeConversation,
+					Source:    "thread_consolidator",
+					Timestamp: time.Now().UTC(),
+					Metadata: map[string]string{
+						"visibility": "private",
+						"thread_id":  payload.ThreadID,
+					},
+				}
+
+				err = r.ltm.Save(ctx, event.TenantID, r.agentID, []model.LTMEntry{ltmEntry})
+				if err != nil {
+					logger.Warn().Err(err).Msg("failed to save consolidated memory to Qdrant LTM")
+				} else {
+					logger.Debug().Str("memory_id", ltmEntry.ID).Msg("thread memory consolidated and saved to Qdrant LTM")
 				}
 			}
 		}

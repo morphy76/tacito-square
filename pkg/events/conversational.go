@@ -12,7 +12,25 @@ const (
 
 	// SchemaConversationalAgentResponse is the URN for agent reasoning responses.
 	SchemaConversationalAgentResponse = "urn:tacito:schema:conversational:agent-response:v1"
+
+	// SchemaConversationalThreadHistory is the URN for emitting the full thread history.
+	SchemaConversationalThreadHistory = "urn:tacito:schema:conversational:thread-history:v1"
 )
+
+// ThreadTurn represents a single conversational or execution step in a thread.
+type ThreadTurn struct {
+	Role      string            `json:"role"`
+	Content   string            `json:"content"`
+	Timestamp string            `json:"timestamp"`
+	Metadata  map[string]string `json:"metadata,omitempty"`
+}
+
+// ThreadHistoryPayload is the payload for urn:tacito:schema:conversational:thread-history:v1.
+type ThreadHistoryPayload struct {
+	ThreadID    string       `json:"thread_id"`
+	CommunityID string       `json:"community_id"`
+	History     []ThreadTurn `json:"history"`
+}
 
 // StartThreadPayload is the payload for urn:tacito:schema:conversational:start-thread:v1.
 type StartThreadPayload struct {
