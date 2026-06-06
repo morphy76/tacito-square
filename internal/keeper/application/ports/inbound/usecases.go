@@ -2,9 +2,12 @@ package inbound
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/google/uuid"
+	"github.com/morphy76/tacito-square/internal/keeper/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
+	"github.com/morphy76/tacito-square/pkg/events"
 )
 
 // LLMBindingUseCase defines the driving operations for managing LLM Provider Bindings.
@@ -85,10 +88,13 @@ type AssignmentUseCase interface {
 	Unassign(ctx context.Context, communityID uuid.UUID, agentID uuid.UUID) error
 }
 
-// EchoUseCase defines the driving port for the community echo feature.
-type EchoUseCase interface {
-	// EchoCommunity sanitizes the message, fans it out to all running agents in
-	// the community via NATS request-reply, and returns the aggregated results.
-	EchoCommunity(ctx context.Context, communityID uuid.UUID, message string) (*model.CommunityEchoResponse, error)
+// EventUseCase defines the driving port for publishing domain events.
+type EventUseCase interface {
+	PublishEvent(ctx context.Context, schemaRef string, payload json.RawMessage) (events.DomainEvent, error)
+}
+
+// EventStreamUseCase defines the driving port for streaming domain events to clients.
+type EventStreamUseCase interface {
+	SubscribeEvents(ctx context.Context, tenantID string, handler func(*events.DomainEvent)) (outbound.EventSubscription, error)
 }
 
