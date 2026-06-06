@@ -14,6 +14,7 @@ import (
 	httpAdapter "github.com/morphy76/tacito-square/internal/keeper/adapters/inbound/http"
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/inbound"
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
+	"github.com/morphy76/tacito-square/pkg/events"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -122,8 +123,7 @@ func TestOpenAPIContract_Parity(t *testing.T) {
 		"AgentDeploymentResult":         inbound.AgentDeploymentResult{},
 		"CommunityDeploymentDetails":    inbound.CommunityDeploymentDetails{},
 		"CommunityStatusDetails":        inbound.CommunityStatusDetails{},
-		"AgentEchoResult":               model.AgentEchoResult{},
-		"CommunityEchoResponse":         model.CommunityEchoResponse{},
+		"DomainEvent":                   events.DomainEvent{},
 	}
 
 	// Bidirectional registry vs spec check (no less, no more schemas)
@@ -228,8 +228,11 @@ func verifyFieldType(t *testing.T, propName string, schemaName string, propSpec 
 		// Bools map to boolean
 		assert.Equal(t, "boolean", openAPIType, "Property '%s' in schema '%s': Go bool type requires OpenAPI type 'boolean' (got '%s')", propName, schemaName, openAPIType)
 	case reflect.Slice:
-		// Slices map to array
-		assert.Equal(t, "array", openAPIType, "Property '%s' in schema '%s': Go slice type requires OpenAPI type 'array' (got '%s')", propName, schemaName, openAPIType)
+		if fieldType.String() == "json.RawMessage" {
+			assert.Equal(t, "object", openAPIType, "Property '%s' in schema '%s': Go json.RawMessage type requires OpenAPI type 'object' (got '%s')", propName, schemaName, openAPIType)
+		} else {
+			assert.Equal(t, "array", openAPIType, "Property '%s' in schema '%s': Go slice type requires OpenAPI type 'array' (got '%s')", propName, schemaName, openAPIType)
+		}
 	case reflect.Struct:
 		if fieldType.String() != "time.Time" && fieldType.String() != "uuid.UUID" {
 			// Nested struct represents object/ref in OpenAPI. It might not have an explicit type but rather $ref.

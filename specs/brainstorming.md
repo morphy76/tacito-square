@@ -1,5 +1,6 @@
 # Brainstorming
 
+- in a conversation identifies what is relevant to be preserved in STM
 - openai brain fallback response dovrebbe revertare eventuale aggiornamento stm
 - refactor for sources too long, too loc
 - api to clear stm per agent and per community
