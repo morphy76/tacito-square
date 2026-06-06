@@ -144,7 +144,7 @@ func (r *SchemaRouterImpl) handleAddUserMessage(ctx context.Context, event event
 		return fmt.Errorf("failed to marshal response event: %w", err)
 	}
 
-	subject := fmt.Sprintf("ts.community.%s.agent.%s.response", payload.CommunityID, r.agentName)
+	subject := fmt.Sprintf("ts.community.%s.agent.%s.response", payload.CommunityID, r.agentID)
 	logger.Info().Str("subject", subject).Msg("publishing agent-response event")
 	if err := r.publisher.Publish(ctx, subject, eventData); err != nil {
 		logger.Error().Err(err).Msg("failed to publish agent-response event to NATS")
@@ -204,7 +204,7 @@ func (r *SchemaRouterImpl) handleEndThread(ctx context.Context, event events.Dom
 			if err != nil {
 				logger.Error().Err(err).Msg("failed to marshal thread-history event to JSON")
 			} else {
-				subject := fmt.Sprintf("ts.community.%s.agent.%s.history", payload.CommunityID, r.agentName)
+				subject := fmt.Sprintf("ts.community.%s.agent.%s.history", payload.CommunityID, r.agentID)
 				logger.Info().Str("subject", subject).Msg("publishing thread-history event")
 				if err := r.publisher.Publish(ctx, subject, eventData); err != nil {
 					logger.Error().Err(err).Msg("failed to publish thread-history event to NATS")
