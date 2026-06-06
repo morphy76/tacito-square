@@ -123,7 +123,7 @@ func (h *EventHandler) StreamEvents(c *gin.Context) {
 	// Get heartbeat config
 	heartbeatSec := viper.GetInt("keeper.sse.heartbeat_seconds")
 	if heartbeatSec <= 0 {
-		heartbeatSec = 15
+		heartbeatSec = 30
 	}
 	heartbeatInterval := time.Duration(heartbeatSec) * time.Second
 	heartbeatTicker := time.NewTicker(heartbeatInterval)

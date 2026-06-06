@@ -132,9 +132,9 @@ func TestSchemaRouter_AddUserMessage_Success(t *testing.T) {
 	require.Len(t, mockProcessor.Calls, 1)
 	require.Len(t, mockPublisher.Calls, 1)
 
-	// Verify NATS subject and payload structure
+	// Call 0: agent-response
 	pubCall := mockPublisher.Calls[0]
-	assert.Equal(t, "ts.community.community-456.agent.agent-123.response", pubCall.Subject)
+	assert.Equal(t, "ts.community.community-456.agent.agent-123.thread.thread-abc.response", pubCall.Subject)
 
 	var publishedEvent events.DomainEvent
 	err = json.Unmarshal(pubCall.Data, &publishedEvent)
@@ -331,7 +331,7 @@ func TestSchemaRouter_EndThread_EmitsHistoryEvent(t *testing.T) {
 
 	require.Len(t, mockPublisher.Calls, 1)
 	pubCall := mockPublisher.Calls[0]
-	assert.Equal(t, "ts.community.community-456.agent.agent-123.history", pubCall.Subject)
+	assert.Equal(t, "ts.community.community-456.agent.agent-123.thread.thread-abc.history", pubCall.Subject)
 
 	var publishedEvent events.DomainEvent
 	err = json.Unmarshal(pubCall.Data, &publishedEvent)
