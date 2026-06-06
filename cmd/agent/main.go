@@ -306,6 +306,7 @@ func main() {
 		embedder,
 		brain,
 		natsPublisher,
+		v,
 	)
 
 	eventSubscriber := agent.NewEventSubscriber(nc, agentName, communityRef, schemaRouter, s3BlobStore, logger)

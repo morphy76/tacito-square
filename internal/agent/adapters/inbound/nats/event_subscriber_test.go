@@ -140,6 +140,55 @@ func TestEventSubscriber_Routing(t *testing.T) {
 	assert.Equal(t, "tenant-1", mockRouter.Calls[0].TenantID)
 }
 
+func TestEventSubscriber_BroadcastRouting(t *testing.T) {
+	ns, nc := startTestNatsServer(t)
+	defer ns.Shutdown()
+	defer nc.Close()
+
+	logger := zerolog.New(nil)
+	mockRouter := &MockSchemaRouter{}
+	sub := agentnats.NewEventSubscriber(nc, "agent-alpha", "comm-1", mockRouter, nil, logger)
+
+	err := sub.Start(context.Background())
+	require.NoError(t, err)
+	defer sub.Stop()
+
+	payload := events.StartThreadPayload{
+		ThreadID:    "thread-abc-broadcast",
+		CommunityID: "comm-1",
+	}
+	payloadBytes, err := json.Marshal(payload)
+	require.NoError(t, err)
+
+	evt := events.DomainEvent{
+		EventID:    "evt-456",
+		SchemaRef:  events.SchemaConversationalStartThread,
+		Source:     "keeper",
+		TenantID:   "tenant-1",
+		OccurredAt: time.Now().UTC().Format(time.RFC3339Nano),
+		Payload:    payloadBytes,
+	}
+
+	evtBytes, err := json.Marshal(evt)
+	require.NoError(t, err)
+
+	// Publish to the broadcast .all topic
+	msg := nats.NewMsg("ts.community.comm-1.agent.all")
+	msg.Data = evtBytes
+	msg.Header.Set("X-Tacito-Schema", events.SchemaConversationalStartThread)
+	msg.Header.Set("X-Tacito-Tenant", "tenant-1")
+
+	err = nc.PublishMsg(msg)
+	require.NoError(t, err)
+
+	// Wait for processing
+	time.Sleep(100 * time.Millisecond)
+
+	require.Len(t, mockRouter.Calls, 1)
+	assert.Equal(t, events.SchemaConversationalStartThread, mockRouter.Calls[0].SchemaRef)
+	assert.Equal(t, "evt-456", mockRouter.Calls[0].EventID)
+}
+
 func TestEventSubscriber_InvalidSchema(t *testing.T) {
 	ns, nc := startTestNatsServer(t)
 	defer ns.Shutdown()

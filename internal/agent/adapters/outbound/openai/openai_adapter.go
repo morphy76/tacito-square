@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/resiliency"
@@ -372,6 +373,8 @@ func (a *Adapter) CreateEmbedding(ctx context.Context, text string) ([]float32, 
 		modelName := a.cfg.Model
 		if modelName == "" {
 			modelName = "text-embedding-3-small"
+		} else if strings.Contains(strings.ToLower(modelName), "gemini") {
+			modelName = "text-embedding-004"
 		}
 
 		params := openai.EmbeddingNewParams{
@@ -440,6 +443,8 @@ func (a *Adapter) CreateEmbeddingsBatch(ctx context.Context, texts []string) ([]
 		modelName := a.cfg.Model
 		if modelName == "" {
 			modelName = "text-embedding-3-small"
+		} else if strings.Contains(strings.ToLower(modelName), "gemini") {
+			modelName = "text-embedding-004"
 		}
 
 		params := openai.EmbeddingNewParams{

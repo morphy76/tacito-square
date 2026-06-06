@@ -72,6 +72,29 @@ func TestPublishEvent_Success_Conversational(t *testing.T) {
 	assert.Equal(t, schemaRef, evt.SchemaRef)
 }
 
+func TestPublishEvent_Success_Conversational_OptionalAgentName(t *testing.T) {
+	pub := &mockPublisher{}
+	sub := &mockSubscriber{}
+	svc := service.NewEventService(pub, sub)
+
+	schemaRef := "urn:tacito:schema:conversational:start-thread:v1"
+	payload := map[string]any{
+		"thread_id":    "thread-123",
+		"community_id": "comm-456",
+	}
+	payloadBytes, _ := json.Marshal(payload)
+
+	ctx := context.Background()
+	tenantID := "tenant-xyz"
+	ctx = context.WithValue(ctx, "tenant_id", tenantID)
+
+	_, err := svc.PublishEvent(ctx, schemaRef, payloadBytes)
+	assert.NoError(t, err)
+
+	// Assert subject routing resolves to agent.all when agent_name is omitted
+	assert.Equal(t, "ts.community.comm-456.agent.all", pub.publishedSubject)
+}
+
 func TestPublishEvent_Conversational_StartThread_GenerateThreadID(t *testing.T) {
 	pub := &mockPublisher{}
 	sub := &mockSubscriber{}

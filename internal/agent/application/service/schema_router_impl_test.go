@@ -65,6 +65,7 @@ func TestSchemaRouter_StartThread(t *testing.T) {
 		nil,
 		nil,
 		nil,
+		nil,
 	)
 
 	payload := events.StartThreadPayload{
@@ -105,6 +106,7 @@ func TestSchemaRouter_AddUserMessage_Success(t *testing.T) {
 		nil,
 		nil,
 		mockPublisher,
+		nil,
 	)
 
 	payload := events.AddUserMessagePayload{
@@ -179,6 +181,7 @@ func TestSchemaRouter_AddUserMessage_LLMFailure_Rollback(t *testing.T) {
 		nil,
 		nil,
 		mockPublisher,
+		nil,
 	)
 
 	payload := events.AddUserMessagePayload{
@@ -254,6 +257,7 @@ func TestSchemaRouter_EndThread_LTM(t *testing.T) {
 		mockEmbedder,
 		mockBrain,
 		nil,
+		nil,
 	)
 
 	payload := events.EndThreadPayload{
@@ -302,6 +306,7 @@ func TestSchemaRouter_EndThread_EmitsHistoryEvent(t *testing.T) {
 		nil,
 		nil,
 		mockPublisher,
+		nil,
 	)
 
 	payload := events.EndThreadPayload{
@@ -355,6 +360,7 @@ func TestSchemaRouter_UnknownSchemaRef(t *testing.T) {
 	router := service.NewSchemaRouterImpl(
 		"agent-123",
 		"test-agent",
+		nil,
 		nil,
 		nil,
 		nil,

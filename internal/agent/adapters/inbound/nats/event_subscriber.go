@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/morphy76/tacito-square/internal/agent/application/ports/inbound"
 	"github.com/morphy76/tacito-square/internal/shared/observability"
@@ -20,7 +21,7 @@ type EventSubscriber struct {
 	router      inbound.SchemaRouter
 	blobStore   outbound.BlobStore
 	logger      zerolog.Logger
-	sub         *natsclient.Subscription
+	subs        []*natsclient.Subscription
 }
 
 func NewEventSubscriber(
@@ -42,22 +43,47 @@ func NewEventSubscriber(
 }
 
 func (s *EventSubscriber) Start(ctx context.Context) error {
-	subject := fmt.Sprintf("ts.community.%s.agent.%s", s.communityID, s.agentName)
-	sub, err := s.nc.Subscribe(subject,
+	s.subs = nil
+
+	// 1. Subscribe to specific agent subject
+	agentSubj := fmt.Sprintf("ts.community.%s.agent.%s", s.communityID, s.agentName)
+	subAgent, err := s.nc.Subscribe(agentSubj,
 		observability.WrapNATSHandler("nats.event_handler", s.logger, s.handleEvent))
 	if err != nil {
-		return fmt.Errorf("event subscriber: subscribe to %s: %w", subject, err)
+		return fmt.Errorf("event subscriber: subscribe to %s: %w", agentSubj, err)
 	}
-	s.sub = sub
-	s.logger.Info().Str("subject", subject).Msg("event subscriber started")
+	s.subs = append(s.subs, subAgent)
+
+	// 2. Subscribe to community broadcast subject
+	allSubj := fmt.Sprintf("ts.community.%s.agent.all", s.communityID)
+	subAll, err := s.nc.Subscribe(allSubj,
+		observability.WrapNATSHandler("nats.event_handler", s.logger, s.handleEvent))
+	if err != nil {
+		_ = subAgent.Unsubscribe()
+		s.subs = nil
+		return fmt.Errorf("event subscriber: subscribe to %s: %w", allSubj, err)
+	}
+	s.subs = append(s.subs, subAll)
+
+	s.logger.Info().
+		Str("agent_subject", agentSubj).
+		Str("broadcast_subject", allSubj).
+		Msg("event subscriber started")
 	return nil
 }
 
 func (s *EventSubscriber) Stop() error {
-	if s.sub != nil {
-		err := s.sub.Drain()
-		s.sub = nil
-		return err
+	var errs []string
+	for _, sub := range s.subs {
+		if sub != nil {
+			if err := sub.Drain(); err != nil {
+				errs = append(errs, err.Error())
+			}
+		}
+	}
+	s.subs = nil
+	if len(errs) > 0 {
+		return fmt.Errorf("failed to drain some subscriptions: %s", strings.Join(errs, ", "))
 	}
 	return nil
 }

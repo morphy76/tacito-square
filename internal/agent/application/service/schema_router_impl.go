@@ -13,6 +13,7 @@ import (
 	"github.com/morphy76/tacito-square/internal/agent/domain/model"
 	"github.com/morphy76/tacito-square/pkg/events"
 	"github.com/rs/zerolog"
+	"github.com/spf13/viper"
 )
 
 type SchemaRouterImpl struct {
@@ -24,6 +25,7 @@ type SchemaRouterImpl struct {
 	embed     outbound.Embedder
 	brain     outbound.Brain
 	publisher outbound.EventPublisher
+	cfg       *viper.Viper
 }
 
 func NewSchemaRouterImpl(
@@ -35,6 +37,7 @@ func NewSchemaRouterImpl(
 	embed outbound.Embedder,
 	brain outbound.Brain,
 	publisher outbound.EventPublisher,
+	cfg *viper.Viper,
 ) *SchemaRouterImpl {
 	return &SchemaRouterImpl{
 		agentID:   agentID,
@@ -45,6 +48,7 @@ func NewSchemaRouterImpl(
 		embed:     embed,
 		brain:     brain,
 		publisher: publisher,
+		cfg:       cfg,
 	}
 }
 
@@ -210,7 +214,11 @@ func (r *SchemaRouterImpl) handleEndThread(ctx context.Context, event events.Dom
 	}
 
 	// 3. Consolidate to LTM if enabled
-	if r.ltm != nil && r.embed != nil && r.brain != nil && len(history) > 0 {
+	bypassLTM := false
+	if r.cfg != nil {
+		bypassLTM = r.cfg.GetBool("bypass.ltm")
+	}
+	if !bypassLTM && r.ltm != nil && r.embed != nil && r.brain != nil && len(history) > 0 {
 		// Compile turns into text block
 		var sb strings.Builder
 		sb.WriteString("Summarize and compress the core facts, declarations, and conversational details from these evicted turns:\n")

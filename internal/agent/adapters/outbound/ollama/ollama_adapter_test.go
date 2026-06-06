@@ -255,6 +255,36 @@ func TestOllamaAdapter_Embeddings(t *testing.T) {
 		assert.Equal(t, []float32{0.1, 0.2, 0.3}, res)
 	})
 
+	t.Run("should map chat model to nomic-embed-text", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var body struct {
+				Model string `json:"model"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			assert.Equal(t, "nomic-embed-text", body.Model)
+
+			resp := map[string]any{
+				"model": "nomic-embed-text",
+				"embeddings": [][]float64{
+					{0.1, 0.2, 0.3},
+				},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+		}))
+		defer server.Close()
+
+		adapter := ollama.NewAdapter(ollama.Config{
+			Endpoint: server.URL,
+			Model:    "llama3",
+			Timeout:  2 * time.Second,
+		})
+
+		res, err := adapter.CreateEmbedding(context.Background(), "test text")
+		assert.NoError(t, err)
+		assert.Equal(t, []float32{0.1, 0.2, 0.3}, res)
+	})
+
 	t.Run("should generate batch embeddings successfully", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			resp := map[string]any{

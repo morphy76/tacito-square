@@ -70,9 +70,7 @@ func (s *EventServiceImpl) PublishEvent(ctx context.Context, schemaRef string, p
 		if routeInfo.CommunityID == "" {
 			return events.DomainEvent{}, errors.New("community_id is required in conversational event payload")
 		}
-		if routeInfo.AgentName == "" {
-			return events.DomainEvent{}, errors.New("agent_name is required in conversational event payload")
-		}
+		// agent_name is optional
 
 		// Handle threadID generation if missing in start-thread
 		if schemaRef == events.SchemaConversationalStartThread {
@@ -90,7 +88,11 @@ func (s *EventServiceImpl) PublishEvent(ctx context.Context, schemaRef string, p
 			}
 		}
 
-		subject = fmt.Sprintf("ts.community.%s.agent.%s", routeInfo.CommunityID, routeInfo.AgentName)
+		if routeInfo.AgentName == "" {
+			subject = fmt.Sprintf("ts.community.%s.agent.all", routeInfo.CommunityID)
+		} else {
+			subject = fmt.Sprintf("ts.community.%s.agent.%s", routeInfo.CommunityID, routeInfo.AgentName)
+		}
 
 		// Sanitize if add-user-message
 		if schemaRef == events.SchemaConversationalAddUserMessage {
