@@ -1,1 +1,4360 @@
-../../internal/keeper/openapi.json
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Keeper API",
+    "description": "API spec for Tacito Square Keeper component, managing agent configurations, communities, and support entities.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "/api/v1",
+      "description": "Primary API Version 1"
+    }
+  ],
+  "tags": [
+    {
+      "name": "agent-config/llm-bindings",
+      "description": "Bounded context: Agent Configuration \u00b7 Model Bindings. Manages LLM provider registrations used by agents at runtime. Why: It decouples the specific LLM hosting details (endpoints, secure credentials) from the cognitive agent models, allowing system administrators to update, swap, or rotate provider credentials globally without changing agent definitions."
+    },
+    {
+      "name": "agent-config/mcp-servers",
+      "description": "Bounded context: Agent Configuration \u00b7 Tool Bindings. Manages Model Context Protocol (MCP) server profiles that expose tools to agents. Why: MCP standardizes how autonomous agents securely connect to external data sources, APIs, and local scripts. Exposing these profiles separates environment-specific tool execution from the core agent logic."
+    },
+    {
+      "name": "agent-config/skills",
+      "description": "Bounded context: Agent Configuration \u00b7 Skills. Defines skill collections and controls which tools an agent may use. Why: Restricts agent capabilities to pre-approved boundaries. Skills dictate how agents behave, what tools they can invoke, and what guidelines they must follow."
+    },
+    {
+      "name": "agent-config/prompt-engineering",
+      "description": "Bounded context: Agent Configuration \u00b7 Prompt Engineering. Manages versioned prompt templates and the collections that group them. Why: Decouples prompt iteration and cognitive instructions from the static code, allowing system behavior to be modified dynamically via REST APIs."
+    },
+    {
+      "name": "agent-config/agents",
+      "description": "Bounded context: Agent Configuration \u00b7 Templates. Manages agent templates used to deploy autonomous units at runtime. Why: Serves as the cognitive blueprint of an agent, combining its brain (LLM), memory policies, prompt templates, and active tools into a single deployment manifest."
+    },
+    {
+      "name": "community/communities",
+      "description": "Bounded context: Community \u00b7 Logical Boundaries. Manages logical networking, collaboration topology, and isolation domains for agents. Why: Ensures tenant isolation and defines how agents communicate with each other or coordinate work under specific topologies."
+    },
+    {
+      "name": "lifecycle/management",
+      "description": "Bounded context: Lifecycle Management. Enables deploying, undeploying and monitoring active runtime agents and communities. Why: Bridges the logical configuration layer with Kubernetes runtime scheduling, managing the lifecycle of the actual agent containers."
+    },
+    {
+      "name": "development/operations",
+      "description": "development supporting operations. Why: Exposes operational tools (such as echo/ping tests) to verify connectivity across architectural layers during development and staging."
+    }
+  ],
+  "paths": {
+    "/llm-bindings": {
+      "post": {
+        "summary": "Create a new LLM provider binding",
+        "operationId": "createLLMBinding",
+        "tags": [
+          "agent-config/llm-bindings"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLLMBindingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successfully created LLM provider binding",
+            "headers": {
+              "Location": {
+                "description": "The URI of the newly created llm bindings",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Registers a new LLM provider configuration (e.g., API URL, authentication secrets, and model parameters). Why: This separates external provider-specific parameters from cognitive agent definitions, enabling administrators to swap backend engines, rotate keys, or adjust latency thresholds globally without affecting individual agent templates."
+      },
+      "get": {
+        "summary": "List all LLM provider bindings",
+        "operationId": "listLLMBindings",
+        "tags": [
+          "agent-config/llm-bindings"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of LLM provider bindings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LLMBinding"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Retrieves a list of all registered LLM provider bindings for the active tenant. Why: Allows client applications and administration UIs to discover available LLM hosting environments for binding agent configurations."
+      }
+    },
+    "/llm-bindings/{id}": {
+      "get": {
+        "summary": "Retrieve a specific LLM provider binding by ID",
+        "operationId": "getLLMBinding",
+        "tags": [
+          "agent-config/llm-bindings"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The system-generated UUID of the LLM provider binding to retrieve.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "LLM provider binding details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LLMBinding"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "LLM provider binding not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Fetches the detailed configuration of an LLM provider binding using its UUID. Why: Facilitates inspecting target API endpoints, default temperatures, and secret keys during agent configuration audits."
+      },
+      "put": {
+        "summary": "Update an LLM provider binding by ID",
+        "operationId": "updateLLMBinding",
+        "tags": [
+          "agent-config/llm-bindings"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the LLM provider binding to update.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLLMBindingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully updated LLM provider binding",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LLMBinding"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "LLM provider binding not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Modifies an existing LLM provider configuration by UUID. Why: Allows administrators to change models, update gateway URLs, or switch credential references when LLM infrastructure migrates, without interrupting running agents."
+      },
+      "delete": {
+        "summary": "Delete an LLM provider binding by ID",
+        "operationId": "deleteLLMBinding",
+        "tags": [
+          "agent-config/llm-bindings"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the LLM provider binding to delete.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully deleted LLM provider binding"
+          },
+          "404": {
+            "description": "LLM provider binding not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Deletes a registered LLM provider binding by UUID. Why: Removes obsolete or insecure provider configurations from the system. Caution: This operation will fail if active agent configurations still reference this binding."
+      }
+    },
+    "/mcp-servers": {
+      "post": {
+        "summary": "Register a new MCP server profile",
+        "operationId": "createMCPServer",
+        "tags": [
+          "agent-config/mcp-servers"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMCPServerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successfully registered MCP server profile",
+            "headers": {
+              "Location": {
+                "description": "The URI of the newly created mcp servers",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Registers a new Model Context Protocol (MCP) server profile, defining transport mechanism (stdio subprocess or SSE stream) and environmental arguments. Why: Registers external tool bundles globally, providing a catalog of secure adapters that agents can attach to for external filesystem, API, or database operations."
+      },
+      "get": {
+        "summary": "List registered MCP server profiles",
+        "operationId": "listMCPServers",
+        "tags": [
+          "agent-config/mcp-servers"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of MCP server profiles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MCPServer"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Lists all registered MCP server profiles accessible to the active tenant. Why: Enables visual catalogs to show what integrations are available for mounting onto autonomous agent nodes."
+      }
+    },
+    "/mcp-servers/{id}": {
+      "get": {
+        "summary": "Retrieve a specific MCP server profile by ID",
+        "operationId": "getMCPServer",
+        "tags": [
+          "agent-config/mcp-servers"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the MCP server configuration profile.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "MCP server configuration details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MCPServer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "MCP server profile not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Retrieves complete transport and command parameters of an MCP server by UUID. Why: Supports detail rendering and tool mapping when auditing agent capability mounts."
+      },
+      "put": {
+        "summary": "Update an MCP server profile by ID",
+        "operationId": "updateMCPServer",
+        "tags": [
+          "agent-config/mcp-servers"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the MCP server configuration to update.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMCPServerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully updated MCP server profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MCPServer"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "MCP server profile not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Modifies the execution command, transport, SSE URL, or secrets of an MCP profile by UUID. Why: Supports hot-updating tool server profiles when microservices upgrade or command arguments evolve."
+      },
+      "delete": {
+        "summary": "Unregister an MCP server profile by ID",
+        "operationId": "deleteMCPServer",
+        "tags": [
+          "agent-config/mcp-servers"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the MCP server configuration to delete.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully deleted MCP server profile"
+          },
+          "404": {
+            "description": "MCP server profile not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Removes an MCP server profile from the global registry. Why: Deprecates integration tools that are no longer supported or secure. Enforces constraint validation to ensure no active agent blueprints are left referencing this server."
+      }
+    },
+    "/skills": {
+      "post": {
+        "summary": "Create a new Skill",
+        "operationId": "createSkill",
+        "tags": [
+          "agent-config/skills"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSkillRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successfully created Skill Collection",
+            "headers": {
+              "Location": {
+                "description": "The URI of the newly created skills",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Registers a new discrete capability skill containing guidelines and content prompts. Why: Standardizes unique capability rules (e.g. 'code-review-standards') so they can be reused and enforced within various agent prompts."
+      },
+      "get": {
+        "summary": "List all Skills",
+        "operationId": "listSkills",
+        "tags": [
+          "agent-config/skills"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of Skill Collections",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Skill"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Lists all registered capability skills defined for the active tenant. Why: Provides a lookup repository of individual behavioral guidelines."
+      }
+    },
+    "/skills/{id}": {
+      "get": {
+        "summary": "Retrieve a specific Skill by ID",
+        "operationId": "getSkill",
+        "tags": [
+          "agent-config/skills"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Skill capability to retrieve.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Skill Collection details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Skill"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Skill Collection not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Retrieves the content rules and metadata of a registered skill by UUID. Why: Audits the exact prompts injected into active LLM systems."
+      },
+      "put": {
+        "summary": "Update a Skill by ID",
+        "operationId": "updateSkill",
+        "tags": [
+          "agent-config/skills"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Skill capability to update.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSkillRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully updated Skill Collection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Skill"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Skill Collection not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Updates the natural language content or description of a skill by UUID. Why: Enables rapid tuning of agent boundaries and safety behaviors without modifying the agent blueprints directly."
+      },
+      "delete": {
+        "summary": "Delete a Skill by ID",
+        "operationId": "deleteSkill",
+        "tags": [
+          "agent-config/skills"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Skill capability to delete.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully deleted Skill Collection"
+          },
+          "404": {
+            "description": "Skill Collection not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Removes a skill definition by UUID. Why: Cleans up obsolete behavioral directives."
+      }
+    },
+    "/agents/{agent_id}/skills/{skill_id}": {
+      "post": {
+        "summary": "Attach a Skill to an Agent",
+        "operationId": "attachSkillToAgent",
+        "tags": [
+          "agent-config/skills"
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Agent template.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "skill_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Skill capability to attach.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully attached",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "attached"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Mounts a specific skill capability onto an agent template. Why: Authorizes the agent to incorporate the skill's guidelines, behaviors, and constraints into its cognitive prompt chain."
+      },
+      "delete": {
+        "summary": "Detach a Skill from an Agent",
+        "operationId": "detachSkillFromAgent",
+        "tags": [
+          "agent-config/skills"
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Agent template.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "skill_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Skill capability to detach.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully detached"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Removes a mounted skill capability from an agent template. Why: Revokes the agent's access to specific guidelines or tool constraints."
+      }
+    },
+    "/skill-collections": {
+      "post": {
+        "summary": "Create a new Skill Collection",
+        "operationId": "createSkillCollection",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSkillCollectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successfully created Skill Collection",
+            "headers": {
+              "Location": {
+                "description": "The URI of the newly created skill collections",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config/skills"
+        ],
+        "description": "Creates a named folder of linked skill UUIDs. Why: Bundles related capability skills into a single logical package, allowing users to easily attach multi-skill roles to agent templates at once."
+      },
+      "get": {
+        "summary": "List all Skill Collections",
+        "operationId": "listSkillCollections",
+        "responses": {
+          "200": {
+            "description": "List of Skill Collections",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SkillCollection"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config/skills"
+        ],
+        "description": "Lists all skill collections registered for the tenant. Why: Enables discovery of standardized capability role profiles."
+      }
+    },
+    "/skill-collections/{id}": {
+      "get": {
+        "summary": "Retrieve a specific Skill Collection by ID",
+        "operationId": "getSkillCollection",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Skill Collection to retrieve.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Skill Collection details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCollection"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Skill Collection not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config/skills"
+        ],
+        "description": "Retrieves a skill collection template listing its linked skill UUIDs by UUID. Why: Inspects the membership of standard capability bundles."
+      },
+      "put": {
+        "summary": "Update a Skill Collection by ID",
+        "operationId": "updateSkillCollection",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Skill Collection to update.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSkillCollectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully updated Skill Collection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCollection"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Skill Collection not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config/skills"
+        ],
+        "description": "Updates the metadata or linked skill membership array of a collection by UUID. Why: Allows rolling out new behavioral modifications or tools globally across all agents consuming this collection bundle."
+      },
+      "delete": {
+        "summary": "Delete a Skill Collection by ID",
+        "operationId": "deleteSkillCollection",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Skill Collection to delete.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully deleted Skill Collection"
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config/skills"
+        ],
+        "description": "Deletes a skill collection container by UUID. Why: Dissolves standard bundle envelopes. Note: This does not delete the underlying skills themselves."
+      }
+    },
+    "/skill-collections/{id}/resolve": {
+      "get": {
+        "summary": "Resolve all nested skills in a collection",
+        "operationId": "resolveCollectionSkills",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Skill Collection to compile and resolve.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resolved Skills",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Skill"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config/skills"
+        ],
+        "description": "Queries a collection and returns the fully hydrated, flattened list of all Skills inside. Why: Resolves hierarchical capability graphs, providing the downstream runtime or compiler with the complete set of natural language system prompt instructions to serve the agent's LLM."
+      }
+    },
+    "/prompts": {
+      "post": {
+        "summary": "Create a new Prompt Template",
+        "operationId": "createPromptTemplate",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePromptTemplateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successfully created Prompt Template",
+            "headers": {
+              "Location": {
+                "description": "The URI of the newly created prompts",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config/prompt-engineering"
+        ],
+        "description": "Registers a reusable system prompt instruction or dialog template. Why: Inserts cognitive, framing, or reasoning prompts into the centralized prompt store."
+      },
+      "get": {
+        "summary": "List all Prompt Templates",
+        "operationId": "listPromptTemplates",
+        "responses": {
+          "200": {
+            "description": "List of Prompt Templates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PromptTemplate"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config/prompt-engineering"
+        ],
+        "description": "Lists all registered system and user prompt templates defined in the system. Why: Facilitates reusing versioned instructions across multiple agent models."
+      }
+    },
+    "/prompts/{id}": {
+      "get": {
+        "summary": "Retrieve a specific Prompt Template by ID",
+        "operationId": "getPromptTemplate",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Prompt Template to retrieve.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Prompt Template version details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptTemplate"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Prompt Template not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config/prompt-engineering"
+        ],
+        "description": "Retrieves the raw text and lifecycle state of a prompt template by UUID. Why: Evaluates the system directives deployed inside active cognitive networks."
+      },
+      "put": {
+        "summary": "Update a Prompt Template by ID",
+        "operationId": "updatePromptTemplate",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Prompt Template to update.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePromptTemplateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully updated and created a new Prompt Template version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptTemplate"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Prompt Template not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config/prompt-engineering"
+        ],
+        "description": "Modifies prompt content, labels, or draft status by UUID. Why: Enables prompt engineers to fine-tune instructions, inject safety blocks, or update formatting schemas in real-time."
+      },
+      "delete": {
+        "summary": "Delete a Prompt Template by ID",
+        "operationId": "deletePromptTemplate",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Prompt Template to delete.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully deleted version"
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config/prompt-engineering"
+        ],
+        "description": "Removes a prompt template from the registry by UUID. Why: Retires obsolete instruction sets."
+      }
+    },
+    "/prompt-collections": {
+      "post": {
+        "summary": "Create a new Prompt Collection",
+        "operationId": "createPromptCollection",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePromptCollectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successfully created Prompt Collection",
+            "headers": {
+              "Location": {
+                "description": "The URI of the newly created prompt collections",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config/prompt-engineering"
+        ],
+        "description": "Groups multiple prompt templates into a unified bundle. Why: Represents a comprehensive dialogue flow or complete cognitive context package ready for agent attachment."
+      },
+      "get": {
+        "summary": "List all Prompt Collections",
+        "operationId": "listPromptCollections",
+        "responses": {
+          "200": {
+            "description": "List of Prompt Collections",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PromptCollection"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config/prompt-engineering"
+        ],
+        "description": "Lists all prompt collections registered in the system. Why: Identifies standard dialog configurations."
+      }
+    },
+    "/prompt-collections/{id}": {
+      "get": {
+        "summary": "Retrieve a specific Prompt Collection by ID",
+        "operationId": "getPromptCollection",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Prompt Collection to retrieve.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Prompt Collection details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptCollection"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Prompt Collection not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config/prompt-engineering"
+        ],
+        "description": "Retrieves a prompt collection's templates map by UUID. Why: Inspects the instructional structure of dynamic agent workflows."
+      },
+      "put": {
+        "summary": "Update a Prompt Collection by ID",
+        "operationId": "updatePromptCollection",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Prompt Collection to update.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePromptCollectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully updated Prompt Collection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptCollection"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Prompt Collection not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config/prompt-engineering"
+        ],
+        "description": "Updates prompt collection metadata or its linked templates array by UUID. Why: Facilitates version upgrades to the dialogue instructions of active agent teams."
+      },
+      "delete": {
+        "summary": "Delete a Prompt Collection by ID",
+        "operationId": "deletePromptCollection",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Prompt Collection to delete.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully deleted Prompt Collection"
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config/prompt-engineering"
+        ],
+        "description": "Deletes a prompt collection profile by UUID. Why: Cleans up deprecated dialog blueprints."
+      }
+    },
+    "/prompt-collections/{id}/resolve": {
+      "get": {
+        "summary": "Resolve all templates in a collection",
+        "operationId": "resolveCollectionPrompts",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Prompt Collection to resolve.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resolved Prompt Templates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PromptTemplate"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "agent-config/prompt-engineering"
+        ],
+        "description": "Compiles and flattens a prompt collection into a fully hydrated array of prompt contents. Why: Provides the runtime container with the complete, compiled instructional payload needed to build the cognitive engine context before execution."
+      }
+    },
+    "/agents": {
+      "post": {
+        "summary": "Create a new Agent template",
+        "operationId": "createAgent",
+        "tags": [
+          "agent-config/agents"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAgentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successfully created Agent template",
+            "headers": {
+              "Location": {
+                "description": "The URI of the newly created agents",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Creates an Agent template configuration. Why: Registers the full architectural template (brain, memory parameters, prompts, skills, and tool clients) in the database, establishing the blueprint before physical container rollout."
+      },
+      "get": {
+        "summary": "List all Agent templates",
+        "operationId": "listAgents",
+        "tags": [
+          "agent-config/agents"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of agent templates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Agent"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Lists all agent configurations defined within the active tenant domain. Why: Provides a catalog of agent personas and templates defined in the system."
+      }
+    },
+    "/agents/{id}": {
+      "get": {
+        "summary": "Retrieve a specific Agent template by ID",
+        "operationId": "getAgent",
+        "tags": [
+          "agent-config/agents"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the agent template",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent template details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Agent"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent template not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Retrieves the complete configuration block of an agent template using its UUID. Why: Inspects cognitive configurations, tool mounts, and memory policies of an agent prior to deployment."
+      },
+      "put": {
+        "summary": "Update an Agent template by ID",
+        "operationId": "updateAgent",
+        "tags": [
+          "agent-config/agents"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the agent template",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAgentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully updated Agent template",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Agent"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent template not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Updates an agent's brain configuration, memory targets, attached skills, or mounted MCP clients. Why: Adjusts cognitive blueprints or capabilities. Note: If the agent is actively deployed, these updates will require a redeployment to reconcile the runtime state."
+      },
+      "delete": {
+        "summary": "Delete an Agent template by ID",
+        "operationId": "deleteAgent",
+        "tags": [
+          "agent-config/agents"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the agent template",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully deleted Agent template"
+          },
+          "404": {
+            "description": "Agent template not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Deletes an agent configuration blueprint from the database by UUID. Why: Cleans up obsolete blueprints. Caution: This operation will reject if the agent is actively deployed in a Kubernetes cluster or assigned to a community."
+      }
+    },
+    "/communities": {
+      "post": {
+        "summary": "Create a new Community network boundary",
+        "operationId": "createCommunity",
+        "tags": [
+          "community/communities"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCommunityRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successfully created Community",
+            "headers": {
+              "Location": {
+                "description": "The URI of the newly created communities",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Creates a logical community network boundary with a designated topology (e.g. hub-spoke). Why: Establishes a secure communication namespace and isolation group where agents can collaborate and exchange events via the NATS message broker."
+      },
+      "get": {
+        "summary": "List all Communities",
+        "operationId": "listCommunities",
+        "tags": [
+          "community/communities"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of Communities",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Community"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Lists all community network boundaries registered under the active tenant domain. Why: Enables looking up collaborative environments and auditing logical network segments."
+      }
+    },
+    "/communities/{id}": {
+      "get": {
+        "summary": "Retrieve a specific Community by ID",
+        "operationId": "getCommunity",
+        "tags": [
+          "community/communities"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Community",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Community details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Community"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Community not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Retrieves the topology, status, and custom variables of a community by UUID. Why: Audits logical routing policies and configurations for multi-agent networking."
+      },
+      "put": {
+        "summary": "Update a Community by ID",
+        "operationId": "updateCommunity",
+        "tags": [
+          "community/communities"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Community",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCommunityRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully updated Community",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Community"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Community not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Updates community metadata, topology types, or dynamic variables by UUID. Why: Manages structural changes to networking scopes or custom parameters of collaboration zones."
+      },
+      "delete": {
+        "summary": "Delete a Community by ID",
+        "operationId": "deleteCommunity",
+        "tags": [
+          "community/communities"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Community",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully deleted Community"
+          },
+          "404": {
+            "description": "Community not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Removes a community network registry from the database. Why: Deprecates active collaboration zones. Note: Rejects if the community has active agents assigned."
+      }
+    },
+    "/communities/{community_id}/agents/{agent_id}": {
+      "post": {
+        "summary": "Assign an Agent to a Community",
+        "operationId": "assignAgentToCommunity",
+        "tags": [
+          "community/communities"
+        ],
+        "parameters": [
+          {
+            "name": "community_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Community network boundary.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Agent template to assign.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully assigned Agent to Community",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "assigned"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Community or Agent not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (agent already assigned)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Binds an agent template to a specific community network boundary. Why: Binds the agent's event routes to the community's communication mesh and sets the `community_id` foreign key. Crucial step before deploying the agent, ensuring it wakes up in a secure, isolated workspace."
+      },
+      "delete": {
+        "summary": "Unassign an Agent from a Community",
+        "operationId": "unassignAgentFromCommunity",
+        "tags": [
+          "community/communities"
+        ],
+        "parameters": [
+          {
+            "name": "community_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Community network boundary.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Agent to unassign.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully unassigned Agent from Community"
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Community or Agent not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Clears an agent's association with a community, returning its status to standalone 'defined'. Why: Revokes community event membership. Caution: This operation requires the agent to be undeployed first."
+      }
+    },
+    "/agents/{agent_id}/deploy": {
+      "post": {
+        "summary": "Deploy an Agent to the runtime environment",
+        "operationId": "deployAgent",
+        "tags": [
+          "lifecycle/management"
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Agent template to deploy.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successfully triggered Agent deployment"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Translates the database agent blueprint into a live Kubernetes deployment (TacitoAgent CRD) and signals the operator to spawn the container pod. Why: Transitions the agent from a static configuration into an active, running, autonomous cognitive subprocess capable of processing workflows."
+      }
+    },
+    "/agents/{agent_id}/undeploy": {
+      "post": {
+        "summary": "Undeploy an Agent and terminate its runtime",
+        "operationId": "undeployAgent",
+        "tags": [
+          "lifecycle/management"
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Agent to undeploy.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully undeployed Agent"
+          },
+          "404": {
+            "description": "Agent not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Tears down the TacitoAgent Kubernetes CRD and terminates the agent container pod. Why: Safely stops execution, clean-releases NATS listeners, and frees infrastructure resources while preserving the database configuration template intact."
+      }
+    },
+    "/agents/{agent_id}/status": {
+      "get": {
+        "summary": "Query active Agent runtime status",
+        "operationId": "getAgentStatus",
+        "tags": [
+          "lifecycle/management"
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the deployed Agent.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent status details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentStatusDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Queries the live Kubernetes status fields of the deployed agent pod (reconciling container states, replicas, memory limits, and operator errors). Why: Provides live observability and health reporting for control panels and monitoring dashboards."
+      }
+    },
+    "/communities/{community_id}/deploy": {
+      "post": {
+        "summary": "Deploy a Community and all its assigned agents",
+        "operationId": "deployCommunity",
+        "tags": [
+          "lifecycle/management"
+        ],
+        "parameters": [
+          {
+            "name": "community_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Community to deploy.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successfully triggered Community deployment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityDeploymentDetails"
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "Multi-Status (Partial deployment success)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityDeploymentDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Community not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Triggers sequential or parallel deployment for every single agent assigned to the community. Why: Orchestrates rolling out a complete multi-agent collaborative workspace in one transaction, ensuring all team members are booted and interconnected."
+      }
+    },
+    "/communities/{community_id}/undeploy": {
+      "post": {
+        "summary": "Undeploy a Community and teardown all its agents",
+        "operationId": "undeployCommunity",
+        "tags": [
+          "lifecycle/management"
+        ],
+        "parameters": [
+          {
+            "name": "community_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Community to undeploy.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully undeployed Community",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityDeploymentDetails"
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "Multi-Status (Partial undeployment success)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityDeploymentDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Community not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Stops runtime execution for the entire community. Tears down all agent container pods and NATS routing meshes. Why: Safely suspends a collaborative workspace in one step, saving cluster resources."
+      }
+    },
+    "/communities/{community_id}/status": {
+      "get": {
+        "summary": "Query live Community and agent runtime status",
+        "operationId": "getCommunityStatus",
+        "tags": [
+          "lifecycle/management"
+        ],
+        "parameters": [
+          {
+            "name": "community_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Community to query.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Community status details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityStatusDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Community not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Aggregates live Kubernetes operational health, replica counts, and pod errors for all agents assigned to the community. Why: Offers high-level observability indicating if the entire multi-agent mesh is healthy and ready to process workflows."
+      }
+    },
+    "/events": {
+      "post": {
+        "summary": "Publish a generic domain event",
+        "operationId": "publishEvent",
+        "tags": [
+          "events/publish"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "schema_ref",
+                  "payload"
+                ],
+                "properties": {
+                  "schema_ref": {
+                    "type": "string",
+                    "example": "urn:tacito:schema:conversational:start-thread:v1"
+                  },
+                  "payload": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Event accepted and published",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DomainEvent"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Accepts a schemaRef and payload, dynamically resolves routing subjects and tenant ID, sanitizes message contents, auto-populates system metadata, and broadcasts the completed DomainEvent onto the NATS network."
+      }
+    },
+    "/events/stream": {
+      "get": {
+        "summary": "Subscribe to real-time events stream (SSE)",
+        "operationId": "streamEvents",
+        "tags": [
+          "events/stream"
+        ],
+        "responses": {
+          "200": {
+            "description": "SSE stream connection established",
+            "headers": {
+              "Content-Type": {
+                "schema": {
+                  "type": "string",
+                  "example": "text/event-stream"
+                }
+              }
+            }
+          }
+        },
+        "description": "Establishes a persistent Server-Sent Events (SSE) connection. Subscribes to the NATS community wildcard events filtered by the client's resolved tenant context, fanning out live conversational updates."
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateLLMBindingRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "provider",
+          "api_base_url",
+          "api_key_secret_ref",
+          "default_model"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "openai-gpt4o",
+            "description": "Unique name for this LLM provider registration. Why: Allows agents to reference this binding by name."
+          },
+          "description": {
+            "type": "string",
+            "example": "Primary OpenAI GPT-4o endpoint",
+            "description": "Optional human-readable description of the LLM binding's purpose and SLA."
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "openai",
+              "anthropic",
+              "groq",
+              "ollama",
+              "custom"
+            ],
+            "example": "openai",
+            "description": "The LLM provider type. Why: Directs the internal routing logic to load provider-specific adapter classes."
+          },
+          "api_base_url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://api.openai.com/v1",
+            "description": "The API endpoint URL. Why: Directs the outgoing HTTP client to the specific inference gateway."
+          },
+          "api_key_secret_ref": {
+            "type": "string",
+            "example": "openai-api-key",
+            "description": "Secret reference containing the provider's API key. Why: Ensures secure credential resolution."
+          },
+          "default_model": {
+            "type": "string",
+            "example": "gpt-4o",
+            "description": "The default model name. Why: Serves as the fallback model when agent configurations omit specific model names."
+          },
+          "default_temperature": {
+            "type": "number",
+            "format": "double",
+            "minimum": 0.0,
+            "maximum": 2.0,
+            "default": 0.7,
+            "example": 0.7,
+            "description": "Default sampling temperature. Why: Defines creativity boundaries when not overridden by specific agents."
+          },
+          "default_max_tokens": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 2048,
+            "example": 2048,
+            "description": "Default maximum token limit. Why: Prevents infinite response loops and controls cost metrics."
+          },
+          "timeout_seconds": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 30,
+            "example": 30,
+            "description": "API request timeout in seconds. Why: Enforces clean deadlines to prevent backend thread starvation."
+          }
+        },
+        "description": "Request payload to create a new LLM provider binding. Why: Standardizes the input parameters needed to connect to an external inference endpoint."
+      },
+      "UpdateLLMBindingRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "provider",
+          "api_base_url",
+          "api_key_secret_ref",
+          "default_model"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "openai-gpt4o",
+            "description": "Updated name for this LLM provider registration."
+          },
+          "description": {
+            "type": "string",
+            "example": "Primary OpenAI GPT-4o endpoint",
+            "description": "Updated description indicating the SLA or hosting zone of the endpoint."
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "openai",
+              "anthropic",
+              "groq",
+              "ollama",
+              "custom"
+            ],
+            "example": "openai",
+            "description": "The underlying LLM provider type."
+          },
+          "api_base_url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://api.openai.com/v1",
+            "description": "The target API gateway endpoint URL."
+          },
+          "api_key_secret_ref": {
+            "type": "string",
+            "example": "openai-api-key",
+            "description": "Reference to the updated API credentials secret."
+          },
+          "default_model": {
+            "type": "string",
+            "example": "gpt-4o",
+            "description": "Target model identifier."
+          },
+          "default_temperature": {
+            "type": "number",
+            "format": "double",
+            "minimum": 0.0,
+            "maximum": 2.0,
+            "default": 0.7,
+            "example": 0.7,
+            "description": "Standard creativity ceiling coefficient."
+          },
+          "default_max_tokens": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 2048,
+            "example": 2048,
+            "description": "Maximum token generation bounds."
+          },
+          "timeout_seconds": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 30,
+            "example": 30,
+            "description": "Network response deadline duration."
+          }
+        },
+        "description": "Request payload to update an existing LLM provider binding. Why: Allows updating endpoints, model overrides, or secret references without changing associated agent models."
+      },
+      "LLMBinding": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "provider",
+          "api_base_url",
+          "api_key_secret_ref",
+          "default_model",
+          "default_temperature",
+          "default_max_tokens",
+          "timeout_seconds",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "System-generated unique UUID. Why: Uniquely identifies this LLM binding resource throughout the keeper."
+          },
+          "name": {
+            "type": "string",
+            "description": "Unique registration name referenced by agent templates."
+          },
+          "description": {
+            "type": "string",
+            "description": "Detailed explanation of the binding's role and purpose."
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "openai",
+              "anthropic",
+              "groq",
+              "ollama",
+              "custom"
+            ],
+            "description": "LLM provider type which dictates client library selection."
+          },
+          "api_base_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "The resolved target HTTP gateway URL."
+          },
+          "api_key_secret_ref": {
+            "type": "string",
+            "description": "Pointer to the credentials stored within secure backend secrets."
+          },
+          "default_model": {
+            "type": "string",
+            "description": "Standard model string used for fallbacks."
+          },
+          "default_temperature": {
+            "type": "number",
+            "format": "double",
+            "description": "Default creativity parameter."
+          },
+          "default_max_tokens": {
+            "type": "integer",
+            "description": "Maximum output token allocation limits."
+          },
+          "timeout_seconds": {
+            "type": "integer",
+            "description": "Deadlines protecting outbound HTTP pipelines."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended",
+              "inactive"
+            ],
+            "description": "Active deployment status. Why: Allows administrators to temporarily suspend specific models."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when this LLM binding was registered."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of the last binding configuration update."
+          }
+        },
+        "description": "Represents a registered LLM provider binding. Why: Stores the configuration for a specific LLM hosting service, separating the physical integration layer from the cognitive agent templates."
+      },
+      "CreateMCPServerRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "transport"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "sqlite-mcp",
+            "description": "Unique profile name for this MCP server. Why: Allows agent blueprints to link this server."
+          },
+          "description": {
+            "type": "string",
+            "example": "Local SQLite MCP server",
+            "description": "Purpose of the MCP server, detailing what tools and capabilities it exposes."
+          },
+          "transport": {
+            "type": "string",
+            "enum": [
+              "stdio",
+              "sse"
+            ],
+            "example": "stdio",
+            "description": "Communication mechanism. Why: Stdio launches local subprocesses, SSE utilizes remote HTTP streams."
+          },
+          "command": {
+            "type": "string",
+            "example": "mcp-sqlite",
+            "description": "The shell executable command. Why: Required for stdio transport to spawn the server process."
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "--db",
+              "test.db"
+            ],
+            "description": "Optional launch arguments. Why: Customizes local tool execution contexts (e.g. mounting database paths)."
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "example": {
+              "DEBUG": "true"
+            },
+            "description": "Environmental variables. Why: Securely configures target credentials, debug toggles, or ports for the subprocess."
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://mcp.github.com/events",
+            "description": "External Server-Sent Events stream endpoint. Why: Required for SSE transport to locate the remote listener."
+          },
+          "auth_secret_ref": {
+            "type": "string",
+            "example": "github-secret",
+            "description": "Secret pointer containing target API keys. Why: Authenticates remote HTTP connection flows."
+          }
+        },
+        "description": "Request payload to register a new Model Context Protocol (MCP) server profile. Why: Specifies how the orchestrator should boot and connect to a tool-exposing server."
+      },
+      "UpdateMCPServerRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "transport"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "sqlite-mcp",
+            "description": "Updated profile name for the MCP server."
+          },
+          "description": {
+            "type": "string",
+            "example": "Local SQLite MCP server",
+            "description": "Updated explanation of the tool collection scope."
+          },
+          "transport": {
+            "type": "string",
+            "enum": [
+              "stdio",
+              "sse"
+            ],
+            "example": "stdio",
+            "description": "Target transport protocol (stdio vs sse)."
+          },
+          "command": {
+            "type": "string",
+            "example": "mcp-sqlite",
+            "description": "Local terminal executable path."
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "--db",
+              "test.db"
+            ],
+            "description": "CLI invocation parameters."
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "example": {
+              "DEBUG": "true"
+            },
+            "description": "Environment variable configurations."
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://mcp.github.com/events",
+            "description": "Remote SSE connection gateway URL."
+          },
+          "auth_secret_ref": {
+            "type": "string",
+            "example": "github-secret",
+            "description": "Updated authorization credential secret reference."
+          }
+        },
+        "description": "Request payload to update an MCP server profile. Why: Allows modifying commands, environmental arguments, or URLs when MCP servers relocate or upgrade."
+      },
+      "MCPServer": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "transport",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "System-generated unique UUID."
+          },
+          "name": {
+            "type": "string",
+            "description": "Unique profile identifier used by agent templates."
+          },
+          "description": {
+            "type": "string",
+            "description": "Brief description of the server's function."
+          },
+          "transport": {
+            "type": "string",
+            "enum": [
+              "stdio",
+              "sse"
+            ],
+            "description": "Target transport protocol (stdio vs sse)."
+          },
+          "command": {
+            "type": "string",
+            "description": "Path of the executed binary for local stdio integration."
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array of command-line arguments passed at startup."
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Key-value map of runtime environment configurations."
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "The remote HTTP SSE endpoint URL."
+          },
+          "auth_secret_ref": {
+            "type": "string",
+            "description": "Secret locator for access credentials."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended",
+              "inactive"
+            ],
+            "description": "Lifecycle state of this MCP connection configuration."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when this MCP server profile was created."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of the last configuration update."
+          }
+        },
+        "description": "Stores the profile of a Model Context Protocol (MCP) server. Why: Serves as the database record detailing the transport protocols, runtime execution commands, and security configurations for external tools."
+      },
+      "CreateSkillRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "web-search",
+            "description": "Unique skill name. Why: Allows identifying the skill in search results and attaching it to templates."
+          },
+          "description": {
+            "type": "string",
+            "example": "Google search and URL extraction tools",
+            "description": "Short summary explaining what capability this skill introduces to the agent."
+          },
+          "content": {
+            "type": "string",
+            "example": "Always verify calculation steps before outputting final answers.",
+            "description": "Behavioral guidelines. Why: Injected directly into the system instructions to force the LLM to follow specific rules."
+          }
+        },
+        "description": "Request payload to create a new behavioral capability or skill. Why: Enables injecting specific business rules and guidelines into the system."
+      },
+      "UpdateSkillRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "web-search",
+            "description": "Unique skill identifier name."
+          },
+          "description": {
+            "type": "string",
+            "example": "Google search and URL extraction tools",
+            "description": "Refined summary of the capability scope."
+          },
+          "content": {
+            "type": "string",
+            "example": "Always verify calculation steps before outputting final answers.",
+            "description": "Updated rules and guidelines that govern model behavior."
+          }
+        },
+        "description": "Request payload to update a skill's content or description. Why: Allows refining the behavioral constraints of an active skill dynamically."
+      },
+      "Skill": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "System-generated unique UUID."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable label mapping to this specific skill capability."
+          },
+          "description": {
+            "type": "string",
+            "description": "Explanation of what tasks or rules this skill handles."
+          },
+          "content": {
+            "type": "string",
+            "description": "Natural language instructions guiding agent decision-making policies."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended",
+              "inactive"
+            ],
+            "description": "Operational status of this skill. Suspended skills are ignored at runtime."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when this skill was created."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of the last skill modification."
+          }
+        },
+        "description": "Represents a distinct capability skill containing domain behavior constraints. Why: Defines the specific operational rules and guidelines an agent must follow for a feature area."
+      },
+      "CreateSkillCollectionRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "general-skills",
+            "description": "Unique collection name. Why: Allows attaching this bundle to agents directly."
+          },
+          "description": {
+            "type": "string",
+            "example": "General assistant capabilities",
+            "description": "Purpose of this collection, listing what roles or teams use these capabilities."
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": [
+              "550e8400-e29b-41d4-a716-446655440000"
+            ],
+            "description": "List of UUIDs representing member skills. Why: Aggregates modular skills into a single management unit."
+          }
+        },
+        "description": "Request payload to bundle multiple skills into a collection. Why: Simplifies binding standard skillsets to agents in bulk."
+      },
+      "UpdateSkillCollectionRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "general-skills",
+            "description": "Unique collection name."
+          },
+          "description": {
+            "type": "string",
+            "example": "General assistant capabilities",
+            "description": "Updated explanation of the collection's role."
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": [
+              "550e8400-e29b-41d4-a716-446655440000"
+            ],
+            "description": "Updated list of UUIDs defining this collection's skills."
+          }
+        },
+        "description": "Request payload to update a skill collection's members. Why: Allows adding or removing modular capabilities across all consuming agents simultaneously."
+      },
+      "SkillCollection": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "skills",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "System-generated unique UUID."
+          },
+          "name": {
+            "type": "string",
+            "description": "Unique skillset bundle label."
+          },
+          "description": {
+            "type": "string",
+            "description": "Summary explaining the skillset bundle's function."
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Array of skill UUIDs linked into this collection."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the collection was created."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of the last collection membership change."
+          }
+        },
+        "description": "Groups multiple Skill references into a single logical capability set. Why: Enables robust multi-agent template definition without listing individual skills redundantly."
+      },
+      "CreatePromptTemplateRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "system-behavior",
+            "description": "Unique name for the prompt template. Why: Enables identification and version tracking."
+          },
+          "content": {
+            "type": "string",
+            "example": "You are a helpful AI assistant.",
+            "description": "The actual instruction template string. Why: Defines the core personality and structure of model outputs."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "active",
+              "archived"
+            ],
+            "example": "active",
+            "description": "Initial status of the template. Why: Allows draft mode workflows prior to staging/production rollouts."
+          }
+        },
+        "description": "Request payload to define a new versioned system instruction template. Why: Inserts cognitive directives or framing rules into the prompt engineering store."
+      },
+      "UpdatePromptTemplateRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "status"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "system-behavior",
+            "description": "Unique template identifier name."
+          },
+          "content": {
+            "type": "string",
+            "example": "You are a helpful AI assistant version 2.",
+            "description": "Updated instruction prompt text."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "active",
+              "archived"
+            ],
+            "example": "active",
+            "description": "New lifecycle status (e.g. moving draft to active, or archiving older versions)."
+          }
+        },
+        "description": "Request payload to update a prompt template and modify its lifecycle status. Why: Allows prompt engineers to iterate on agent personality, safety guardrails, and formatting."
+      },
+      "PromptTemplate": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "content",
+          "status",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "System-generated unique UUID."
+          },
+          "name": {
+            "type": "string",
+            "description": "Unique template name."
+          },
+          "content": {
+            "type": "string",
+            "description": "The natural language instruction string served to the models."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "active",
+              "archived"
+            ],
+            "description": "Current lifecycle state of the template."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp indicating when this template was created."
+          }
+        },
+        "description": "Represents a versioned prompt pattern or instruction. Why: Stores the actual natural language instructions that guide LLM reasoning and behavior."
+      },
+      "CreatePromptCollectionRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "agent-a-prompts",
+            "description": "Unique prompt collection name. Why: Linked directly into the agent template parameters."
+          },
+          "description": {
+            "type": "string",
+            "example": "A collection of greeting and behavioral templates.",
+            "description": "Functional description of the collection's role (e.g. 'Standard Coding Agents Collection')."
+          },
+          "templates": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": [
+              "550e8400-e29b-41d4-a716-446655440000"
+            ],
+            "description": "List of UUIDs mapping member templates. Why: Collects individual behavioral directives into a unified packet."
+          }
+        },
+        "description": "Request payload to assemble multiple prompt templates. Why: Prepares cohesive sets of system, user, and safety prompts for agent instantiation."
+      },
+      "UpdatePromptCollectionRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "agent-a-prompts",
+            "description": "Unique prompt collection name."
+          },
+          "description": {
+            "type": "string",
+            "example": "A collection of greeting and behavioral templates.",
+            "description": "Updated collection description details."
+          },
+          "templates": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": [
+              "550e8400-e29b-41d4-a716-446655440000"
+            ],
+            "description": "Updated list of linked prompt template UUIDs."
+          }
+        },
+        "description": "Request payload to update prompt collection template links. Why: Coordinates major upgrades to the multi-turn prompt templates used by active agents."
+      },
+      "PromptCollection": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "templates",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "System-generated unique UUID."
+          },
+          "name": {
+            "type": "string",
+            "description": "Unique prompt bundle name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Functional scope overview for the collection."
+          },
+          "templates": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Array of linked prompt template UUIDs."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp indicating when the collection was initialized."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of the last prompt collection update."
+          }
+        },
+        "description": "Aggregates a set of versioned prompt templates into a unified collection. Why: Simplifies referencing entire dialog structures or instruction sets from the agent configuration."
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "name is required",
+            "description": "Descriptive error message. Why: Explains validation syntax failures or database unavailable causes."
+          }
+        },
+        "description": "Standardized API error response container. Why: Enforces consistent error handling across the entire system, strictly matching the Spec NFR constraints."
+      },
+      "BrainConfig": {
+        "type": "object",
+        "required": [
+          "model"
+        ],
+        "properties": {
+          "model": {
+            "type": "string",
+            "example": "gpt-4o",
+            "description": "Target LLM model string (e.g. gpt-4o). Why: Tells the inference engine what architecture to query."
+          },
+          "temperature": {
+            "type": "number",
+            "example": 0.7,
+            "description": "Model sampling temperature. Why: Determines predictability vs creativity of generated content."
+          },
+          "max_tokens": {
+            "type": "integer",
+            "example": 2048,
+            "description": "Token output limit. Why: Sets strict usage boundaries to avoid cascading latency or processing costs."
+          },
+          "endpoint": {
+            "type": "string",
+            "example": "https://api.openai.com/v1",
+            "description": "Direct model endpoint URL override. Why: Allows bypassing the standard binding URL for private test proxies."
+          },
+          "credentials_secret": {
+            "type": "string",
+            "example": "openai-secret-key",
+            "description": "Secret ref containing access tokens. Why: Authenticates outbound calls securely."
+          }
+        },
+        "description": "Defines the agent's cognitive brain. Why: Selects the LLM provider, target model, and parameters (like temperature) that govern agent reasoning."
+      },
+      "ShortTermMemoryConfig": {
+        "type": "object",
+        "required": [
+          "ttl_seconds"
+        ],
+        "properties": {
+          "key_namespace": {
+            "type": "string",
+            "example": "agent:qa:short",
+            "description": "Prefix string for Redis keys. Why: Isolates data namespaces between distinct sessions or agents."
+          },
+          "ttl_seconds": {
+            "type": "integer",
+            "example": 3600,
+            "description": "Lifespan of session keys in seconds. Why: Automatically reclaims Redis memory when conversations terminate."
+          }
+        },
+        "description": "Configuration for the agent's conversational runtime memory. Why: Standardizes Redis key namespaces and TTL policies to clean up inactive session histories automatically."
+      },
+      "LongTermMemoryConfig": {
+        "type": "object",
+        "required": [
+          "collection_name",
+          "vector_dimension"
+        ],
+        "properties": {
+          "collection_name": {
+            "type": "string",
+            "example": "agent-qa-long",
+            "description": "Target Qdrant vector database collection. Why: Segregates vector storage namespaces for security."
+          },
+          "vector_dimension": {
+            "type": "integer",
+            "example": 1536,
+            "description": "Embedding vector dimensions. Why: Ensures the vector collection aligns with the LLM's encoder dimensions."
+          }
+        },
+        "description": "Configuration for semantic vector database memory. Why: Links the agent to high-dimensional knowledge retrieval collections in Qdrant."
+      },
+      "MCPClientConfig": {
+        "type": "object",
+        "required": [
+          "server_id"
+        ],
+        "properties": {
+          "server_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID reference of the registered MCP server profile. Why: Identifies which tool server should be mounted."
+          },
+          "custom_env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Runtime environment overrides. Why: Tailors MCP server execution variables dynamically for this agent."
+          },
+          "custom_args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Launch arguments overrides. Why: Adjusts the tool mounting paths or parameters for individual agents."
+          }
+        },
+        "description": "Configuration for mounting a specific MCP server onto an agent. Why: Governs which MCP tool servers are activated and parameterizes client-side overrides."
+      },
+      "CreateAgentRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "brain",
+          "short_term_memory",
+          "long_term_memory"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "qa-agent",
+            "description": "Unique name of the agent. Why: Uniquely identifies the autonomous agent template."
+          },
+          "description": {
+            "type": "string",
+            "example": "QA Testing Agent template",
+            "description": "Role description for this agent, highlighting its expertise area."
+          },
+          "brain": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BrainConfig"
+              }
+            ],
+            "description": "Brain configuration parameters."
+          },
+          "short_term_memory": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ShortTermMemoryConfig"
+              }
+            ],
+            "description": "Short term state memory configurations."
+          },
+          "long_term_memory": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LongTermMemoryConfig"
+              }
+            ],
+            "description": "Long term knowledge memory configurations."
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Optional array of Skill or SkillCollection UUIDs. Why: Endows the agent with specific operational tools."
+          },
+          "prompt_template": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID pointing to a specific PromptTemplate. Why: Formulates the agent's core instructions."
+          },
+          "mcp_clients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MCPClientConfig"
+            },
+            "description": "Array of MCP client configurations. Why: Enables the agent to execute specific external tools."
+          },
+          "deployment": {
+            "type": "object",
+            "properties": {
+              "tier": {
+                "type": "string",
+                "example": "heavy",
+                "description": "Logical runtime tier name (e.g. 'standard', 'heavy', 'gpu-optimized'). The Operator maps this to container resources and image settings. If omitted or unknown, the implicit default profile is used."
+              }
+            },
+            "description": "Deployment configuration options. Why: Decouples infrastructure sizing from the agent definition, allowing operators to define resource profiles independently."
+          }
+        },
+        "description": "Request payload to define an Agent template. Why: Packages the cognitive blueprint (LLM, memory policies, skills, prompts, and tool attachments) for creation."
+      },
+      "UpdateAgentRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "brain",
+          "short_term_memory",
+          "long_term_memory"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "qa-agent",
+            "description": "Updated name of the agent."
+          },
+          "description": {
+            "type": "string",
+            "example": "QA Testing Agent template",
+            "description": "Refined role explanation for the agent."
+          },
+          "brain": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BrainConfig"
+              }
+            ],
+            "description": "Updated cognitive reasoning configuration details."
+          },
+          "short_term_memory": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ShortTermMemoryConfig"
+              }
+            ],
+            "description": "Updated session memory policies."
+          },
+          "long_term_memory": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LongTermMemoryConfig"
+              }
+            ],
+            "description": "Updated semantic database parameters."
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Updated list of linked skill UUIDs."
+          },
+          "prompt_template": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Updated prompt instruction UUID pointer."
+          },
+          "mcp_clients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MCPClientConfig"
+            },
+            "description": "Updated array of mounted MCP server configurations."
+          },
+          "deployment": {
+            "type": "object",
+            "properties": {
+              "tier": {
+                "type": "string",
+                "example": "gpu-optimized",
+                "description": "Updated logical runtime tier name. Operator will apply the new tier profile on the next reconciliation after agent reassignment."
+              }
+            },
+            "description": "Updated deployment configuration options."
+          }
+        },
+        "description": "Request payload to modify an existing Agent template. Why: Supports hot-updating memory policies, prompt templates, or skill configurations."
+      },
+      "Agent": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "brain",
+          "short_term_memory",
+          "long_term_memory",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "System-generated unique UUID."
+          },
+          "name": {
+            "type": "string",
+            "description": "Unique agent identifier label."
+          },
+          "description": {
+            "type": "string",
+            "description": "Explanation of the agent's functional role."
+          },
+          "brain": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BrainConfig"
+              }
+            ],
+            "description": "Active cognitive brain configurations."
+          },
+          "short_term_memory": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ShortTermMemoryConfig"
+              }
+            ],
+            "description": "Active short term memory policies."
+          },
+          "long_term_memory": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LongTermMemoryConfig"
+              }
+            ],
+            "description": "Active long term vector database memory configs."
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Array of skill UUIDs currently attached to this agent."
+          },
+          "prompt_template": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Active prompt template UUID pointer guiding reasoning."
+          },
+          "mcp_clients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MCPClientConfig"
+            },
+            "description": "Array of active MCP client mounts providing tools."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "defined",
+              "assigned",
+              "active",
+              "terminated"
+            ],
+            "description": "Operational state. Why: Distinguishes defined templates from actively assigned or running agents."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when this agent blueprint was created."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of the last agent metadata change."
+          },
+          "community_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of the assigned community. Why: Null if unassigned; binds the agent to a secure logical network domain."
+          },
+          "tier": {
+            "type": "string",
+            "description": "Logical runtime tier name assigned to this agent (empty string if using the implicit default)."
+          }
+        },
+        "description": "Blueprint configuration of an autonomous agent. Why: Serves as the authoritative source of truth detailing the cognitive architecture of an agent model."
+      },
+      "CreateCommunityRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "topology"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "sales-agents-net",
+            "description": "Unique community name. Why: Uniquely identifies the network domain."
+          },
+          "description": {
+            "type": "string",
+            "description": "Context of the community, detailing what workflows or teams operate inside."
+          },
+          "topology": {
+            "type": "string",
+            "enum": [
+              "hub-spoke"
+            ],
+            "description": "Collaboration structure. Why: Hub-Spoke forces centralized routing for governance."
+          },
+          "configuration": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Dynamic JSON configuration overrides. Why: Customizes network latency, ports, or NATS topics."
+          }
+        },
+        "description": "Request payload to create a new logical community boundary. Why: Instantiates isolated networking contexts and communication topologies for collaboration."
+      },
+      "UpdateCommunityRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "topology"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "sales-agents-net",
+            "description": "Updated unique community name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Refined workflow explanation."
+          },
+          "topology": {
+            "type": "string",
+            "enum": [
+              "hub-spoke"
+            ],
+            "description": "Selected collaboration structure."
+          },
+          "configuration": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Updated key-value custom parameter overrides."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "active",
+              "suspended",
+              "terminated"
+            ],
+            "description": "Updated lifecycle status of the community."
+          }
+        },
+        "description": "Request payload to update a community's metadata or status. Why: Manages active state transitions or adjustments to collaboration topologies."
+      },
+      "Community": {
+        "type": "object",
+        "required": [
+          "id",
+          "tenant_id",
+          "name",
+          "topology",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "System-generated unique UUID."
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Dynamic isolation key. Why: Enforces multitenancy so database queries automatically filter tenant scope."
+          },
+          "name": {
+            "type": "string",
+            "description": "Unique community network domain name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Workflow context description for the community."
+          },
+          "topology": {
+            "type": "string",
+            "enum": [
+              "hub-spoke"
+            ],
+            "description": "Collaboration topology design."
+          },
+          "configuration": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Map of custom configuration variables."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "active",
+              "suspended",
+              "terminated"
+            ],
+            "description": "Lifecycle state of the community."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the community was initialized."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of the last community topology modification."
+          }
+        },
+        "description": "Represents a logical networking boundary and agent collaboration domain. Why: Enforces tenancy isolation and structures horizontal message routing rules."
+      },
+      "AgentStatusDetails": {
+        "type": "object",
+        "required": [
+          "agent_id",
+          "status",
+          "message",
+          "replicas",
+          "updated_at"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Target agent UUID. Why: Identifies which autonomous unit this status report describes."
+          },
+          "status": {
+            "type": "string",
+            "description": "Live pod scheduling state resolved from Kubernetes (e.g. running, pending, failed)."
+          },
+          "message": {
+            "type": "string",
+            "description": "Status description message. Why: Returns descriptive crash errors or startup progress logs."
+          },
+          "replicas": {
+            "type": "integer",
+            "description": "Number of live container instances actively executing in Kubernetes."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of the last Kubernetes status reconcile."
+          }
+        },
+        "description": "Detailed operational and deployment status of a runtime agent container. Why: Directs Kubernetes pod replica states, health statuses, and failure logs back to the control plane."
+      },
+      "AgentDeploymentResult": {
+        "type": "object",
+        "required": [
+          "agent_id",
+          "status"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of the targeted agent resource."
+          },
+          "status": {
+            "type": "string",
+            "description": "Result of the scheduling deployment (e.g. success, failed, pending)."
+          },
+          "error": {
+            "type": "string",
+            "description": "Detailed error log. Why: Null on success; records orchestrator scheduling failures."
+          }
+        },
+        "description": "Details the results of a single agent's deployment process. Why: Reports scheduling success or underlying container provisioning errors back to the caller."
+      },
+      "CommunityDeploymentDetails": {
+        "type": "object",
+        "required": [
+          "community_id",
+          "status",
+          "agents"
+        ],
+        "properties": {
+          "community_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Target community UUID. Why: Pinpoints the collaboration domain this report covers."
+          },
+          "status": {
+            "type": "string",
+            "description": "Consolidated deployment state of the entire community rollout."
+          },
+          "agents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentDeploymentResult"
+            },
+            "description": "Rollout report array listing deployment details for every assigned agent."
+          }
+        },
+        "description": "Deployment summary report for all agents inside a community. Why: Offers a single transactional view indicating the rollout status of a multi-agent team."
+      },
+      "CommunityStatusDetails": {
+        "type": "object",
+        "required": [
+          "community_id",
+          "status",
+          "agents"
+        ],
+        "properties": {
+          "community_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Target community UUID."
+          },
+          "status": {
+            "type": "string",
+            "description": "Consolidated live operational status of the community."
+          },
+          "agents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentStatusDetails"
+            },
+            "description": "Array listing live operational and container statuses for all assigned agents."
+          }
+        },
+        "description": "Live operational monitoring status of all agents assigned to a community. Why: Facilitates observability by aggregating live replica counts and error messages from Kubernetes CRD status blocks."
+      },
+      "DomainEvent": {
+        "type": "object",
+        "required": [
+          "event_id",
+          "schema_ref",
+          "source",
+          "tenant_id",
+          "occurred_at",
+          "payload"
+        ],
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "f7d54b4d-cb7f-44e2-a722-df38d2f1f582",
+            "description": "Globally unique identifier for this event instance."
+          },
+          "schema_ref": {
+            "type": "string",
+            "example": "urn:tacito:schema:conversational:start-thread:v1",
+            "description": "Versioned URN identifying the event's payload schema."
+          },
+          "source": {
+            "type": "string",
+            "example": "keeper",
+            "description": "Identifier of the component that emitted the event."
+          },
+          "tenant_id": {
+            "type": "string",
+            "example": "community-1",
+            "description": "Resolved tenant identifier."
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-06T07:10:50Z",
+            "description": "UTC timestamp when the event was created."
+          },
+          "payload": {
+            "type": "object",
+            "description": "Schema-specific event data payload."
+          }
+        },
+        "description": "Canonical, schema-agnostic event envelope used throughout the reactive mesh."
+      }
+    }
+  }
+}

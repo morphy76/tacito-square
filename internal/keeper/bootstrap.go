@@ -21,12 +21,12 @@ import (
 	"github.com/morphy76/tacito-square/internal/shared/health"
 	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/nats-io/nats.go"
+	"github.com/morphy76/tacito-square/api/openapi"
 	"github.com/morphy76/tacito-square/pkg/kubernetes/apis/tacito/v1alpha1"
 	"k8s.io/client-go/rest"
 )
 
-//go:embed openapi.json
-var openapiJSON []byte
+var openapiJSON = openapi.Spec
 
 // NewServer creates and configures a new Gin HTTP server with health probes.
 func NewServer(pool *pgxpool.Pool, nc *nats.Conn, k8sConfig *rest.Config) *gin.Engine {
