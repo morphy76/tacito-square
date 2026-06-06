@@ -135,22 +135,23 @@ func TestOpenAIAdapter_Generate(t *testing.T) {
 
 			// Assertions on the request sent to OpenAI
 			// We expect 3 messages: user, assistant (with tool_calls), tool (with tool_call_id)
+			// The user message must come first (chronological ordering requirement).
 			if len(body.Messages) == 3 {
+				// User message (first – triggered the tool call)
+				userMsg := body.Messages[0]
+				assert.Equal(t, "user", userMsg["role"])
+				assert.Equal(t, "Next question", userMsg["content"])
+
 				// Assistant message
-				asst := body.Messages[0]
+				asst := body.Messages[1]
 				assert.Equal(t, "assistant", asst["role"])
 				assert.NotNil(t, asst["tool_calls"])
 
 				// Tool message
-				toolMsg := body.Messages[1]
+				toolMsg := body.Messages[2]
 				assert.Equal(t, "tool", toolMsg["role"])
 				assert.Equal(t, "call_123", toolMsg["tool_call_id"])
 				assert.Equal(t, "observation result", toolMsg["content"])
-
-				// New User query
-				userMsg := body.Messages[2]
-				assert.Equal(t, "user", userMsg["role"])
-				assert.Equal(t, "Next question", userMsg["content"])
 			}
 
 			// We expect 1 tool definition
@@ -205,6 +206,10 @@ func TestOpenAIAdapter_Generate(t *testing.T) {
 		})
 
 		history := []model.MemoryEntry{
+			{
+				Role:    "user",
+				Content: "Next question",
+			},
 			{
 				Role:    "assistant",
 				Content: "Let me call the tool.",

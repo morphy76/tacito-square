@@ -124,23 +124,24 @@ func TestOllamaAdapter_Generate(t *testing.T) {
 			_ = json.NewDecoder(r.Body).Decode(&body)
 
 			// Assertions on history conversion
+			// The user message must come first (chronological ordering requirement).
 			if len(body.Messages) == 3 {
+				// User prompt (first – triggered the tool call)
+				userMsg := body.Messages[0]
+				assert.Equal(t, "user", userMsg["role"])
+				assert.Equal(t, "Next query", userMsg["content"])
+
 				// Assistant message with tool calls
-				asst := body.Messages[0]
+				asst := body.Messages[1]
 				assert.Equal(t, "assistant", asst["role"])
 				assert.NotNil(t, asst["tool_calls"])
 
 				// Tool message with ToolCallID and ToolName
-				toolMsg := body.Messages[1]
+				toolMsg := body.Messages[2]
 				assert.Equal(t, "tool", toolMsg["role"])
 				assert.Equal(t, "call_123", toolMsg["tool_call_id"])
 				assert.Equal(t, "my-tool", toolMsg["tool_name"])
 				assert.Equal(t, "observation result", toolMsg["content"])
-
-				// User prompt
-				userMsg := body.Messages[2]
-				assert.Equal(t, "user", userMsg["role"])
-				assert.Equal(t, "Next query", userMsg["content"])
 			}
 
 			// Assertions on tools mapping
@@ -187,6 +188,10 @@ func TestOllamaAdapter_Generate(t *testing.T) {
 		})
 
 		history := []model.MemoryEntry{
+			{
+				Role:    "user",
+				Content: "Next query",
+			},
 			{
 				Role:    "assistant",
 				Content: "Let me call the tool.",

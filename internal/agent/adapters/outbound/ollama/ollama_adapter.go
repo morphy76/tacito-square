@@ -170,14 +170,13 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 				})
 			}
 		}
-		messages = append(messages, api.Message{
-			Role:    "user",
-			Content: req.Prompt,
-		})
-
-		modelName := a.cfg.Model
-		if modelName == "" {
-			modelName = "llama3"
+		// Only append the current user prompt when it is not already present in history
+		// (i.e., it was not inserted before a tool-call chain by the cognitive engine).
+		if len(req.History) == 0 || req.History[len(req.History)-1].Role != "tool" {
+			messages = append(messages, api.Message{
+				Role:    "user",
+				Content: req.Prompt,
+			})
 		}
 
 		var sdkTools []api.Tool
