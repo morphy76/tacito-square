@@ -179,6 +179,11 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 			})
 		}
 
+		modelName := a.cfg.Model
+		if modelName == "" {
+			modelName = "llama3"
+		}
+
 		var sdkTools []api.Tool
 		for _, t := range req.Tools {
 			schemaBytes, _ := json.Marshal(t.InputSchema)
