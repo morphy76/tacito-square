@@ -35,12 +35,14 @@ func (m *MockBrain) GenerateStream(ctx context.Context, request model.BrainReque
 
 // MockShortTermMemory is a mock implementation of the ShortTermMemory outbound port.
 type MockShortTermMemory struct {
-	AppendFunc func(ctx context.Context, tenantID, agentID, threadID string, entry model.MemoryEntry) error
-	GetFunc    func(ctx context.Context, tenantID, agentID, threadID string, limit int) ([]model.MemoryEntry, error)
-	ClearFunc  func(ctx context.Context, tenantID, agentID, threadID string) error
+	AppendFunc       func(ctx context.Context, tenantID, agentID, threadID string, entry model.MemoryEntry) error
+	GetFunc          func(ctx context.Context, tenantID, agentID, threadID string, limit int) ([]model.MemoryEntry, error)
+	ClearFunc        func(ctx context.Context, tenantID, agentID, threadID string) error
+	RollbackLastFunc func(ctx context.Context, tenantID, agentID, threadID string) error
 
-	AppendCalls []model.MemoryEntry
-	GetCalls    []int
+	AppendCalls       []model.MemoryEntry
+	GetCalls          []int
+	RollbackLastCalls []string
 }
 
 func (m *MockShortTermMemory) Append(ctx context.Context, tenantID, agentID, threadID string, entry model.MemoryEntry) error {
@@ -62,6 +64,14 @@ func (m *MockShortTermMemory) Get(ctx context.Context, tenantID, agentID, thread
 func (m *MockShortTermMemory) Clear(ctx context.Context, tenantID, agentID, threadID string) error {
 	if m.ClearFunc != nil {
 		return m.ClearFunc(ctx, tenantID, agentID, threadID)
+	}
+	return nil
+}
+
+func (m *MockShortTermMemory) RollbackLast(ctx context.Context, tenantID, agentID, threadID string) error {
+	m.RollbackLastCalls = append(m.RollbackLastCalls, threadID)
+	if m.RollbackLastFunc != nil {
+		return m.RollbackLastFunc(ctx, tenantID, agentID, threadID)
 	}
 	return nil
 }

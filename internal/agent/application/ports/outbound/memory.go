@@ -16,4 +16,7 @@ type ShortTermMemory interface {
 
 	// Clear deletes all entries associated with the specified thread.
 	Clear(ctx context.Context, tenantID, agentID, threadID string) error
+
+	// RollbackLast pops the last entry in the short-term memory list for the thread.
+	RollbackLast(ctx context.Context, tenantID, agentID, threadID string) error
 }
