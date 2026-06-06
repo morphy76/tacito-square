@@ -5,7 +5,7 @@
 | Task ID     | TASK-M6.0-T4                                             |
 | Spec        | SPEC-FR-M6.0                                             |
 | Boundary    | Keeper Adapters — `internal/keeper/adapters/outbound/nats` |
-| Status      | DRAFT                                                    |
+| Status      | IMPLEMENTED                                              |
 | Depends On  | TASK-M6.0-T3                                             |
 
 ## Objective
