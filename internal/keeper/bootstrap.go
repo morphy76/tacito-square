@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"errors"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -110,9 +109,10 @@ func NewServer(pool *pgxpool.Pool, nc *nats.Conn, k8sConfig *rest.Config) *gin.E
 	communityService := service.NewCommunityService(communityRepo)
 	lifecycleService := service.NewLifecycleService(agentRepo, communityRepo, crdCoord, nc)
 
-	// Echo feature
-	natsBroadcaster := outboundNats.NewNATSCommunityBroadcaster(nc, observability.NewLogger("info", os.Stdout))
-	echoService := service.NewEchoService(communityRepo, agentRepo, crdCoord, natsBroadcaster, nil)
+	// Events feature
+	eventPublisher := outboundNats.NewNATSEventPublisher(nc)
+	eventSubscriber := outboundNats.NewNATSEventSubscriber(nc)
+	eventService := service.NewEventService(eventPublisher, eventSubscriber)
 
 	// Inbound Handlers (Gin adapters depending strictly on inboundports / services)
 	handler := httpAdapter.NewLLMBindingHandler(llmService)
@@ -123,7 +123,7 @@ func NewServer(pool *pgxpool.Pool, nc *nats.Conn, k8sConfig *rest.Config) *gin.E
 	communityHandler := httpAdapter.NewCommunityHandler(communityService)
 	assignmentHandler := httpAdapter.NewAssignmentHandler(agentService)
 	lifecycleHandler := httpAdapter.NewLifecycleHandler(lifecycleService)
-	echoHandler := httpAdapter.NewEchoHandler(echoService)
+	eventHandler := httpAdapter.NewEventHandler(eventService, eventService)
 
 	v1 := r.Group("/api/v1")
 	v1.Use(httpAdapter.TenantResolutionMiddleware(httpAdapter.NewHeaderTenantResolver()))
@@ -194,8 +194,9 @@ func NewServer(pool *pgxpool.Pool, nc *nats.Conn, k8sConfig *rest.Config) *gin.E
 		v1.POST("/communities/:community_id/undeploy", lifecycleHandler.UndeployCommunity)
 		v1.GET("/communities/:community_id/status", lifecycleHandler.GetCommunityStatus)
 
-		// Echo routes
-		echoHandler.RegisterRoutes(v1)
+		// Event routes
+		v1.POST("/events", eventHandler.PublishEvent)
+		v1.GET("/events/stream", eventHandler.StreamEvents)
 	}
 
 	return r

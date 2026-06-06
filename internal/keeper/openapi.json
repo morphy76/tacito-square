@@ -2746,24 +2746,12 @@
         "description": "Aggregates live Kubernetes operational health, replica counts, and pod errors for all agents assigned to the community. Why: Offers high-level observability indicating if the entire multi-agent mesh is healthy and ready to process workflows."
       }
     },
-    "/communities/{community_id}/echo": {
+    "/events": {
       "post": {
-        "summary": "Send an Echo diagnostic message to a community",
-        "operationId": "echoCommunity",
+        "summary": "Publish a generic domain event",
+        "operationId": "publishEvent",
         "tags": [
-          "development/operations"
-        ],
-        "parameters": [
-          {
-            "name": "community_id",
-            "in": "path",
-            "required": true,
-            "description": "The UUID of the Community to test.",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
+          "events/publish"
         ],
         "requestBody": {
           "required": true,
@@ -2772,12 +2760,16 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "message"
+                  "schema_ref",
+                  "payload"
                 ],
                 "properties": {
-                  "message": {
+                  "schema_ref": {
                     "type": "string",
-                    "example": "ping"
+                    "example": "urn:tacito:schema:conversational:start-thread:v1"
+                  },
+                  "payload": {
+                    "type": "object"
                   }
                 }
               }
@@ -2785,18 +2777,18 @@
           }
         },
         "responses": {
-          "200": {
-            "description": "Successfully dispatched echo to community agents",
+          "202": {
+            "description": "Event accepted and published",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CommunityEchoResponse"
+                  "$ref": "#/components/schemas/DomainEvent"
                 }
               }
             }
           },
           "400": {
-            "description": "Bad Request / Validation Error",
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -2805,28 +2797,8 @@
               }
             }
           },
-          "404": {
-            "description": "Community not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable (NATS unavailable or no running agents)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
+          "422": {
+            "description": "Unprocessable Entity",
             "content": {
               "application/json": {
                 "schema": {
@@ -2836,7 +2808,30 @@
             }
           }
         },
-        "description": "Broadcasts a custom test payload to all assigned agents in a community via NATS and awaits responses. Why: Validates end-to-end event-routing, message broker responsiveness, and container active state without running heavy cognitive loops or external tools. A vital diagnostics interface."
+        "description": "Accepts a schemaRef and payload, dynamically resolves routing subjects and tenant ID, sanitizes message contents, auto-populates system metadata, and broadcasts the completed DomainEvent onto the NATS network."
+      }
+    },
+    "/events/stream": {
+      "get": {
+        "summary": "Subscribe to real-time events stream (SSE)",
+        "operationId": "streamEvents",
+        "tags": [
+          "events/stream"
+        ],
+        "responses": {
+          "200": {
+            "description": "SSE stream connection established",
+            "headers": {
+              "Content-Type": {
+                "schema": {
+                  "type": "string",
+                  "example": "text/event-stream"
+                }
+              }
+            }
+          }
+        },
+        "description": "Establishes a persistent Server-Sent Events (SSE) connection. Subscribes to the NATS community wildcard events filtered by the client's resolved tenant context, fanning out live conversational updates."
       }
     }
   },
@@ -4279,58 +4274,50 @@
         },
         "description": "Live operational monitoring status of all agents assigned to a community. Why: Facilitates observability by aggregating live replica counts and error messages from Kubernetes CRD status blocks."
       },
-      "AgentEchoResult": {
+      "DomainEvent": {
         "type": "object",
         "required": [
-          "agent_name"
+          "event_id",
+          "schema_ref",
+          "source",
+          "tenant_id",
+          "occurred_at",
+          "payload"
         ],
         "properties": {
-          "agent_name": {
-            "type": "string",
-            "example": "math-agent",
-            "description": "Target agent name. Why: Identifies which agent responded to the echo request."
-          },
-          "decorated": {
-            "type": "string",
-            "example": "[math-agent]: Echo: hello (w/ community-1 info)",
-            "description": "Formatted echo output string returned by the agent process via NATS."
-          },
-          "error": {
-            "type": "string",
-            "example": "timeout",
-            "description": "Error trace message. Why: Indicates if the agent failed to respond within deadlines."
-          }
-        },
-        "description": "Result payload of a single agent's response to the echo diagnostic signal. Why: Verifies that the agent's message loop is listening to NATS and capable of responding."
-      },
-      "CommunityEchoResponse": {
-        "type": "object",
-        "required": [
-          "community_id",
-          "woke_community",
-          "results"
-        ],
-        "properties": {
-          "community_id": {
+          "event_id": {
             "type": "string",
             "format": "uuid",
-            "example": "ec57f1af-d2d8-4ad4-be1e-195176775734",
-            "description": "UUID of the tested community network domain."
+            "example": "f7d54b4d-cb7f-44e2-a722-df38d2f1f582",
+            "description": "Globally unique identifier for this event instance."
           },
-          "woke_community": {
-            "type": "boolean",
-            "example": false,
-            "description": "Indicates if sleeping agents had to be booted. Why: Evaluates standby startup latency."
+          "schema_ref": {
+            "type": "string",
+            "example": "urn:tacito:schema:conversational:start-thread:v1",
+            "description": "Versioned URN identifying the event's payload schema."
           },
-          "results": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AgentEchoResult"
-            },
-            "description": "Array listing echo results for every agent assigned to the community."
+          "source": {
+            "type": "string",
+            "example": "keeper",
+            "description": "Identifier of the component that emitted the event."
+          },
+          "tenant_id": {
+            "type": "string",
+            "example": "community-1",
+            "description": "Resolved tenant identifier."
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-06T07:10:50Z",
+            "description": "UTC timestamp when the event was created."
+          },
+          "payload": {
+            "type": "object",
+            "description": "Schema-specific event data payload."
           }
         },
-        "description": "Result payload of the community echo test. Why: Assures developers that horizontal network routes and message brokers are fully functional between all assigned agents."
+        "description": "Canonical, schema-agnostic event envelope used throughout the reactive mesh."
       }
     }
   }
