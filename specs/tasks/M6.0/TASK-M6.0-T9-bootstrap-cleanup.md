@@ -5,7 +5,7 @@
 | Task ID     | TASK-M6.0-T9                                            |
 | Spec        | SPEC-FR-M6.0                                            |
 | Boundary    | Bootstrap & Wiring — `cmd/`, `internal/keeper`, `internal/agent` |
-| Status      | DRAFT                                                   |
+| Status      | VERIFIED                                                |
 | Depends On  | TASK-M6.0-T5, TASK-M6.0-T8                              |
 
 ## Objective

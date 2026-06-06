@@ -95,6 +95,11 @@ func main() {
 		logger.Fatal().Msg("TS_AGENT_NAME is required but not set")
 	}
 
+	agentID := v.GetString("id")
+	if agentID == "" {
+		logger.Fatal().Msg("TS_AGENT_ID is required but not set")
+	}
+
 	communityRef := v.GetString("community.ref")
 	if communityRef == "" {
 		logger.Fatal().Msg("TS_AGENT_COMMUNITY_REF is required but not set")
@@ -292,13 +297,24 @@ func main() {
 		s3BlobStore = blobStoreAdapter
 	}
 
-	echoSubscriber := agent.NewEchoSubscriber(nc, agentName, communityRef, "", processor, s3BlobStore, logger)
-	if err := echoSubscriber.Start(ctx); err != nil {
-		logger.Fatal().Err(err).Msg("failed to start echo subscriber")
+	schemaRouter := service.NewSchemaRouterImpl(
+		agentID,
+		agentName,
+		processor,
+		memoryAdapter,
+		ltm,
+		embedder,
+		brain,
+		natsPublisher,
+	)
+
+	eventSubscriber := agent.NewEventSubscriber(nc, agentName, communityRef, schemaRouter, s3BlobStore, logger)
+	if err := eventSubscriber.Start(ctx); err != nil {
+		logger.Fatal().Err(err).Msg("failed to start event subscriber")
 	}
-	mgr.Register("echo-subscriber", func(ctx context.Context) error {
-		logger.Info().Msg("stopping echo subscriber")
-		return echoSubscriber.Stop()
+	mgr.Register("event-subscriber", func(ctx context.Context) error {
+		logger.Info().Msg("stopping event subscriber")
+		return eventSubscriber.Stop()
 	})
 
 	// 6. Create HTTP router with parallel readiness dependency checkers

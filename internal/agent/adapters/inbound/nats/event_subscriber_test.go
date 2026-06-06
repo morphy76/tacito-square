@@ -3,12 +3,16 @@ package nats_test
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	agentnats "github.com/morphy76/tacito-square/internal/agent/adapters/inbound/nats"
+	"github.com/morphy76/tacito-square/internal/shared/ports/outbound"
 	"github.com/morphy76/tacito-square/pkg/events"
+	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
@@ -26,6 +30,65 @@ func (m *MockSchemaRouter) RouteEvent(ctx context.Context, event events.DomainEv
 		return m.RouteEventFunc(ctx, event)
 	}
 	return nil
+}
+
+type mockBlobStore struct {
+	mu     sync.Mutex
+	puts   map[string][]byte
+	putErr error
+}
+
+var _ outbound.BlobStore = (*mockBlobStore)(nil)
+
+func newMockBlobStore() *mockBlobStore {
+	return &mockBlobStore{
+		puts: make(map[string][]byte),
+	}
+}
+
+func (m *mockBlobStore) Put(ctx context.Context, key string, data io.Reader, contentType string) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.putErr != nil {
+		return "", m.putErr
+	}
+	b, err := io.ReadAll(data)
+	if err != nil {
+		return "", err
+	}
+	m.puts[key] = b
+	return "http://mock-s3/test-bucket/" + key, nil
+}
+
+func (m *mockBlobStore) Get(ctx context.Context, key string) (io.ReadCloser, error) {
+	return nil, nil
+}
+
+func (m *mockBlobStore) Delete(ctx context.Context, key string) error {
+	return nil
+}
+
+func (m *mockBlobStore) Exists(ctx context.Context, key string) (bool, error) {
+	return false, nil
+}
+
+func startTestNatsServer(t *testing.T) (*server.Server, *nats.Conn) {
+	opts := &server.Options{
+		Host: "127.0.0.1",
+		Port: -1,
+	}
+	ns, err := server.NewServer(opts)
+	require.NoError(t, err)
+
+	go ns.Start()
+	if !ns.ReadyForConnections(2 * time.Second) {
+		t.Fatal("NATS server not ready for connections")
+	}
+
+	nc, err := nats.Connect(ns.ClientURL())
+	require.NoError(t, err)
+
+	return ns, nc
 }
 
 func TestEventSubscriber_Routing(t *testing.T) {
