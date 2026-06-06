@@ -5,7 +5,7 @@
 | Task ID     | TASK-M6.0-T3                                             |
 | Spec        | SPEC-FR-M6.0                                             |
 | Boundary    | Keeper Service — `internal/keeper/application/service`   |
-| Status      | DRAFT                                                    |
+| Status      | IMPLEMENTED                                              |
 | Depends On  | TASK-M6.0-T2                                             |
 
 ## Objective
