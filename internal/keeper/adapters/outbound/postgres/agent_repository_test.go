@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
 	"github.com/morphy76/tacito-square/internal/shared/tenant"
+	"github.com/morphy76/tacito-square/pkg/agentcard"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -252,4 +253,114 @@ func TestAgentRepository_Lifecycle(t *testing.T) {
 		_, err = repo.GetByID(ctx, agent.ID)
 		assert.Error(t, err)
 	})
+}
+
+func TestAgentRepository_AgentRegistration(t *testing.T) {
+	dbURL := os.Getenv("TS_DATABASE_URL")
+	if dbURL == "" {
+		t.Skip("Skipping PostgreSQL integration test: TS_DATABASE_URL not set")
+	}
+
+	ten, _ := tenant.New("test-tenant.com", "")
+	ctx := tenant.ContextWithTenant(context.Background(), ten)
+
+	pool, err := pgxpool.New(ctx, dbURL)
+	require.NoError(t, err)
+	defer pool.Close()
+
+	// Clean up any test records
+	_, _ = pool.Exec(ctx, "DELETE FROM agent_registrations")
+	_, _ = pool.Exec(ctx, "DELETE FROM agent_skills")
+	_, _ = pool.Exec(ctx, "DELETE FROM agents WHERE name LIKE 'test-%'")
+	_, _ = pool.Exec(ctx, "DELETE FROM communities WHERE name LIKE 'test-%'")
+
+	repo := NewAgentRepository(pool)
+	commRepo := NewCommunityRepository(pool)
+
+	// Create prerequisite community
+	comm := &model.Community{
+		ID:        uuid.New(),
+		Name:      "test-comm-reg",
+		Topology:  "hub-spoke",
+		Status:    "active",
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+	}
+	err = commRepo.Create(ctx, comm)
+	require.NoError(t, err)
+
+	// Create prerequisite agent
+	agent := &model.Agent{
+		ID:          uuid.New(),
+		Name:        "test-agent-reg",
+		Description: "For registration test",
+		Brain: model.BrainConfig{
+			Model:             "gpt-4o",
+			Temperature:       0.7,
+			MaxTokens:         2048,
+			Endpoint:          "https://api.openai.com/v1",
+			CredentialsSecret: "secret",
+		},
+		ShortTermMemory: model.ShortTermMemoryConfig{
+			KeyNamespace: "test",
+			TTLSeconds:   3600,
+		},
+		LongTermMemory: model.LongTermMemoryConfig{
+			CollectionName:  "test",
+			VectorDimension: 1536,
+		},
+		Status:    model.AgentStatusDefined,
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+	}
+	err = repo.Create(ctx, agent)
+	require.NoError(t, err)
+
+	card := &agentcard.AgentCard{
+		Name:               "test-agent-reg",
+		Description:        "For registration test",
+		URL:                "http://test-agent",
+		Version:            "1.0.0",
+		Capabilities:       agentcard.AgentCardCapabilities{Streaming: true},
+		Authentication:     agentcard.AgentCardAuthentication{Schemes: []string{"Bearer"}},
+		DefaultInputModes:  []string{"text/plain"},
+		DefaultOutputModes: []string{"text/plain"},
+		Skills:             []agentcard.AgentCardSkill{},
+	}
+
+	t.Run("Upsert Registration", func(t *testing.T) {
+		err := repo.UpsertRegistration(ctx, agent.ID, comm.ID, card)
+		require.NoError(t, err)
+	})
+
+	t.Run("Get Registration", func(t *testing.T) {
+		fetched, err := repo.GetRegistration(ctx, agent.ID, comm.ID)
+		require.NoError(t, err)
+		assert.Equal(t, card.Name, fetched.Name)
+		assert.Equal(t, card.URL, fetched.URL)
+	})
+
+	t.Run("Get Active Registrations By Community", func(t *testing.T) {
+		list, err := repo.GetActiveRegistrationsByCommunity(ctx, comm.ID)
+		require.NoError(t, err)
+		assert.Len(t, list, 1)
+		assert.Equal(t, card.Name, list[0].Name)
+	})
+
+	t.Run("Prune Stale Registrations", func(t *testing.T) {
+		// Pruning with 0 threshold should prune immediately
+		prunedRefs, err := repo.PruneStaleRegistrations(ctx, 0)
+		require.NoError(t, err)
+		assert.Len(t, prunedRefs, 1)
+		assert.Equal(t, agent.ID.String(), prunedRefs[0].AgentID)
+		assert.Equal(t, comm.ID.String(), prunedRefs[0].CommunityID)
+
+		// Get should fail now
+		_, err = repo.GetRegistration(ctx, agent.ID, comm.ID)
+		assert.Error(t, err)
+	})
+
+	// Cleanup
+	_ = repo.Delete(ctx, agent.ID)
+	_ = commRepo.Delete(ctx, comm.ID)
 }

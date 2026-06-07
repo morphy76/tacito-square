@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
 	"github.com/morphy76/tacito-square/internal/shared/tenant"
+	"github.com/morphy76/tacito-square/pkg/agentcard"
 )
 
 // AgentRepository implements the outbound.AgentRepository port interface using PostgreSQL.
@@ -443,4 +444,152 @@ func (r *AgentRepository) UnassignFromCommunity(ctx context.Context, agentID uui
 
 		return nil
 	})
+}
+
+// UpsertRegistration registers an agent's active card.
+func (r *AgentRepository) UpsertRegistration(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID, card *agentcard.AgentCard) error {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return errors.New("tenant resolution failed")
+	}
+
+	cardJSON, err := json.Marshal(card)
+	if err != nil {
+		return fmt.Errorf("marshal agent card: %w", err)
+	}
+
+	query := `INSERT INTO agent_registrations (
+		agent_id, community_id, tenant_id, card, last_seen_at
+	) VALUES ($1, $2, $3, $4, $5)
+	ON CONFLICT (agent_id, community_id) DO UPDATE SET
+		card = EXCLUDED.card,
+		last_seen_at = EXCLUDED.last_seen_at`
+
+	exec := GetExecutor(ctx, r.pool)
+	now := time.Now().UTC()
+	_, err = exec.Exec(ctx, query, agentID, communityID, ten.FullName(), cardJSON, now)
+	if err != nil {
+		return fmt.Errorf("upsert agent registration: %w", err)
+	}
+	return nil
+}
+
+// GetRegistration retrieves a registered agent's card.
+func (r *AgentRepository) GetRegistration(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) (*agentcard.AgentCard, error) {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return nil, errors.New("tenant resolution failed")
+	}
+
+	query := `SELECT card FROM agent_registrations 
+	WHERE agent_id = $1 AND community_id = $2 AND tenant_id = $3`
+
+	var cardBytes []byte
+	exec := GetExecutor(ctx, r.pool)
+	err := exec.QueryRow(ctx, query, agentID, communityID, ten.FullName()).Scan(&cardBytes)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("registration not found for agent %s in community %s", agentID, communityID)
+		}
+		return nil, fmt.Errorf("get agent registration: %w", err)
+	}
+
+	var card agentcard.AgentCard
+	if err := json.Unmarshal(cardBytes, &card); err != nil {
+		return nil, fmt.Errorf("unmarshal agent card: %w", err)
+	}
+	return &card, nil
+}
+
+// GetActiveRegistrationsByCommunity retrieves registrations inside a community.
+func (r *AgentRepository) GetActiveRegistrationsByCommunity(ctx context.Context, communityID uuid.UUID) ([]*agentcard.AgentCard, error) {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return nil, errors.New("tenant resolution failed")
+	}
+
+	query := `SELECT card FROM agent_registrations 
+	WHERE community_id = $1 AND tenant_id = $2 ORDER BY last_seen_at DESC`
+
+	exec := GetExecutor(ctx, r.pool)
+	rows, err := exec.Query(ctx, query, communityID, ten.FullName())
+	if err != nil {
+		return nil, fmt.Errorf("get active registrations by community: %w", err)
+	}
+	defer rows.Close()
+
+	var cards []*agentcard.AgentCard
+	for rows.Next() {
+		var cardBytes []byte
+		if err := rows.Scan(&cardBytes); err != nil {
+			return nil, fmt.Errorf("scan agent card: %w", err)
+		}
+		var card agentcard.AgentCard
+		if err := json.Unmarshal(cardBytes, &card); err != nil {
+			return nil, fmt.Errorf("unmarshal agent card list item: %w", err)
+		}
+		cards = append(cards, &card)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
+	return cards, nil
+}
+
+// PruneStaleRegistrations deletes registrations missing heartbeats and sets agent status to offline.
+func (r *AgentRepository) PruneStaleRegistrations(ctx context.Context, threshold time.Duration) ([]agentcard.AgentCommunityRef, error) {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return nil, errors.New("tenant resolution failed")
+	}
+
+	cutoff := time.Now().UTC().Add(-threshold)
+
+	var pruned []agentcard.AgentCommunityRef
+	err := ExecuteInTxOrPool(ctx, r.pool, func(tx pgx.Tx) error {
+		// 1. Delete and return pruned agents
+		queryDel := `DELETE FROM agent_registrations 
+		WHERE last_seen_at < $1 AND tenant_id = $2
+		RETURNING agent_id, community_id`
+
+		rows, err := tx.Query(ctx, queryDel, cutoff, ten.FullName())
+		if err != nil {
+			return fmt.Errorf("delete stale registrations: %w", err)
+		}
+		defer rows.Close()
+
+		var agentIDs []uuid.UUID
+		for rows.Next() {
+			var aID uuid.UUID
+			var cID uuid.UUID
+			if err := rows.Scan(&aID, &cID); err != nil {
+				return fmt.Errorf("scan pruned registration: %w", err)
+			}
+			agentIDs = append(agentIDs, aID)
+			pruned = append(pruned, agentcard.AgentCommunityRef{
+				AgentID:     aID.String(),
+				CommunityID: cID.String(),
+			})
+		}
+		if err := rows.Err(); err != nil {
+			return fmt.Errorf("rows error: %w", err)
+		}
+
+		// 2. Set status to offline (stopped) in agents table
+		if len(agentIDs) > 0 {
+			queryUpdate := `UPDATE agents SET status = $1, updated_at = $2 
+			WHERE id = ANY($3) AND tenant_id = $4`
+			
+			_, err = tx.Exec(ctx, queryUpdate, string(model.AgentStatusStopped), time.Now().UTC(), agentIDs, ten.FullName())
+			if err != nil {
+				return fmt.Errorf("update pruned agents status: %w", err)
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return pruned, nil
 }

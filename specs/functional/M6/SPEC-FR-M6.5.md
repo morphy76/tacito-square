@@ -103,15 +103,16 @@ The Agent Card MUST adhere to the official A2A AgentCard JSON schema. In Tacito 
   `ts.community.{community_id}.agent.{agent_id}.heartbeat`
 - **Registry Update:** The Keeper subscribes to the heartbeat topic wildcard `ts.community.*.agent.*.heartbeat`. Upon receiving a heartbeat:
   - It extracts the `AgentCard` payload and validates it.
-  - It saves/updates the card in the database by updating the `card` column of the matching agent in the `agents` table.
-  - It updates the agent's status to `running` or `active` and refreshes the `updated_at` timestamp.
+  - It saves/updates the card in the database by upserting into the `agent_registrations` table (updating the `card` and setting `last_seen_at = NOW()`).
+  - It updates the agent's status to `running` or `active` in the `agents` table.
   - It invalidates/updates the Keeper's Redis cache for that community's active cards.
 - **OTel context:** The NATS heartbeat message must carry and propagate the active OpenTelemetry context using `X-Tacito-Tenant` and other standard headers.
 
 ### 3. Registry Pruning
 - The Keeper maintains a background scheduler/timer task to check for dead agents.
-- If no heartbeat is received from an agent within $M$ seconds (default: 30s, configurable), the Keeper:
-  - Updates the agent's status in PostgreSQL to `offline`.
+- If no heartbeat is received from an agent within $M$ seconds (default: 30s, configurable) as calculated from `last_seen_at` in the `agent_registrations` table, the Keeper:
+  - Updates the agent's status in PostgreSQL `agents` table to `offline`.
+  - Deletes the registration row from `agent_registrations`.
   - Clears/removes the agent's card from the Redis active cache.
   - Publishes a NATS status change event to `ts.community.{community_id}.agent.{agent_id}.status` with status `offline` so other agents can invalidate their client-side cache.
 
@@ -163,10 +164,10 @@ To remain compliant with standard A2A protocol structures, the registry exposes 
 
 ## Acceptance Criteria
 
-1. **DB Schema:** The `agents` table contains a `card` JSONB column.
+1. **DB Schema:** A separate `agent_registrations` table maps agent IDs and community IDs to their active `card` JSONB data and `last_seen_at` timestamps.
 2. **Agent Heartbeat:** On startup and every 10s, the agent publishes its card to `ts.community.{community_id}.agent.{agent_id}.heartbeat` with correct OpenTelemetry headers.
-3. **Keeper Registry Ingestion:** Keeper receives the NATS heartbeats, validates the payload against the AgentCard schema, updates Postgres (status to `running` and the `card` column), and caches it in Redis.
-4. **Keeper Pruning:** If an agent's heartbeat is missing for 30s, Keeper transitions the status to `offline` and clears its cache.
+3. **Keeper Registry Ingestion:** Keeper receives the NATS heartbeats, validates the payload against the AgentCard schema, upserts the `agent_registrations` table, updates the `agents` table status to `running`, and caches the card in Redis.
+4. **Keeper Pruning:** If an agent's heartbeat is missing for 30s, Keeper deletes the `agent_registrations` record, transitions the status in `agents` to `offline`, and clears its cache.
 5. **NATS Discovery:** Agents can execute a NATS Request on `ts.community.{community_id}.registry.request` and receive the community's active agent cards under 10ms.
 6. **Local Caching:** Agents cache the retrieved cards in memory and invalidate them reactively when receiving agent status updates from NATS.
 7. **HTTP Discovery:**

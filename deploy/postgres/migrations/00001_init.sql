@@ -139,10 +139,22 @@ CREATE TABLE IF NOT EXISTS agent_skills (
     skill_id UUID REFERENCES skills(id) ON DELETE CASCADE,
     PRIMARY KEY (agent_id, skill_id)
 );
+
+CREATE TABLE IF NOT EXISTS agent_registrations (
+    agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+    community_id UUID NOT NULL REFERENCES communities(id) ON DELETE CASCADE,
+    tenant_id VARCHAR(255) NOT NULL,
+    card JSONB NOT NULL,
+    last_seen_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    PRIMARY KEY (agent_id, community_id)
+);
+CREATE INDEX IF NOT EXISTS idx_agent_registrations_tenant_id ON agent_registrations(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_agent_registrations_community ON agent_registrations(community_id);
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
+DROP TABLE IF EXISTS agent_registrations;
 DROP TABLE IF EXISTS agent_skills;
 DROP TABLE IF EXISTS agents;
 DROP TABLE IF EXISTS communities;
