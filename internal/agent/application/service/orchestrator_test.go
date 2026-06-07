@@ -418,23 +418,30 @@ func TestOrchestrator_LoopDetection(t *testing.T) {
 		require.NoError(t, err)
 		assert.Nil(t, state)
 
-		// Check publishes contains the EndThread event and fallback error message
+		// Check publishes contains the progression update, EndThread event, and fallback error message
 		publishes := mockPublisher.GetPublishes()
-		require.Len(t, publishes, 2)
+		require.Len(t, publishes, 3)
+
+		// Verify progression update
+		var progEvt events.DomainEvent
+		err = json.Unmarshal(publishes[0].Data, &progEvt)
+		require.NoError(t, err)
+		assert.Equal(t, events.SchemaConversationalAgentResponse, progEvt.SchemaRef)
+		assert.Equal(t, "ts.community.comm-1.agent.hub-123.thread.thread-abc.response", publishes[0].Subject)
 
 		// 1. Verify EndThread event sent to spokes
 		var endEvt events.DomainEvent
-		err = json.Unmarshal(publishes[0].Data, &endEvt)
+		err = json.Unmarshal(publishes[1].Data, &endEvt)
 		require.NoError(t, err)
 		assert.Equal(t, events.SchemaConversationalEndThread, endEvt.SchemaRef)
-		assert.Equal(t, "ts.community.comm-1.agent.all", publishes[0].Subject)
+		assert.Equal(t, "ts.community.comm-1.agent.all", publishes[1].Subject)
 
 		// 2. Verify Final Response sent to Keeper/BFF
 		var finalEvt events.DomainEvent
-		err = json.Unmarshal(publishes[1].Data, &finalEvt)
+		err = json.Unmarshal(publishes[2].Data, &finalEvt)
 		require.NoError(t, err)
 		assert.Equal(t, events.SchemaConversationalAgentResponse, finalEvt.SchemaRef)
-		assert.Equal(t, "ts.community.comm-1.agent.hub-123.thread.thread-abc.response", publishes[1].Subject)
+		assert.Equal(t, "ts.community.comm-1.agent.hub-123.thread.thread-abc.response", publishes[2].Subject)
 
 		var finalPayload events.AgentResponsePayload
 		err = json.Unmarshal(finalEvt.Payload, &finalPayload)

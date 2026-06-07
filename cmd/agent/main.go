@@ -16,6 +16,7 @@ import (
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/ollama"
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/openai"
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/qdrant"
+	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/cache"
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/redis"
 	"github.com/morphy76/tacito-square/internal/agent/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/agent/application/service"
@@ -56,6 +57,7 @@ func main() {
 	v.SetDefault("s3.chunk.size", 32*1024)
 	v.SetDefault("bypass.ltm", true)
 	v.SetDefault("role", "spoke")
+	v.SetDefault("tenant.id", "default")
 
 	port := v.GetString("port")
 	logLevel := v.GetString("log.level")
@@ -106,6 +108,7 @@ func main() {
 		logger.Fatal().Msg("TS_AGENT_COMMUNITY_REF is required but not set")
 	}
 
+	tenantID := v.GetString("tenant.id")
 	agentRole := v.GetString("role")
 
 	nc, err := agent.ConnectNATS(natsURL, logger)
@@ -300,10 +303,39 @@ func main() {
 		s3BlobStore = blobStoreAdapter
 	}
 
+	var orchestrator *service.Orchestrator
+	var clientCache *cache.ClientCache
+
+	if agentRole == "hub" {
+		clientCache = cache.NewClientCache(nc, communityRef, tenantID, logger)
+		if err := clientCache.Start(ctx); err != nil {
+			logger.Fatal().Err(err).Msg("failed to start client cache")
+		}
+		mgr.Register("client-cache", func(ctx context.Context) error {
+			logger.Info().Msg("stopping client cache")
+			return clientCache.Stop()
+		})
+
+		orchestrator = service.NewOrchestrator(
+			agentID,
+			agentName,
+			communityRef,
+			brain,
+			memoryAdapter,
+			memoryAdapter,
+			clientCache,
+			memoryAdapter,
+			natsPublisher,
+			systemPrompt,
+		)
+	}
+
 	schemaRouter := service.NewSchemaRouterImpl(
 		agentID,
 		agentName,
+		agentRole,
 		processor,
+		orchestrator,
 		memoryAdapter,
 		ltm,
 		embedder,
