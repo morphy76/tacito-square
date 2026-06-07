@@ -11,6 +11,7 @@ import (
 	"github.com/morphy76/tacito-square/internal/agent/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/morphy76/tacito-square/pkg/agentcard"
+	"github.com/morphy76/tacito-square/pkg/events"
 	natsclient "github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
@@ -139,20 +140,6 @@ func (p *HeartbeatPublisher) publishHeartbeat() {
 		return
 	}
 
-	cardBytes, err := json.Marshal(card)
-	if err != nil {
-		p.logger.Error().Err(err).Msg("failed to marshal agent card for heartbeat")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return
-	}
-
-	p.logger.Trace().Int("payload_size_bytes", len(cardBytes)).Msg("marshaled agent card successfully")
-
-	subject := fmt.Sprintf("ts.community.%s.agent.%s.heartbeat", p.communityID, p.agentID)
-	msg := natsclient.NewMsg(subject)
-	msg.Data = cardBytes
-
 	// Tenant resolution (Rule compliant - single tenant variable search)
 	tenantID := p.cfg.GetString("tenant.id")
 	if tenantID == "" {
@@ -161,9 +148,44 @@ func (p *HeartbeatPublisher) publishHeartbeat() {
 	if tenantID == "" {
 		tenantID = os.Getenv("TENANT_ID")
 	}
-	if tenantID != "" {
-		msg.Header.Set("X-Tacito-Tenant", tenantID)
+	if tenantID == "" {
+		tenantID = "default"
 	}
+
+	// Construct DomainEvent wrapping the AgentCard
+	evt, err := events.NewDomainEvent(
+		events.SchemaInfrastructureAgentHeartbeat,
+		fmt.Sprintf("agent/%s", p.agentID),
+		tenantID,
+		card,
+	)
+	if err != nil {
+		p.logger.Error().Err(err).Msg("failed to construct heartbeat domain event")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return
+	}
+
+	evtBytes, err := json.Marshal(evt)
+	if err != nil {
+		p.logger.Error().Err(err).Msg("failed to marshal heartbeat domain event")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return
+	}
+
+	p.logger.Trace().Int("payload_size_bytes", len(evtBytes)).Msg("marshaled heartbeat domain event successfully")
+
+	subject := fmt.Sprintf("ts.community.%s.agent.%s.heartbeat", p.communityID, p.agentID)
+	msg := natsclient.NewMsg(subject)
+	msg.Data = evtBytes
+
+	// Set versioned schema, tenant, event_id, source, and occurred_at headers
+	msg.Header.Set("X-Tacito-Schema", evt.SchemaRef)
+	msg.Header.Set("X-Tacito-Source", evt.Source)
+	msg.Header.Set("X-Tacito-Tenant", evt.TenantID)
+	msg.Header.Set("X-Tacito-Event-ID", evt.EventID)
+	msg.Header.Set("X-Tacito-Occurred", evt.OccurredAt)
 
 	observability.InjectNATSContext(ctx, msg)
 

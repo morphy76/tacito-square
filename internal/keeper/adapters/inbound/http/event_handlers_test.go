@@ -209,3 +209,57 @@ func TestStreamEvents_HTTP_SSE(t *testing.T) {
 	assert.Contains(t, resp.Body.String(), "id: evt-123")
 	assert.Contains(t, resp.Body.String(), `data: {`)
 }
+
+func TestStreamEvents_HTTP_SSE_Blacklisted(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	pubUC := new(mockEventUseCase)
+	streamUC := new(mockEventStreamUseCase)
+	handler := NewEventHandler(pubUC, streamUC)
+
+	r := gin.New()
+	r.Use(testTenantMiddleware())
+	r.GET("/api/v1/events/stream", handler.StreamEvents)
+
+	sub := new(mockSubscription)
+	sub.On("Stop").Return(nil)
+
+	// Mock SubscribeEvents to invoke handler immediately with a blacklisted heartbeat event
+	streamUC.On("SubscribeEvents", mock.Anything, "test-tenant.com", mock.Anything).
+		Run(func(args mock.Arguments) {
+			h := args.Get(2).(func(*events.DomainEvent))
+			evt := &events.DomainEvent{
+				EventID:    "evt-hb",
+				SchemaRef:  events.SchemaInfrastructureAgentHeartbeat,
+				Source:     "agent/1",
+				TenantID:   "test-tenant.com",
+				OccurredAt: "2026-06-06T08:00:00Z",
+				Payload:    json.RawMessage(`{}`),
+			}
+			h(evt)
+		}).
+		Return(sub, nil)
+
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/events/stream", nil)
+	resp := httptest.NewRecorder()
+	closedChan := make(chan bool, 1)
+	customWriter := &closeNotifyingRecorder{
+		ResponseRecorder: resp,
+		closed:           closedChan,
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	req = req.WithContext(ctx)
+
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		closedChan <- true
+		cancel()
+	}()
+
+	r.ServeHTTP(customWriter, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.NotContains(t, resp.Body.String(), "evt-hb")
+	assert.NotContains(t, resp.Body.String(), "agent-heartbeat")
+}
+

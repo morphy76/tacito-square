@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/morphy76/tacito-square/pkg/agentcard"
+	"github.com/morphy76/tacito-square/pkg/events"
 	natsclient "github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
 )
@@ -122,9 +123,20 @@ func (c *ClientCache) handleHeartbeatMsg(msg *natsclient.Msg) {
 	}
 	agentID := parts[4]
 
+	var evt events.DomainEvent
+	if err := json.Unmarshal(msg.Data, &evt); err != nil {
+		c.logger.Warn().Err(err).Msg("failed to unmarshal heartbeat domain event envelope")
+		return
+	}
+
+	if evt.SchemaRef != events.SchemaInfrastructureAgentHeartbeat {
+		c.logger.Warn().Str("schema_ref", evt.SchemaRef).Msg("unexpected schema in heartbeat message")
+		return
+	}
+
 	var card agentcard.AgentCard
-	if err := json.Unmarshal(msg.Data, &card); err != nil {
-		c.logger.Warn().Err(err).Msg("failed to unmarshal agent card heartbeat")
+	if err := json.Unmarshal(evt.Payload, &card); err != nil {
+		c.logger.Warn().Err(err).Msg("failed to unmarshal agent card from heartbeat payload")
 		return
 	}
 

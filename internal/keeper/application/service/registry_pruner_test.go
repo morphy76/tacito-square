@@ -2,6 +2,7 @@ package service_test
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -55,6 +56,7 @@ func (m *mockPrunerAgentRepository) DeleteRegistration(ctx context.Context, agen
 }
 
 type mockPrunerCache struct {
+	mu          sync.Mutex
 	invalidated []string
 }
 
@@ -63,19 +65,45 @@ func (m *mockPrunerCache) Set(ctx context.Context, key string, value interface{}
 	return nil
 }
 func (m *mockPrunerCache) Invalidate(ctx context.Context, key string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.invalidated = append(m.invalidated, key)
 	return nil
 }
+func (m *mockPrunerCache) GetInvalidated() []string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := make([]string, len(m.invalidated))
+	copy(out, m.invalidated)
+	return out
+}
 
 type mockPrunerEventPublisher struct {
+	mu        sync.Mutex
 	published []events.DomainEvent
 	subjects  []string
 }
 
 func (m *mockPrunerEventPublisher) Publish(ctx context.Context, subject string, event events.DomainEvent) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.published = append(m.published, event)
 	m.subjects = append(m.subjects, subject)
 	return nil
+}
+func (m *mockPrunerEventPublisher) GetPublished() []events.DomainEvent {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := make([]events.DomainEvent, len(m.published))
+	copy(out, m.published)
+	return out
+}
+func (m *mockPrunerEventPublisher) GetSubjects() []string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := make([]string, len(m.subjects))
+	copy(out, m.subjects)
+	return out
 }
 
 func TestRegistryPruner_Pruning(t *testing.T) {
@@ -106,10 +134,11 @@ func TestRegistryPruner_Pruning(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Assert pruner evicted stale registration from cache
-	assert.Contains(t, cacheAdapter.invalidated, "communities:comm-1:agents:agent-1")
+	assert.Contains(t, cacheAdapter.GetInvalidated(), "communities:comm-1:agents:agent-1")
 
 	// Assert pruner published offline status NATS event
-	assert.Contains(t, publisher.subjects, "ts.community.comm-1.agent.agent-1.status")
-	assert.GreaterOrEqual(t, len(publisher.published), 1)
-	assert.Contains(t, string(publisher.published[0].Payload), "offline")
+	assert.Contains(t, publisher.GetSubjects(), "ts.community.comm-1.agent.agent-1.status")
+	published := publisher.GetPublished()
+	assert.GreaterOrEqual(t, len(published), 1)
+	assert.Contains(t, string(published[0].Payload), "offline")
 }

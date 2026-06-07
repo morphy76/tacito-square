@@ -97,6 +97,10 @@ func (h *EventHandler) PublishEvent(c *gin.Context) {
 	c.JSON(http.StatusAccepted, evt)
 }
 
+var sseSchemaBlacklist = map[string]bool{
+	events.SchemaInfrastructureAgentHeartbeat: true,
+}
+
 func (h *EventHandler) StreamEvents(c *gin.Context) {
 	ctx, cancel := context.WithCancel(c.Request.Context())
 	defer cancel()
@@ -133,6 +137,10 @@ func (h *EventHandler) StreamEvents(c *gin.Context) {
 	eventChan := make(chan string, 100)
 
 	sub, err := h.eventStreamUseCase.SubscribeEvents(ctx, ten.FullName(), func(evt *events.DomainEvent) {
+		if evt.SchemaRef == "" || sseSchemaBlacklist[evt.SchemaRef] {
+			return
+		}
+
 		// Format: event is last segment of schema URN (e.g. "urn:tacito:schema:conversational:start-thread:v1" -> "start-thread")
 		parts := strings.Split(evt.SchemaRef, ":")
 		eventType := parts[len(parts)-1]

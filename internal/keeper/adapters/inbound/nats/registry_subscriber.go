@@ -14,6 +14,7 @@ import (
 	sharedports "github.com/morphy76/tacito-square/internal/shared/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/shared/tenant"
 	"github.com/morphy76/tacito-square/pkg/agentcard"
+	"github.com/morphy76/tacito-square/pkg/events"
 	"github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
@@ -94,9 +95,20 @@ func (s *RegistrySubscriber) handleHeartbeat(ctx context.Context, logger zerolog
 		return nil
 	}
 
+	var evt events.DomainEvent
+	if err := json.Unmarshal(msg.Data, &evt); err != nil {
+		logger.Warn().Err(err).Msg("failed to unmarshal domain event envelope, skipping")
+		return nil
+	}
+
+	if evt.SchemaRef != events.SchemaInfrastructureAgentHeartbeat {
+		logger.Warn().Str("schema_ref", evt.SchemaRef).Msg("unexpected schema in heartbeat NATS subject, skipping")
+		return nil
+	}
+
 	var card agentcard.AgentCard
-	if err := json.Unmarshal(msg.Data, &card); err != nil {
-		logger.Warn().Err(err).Msg("failed to unmarshal agent card payload, skipping")
+	if err := json.Unmarshal(evt.Payload, &card); err != nil {
+		logger.Warn().Err(err).Msg("failed to unmarshal agent card from event payload, skipping")
 		return nil
 	}
 

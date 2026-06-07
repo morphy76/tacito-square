@@ -9,6 +9,7 @@ import (
 	agentnats "github.com/morphy76/tacito-square/internal/agent/adapters/outbound/nats"
 	agentmodel "github.com/morphy76/tacito-square/internal/agent/domain/model"
 	"github.com/morphy76/tacito-square/pkg/agentcard"
+	"github.com/morphy76/tacito-square/pkg/events"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
@@ -88,8 +89,13 @@ func TestHeartbeatPublisher_PublishesCard(t *testing.T) {
 	// Assert message is received and valid
 	select {
 	case data := <-ch:
+		var evt events.DomainEvent
+		err := json.Unmarshal(data, &evt)
+		require.NoError(t, err)
+		assert.Equal(t, events.SchemaInfrastructureAgentHeartbeat, evt.SchemaRef)
+
 		var card agentcard.AgentCard
-		err := json.Unmarshal(data, &card)
+		err = json.Unmarshal(evt.Payload, &card)
 		require.NoError(t, err)
 		assert.Equal(t, "test-agent-name", card.Name)
 		assert.Equal(t, "A test agent", card.Description)
@@ -139,8 +145,13 @@ func TestHeartbeatPublisher_IncludesMCPTools(t *testing.T) {
 
 	select {
 	case data := <-ch:
+		var evt events.DomainEvent
+		err := json.Unmarshal(data, &evt)
+		require.NoError(t, err)
+		assert.Equal(t, events.SchemaInfrastructureAgentHeartbeat, evt.SchemaRef)
+
 		var card agentcard.AgentCard
-		err := json.Unmarshal(data, &card)
+		err = json.Unmarshal(evt.Payload, &card)
 		require.NoError(t, err)
 		assert.Len(t, card.Skills, 1)
 		assert.Equal(t, "tool-get_weather", card.Skills[0].ID)
@@ -185,8 +196,13 @@ func TestHeartbeatPublisher_ParsesSystemPrompt(t *testing.T) {
 
 	select {
 	case data := <-ch:
+		var evt events.DomainEvent
+		err := json.Unmarshal(data, &evt)
+		require.NoError(t, err)
+		assert.Equal(t, events.SchemaInfrastructureAgentHeartbeat, evt.SchemaRef)
+
 		var card agentcard.AgentCard
-		err := json.Unmarshal(data, &card)
+		err = json.Unmarshal(evt.Payload, &card)
 		require.NoError(t, err)
 		assert.Equal(t, "test-agent-name", card.Name)
 		assert.Equal(t, "Dynamic description from prompt", card.Description)

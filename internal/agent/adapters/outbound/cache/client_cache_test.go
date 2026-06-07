@@ -9,6 +9,7 @@ import (
 
 	agentcache "github.com/morphy76/tacito-square/internal/agent/adapters/outbound/cache"
 	"github.com/morphy76/tacito-square/pkg/agentcard"
+	"github.com/morphy76/tacito-square/pkg/events"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
@@ -56,11 +57,26 @@ func TestClientCache_ReactiveUpdates(t *testing.T) {
 		URL:         "http://agent-alpha",
 		Version:     "1.0.0",
 	}
-	cardBytes, err := json.Marshal(card)
+	evt, err := events.NewDomainEvent(
+		events.SchemaInfrastructureAgentHeartbeat,
+		"agent/agent-1",
+		tenantID,
+		card,
+	)
+	require.NoError(t, err)
+	evtBytes, err := json.Marshal(evt)
 	require.NoError(t, err)
 
 	hbSubject := fmt.Sprintf("ts.community.%s.agent.agent-1.heartbeat", communityID)
-	err = nc.Publish(hbSubject, cardBytes)
+	msg := nats.NewMsg(hbSubject)
+	msg.Data = evtBytes
+	msg.Header.Set("X-Tacito-Schema", evt.SchemaRef)
+	msg.Header.Set("X-Tacito-Source", evt.Source)
+	msg.Header.Set("X-Tacito-Tenant", evt.TenantID)
+	msg.Header.Set("X-Tacito-Event-ID", evt.EventID)
+	msg.Header.Set("X-Tacito-Occurred", evt.OccurredAt)
+
+	err = nc.PublishMsg(msg)
 	require.NoError(t, err)
 
 	// Wait for subscription processing

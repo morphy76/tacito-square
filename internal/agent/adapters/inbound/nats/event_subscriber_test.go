@@ -20,16 +20,29 @@ import (
 )
 
 type MockSchemaRouter struct {
+	mu             sync.Mutex
 	RouteEventFunc func(ctx context.Context, event events.DomainEvent) error
-	Calls          []events.DomainEvent
+	calls          []events.DomainEvent
 }
 
 func (m *MockSchemaRouter) RouteEvent(ctx context.Context, event events.DomainEvent) error {
-	m.Calls = append(m.Calls, event)
-	if m.RouteEventFunc != nil {
-		return m.RouteEventFunc(ctx, event)
+	m.mu.Lock()
+	m.calls = append(m.calls, event)
+	fn := m.RouteEventFunc
+	m.mu.Unlock()
+
+	if fn != nil {
+		return fn(ctx, event)
 	}
 	return nil
+}
+
+func (m *MockSchemaRouter) GetCalls() []events.DomainEvent {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := make([]events.DomainEvent, len(m.calls))
+	copy(out, m.calls)
+	return out
 }
 
 type mockBlobStore struct {
@@ -134,10 +147,11 @@ func TestEventSubscriber_Routing(t *testing.T) {
 	// Wait for processing
 	time.Sleep(100 * time.Millisecond)
 
-	require.Len(t, mockRouter.Calls, 1)
-	assert.Equal(t, events.SchemaConversationalStartThread, mockRouter.Calls[0].SchemaRef)
-	assert.Equal(t, "evt-123", mockRouter.Calls[0].EventID)
-	assert.Equal(t, "tenant-1", mockRouter.Calls[0].TenantID)
+	calls := mockRouter.GetCalls()
+	require.Len(t, calls, 1)
+	assert.Equal(t, events.SchemaConversationalStartThread, calls[0].SchemaRef)
+	assert.Equal(t, "evt-123", calls[0].EventID)
+	assert.Equal(t, "tenant-1", calls[0].TenantID)
 }
 
 func TestEventSubscriber_BroadcastRouting(t *testing.T) {
@@ -184,9 +198,10 @@ func TestEventSubscriber_BroadcastRouting(t *testing.T) {
 	// Wait for processing
 	time.Sleep(100 * time.Millisecond)
 
-	require.Len(t, mockRouter.Calls, 1)
-	assert.Equal(t, events.SchemaConversationalStartThread, mockRouter.Calls[0].SchemaRef)
-	assert.Equal(t, "evt-456", mockRouter.Calls[0].EventID)
+	calls := mockRouter.GetCalls()
+	require.Len(t, calls, 1)
+	assert.Equal(t, events.SchemaConversationalStartThread, calls[0].SchemaRef)
+	assert.Equal(t, "evt-456", calls[0].EventID)
 }
 
 func TestEventSubscriber_InvalidSchema(t *testing.T) {
@@ -210,7 +225,7 @@ func TestEventSubscriber_InvalidSchema(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	assert.Empty(t, mockRouter.Calls)
+	assert.Empty(t, mockRouter.GetCalls())
 }
 
 func TestOffloadUtility(t *testing.T) {

@@ -19,6 +19,7 @@ import (
 	sharedports "github.com/morphy76/tacito-square/internal/shared/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/shared/tenant"
 	"github.com/morphy76/tacito-square/pkg/agentcard"
+	"github.com/morphy76/tacito-square/pkg/events"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
@@ -157,12 +158,23 @@ func TestRegistry_Ingestion(t *testing.T) {
 		Skills:             []agentcard.AgentCardSkill{},
 	}
 
-	cardBytes, err := json.Marshal(card)
+	evt, err := events.NewDomainEvent(
+		events.SchemaInfrastructureAgentHeartbeat,
+		fmt.Sprintf("agent/%s", ag.ID),
+		ten.FullName(),
+		card,
+	)
+	require.NoError(t, err)
+	evtBytes, err := json.Marshal(evt)
 	require.NoError(t, err)
 
 	msg := nats.NewMsg(fmt.Sprintf("ts.community.%s.agent.%s.heartbeat", comm.ID, ag.ID))
-	msg.Data = cardBytes
-	msg.Header.Set("X-Tacito-Tenant", ten.FullName())
+	msg.Data = evtBytes
+	msg.Header.Set("X-Tacito-Schema", evt.SchemaRef)
+	msg.Header.Set("X-Tacito-Source", evt.Source)
+	msg.Header.Set("X-Tacito-Tenant", evt.TenantID)
+	msg.Header.Set("X-Tacito-Event-ID", evt.EventID)
+	msg.Header.Set("X-Tacito-Occurred", evt.OccurredAt)
 
 	err = nc.PublishMsg(msg)
 	require.NoError(t, err)
