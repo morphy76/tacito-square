@@ -15,6 +15,8 @@ import (
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/inbound"
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
 	"github.com/morphy76/tacito-square/pkg/events"
+	"github.com/morphy76/tacito-square/pkg/agentcard"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -48,7 +50,7 @@ func TestOpenAPIContract_Parity(t *testing.T) {
 	require.NoError(t, err, "failed to parse openapi.json")
 
 	// 2. Bootstrap Gin router (nil pool is fine)
-	router := keeper.NewServer(nil, nil, nil)
+	router := keeper.NewServer(nil, nil, nil, nil, zerolog.Nop())
 	require.NotNil(t, router)
 
 	// Extract registered Gin routes under /api/v1
@@ -90,6 +92,13 @@ func TestOpenAPIContract_Parity(t *testing.T) {
 
 	// 4. Bidirectional Schema/Model Parity Checks (No Less, No More)
 	schemasToVerify := map[string]interface{}{
+		"AgentCardProvider":             agentcard.AgentCardProvider{},
+		"AgentCardCapabilities":         agentcard.AgentCardCapabilities{},
+		"AgentCardAuthentication":       agentcard.AgentCardAuthentication{},
+		"AgentCardSkill":                agentcard.AgentCardSkill{},
+		"AgentCard":                     agentcard.AgentCard{},
+		"CommunityAgentSummary":         model.CommunityAgentSummary{},
+		"CommunityCard":                 model.CommunityCard{},
 		"CreateLLMBindingRequest":       httpAdapter.CreateLLMBindingRequest{},
 		"UpdateLLMBindingRequest":       httpAdapter.UpdateLLMBindingRequest{},
 		"LLMBinding":                    model.LLMBinding{},

@@ -2386,6 +2386,151 @@
         "description": "Clears an agent's association with a community, returning its status to standalone 'defined'. Why: Revokes community event membership. Caution: This operation requires the agent to be undeployed first."
       }
     },
+    "/communities/{community_id}/agents/{agent_id}/.well-known/agent-card.json": {
+      "get": {
+        "summary": "Retrieve an Agent's A2A AgentCard",
+        "operationId": "getAgentCard",
+        "tags": [
+          "community/communities"
+        ],
+        "parameters": [
+          {
+            "name": "community_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Community.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Agent.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The AgentCard payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentCard"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "AgentCard registration not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Retrieves the A2A AgentCard containing capabilities, default modes, and skills of the specified agent in the community."
+      }
+    },
+    "/communities/{community_id}/.well-known/community-card.json": {
+      "get": {
+        "summary": "Retrieve a Community's collective CommunityCard",
+        "operationId": "getCommunityCard",
+        "tags": [
+          "community/communities"
+        ],
+        "parameters": [
+          {
+            "name": "community_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Community.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The CommunityCard payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityCard"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Community not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Retrieves the collective metadata and active member summaries of the community."
+      }
+    },
+    "/communities/{community_id}/.well-known/agent-cards.json": {
+      "get": {
+        "summary": "List active AgentCards in a Community",
+        "operationId": "getAgentCards",
+        "tags": [
+          "community/communities"
+        ],
+        "parameters": [
+          {
+            "name": "community_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Community.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of active AgentCards",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgentCard"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Community not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Retrieves a lightweight index of all active AgentCards inside the community."
+      }
+    },
     "/agents/{agent_id}/deploy": {
       "post": {
         "summary": "Deploy an Agent to the runtime environment",
@@ -2837,6 +2982,219 @@
   },
   "components": {
     "schemas": {
+      "AgentCardProvider": {
+        "type": "object",
+        "required": [
+          "organization",
+          "url"
+        ],
+        "properties": {
+          "organization": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentCardCapabilities": {
+        "type": "object",
+        "properties": {
+          "streaming": {
+            "type": "boolean"
+          },
+          "pushNotifications": {
+            "type": "boolean"
+          },
+          "stateTransitionHistory": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AgentCardAuthentication": {
+        "type": "object",
+        "required": [
+          "schemes"
+        ],
+        "properties": {
+          "schemes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "credentials": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentCardSkill": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "tags"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "examples": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "inputModes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "outputModes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AgentCard": {
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "url",
+          "version",
+          "capabilities",
+          "authentication",
+          "defaultInputModes",
+          "defaultOutputModes",
+          "skills"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/AgentCardProvider"
+          },
+          "version": {
+            "type": "string"
+          },
+          "documentationUrl": {
+            "type": "string"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/AgentCardCapabilities"
+          },
+          "authentication": {
+            "$ref": "#/components/schemas/AgentCardAuthentication"
+          },
+          "defaultInputModes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "defaultOutputModes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentCardSkill"
+            }
+          }
+        }
+      },
+      "CommunityAgentSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "version",
+          "description",
+          "capabilities"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CommunityCard": {
+        "type": "object",
+        "required": [
+          "community_id",
+          "name",
+          "description",
+          "topology",
+          "status",
+          "agents"
+        ],
+        "properties": {
+          "community_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "topology": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "agents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommunityAgentSummary"
+            }
+          }
+        }
+      },
       "CreateLLMBindingRequest": {
         "type": "object",
         "required": [

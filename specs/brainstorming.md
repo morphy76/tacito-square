@@ -63,3 +63,14 @@ Each direction is labeled with one of the following categories:
 | 32 | **Provide a standardized API test suite for the Keeper component**<br>Build a Bruno or Postman collection to verify and regression-test Keeper's HTTP endpoints. | ⚙️ Infra & Quality | **Already Addressed**<br>(Incorp. in draft `SPEC-FR-M9.3`) | **M9: Hardening** | 4 ⭐ | 3 | **0** |
 | 33 | **Establish BFF and Frontend development guidelines**<br>Define guidelines for stateless architecture, avoiding HTTP sessions, and storing auth tokens securely in encrypted cookies. | ⚙️ Infra & Quality | **Already Addressed**<br>(Incorp. in draft `SPEC-FR-M7.1`) | **M7: BFF & UIs** | 4 ⭐ | 3 | **0** |
 | 34 | **Optimize component startup times and container initialization**<br>Profile and streamline system initialization processes to allow faster scaling and cold starts. | ⚙️ Infra & Quality | **Already Addressed**<br>(Refines `SPEC-FR-M2.7`) | **M9: Hardening** | 3 | 2 | **0** |
+
+## Fee entries (before prioritization)
+
+- all get apis, except well-known like agent cards, should accept query string arguments (managed as shared module, as they will be used across the board) to: limit the reposonse model, by excluding/including fields, sort by field values ascending/descending, simple filtering by field values and values patterns, page and offset arguments for pagination, timestamp formats (RFC3339 with/without fractional seconds, epoch), timezone offset for timestamp conversions,
+- GraphQL APIs can be the primary API surface for the BFF, with REST APIs still operating to serve CLI clients.
+- why empty events {"event_id":"","schema_ref":"","source":"","tenant_id":"","occurred_at":"","payload":null} in SSE?
+- save conversation history for recovery and for long term memory
+- built-in tools and mcp tools in agent cards
+- bug? agent cards con http header expires == last modified
+- evaluate to move community end user operations from the keeper to a new gateway component
+- community attributes and usage enforcing, e.g. rate limits, quotas, max resources (e.g. number of agents, knowledge base size, etc.)

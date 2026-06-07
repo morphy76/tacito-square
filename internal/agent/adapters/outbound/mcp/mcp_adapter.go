@@ -135,6 +135,9 @@ func defaultTransportFactory(info outbound.MCPClientInfo) (mcp.Transport, error)
 }
 
 func (a *MCPAdapter) ListAllowedTools(ctx context.Context) ([]model.ToolDefinition, error) {
+	if a == nil {
+		return nil, nil
+	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -201,6 +204,9 @@ func (a *MCPAdapter) ListAllowedTools(ctx context.Context) ([]model.ToolDefiniti
 
 
 func (a *MCPAdapter) Execute(ctx context.Context, toolName string, arguments map[string]any) (string, error) {
+	if a == nil {
+		return "", nil
+	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -266,6 +272,9 @@ func (a *MCPAdapter) Execute(ctx context.Context, toolName string, arguments map
 }
 
 func (a *MCPAdapter) Close(ctx context.Context) error {
+	if a == nil {
+		return nil
+	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
 

@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
 	"github.com/morphy76/tacito-square/internal/shared/tenant"
+	"github.com/morphy76/tacito-square/pkg/agentcard"
 )
 
 // AgentRepository implements the outbound.AgentRepository port interface using PostgreSQL.
@@ -444,3 +445,216 @@ func (r *AgentRepository) UnassignFromCommunity(ctx context.Context, agentID uui
 		return nil
 	})
 }
+
+// UpdateStatus updates an agent's status in the database.
+func (r *AgentRepository) UpdateStatus(ctx context.Context, agentID uuid.UUID, status model.AgentStatus) error {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return errors.New("tenant resolution failed")
+	}
+
+	query := `UPDATE agents SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4`
+
+	exec := GetExecutor(ctx, r.pool)
+	_, err := exec.Exec(ctx, query, string(status), time.Now().UTC(), agentID, ten.FullName())
+	if err != nil {
+		return fmt.Errorf("update agent status: %w", err)
+	}
+	return nil
+}
+
+// UpsertRegistration registers an agent's active card.
+func (r *AgentRepository) UpsertRegistration(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID, card *agentcard.AgentCard) error {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return errors.New("tenant resolution failed")
+	}
+
+	cardJSON, err := json.Marshal(card)
+	if err != nil {
+		return fmt.Errorf("marshal agent card: %w", err)
+	}
+
+	query := `INSERT INTO agent_registrations (
+		agent_id, community_id, tenant_id, card, last_seen_at
+	) VALUES ($1, $2, $3, $4, $5)
+	ON CONFLICT (agent_id, community_id) DO UPDATE SET
+		card = EXCLUDED.card,
+		last_seen_at = EXCLUDED.last_seen_at`
+
+	exec := GetExecutor(ctx, r.pool)
+	now := time.Now().UTC()
+	_, err = exec.Exec(ctx, query, agentID, communityID, ten.FullName(), cardJSON, now)
+	if err != nil {
+		return fmt.Errorf("upsert agent registration: %w", err)
+	}
+	return nil
+}
+
+// GetRegistration retrieves a registered agent's card.
+func (r *AgentRepository) GetRegistration(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) (*agentcard.AgentCard, time.Time, error) {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return nil, time.Time{}, errors.New("tenant resolution failed")
+	}
+
+	query := `SELECT card, last_seen_at FROM agent_registrations 
+	WHERE agent_id = $1 AND community_id = $2 AND tenant_id = $3`
+
+	var cardBytes []byte
+	var lastSeen time.Time
+	exec := GetExecutor(ctx, r.pool)
+	err := exec.QueryRow(ctx, query, agentID, communityID, ten.FullName()).Scan(&cardBytes, &lastSeen)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, time.Time{}, fmt.Errorf("registration not found for agent %s in community %s", agentID, communityID)
+		}
+		return nil, time.Time{}, fmt.Errorf("get agent registration: %w", err)
+	}
+
+	var card agentcard.AgentCard
+	if err := json.Unmarshal(cardBytes, &card); err != nil {
+		return nil, time.Time{}, fmt.Errorf("unmarshal agent card: %w", err)
+	}
+	return &card, lastSeen, nil
+}
+
+// GetActiveRegistrationsByCommunity retrieves registrations inside a community.
+func (r *AgentRepository) GetActiveRegistrationsByCommunity(ctx context.Context, communityID uuid.UUID) ([]*agentcard.AgentCard, time.Time, error) {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return nil, time.Time{}, errors.New("tenant resolution failed")
+	}
+
+	query := `SELECT card, last_seen_at FROM agent_registrations 
+	WHERE community_id = $1 AND tenant_id = $2 ORDER BY last_seen_at DESC`
+
+	exec := GetExecutor(ctx, r.pool)
+	rows, err := exec.Query(ctx, query, communityID, ten.FullName())
+	if err != nil {
+		return nil, time.Time{}, fmt.Errorf("get active registrations by community: %w", err)
+	}
+	defer rows.Close()
+
+	var cards []*agentcard.AgentCard
+	var latestTime time.Time
+	for rows.Next() {
+		var cardBytes []byte
+		var lastSeen time.Time
+		if err := rows.Scan(&cardBytes, &lastSeen); err != nil {
+			return nil, time.Time{}, fmt.Errorf("scan agent card: %w", err)
+		}
+		if lastSeen.After(latestTime) {
+			latestTime = lastSeen
+		}
+		var card agentcard.AgentCard
+		if err := json.Unmarshal(cardBytes, &card); err != nil {
+			return nil, time.Time{}, fmt.Errorf("unmarshal agent card list item: %w", err)
+		}
+		cards = append(cards, &card)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, time.Time{}, fmt.Errorf("rows iteration error: %w", err)
+	}
+	return cards, latestTime, nil
+}
+
+// PruneStaleRegistrations deletes registrations missing heartbeats and sets agent status to offline.
+func (r *AgentRepository) PruneStaleRegistrations(ctx context.Context, threshold time.Duration) ([]agentcard.AgentCommunityRef, error) {
+	ten := tenant.FromContext(ctx)
+
+	cutoff := time.Now().UTC().Add(-threshold)
+
+	type prunedRow struct {
+		agentID     uuid.UUID
+		communityID uuid.UUID
+		tenantID    string
+	}
+	var prunedRows []prunedRow
+
+	err := ExecuteInTxOrPool(ctx, r.pool, func(tx pgx.Tx) error {
+		var rows pgx.Rows
+		var err error
+
+		if ten != nil {
+			queryDel := `DELETE FROM agent_registrations 
+			WHERE last_seen_at < $1 AND tenant_id = $2
+			RETURNING agent_id, community_id, tenant_id`
+			rows, err = tx.Query(ctx, queryDel, cutoff, ten.FullName())
+		} else {
+			queryDel := `DELETE FROM agent_registrations 
+			WHERE last_seen_at < $1
+			RETURNING agent_id, community_id, tenant_id`
+			rows, err = tx.Query(ctx, queryDel, cutoff)
+		}
+
+		if err != nil {
+			return fmt.Errorf("delete stale registrations: %w", err)
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var rRow prunedRow
+			if err := rows.Scan(&rRow.agentID, &rRow.communityID, &rRow.tenantID); err != nil {
+				return fmt.Errorf("scan pruned registration: %w", err)
+			}
+			prunedRows = append(prunedRows, rRow)
+		}
+		if err := rows.Err(); err != nil {
+			return fmt.Errorf("rows error: %w", err)
+		}
+
+		// 2. Set status to offline (stopped) in agents table
+		if len(prunedRows) > 0 {
+			// Group by tenant for segregated updates
+			prunedByTenant := make(map[string][]uuid.UUID)
+			for _, row := range prunedRows {
+				prunedByTenant[row.tenantID] = append(prunedByTenant[row.tenantID], row.agentID)
+			}
+
+			for tID, agentIDs := range prunedByTenant {
+				queryUpdate := `UPDATE agents SET status = $1, updated_at = $2 
+				WHERE id = ANY($3) AND tenant_id = $4`
+				
+				_, err = tx.Exec(ctx, queryUpdate, string(model.AgentStatusStopped), time.Now().UTC(), agentIDs, tID)
+				if err != nil {
+					return fmt.Errorf("update pruned agents status: %w", err)
+				}
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	prunedRefs := make([]agentcard.AgentCommunityRef, 0, len(prunedRows))
+	for _, row := range prunedRows {
+		prunedRefs = append(prunedRefs, agentcard.AgentCommunityRef{
+			AgentID:     row.agentID.String(),
+			CommunityID: row.communityID.String(),
+			TenantID:    row.tenantID,
+		})
+	}
+	return prunedRefs, nil
+}
+
+// DeleteRegistration deletes a registered agent card for a community.
+func (r *AgentRepository) DeleteRegistration(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return errors.New("tenant resolution failed")
+	}
+
+	query := `DELETE FROM agent_registrations 
+	WHERE agent_id = $1 AND community_id = $2 AND tenant_id = $3`
+
+	exec := GetExecutor(ctx, r.pool)
+	_, err := exec.Exec(ctx, query, agentID, communityID, ten.FullName())
+	if err != nil {
+		return fmt.Errorf("delete agent registration: %w", err)
+	}
+	return nil
+}
+

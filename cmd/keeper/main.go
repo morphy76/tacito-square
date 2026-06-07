@@ -15,6 +15,7 @@ import (
 	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/morphy76/tacito-square/internal/shared/shutdown"
 	"github.com/nats-io/nats.go"
+	"github.com/redis/go-redis/v9"
 	k8sconfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
@@ -140,14 +141,40 @@ func main() {
 		})
 	}
 
-	// 5c. Initialize Kubernetes Client Config
+	// 5c. Initialize Redis connection
+	redisURL := v.GetString("redis.url")
+	var redisClient redis.UniversalClient
+	if redisURL != "" {
+		opts, err := redis.ParseURL(redisURL)
+		if err != nil {
+			logger.Error().Err(err).Str("redis.url", redisURL).Msg("failed to parse Redis URL, using in-memory fallback")
+		} else {
+			redisClient = redis.NewClient(opts)
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			if err := redisClient.Ping(ctx).Err(); err != nil {
+				logger.Error().Err(err).Msg("failed to connect to Redis, using in-memory fallback")
+				redisClient.Close()
+				redisClient = nil
+			}
+			cancel()
+		}
+	}
+
+	if redisClient != nil {
+		mgr.Register("redis-client", func(ctx context.Context) error {
+			logger.Info().Msg("closing Redis connection")
+			return redisClient.Close()
+		})
+	}
+
+	// 5d. Initialize Kubernetes Client Config
 	k8sCfg, err := k8sconfig.GetConfig()
 	if err != nil {
 		logger.Warn().Err(err).Msg("failed to load kubernetes config, crd coordinator will be disabled")
 	}
 
 	// 6. Create HTTP router
-	router := keeper.NewServer(pool, nc, k8sCfg)
+	router := keeper.NewServer(pool, nc, redisClient, k8sCfg, logger)
 
 	srv := &http.Server{
 		Addr:    ":" + port,

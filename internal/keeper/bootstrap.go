@@ -12,24 +12,35 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	httpAdapter "github.com/morphy76/tacito-square/internal/keeper/adapters/inbound/http"
+	keepernats "github.com/morphy76/tacito-square/internal/keeper/adapters/inbound/nats"
 	"github.com/morphy76/tacito-square/internal/keeper/adapters/outbound/crd"
 	outboundNats "github.com/morphy76/tacito-square/internal/keeper/adapters/outbound/nats"
 	"github.com/morphy76/tacito-square/internal/keeper/adapters/outbound/postgres"
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/keeper/application/service"
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
+	"github.com/morphy76/tacito-square/internal/shared/adapters/outbound/cache"
 	"github.com/morphy76/tacito-square/internal/shared/health"
 	"github.com/morphy76/tacito-square/internal/shared/observability"
+	sharedports "github.com/morphy76/tacito-square/internal/shared/ports/outbound"
 	"github.com/nats-io/nats.go"
 	"github.com/morphy76/tacito-square/api/openapi"
 	"github.com/morphy76/tacito-square/pkg/kubernetes/apis/tacito/v1alpha1"
+	"github.com/redis/go-redis/v9"
+	"github.com/rs/zerolog"
 	"k8s.io/client-go/rest"
 )
 
 var openapiJSON = openapi.Spec
 
 // NewServer creates and configures a new Gin HTTP server with health probes.
-func NewServer(pool *pgxpool.Pool, nc *nats.Conn, k8sConfig *rest.Config) *gin.Engine {
+func NewServer(
+	pool *pgxpool.Pool,
+	nc *nats.Conn,
+	redisClient redis.UniversalClient,
+	k8sConfig *rest.Config,
+	logger zerolog.Logger,
+) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 
 	r := gin.New()
@@ -40,6 +51,16 @@ func NewServer(pool *pgxpool.Pool, nc *nats.Conn, k8sConfig *rest.Config) *gin.E
 
 	// Register database connection pool statistics
 	observability.RegisterDBPoolStats(pool)
+
+	var cacheClient sharedports.Cache
+	if redisClient != nil {
+		redisWrapper := cache.NewRedisClientWrapper(redisClient)
+		cacheClient = cache.NewCacheAdapter(redisWrapper, "keeper")
+	} else {
+		// Use InMemoryRedis fallback cache
+		inMemRedis := cache.NewInMemoryRedis()
+		cacheClient = cache.NewCacheAdapter(inMemRedis, "keeper")
+	}
 
 	var checkers []health.Checker
 	if pool != nil {
@@ -53,10 +74,12 @@ func NewServer(pool *pgxpool.Pool, nc *nats.Conn, k8sConfig *rest.Config) *gin.E
 		})
 	}
 
-	// Add dynamic stubs for architectural dependencies required in k8s-best-practices.md but not yet globally wired in keeper bootstrap.
 	checkers = append(checkers, health.Checker{
 		Name: "nats",
 		Check: func(ctx context.Context) error {
+			if nc == nil || nc.Status() != nats.CONNECTED {
+				return errors.New("NATS connection is offline")
+			}
 			return nil
 		},
 	})
@@ -64,14 +87,20 @@ func NewServer(pool *pgxpool.Pool, nc *nats.Conn, k8sConfig *rest.Config) *gin.E
 	checkers = append(checkers, health.Checker{
 		Name: "redis",
 		Check: func(ctx context.Context) error {
-			return nil
+			if redisClient == nil {
+				return errors.New("redis client is not initialized")
+			}
+			return redisClient.Ping(ctx).Err()
 		},
 	})
 
 	checkers = append(checkers, health.Checker{
 		Name: "cache-redis",
 		Check: func(ctx context.Context) error {
-			return nil
+			if redisClient == nil {
+				return errors.New("cache redis client is not initialized")
+			}
+			return redisClient.Ping(ctx).Err()
 		},
 	})
 
@@ -105,14 +134,45 @@ func NewServer(pool *pgxpool.Pool, nc *nats.Conn, k8sConfig *rest.Config) *gin.E
 		}
 	}
 
-	agentService := service.NewAgentService(agentRepo, crdCoord)
-	communityService := service.NewCommunityService(communityRepo)
-	lifecycleService := service.NewLifecycleService(agentRepo, communityRepo, crdCoord, nc)
-
 	// Events feature
 	eventPublisher := outboundNats.NewNATSEventPublisher(nc)
 	eventSubscriber := outboundNats.NewNATSEventSubscriber(nc)
 	eventService := service.NewEventService(eventPublisher, eventSubscriber)
+
+	agentService := service.NewAgentService(agentRepo, crdCoord, cacheClient, eventPublisher)
+	communityService := service.NewCommunityService(communityRepo)
+	lifecycleService := service.NewLifecycleService(agentRepo, communityRepo, crdCoord, nc)
+
+	// Wire NATS registry subscriber, registry pruner, and registry handler
+	if nc != nil && pool != nil {
+		subscriber := keepernats.NewRegistrySubscriber(nc, agentRepo, cacheClient, logger)
+		pruner := service.NewRegistryPruner(agentRepo, cacheClient, eventPublisher, logger)
+		handler := keepernats.NewRegistryHandler(nc, agentRepo, cacheClient, logger)
+
+		ctx := context.Background()
+		if err := subscriber.Start(ctx); err != nil {
+			logger.Error().Err(err).Msg("failed to start registry subscriber")
+		}
+		if err := pruner.Start(ctx); err != nil {
+			logger.Error().Err(err).Msg("failed to start registry pruner")
+		}
+		if err := handler.Start(ctx); err != nil {
+			logger.Error().Err(err).Msg("failed to start registry handler")
+		}
+
+		nc.SetClosedHandler(func(conn *nats.Conn) {
+			logger.Info().Msg("NATS connection closed, stopping registry subscriber, pruner, and handler")
+			if err := subscriber.Stop(); err != nil {
+				logger.Error().Err(err).Msg("error stopping registry subscriber")
+			}
+			if err := pruner.Stop(); err != nil {
+				logger.Error().Err(err).Msg("error stopping registry pruner")
+			}
+			if err := handler.Stop(); err != nil {
+				logger.Error().Err(err).Msg("error stopping registry handler")
+			}
+		})
+	}
 
 	// Inbound Handlers (Gin adapters depending strictly on inboundports / services)
 	handler := httpAdapter.NewLLMBindingHandler(llmService)
@@ -124,6 +184,7 @@ func NewServer(pool *pgxpool.Pool, nc *nats.Conn, k8sConfig *rest.Config) *gin.E
 	assignmentHandler := httpAdapter.NewAssignmentHandler(agentService)
 	lifecycleHandler := httpAdapter.NewLifecycleHandler(lifecycleService)
 	eventHandler := httpAdapter.NewEventHandler(eventService, eventService)
+	cardHandler := httpAdapter.NewCardHandler(agentRepo, communityRepo)
 
 	v1 := r.Group("/api/v1")
 	v1.Use(httpAdapter.TenantResolutionMiddleware(httpAdapter.NewHeaderTenantResolver()))
@@ -197,6 +258,11 @@ func NewServer(pool *pgxpool.Pool, nc *nats.Conn, k8sConfig *rest.Config) *gin.E
 		// Event routes
 		v1.POST("/events", eventHandler.PublishEvent)
 		v1.GET("/events/stream", eventHandler.StreamEvents)
+
+		// Discovery well-known routes
+		v1.GET("/communities/:community_id/agents/:agent_id/.well-known/agent-card.json", cardHandler.GetAgentCard)
+		v1.GET("/communities/:community_id/.well-known/community-card.json", cardHandler.GetCommunityCard)
+		v1.GET("/communities/:community_id/.well-known/agent-cards.json", cardHandler.GetAgentCards)
 	}
 
 	return r

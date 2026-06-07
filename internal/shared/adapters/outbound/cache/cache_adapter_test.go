@@ -94,3 +94,35 @@ func TestCacheAdapter_ComponentIsolation(t *testing.T) {
 	require.NoError(t, agentCache.Get(context.Background(), "shared-key", &agentResult))
 	assert.Equal(t, "agent-val", agentResult)
 }
+
+// mockRedis is a test double for Redis cache operations.
+type mockRedis struct {
+	store map[string][]byte
+	ttls  map[string]time.Duration
+}
+
+func newMockRedis() *mockRedis {
+	return &mockRedis{
+		store: make(map[string][]byte),
+		ttls:  make(map[string]time.Duration),
+	}
+}
+
+func (m *mockRedis) Set(_ context.Context, key string, value []byte, ttl time.Duration) error {
+	m.store[key] = value
+	m.ttls[key] = ttl
+	return nil
+}
+
+func (m *mockRedis) Get(_ context.Context, key string) ([]byte, error) {
+	data, ok := m.store[key]
+	if !ok {
+		return nil, outbound.ErrCacheMiss
+	}
+	return data, nil
+}
+
+func (m *mockRedis) Del(_ context.Context, key string) error {
+	delete(m.store, key)
+	return nil
+}

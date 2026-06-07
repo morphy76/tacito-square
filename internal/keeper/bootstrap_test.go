@@ -8,17 +8,18 @@ import (
 	"os"
 	"testing"
 
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewServer_ReturnsGinEngine(t *testing.T) {
-	srv := NewServer(nil, nil, nil)
+	srv := NewServer(nil, nil, nil, nil, zerolog.Nop())
 	require.NotNil(t, srv)
 }
 
 func TestHealthz_Returns200(t *testing.T) {
-	srv := NewServer(nil, nil, nil)
+	srv := NewServer(nil, nil, nil, nil, zerolog.Nop())
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	w := httptest.NewRecorder()
@@ -33,7 +34,7 @@ func TestHealthz_Returns200(t *testing.T) {
 }
 
 func TestReadyz_Returns503_WhenDatabaseUnavailable(t *testing.T) {
-	srv := NewServer(nil, nil, nil)
+	srv := NewServer(nil, nil, nil, nil, zerolog.Nop())
 
 	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
 	w := httptest.NewRecorder()
@@ -66,7 +67,7 @@ func TestReadyz_Returns503_WhenDatabaseUnavailable(t *testing.T) {
 }
 
 func TestOpenAPI_Returns200AndValidJSON(t *testing.T) {
-	srv := NewServer(nil, nil, nil)
+	srv := NewServer(nil, nil, nil, nil, zerolog.Nop())
 
 	req := httptest.NewRequest(http.MethodGet, "/openapi.json", nil)
 	w := httptest.NewRecorder()
@@ -102,7 +103,7 @@ func TestOpenAPISpec_MatchesCommittedContract(t *testing.T) {
 }
 
 func TestMetrics_Returns200AndPrometheusFormat(t *testing.T) {
-	srv := NewServer(nil, nil, nil)
+	srv := NewServer(nil, nil, nil, nil, zerolog.Nop())
 
 	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
 	w := httptest.NewRecorder()
@@ -113,7 +114,7 @@ func TestMetrics_Returns200AndPrometheusFormat(t *testing.T) {
 }
 
 func TestEndpoints_DatabaseUnavailable_Returns503(t *testing.T) {
-	srv := NewServer(nil, nil, nil)
+	srv := NewServer(nil, nil, nil, nil, zerolog.Nop())
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/llm-bindings", nil)
 	req.Header.Set("X-Tenant-ID", "tenant-1")
@@ -131,7 +132,7 @@ func TestEndpoints_DatabaseUnavailable_Returns503(t *testing.T) {
 }
 
 func TestNewServer_EventRoutesRegistered(t *testing.T) {
-	srv := NewServer(nil, nil, nil)
+	srv := NewServer(nil, nil, nil, nil, zerolog.Nop())
 	require.NotNil(t, srv)
 
 	postEventFound := false
@@ -149,7 +150,7 @@ func TestNewServer_EventRoutesRegistered(t *testing.T) {
 }
 
 func TestNewServer_EventsDatabaseUnavailable_Returns503(t *testing.T) {
-	srv := NewServer(nil, nil, nil)
+	srv := NewServer(nil, nil, nil, nil, zerolog.Nop())
 	require.NotNil(t, srv)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/events", bytes.NewBufferString(`{"schema_ref":"urn:tacito:schema:conversational:start-thread:v1","payload":{}}`))

@@ -318,6 +318,20 @@ func main() {
 		return eventSubscriber.Stop()
 	})
 
+	// Initialize and start NATS heartbeat publisher
+	var toolExecutor outbound.ToolExecutor
+	if mcpAdapter != nil {
+		toolExecutor = mcpAdapter
+	}
+	heartbeatPublisher := nats.NewHeartbeatPublisher(nc, v, Version, toolExecutor, logger)
+	if err := heartbeatPublisher.Start(ctx); err != nil {
+		logger.Fatal().Err(err).Msg("failed to start heartbeat publisher")
+	}
+	mgr.Register("heartbeat-publisher", func(ctx context.Context) error {
+		logger.Info().Msg("stopping heartbeat publisher")
+		return heartbeatPublisher.Stop()
+	})
+
 	// 6. Create HTTP router with parallel readiness dependency checkers
 	var checkers []health.Checker
 
