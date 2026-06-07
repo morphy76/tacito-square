@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | TASK-M6.1.3                                 |
-| Status        | DRAFT                                       |
+| Status        | VERIFIED                                    |
 | Spec          | SPEC-FR-M6.1                                |
 | Depends On    | TASK-M6.1.2                                 |
 

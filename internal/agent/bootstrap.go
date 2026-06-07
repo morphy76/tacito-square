@@ -17,8 +17,8 @@ import (
 type EventSubscriber = agentnats.EventSubscriber
 
 // NewEventSubscriber constructs a new EventSubscriber for the given agent identity.
-func NewEventSubscriber(nc *natsclient.Conn, agentName, communityID string, router inbound.SchemaRouter, blobStore outbound.BlobStore, logger zerolog.Logger) *EventSubscriber {
-	return agentnats.NewEventSubscriber(nc, agentName, communityID, router, blobStore, logger)
+func NewEventSubscriber(nc *natsclient.Conn, agentName, communityID, role string, router inbound.SchemaRouter, blobStore outbound.BlobStore, logger zerolog.Logger) *EventSubscriber {
+	return agentnats.NewEventSubscriber(nc, agentName, communityID, role, router, blobStore, logger)
 }
 
 // ConnectNATS establishes a NATS connection with default reconnect options and logs the outcome.

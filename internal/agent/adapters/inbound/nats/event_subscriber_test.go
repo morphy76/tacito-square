@@ -3,6 +3,7 @@ package nats_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"strings"
 	"sync"
@@ -111,11 +112,11 @@ func TestEventSubscriber_Routing(t *testing.T) {
 
 	logger := zerolog.New(nil)
 	mockRouter := &MockSchemaRouter{}
-	sub := agentnats.NewEventSubscriber(nc, "agent-alpha", "comm-1", mockRouter, nil, logger)
+	sub := agentnats.NewEventSubscriber(nc, "agent-alpha", "comm-1", "spoke", mockRouter, nil, logger)
 
 	err := sub.Start(context.Background())
 	require.NoError(t, err)
-	defer sub.Stop()
+	defer func() { _ = sub.Stop() }()
 
 	payload := events.StartThreadPayload{
 		ThreadID:    "thread-abc",
@@ -161,11 +162,11 @@ func TestEventSubscriber_BroadcastRouting(t *testing.T) {
 
 	logger := zerolog.New(nil)
 	mockRouter := &MockSchemaRouter{}
-	sub := agentnats.NewEventSubscriber(nc, "agent-alpha", "comm-1", mockRouter, nil, logger)
+	sub := agentnats.NewEventSubscriber(nc, "agent-alpha", "comm-1", "spoke", mockRouter, nil, logger)
 
 	err := sub.Start(context.Background())
 	require.NoError(t, err)
-	defer sub.Stop()
+	defer func() { _ = sub.Stop() }()
 
 	payload := events.StartThreadPayload{
 		ThreadID:    "thread-abc-broadcast",
@@ -211,11 +212,11 @@ func TestEventSubscriber_InvalidSchema(t *testing.T) {
 
 	logger := zerolog.New(nil)
 	mockRouter := &MockSchemaRouter{}
-	sub := agentnats.NewEventSubscriber(nc, "agent-alpha", "comm-1", mockRouter, nil, logger)
+	sub := agentnats.NewEventSubscriber(nc, "agent-alpha", "comm-1", "spoke", mockRouter, nil, logger)
 
 	err := sub.Start(context.Background())
 	require.NoError(t, err)
-	defer sub.Stop()
+	defer func() { _ = sub.Stop() }()
 
 	msg := nats.NewMsg("ts.community.comm-1.agent.agent-alpha")
 	msg.Data = []byte(`{"event_id":"evt-1"}`)
@@ -254,4 +255,68 @@ func TestOffloadUtility(t *testing.T) {
 		defer bs.mu.Unlock()
 		assert.Len(t, bs.puts, 1)
 	})
+}
+
+func TestEventSubscriber_HubQueueGroupLoadBalancing(t *testing.T) {
+	ns, nc := startTestNatsServer(t)
+	defer ns.Shutdown()
+	defer nc.Close()
+
+	logger := zerolog.New(nil)
+
+	// Create 2 mock routers and 2 subscriber instances under the hub role
+	mockRouter1 := &MockSchemaRouter{}
+	sub1 := agentnats.NewEventSubscriber(nc, "hub-instance-1", "comm-1", "hub", mockRouter1, nil, logger)
+	err := sub1.Start(context.Background())
+	require.NoError(t, err)
+	defer func() { _ = sub1.Stop() }()
+
+	mockRouter2 := &MockSchemaRouter{}
+	sub2 := agentnats.NewEventSubscriber(nc, "hub-instance-2", "comm-1", "hub", mockRouter2, nil, logger)
+	err = sub2.Start(context.Background())
+	require.NoError(t, err)
+	defer func() { _ = sub2.Stop() }()
+
+	// Prepare a message payload
+	payload := events.StartThreadPayload{
+		ThreadID:    "thread-123",
+		CommunityID: "comm-1",
+	}
+	payloadBytes, err := json.Marshal(payload)
+	require.NoError(t, err)
+
+	// Publish 10 messages to the hub subject
+	for i := 0; i < 10; i++ {
+		evt := events.DomainEvent{
+			EventID:    fmt.Sprintf("evt-%d", i),
+			SchemaRef:  events.SchemaConversationalStartThread,
+			Source:     "keeper",
+			TenantID:   "tenant-1",
+			OccurredAt: time.Now().UTC().Format(time.RFC3339Nano),
+			Payload:    payloadBytes,
+		}
+		evtBytes, err := json.Marshal(evt)
+		require.NoError(t, err)
+
+		msg := nats.NewMsg("ts.community.comm-1.agent.hub")
+		msg.Data = evtBytes
+		msg.Header.Set("X-Tacito-Schema", events.SchemaConversationalStartThread)
+		msg.Header.Set("X-Tacito-Tenant", "tenant-1")
+
+		err = nc.PublishMsg(msg)
+		require.NoError(t, err)
+	}
+
+	// Wait for processing
+	time.Sleep(200 * time.Millisecond)
+
+	calls1 := mockRouter1.GetCalls()
+	calls2 := mockRouter2.GetCalls()
+
+	totalCalls := len(calls1) + len(calls2)
+	assert.Equal(t, 10, totalCalls, "Total processed messages must be exactly 10")
+
+	// Both subscribers should have processed some messages (load-balancing), and neither should have processed all 10 (which would mean broadcast)
+	assert.Greater(t, len(calls1), 0, "Subscriber 1 should process at least one message")
+	assert.Greater(t, len(calls2), 0, "Subscriber 2 should process at least one message")
 }

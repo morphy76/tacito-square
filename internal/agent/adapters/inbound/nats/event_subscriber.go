@@ -18,6 +18,7 @@ type EventSubscriber struct {
 	nc          *natsclient.Conn
 	agentName   string
 	communityID string
+	role        string
 	router      inbound.SchemaRouter
 	blobStore   outbound.BlobStore
 	logger      zerolog.Logger
@@ -28,6 +29,7 @@ func NewEventSubscriber(
 	nc *natsclient.Conn,
 	agentName string,
 	communityID string,
+	role string,
 	router inbound.SchemaRouter,
 	blobStore outbound.BlobStore,
 	logger zerolog.Logger,
@@ -36,6 +38,7 @@ func NewEventSubscriber(
 		nc:          nc,
 		agentName:   agentName,
 		communityID: communityID,
+		role:        role,
 		router:      router,
 		blobStore:   blobStore,
 		logger:      logger,
@@ -45,30 +48,46 @@ func NewEventSubscriber(
 func (s *EventSubscriber) Start(ctx context.Context) error {
 	s.subs = nil
 
-	// 1. Subscribe to specific agent subject
-	agentSubj := fmt.Sprintf("ts.community.%s.agent.%s", s.communityID, s.agentName)
-	subAgent, err := s.nc.Subscribe(agentSubj,
-		observability.WrapNATSHandler("nats.event_handler", s.logger, s.handleEvent))
-	if err != nil {
-		return fmt.Errorf("event subscriber: subscribe to %s: %w", agentSubj, err)
-	}
-	s.subs = append(s.subs, subAgent)
+	if s.role == "hub" {
+		hubSubj := fmt.Sprintf("ts.community.%s.agent.hub", s.communityID)
+		queueGroup := fmt.Sprintf("hub-queue-group-%s", s.communityID)
+		subHub, err := s.nc.QueueSubscribe(hubSubj, queueGroup,
+			observability.WrapNATSHandler("nats.event_handler", s.logger, s.handleEvent))
+		if err != nil {
+			return fmt.Errorf("event subscriber: queue subscribe to %s: %w", hubSubj, err)
+		}
+		s.subs = append(s.subs, subHub)
 
-	// 2. Subscribe to community broadcast subject
-	allSubj := fmt.Sprintf("ts.community.%s.agent.all", s.communityID)
-	subAll, err := s.nc.Subscribe(allSubj,
-		observability.WrapNATSHandler("nats.event_handler", s.logger, s.handleEvent))
-	if err != nil {
-		_ = subAgent.Unsubscribe()
-		s.subs = nil
-		return fmt.Errorf("event subscriber: subscribe to %s: %w", allSubj, err)
-	}
-	s.subs = append(s.subs, subAll)
+		s.logger.Info().
+			Str("hub_subject", hubSubj).
+			Str("queue_group", queueGroup).
+			Msg("event subscriber started as hub")
+	} else {
+		// 1. Subscribe to specific agent subject
+		agentSubj := fmt.Sprintf("ts.community.%s.agent.%s", s.communityID, s.agentName)
+		subAgent, err := s.nc.Subscribe(agentSubj,
+			observability.WrapNATSHandler("nats.event_handler", s.logger, s.handleEvent))
+		if err != nil {
+			return fmt.Errorf("event subscriber: subscribe to %s: %w", agentSubj, err)
+		}
+		s.subs = append(s.subs, subAgent)
 
-	s.logger.Info().
-		Str("agent_subject", agentSubj).
-		Str("broadcast_subject", allSubj).
-		Msg("event subscriber started")
+		// 2. Subscribe to community broadcast subject
+		allSubj := fmt.Sprintf("ts.community.%s.agent.all", s.communityID)
+		subAll, err := s.nc.Subscribe(allSubj,
+			observability.WrapNATSHandler("nats.event_handler", s.logger, s.handleEvent))
+		if err != nil {
+			_ = subAgent.Unsubscribe()
+			s.subs = nil
+			return fmt.Errorf("event subscriber: subscribe to %s: %w", allSubj, err)
+		}
+		s.subs = append(s.subs, subAll)
+
+		s.logger.Info().
+			Str("agent_subject", agentSubj).
+			Str("broadcast_subject", allSubj).
+			Msg("event subscriber started as spoke")
+	}
 	return nil
 }
 

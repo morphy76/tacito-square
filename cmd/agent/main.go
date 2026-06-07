@@ -55,6 +55,7 @@ func main() {
 	v.SetDefault("s3.max.read.size", 5*1024*1024)
 	v.SetDefault("s3.chunk.size", 32*1024)
 	v.SetDefault("bypass.ltm", true)
+	v.SetDefault("role", "spoke")
 
 	port := v.GetString("port")
 	logLevel := v.GetString("log.level")
@@ -104,6 +105,8 @@ func main() {
 	if communityRef == "" {
 		logger.Fatal().Msg("TS_AGENT_COMMUNITY_REF is required but not set")
 	}
+
+	agentRole := v.GetString("role")
 
 	nc, err := agent.ConnectNATS(natsURL, logger)
 	if err != nil {
@@ -309,7 +312,7 @@ func main() {
 		v,
 	)
 
-	eventSubscriber := agent.NewEventSubscriber(nc, agentID, communityRef, schemaRouter, s3BlobStore, logger)
+	eventSubscriber := agent.NewEventSubscriber(nc, agentID, communityRef, agentRole, schemaRouter, s3BlobStore, logger)
 	if err := eventSubscriber.Start(ctx); err != nil {
 		logger.Fatal().Err(err).Msg("failed to start event subscriber")
 	}
