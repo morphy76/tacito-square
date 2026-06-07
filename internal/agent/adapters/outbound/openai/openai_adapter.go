@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/resiliency"
@@ -144,7 +145,11 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 				messages = append(messages, openai.UserMessage(entry.Content))
 			}
 		}
-		messages = append(messages, openai.UserMessage(req.Prompt))
+		// Only append the current user prompt when it is not already present in history
+		// (i.e., it was not inserted before a tool-call chain by the cognitive engine).
+		if len(req.History) == 0 || req.History[len(req.History)-1].Role != "tool" {
+			messages = append(messages, openai.UserMessage(req.Prompt))
+		}
 
 		modelName := a.cfg.Model
 		if modelName == "" {
@@ -372,6 +377,8 @@ func (a *Adapter) CreateEmbedding(ctx context.Context, text string) ([]float32, 
 		modelName := a.cfg.Model
 		if modelName == "" {
 			modelName = "text-embedding-3-small"
+		} else if strings.Contains(strings.ToLower(modelName), "gemini") {
+			modelName = "text-embedding-004"
 		}
 
 		params := openai.EmbeddingNewParams{
@@ -440,6 +447,8 @@ func (a *Adapter) CreateEmbeddingsBatch(ctx context.Context, texts []string) ([]
 		modelName := a.cfg.Model
 		if modelName == "" {
 			modelName = "text-embedding-3-small"
+		} else if strings.Contains(strings.ToLower(modelName), "gemini") {
+			modelName = "text-embedding-004"
 		}
 
 		params := openai.EmbeddingNewParams{

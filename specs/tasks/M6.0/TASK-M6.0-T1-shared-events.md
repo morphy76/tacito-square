@@ -5,7 +5,7 @@
 | Task ID     | TASK-M6.0-T1                          |
 | Spec        | SPEC-FR-M6.0                          |
 | Boundary    | Shared Package — `pkg/events`         |
-| Status      | DRAFT                                 |
+| Status      | VERIFIED                              |
 | Depends On  | —                                     |
 
 ## Objective

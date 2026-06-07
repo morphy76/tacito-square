@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/morphy76/tacito-square/internal/agent/adapters/outbound/resiliency"
@@ -169,10 +170,14 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 				})
 			}
 		}
-		messages = append(messages, api.Message{
-			Role:    "user",
-			Content: req.Prompt,
-		})
+		// Only append the current user prompt when it is not already present in history
+		// (i.e., it was not inserted before a tool-call chain by the cognitive engine).
+		if len(req.History) == 0 || req.History[len(req.History)-1].Role != "tool" {
+			messages = append(messages, api.Message{
+				Role:    "user",
+				Content: req.Prompt,
+			})
+		}
 
 		modelName := a.cfg.Model
 		if modelName == "" {
@@ -382,7 +387,7 @@ func (a *Adapter) CreateEmbedding(ctx context.Context, text string) ([]float32, 
 		defer cancel()
 
 		modelName := a.cfg.Model
-		if modelName == "" {
+		if modelName == "" || isChatModel(modelName) {
 			modelName = "nomic-embed-text"
 		}
 
@@ -448,7 +453,7 @@ func (a *Adapter) CreateEmbeddingsBatch(ctx context.Context, texts []string) ([]
 		defer cancel()
 
 		modelName := a.cfg.Model
-		if modelName == "" {
+		if modelName == "" || isChatModel(modelName) {
 			modelName = "nomic-embed-text"
 		}
 
@@ -500,4 +505,14 @@ func (a *Adapter) CreateEmbeddingsBatch(ctx context.Context, texts []string) ([]
 		return nil, err
 	}
 	return result, nil
+}
+
+func isChatModel(model string) bool {
+	model = strings.ToLower(model)
+	return strings.Contains(model, "llama") ||
+		strings.Contains(model, "mistral") ||
+		strings.Contains(model, "gemma") ||
+		strings.Contains(model, "phi") ||
+		strings.Contains(model, "qwen") ||
+		strings.Contains(model, "deepseek")
 }

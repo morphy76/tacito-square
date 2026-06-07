@@ -5,7 +5,7 @@
 | Task ID     | TASK-M6.0-T2                                            |
 | Spec        | SPEC-FR-M6.0                                            |
 | Boundary    | Keeper Ports — `internal/keeper/application/ports`      |
-| Status      | DRAFT                                                   |
+| Status      | VERIFIED                                                |
 | Depends On  | TASK-M6.0-T1                                            |
 
 ## Objective

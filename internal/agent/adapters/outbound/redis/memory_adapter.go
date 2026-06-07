@@ -312,3 +312,78 @@ func (a *RedisMemoryAdapter) Clear(ctx context.Context, tenantID, agentID, threa
 	}
 	return nil
 }
+
+// RollbackLast pops the last entry in the short-term memory list for the thread.
+func (a *RedisMemoryAdapter) RollbackLast(ctx context.Context, tenantID, agentID, threadID string) error {
+	start := time.Now()
+
+	ctx, span := a.tracer.Start(ctx, "redis.rollback_last",
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(
+			attribute.String("db.system", "redis"),
+			attribute.String("db.operation", "rpop"),
+			attribute.String("tenant_id", tenantID),
+			attribute.String("agent_id", agentID),
+			attribute.String("thread_id", threadID),
+		),
+	)
+	defer span.End()
+
+	logger := zerolog.Ctx(ctx).With().
+		Str("db.system", "redis").
+		Str("tenant_id", tenantID).
+		Str("agent_id", agentID).
+		Str("thread_id", threadID).
+		Logger()
+
+	key := a.formatKey(tenantID, agentID, threadID)
+	err := a.client.RPop(ctx, key).Err()
+	duration := time.Since(start).Seconds()
+
+	status := "success"
+	if err != nil {
+		if err == redis.Nil {
+			// List is empty or key doesn't exist, handle gracefully
+			err = nil
+		} else {
+			status = "failure"
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			logger.Error().Err(err).Str("key", key).Msg("failed to pop last entry from Redis list")
+		}
+	}
+
+	if err == nil {
+		span.SetStatus(codes.Ok, "")
+		logger.Debug().
+			Str("key", key).
+			Msg("short-term memory last entry rolled back successfully")
+	}
+
+	// Record outbound latency metrics
+	observability.OutboundDependencyDuration.Record(ctx, duration,
+		otelmetric.WithAttributes(
+			attribute.String("dependency", "redis"),
+			attribute.String("operation", "rollback_last"),
+			attribute.String("status", status),
+		),
+	)
+
+	// Record agent stm metrics
+	stmAttrs := otelmetric.WithAttributes(
+		attribute.String("agent", agentID),
+		attribute.String("operation", "rollback_last"),
+	)
+	stmAttrsWithStatus := otelmetric.WithAttributes(
+		attribute.String("agent", agentID),
+		attribute.String("operation", "rollback_last"),
+		attribute.String("status", status),
+	)
+	observability.AgentSTMOperationsTotal.Add(ctx, 1, stmAttrsWithStatus)
+	observability.AgentSTMOperationDuration.Record(ctx, duration, stmAttrs)
+
+	if err != nil {
+		return fmt.Errorf("redis rpop failed: %w", err)
+	}
+	return nil
+}

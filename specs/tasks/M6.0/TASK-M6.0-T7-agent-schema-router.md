@@ -5,7 +5,7 @@
 | Task ID     | TASK-M6.0-T7                                            |
 | Spec        | SPEC-FR-M6.0                                            |
 | Boundary    | Agent Service — `internal/agent/application/service`    |
-| Status      | DRAFT                                                   |
+| Status      | IMPLEMENTED                                             |
 | Depends On  | TASK-M6.0-T6                                            |
 
 ## Objective

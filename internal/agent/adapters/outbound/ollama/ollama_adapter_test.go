@@ -124,23 +124,24 @@ func TestOllamaAdapter_Generate(t *testing.T) {
 			_ = json.NewDecoder(r.Body).Decode(&body)
 
 			// Assertions on history conversion
+			// The user message must come first (chronological ordering requirement).
 			if len(body.Messages) == 3 {
+				// User prompt (first – triggered the tool call)
+				userMsg := body.Messages[0]
+				assert.Equal(t, "user", userMsg["role"])
+				assert.Equal(t, "Next query", userMsg["content"])
+
 				// Assistant message with tool calls
-				asst := body.Messages[0]
+				asst := body.Messages[1]
 				assert.Equal(t, "assistant", asst["role"])
 				assert.NotNil(t, asst["tool_calls"])
 
 				// Tool message with ToolCallID and ToolName
-				toolMsg := body.Messages[1]
+				toolMsg := body.Messages[2]
 				assert.Equal(t, "tool", toolMsg["role"])
 				assert.Equal(t, "call_123", toolMsg["tool_call_id"])
 				assert.Equal(t, "my-tool", toolMsg["tool_name"])
 				assert.Equal(t, "observation result", toolMsg["content"])
-
-				// User prompt
-				userMsg := body.Messages[2]
-				assert.Equal(t, "user", userMsg["role"])
-				assert.Equal(t, "Next query", userMsg["content"])
 			}
 
 			// Assertions on tools mapping
@@ -187,6 +188,10 @@ func TestOllamaAdapter_Generate(t *testing.T) {
 		})
 
 		history := []model.MemoryEntry{
+			{
+				Role:    "user",
+				Content: "Next query",
+			},
 			{
 				Role:    "assistant",
 				Content: "Let me call the tool.",
@@ -247,6 +252,36 @@ func TestOllamaAdapter_Embeddings(t *testing.T) {
 		adapter := ollama.NewAdapter(ollama.Config{
 			Endpoint: server.URL,
 			Model:    "nomic-embed-text",
+			Timeout:  2 * time.Second,
+		})
+
+		res, err := adapter.CreateEmbedding(context.Background(), "test text")
+		assert.NoError(t, err)
+		assert.Equal(t, []float32{0.1, 0.2, 0.3}, res)
+	})
+
+	t.Run("should map chat model to nomic-embed-text", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var body struct {
+				Model string `json:"model"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			assert.Equal(t, "nomic-embed-text", body.Model)
+
+			resp := map[string]any{
+				"model": "nomic-embed-text",
+				"embeddings": [][]float64{
+					{0.1, 0.2, 0.3},
+				},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+		}))
+		defer server.Close()
+
+		adapter := ollama.NewAdapter(ollama.Config{
+			Endpoint: server.URL,
+			Model:    "llama3",
 			Timeout:  2 * time.Second,
 		})
 

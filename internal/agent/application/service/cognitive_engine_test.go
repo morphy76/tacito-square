@@ -338,7 +338,7 @@ func TestCognitiveEngine_ReadLargePayload(t *testing.T) {
 				}
 
 				// Verify observation is passed in history
-				assert.Contains(t, request.History[1].Content, "large file content in S3 stream")
+				assert.Contains(t, request.History[2].Content, "large file content in S3 stream")
 
 				finalAnswer := map[string]any{
 					"thought":      "I read the large file content. answering now.",
@@ -392,7 +392,7 @@ func TestCognitiveEngine_ReadLargePayload(t *testing.T) {
 				}
 
 				// Verify observation is error block
-				assert.Contains(t, request.History[1].Content, `{"error": "Object storage temporarily unavailable."}`)
+				assert.Contains(t, request.History[2].Content, `{"error": "Object storage temporarily unavailable."}`)
 
 				finalAnswer := map[string]any{
 					"thought":      "Object storage was offline, I will degrade gracefully.",
@@ -455,7 +455,7 @@ func TestCognitiveEngine_WriteLargePayload(t *testing.T) {
 					SizeBytes   int64  `json:"size_bytes"`
 					ContentType string `json:"content_type"`
 				}
-				err := json.Unmarshal([]byte(request.History[1].Content), &s3Ref)
+				err := json.Unmarshal([]byte(request.History[2].Content), &s3Ref)
 				assert.NoError(t, err)
 				assert.Equal(t, "s3_reference", s3Ref.Type)
 				assert.Equal(t, "tenant-1", s3Ref.Bucket)
@@ -525,7 +525,7 @@ func TestCognitiveEngine_WriteLargePayload(t *testing.T) {
 				}
 
 				// Verify observation is error block
-				assert.Contains(t, request.History[1].Content, `{"error": "Object storage temporarily unavailable."}`)
+				assert.Contains(t, request.History[2].Content, `{"error": "Object storage temporarily unavailable."}`)
 
 				finalAnswer := map[string]any{
 					"thought":      "Failed to write, S3 is offline.",

@@ -13,13 +13,12 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// EchoSubscriber is a re-export of the NATS echo subscriber for use in the entrypoint.
-type EchoSubscriber = agentnats.EchoSubscriber
+// EventSubscriber is a re-export of the NATS event subscriber for use in the entrypoint.
+type EventSubscriber = agentnats.EventSubscriber
 
-// NewEchoSubscriber constructs a new EchoSubscriber for the given agent identity.
-// The tenantID may be empty for pre-auth milestones.
-func NewEchoSubscriber(nc *natsclient.Conn, agentName, communityID, tenantID string, processor inbound.MessageProcessor, blobStore outbound.BlobStore, logger zerolog.Logger) *EchoSubscriber {
-	return agentnats.NewEchoSubscriber(nc, agentName, communityID, tenantID, processor, blobStore, logger)
+// NewEventSubscriber constructs a new EventSubscriber for the given agent identity.
+func NewEventSubscriber(nc *natsclient.Conn, agentName, communityID string, router inbound.SchemaRouter, blobStore outbound.BlobStore, logger zerolog.Logger) *EventSubscriber {
+	return agentnats.NewEventSubscriber(nc, agentName, communityID, router, blobStore, logger)
 }
 
 // ConnectNATS establishes a NATS connection with default reconnect options and logs the outcome.

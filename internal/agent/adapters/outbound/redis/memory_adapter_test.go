@@ -85,6 +85,37 @@ func TestRedisMemoryAdapter(t *testing.T) {
 		// Should be the most recent one (last turn appended)
 		assert.Equal(t, "Response for Tenant A", historyLimit[0].Content)
 
+		// Test RollbackLast
+		// First reset and append two entries
+		err = adapter.Clear(ctx, tenantA, agentID, threadID)
+		assert.NoError(t, err)
+
+		err = adapter.Append(ctx, tenantA, agentID, threadID, entry1)
+		assert.NoError(t, err)
+		err = adapter.Append(ctx, tenantA, agentID, threadID, entry2)
+		assert.NoError(t, err)
+
+		// Rollback once (removes entry2)
+		err = adapter.RollbackLast(ctx, tenantA, agentID, threadID)
+		assert.NoError(t, err)
+
+		historyRollback1, err := adapter.Get(ctx, tenantA, agentID, threadID, 10)
+		assert.NoError(t, err)
+		require.Len(t, historyRollback1, 1)
+		assert.Equal(t, "Hello from Tenant A", historyRollback1[0].Content)
+
+		// Rollback again (removes entry1)
+		err = adapter.RollbackLast(ctx, tenantA, agentID, threadID)
+		assert.NoError(t, err)
+
+		historyRollback2, err := adapter.Get(ctx, tenantA, agentID, threadID, 10)
+		assert.NoError(t, err)
+		assert.Empty(t, historyRollback2)
+
+		// Rollback on empty key
+		err = adapter.RollbackLast(ctx, tenantA, agentID, threadID)
+		assert.NoError(t, err)
+
 		// Test Clear
 		err = adapter.Clear(ctx, tenantA, agentID, threadID)
 		assert.NoError(t, err)

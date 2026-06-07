@@ -511,11 +511,13 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 	copy(activeHistory, history)
 
 	var lastThought string
+	userQueryInHistory := false
 
 	for step := 1; step <= e.maxSteps; step++ {
 		finalAnswer, shouldContinue, lastParsedThought, err := e.executeStep(
 			ctx, step, tenantID, agentID, threadID,
 			userQuery, activeSystemPrompt, &activeHistory,
+			&userQueryInHistory,
 			activeTools, toolsToExpose, logger,
 		)
 		if lastParsedThought != "" {
@@ -555,6 +557,7 @@ func (e *CognitiveEngine) executeStep(
 	userQuery string,
 	systemPrompt string,
 	activeHistory *[]model.MemoryEntry,
+	userQueryInHistory *bool,
 	activeTools map[string]ToolHandler,
 	toolsToExpose []model.ToolDefinition,
 	logger zerolog.Logger,
@@ -619,6 +622,17 @@ func (e *CognitiveEngine) executeStep(
 
 	// Check if it's a tool call turn
 	if len(toolCalls) > 0 {
+		// Ensure the user query precedes tool call entries in history.
+		// LLM APIs require strict chronological ordering: user → assistant → tool.
+		if !*userQueryInHistory {
+			*activeHistory = append(*activeHistory, model.MemoryEntry{
+				Role:      "user",
+				Content:   userQuery,
+				Timestamp: time.Now().UTC(),
+			})
+			*userQueryInHistory = true
+		}
+
 		// Register tool calls metadata to active history
 		tCallsBytes, _ := json.Marshal(toolCalls)
 		*activeHistory = append(*activeHistory, model.MemoryEntry{

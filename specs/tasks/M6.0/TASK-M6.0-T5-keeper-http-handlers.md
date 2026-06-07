@@ -5,7 +5,7 @@
 | Task ID     | TASK-M6.0-T5                                            |
 | Spec        | SPEC-FR-M6.0                                            |
 | Boundary    | Keeper HTTP Layer — `internal/keeper/adapters/inbound/http` |
-| Status      | DRAFT                                                   |
+| Status      | IMPLEMENTED                                             |
 | Depends On  | TASK-M6.0-T4                                            |
 
 ## Objective

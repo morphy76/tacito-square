@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/morphy76/tacito-square/internal/operator/application/ports/inbound"
 	"github.com/morphy76/tacito-square/pkg/kubernetes/apis/tacito/v1alpha1"
@@ -399,9 +400,12 @@ func (s *ReconcileAgentServiceImpl) BuildDeployment(ctx context.Context, agent *
 		maxTokens = strconv.Itoa(int(*agent.Spec.LLMConfig.MaxTokens))
 	}
 
+	agentID := strings.TrimPrefix(agent.Name, "u-")
+
 	// 4. Construct container environment variables
 	env := []corev1.EnvVar{
 		{Name: "TENANT_ID", Value: agent.Spec.TenantID},
+		{Name: "TS_AGENT_ID", Value: agentID},
 		{Name: "TS_AGENT_NAME", Value: agent.Spec.AgentName},
 		{Name: "TS_AGENT_COMMUNITY_REF", Value: agent.Spec.CommunityRef},
 		{Name: "TS_AGENT_LOG_LEVEL", Value: logLevel},

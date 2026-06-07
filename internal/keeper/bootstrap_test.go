@@ -3,13 +3,11 @@ package keeper
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -132,25 +130,29 @@ func TestEndpoints_DatabaseUnavailable_Returns503(t *testing.T) {
 	assert.Equal(t, "Database service unavailable", body["error"])
 }
 
-func TestNewServer_EchoRouteRegistered(t *testing.T) {
+func TestNewServer_EventRoutesRegistered(t *testing.T) {
 	srv := NewServer(nil, nil, nil)
 	require.NotNil(t, srv)
 
-	found := false
+	postEventFound := false
+	getStreamFound := false
 	for _, route := range srv.Routes() {
-		if route.Method == http.MethodPost && route.Path == "/api/v1/communities/:community_id/echo" {
-			found = true
-			break
+		if route.Method == http.MethodPost && route.Path == "/api/v1/events" {
+			postEventFound = true
+		}
+		if route.Method == http.MethodGet && route.Path == "/api/v1/events/stream" {
+			getStreamFound = true
 		}
 	}
-	assert.True(t, found, "POST /api/v1/communities/:community_id/echo route was not registered")
+	assert.True(t, postEventFound, "POST /api/v1/events route was not registered")
+	assert.True(t, getStreamFound, "GET /api/v1/events/stream route was not registered")
 }
 
-func TestNewServer_EchoDatabaseUnavailable_Returns503(t *testing.T) {
+func TestNewServer_EventsDatabaseUnavailable_Returns503(t *testing.T) {
 	srv := NewServer(nil, nil, nil)
 	require.NotNil(t, srv)
 
-	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/v1/communities/%s/echo", uuid.New()), bytes.NewBufferString(`{"message":"test"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/events", bytes.NewBufferString(`{"schema_ref":"urn:tacito:schema:conversational:start-thread:v1","payload":{}}`))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Tenant-ID", "tenant-1")
 

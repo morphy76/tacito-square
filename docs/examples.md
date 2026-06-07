@@ -1,4 +1,6 @@
-# Create a new agent
+# Some APIs examples
+
+## Create a new agent
 
 ```json
 {
@@ -27,4 +29,43 @@
   "mcp_clients": []
 }
 
+```
+
+## Conversational pattern
+
+Start a new thread
+
+```json
+{
+  "schema_ref": "urn:tacito:schema:conversational:start-thread:v1",
+  "payload": {
+    "thread_id": "test-2",
+    "community_id": "edac9fd7-9222-4b19-9ccb-6970825e6ffe"
+  }
+}
+```
+
+Add a user message
+
+```json
+{
+  "schema_ref": "urn:tacito:schema:conversational:add-user-message:v1",
+  "payload": {
+    "thread_id": "test-2",
+    "community_id": "edac9fd7-9222-4b19-9ccb-6970825e6ffe",
+    "message": "Hello, how are you?"
+  }
+}
+```
+
+End the thread
+
+```json
+{
+  "schema_ref": "urn:tacito:schema:conversational:end-thread:v1",
+  "payload": {
+    "thread_id": "test-2",
+    "community_id": "edac9fd7-9222-4b19-9ccb-6970825e6ffe"
+  }
+}
 ```
