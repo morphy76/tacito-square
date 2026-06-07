@@ -136,7 +136,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | ID | Title | Status | Component | File |
 |----|-------|--------|-----------|------|
 | SPEC-FR-M6.0 | Event-Driven Architecture Foundation & Conversational Schema | VERIFIED | shared, keeper, agent | [SPEC-FR-M6.0](functional/M6/SPEC-FR-M6.0.md) |
-| SPEC-FR-M6.1 | Community Topology (Hub-Spoke) | DRAFT | keeper, agent | [SPEC-FR-M6.1](functional/M6/SPEC-FR-M6.1.md) |
+| SPEC-FR-M6.1 | Community Topology (Hub-Spoke) | IN_PROGRESS | keeper, agent | [SPEC-FR-M6.1](functional/M6/SPEC-FR-M6.1.md) |
 | SPEC-FR-M6.2 | NATS Inter-Agent Messaging | DRAFT | agent | [SPEC-FR-M6.2](functional/M6/SPEC-FR-M6.2.md) |
 | SPEC-FR-M6.3 | NATS Subject Namespacing | DRAFT | agent, keeper | [SPEC-FR-M6.3](functional/M6/SPEC-FR-M6.3.md) |
 | SPEC-FR-M6.4 | Thread Management | DRAFT | conversation-hub | [SPEC-FR-M6.4](functional/M6/SPEC-FR-M6.4.md) |

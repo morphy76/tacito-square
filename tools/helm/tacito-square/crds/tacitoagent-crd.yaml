@@ -1,9 +1,10 @@
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.21.0
   name: tacitoagents.tacito.square.io
-  labels:
-    app.kubernetes.io/part-of: tacito-square
 spec:
   group: tacito.square.io
   names:
@@ -11,150 +12,252 @@ spec:
     listKind: TacitoAgentList
     plural: tacitoagents
     singular: tacitoagent
-    shortNames:
-      - ta
   scope: Namespaced
   versions:
-    - name: v1alpha1
-      served: true
-      storage: true
-      schema:
-        openAPIV3Schema:
-          type: object
-          description: TacitoAgent represents a managed AI agent instance.
-          properties:
-            spec:
-              type: object
-              description: Desired state of the TacitoAgent.
-              required:
-                - tenantId
-                - agentName
-                - communityRef
-                - llmConfig
-              properties:
-                tenantId:
-                  type: string
-                  minLength: 1
-                  description: Identifier of the tenant owning this agent.
-                agentName:
-                  type: string
-                  minLength: 1
-                  description: Unique name of the agent.
-                communityRef:
-                  type: string
-                  minLength: 1
-                  description: Reference to the parent community.
-                llmConfig:
-                  type: object
-                  description: LLM parameters for the agent brain.
-                  required:
-                    - model
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .spec.tenantId
+      name: Tenant
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: TacitoAgent is the Schema for the tacitoagents API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: TacitoAgentSpec defines the desired state of a TacitoAgent.
+            properties:
+              agentName:
+                description: AgentName is the unique name of the agent.
+                minLength: 1
+                type: string
+              communityRef:
+                description: CommunityRef is the reference to the parent community.
+                minLength: 1
+                type: string
+              llmConfig:
+                description: LLMConfig holds the LLM parameters for the agent's brain.
+                properties:
+                  credentialsSecret:
+                    description: CredentialsSecret is the secret reference or raw
+                      secret API key.
+                    type: string
+                  endpoint:
+                    description: Endpoint is the target LLM API endpoint URL.
+                    type: string
+                  maxTokens:
+                    default: 2048
+                    description: MaxTokens is the maximum number of tokens the LLM
+                      can generate.
+                    format: int32
+                    maximum: 8192
+                    minimum: 1
+                    type: integer
+                  model:
+                    description: Model is the LLM model identifier (e.g., "gpt-4o",
+                      "gemini-1.5-pro").
+                    minLength: 1
+                    type: string
+                  temperature:
+                    default: "0.7"
+                    description: Temperature controls the randomness of the LLM output.
+                    pattern: ^[0-9]+(\.[0-9]+)?$
+                    type: string
+                required:
+                - model
+                type: object
+              mcpClients:
+                description: MCPClients holds the list of configured MCP client connections.
+                items:
+                  description: MCPClientSpec defines the configuration of an attached
+                    MCP client gateway.
                   properties:
-                    model:
+                    allowedTools:
+                      description: AllowedTools is the whitelist of tool names permitted
+                        for execution.
+                      items:
+                        type: string
+                      type: array
+                    args:
+                      description: Args is the command-line arguments (for stdio).
+                      items:
+                        type: string
+                      type: array
+                    command:
+                      description: Command is the subprocess execution command (for
+                        stdio).
                       type: string
-                      minLength: 1
-                      description: LLM model identifier (e.g. gpt-4o, gemini-1.5-pro).
-                    temperature:
+                    env:
+                      additionalProperties:
+                        type: string
+                      description: Env is the custom environment overrides (for stdio).
+                      type: object
+                    name:
+                      description: Name is the unique identifier of the MCP client
+                        config.
                       type: string
-                      pattern: "^[0-9]+(\\.[0-9]+)?$"
-                      default: "0.7"
-                      description: Randomness of LLM output (string-encoded decimal).
-                    maxTokens:
-                      type: integer
-                      minimum: 1
-                      maximum: 8192
-                      default: 2048
-                      description: Maximum number of tokens the LLM can generate.
-                    endpoint:
+                    transport:
+                      description: Transport is the protocol transport type ("stdio"
+                        or "sse").
                       type: string
-                      description: Custom target endpoint for OpenAI requests.
-                    credentialsSecret:
+                    url:
+                      description: URL is the SSE event connection endpoint (for sse).
                       type: string
-                      description: Secret reference or raw secret API key.
-                systemPrompt:
-                  type: string
-                  description: Fully synthesized system prompt for the agent.
-                replicas:
-                  type: integer
-                  minimum: 0
-                  maximum: 10
-                  default: 1
-                  description: Desired number of agent pod replicas.
-                resources:
+                  required:
+                  - allowedTools
+                  - name
+                  - transport
                   type: object
-                  x-kubernetes-preserve-unknown-fields: true
-                  description: CPU and memory resource requirements.
-            status:
-              type: object
-              description: Observed state of the TacitoAgent.
-              properties:
-                phase:
-                  type: string
-                  enum:
-                    - Pending
-                    - Running
-                    - Idle
-                    - Terminated
-                  description: Current lifecycle phase of the agent.
-                conditions:
-                  type: array
-                  description: Latest available observations of the agent state.
-                  x-kubernetes-list-type: map
-                  x-kubernetes-list-map-keys:
-                    - type
-                  items:
-                    type: object
-                    required:
-                      - type
-                      - status
-                    properties:
-                      type:
-                        type: string
-                        description: Type of condition (e.g. Available, Reconciling, Failed).
-                      status:
-                        type: string
-                        enum:
-                          - "True"
-                          - "False"
-                          - Unknown
-                        description: Status of the condition.
-                      lastTransitionTime:
-                        type: string
-                        format: date-time
-                        description: Last time the condition transitioned.
-                      reason:
-                        type: string
-                        description: Machine-readable reason for the condition.
-                      message:
-                        type: string
-                        description: Human-readable message for the condition.
-                      observedGeneration:
-                        type: integer
-                        format: int64
-                        description: Generation observed when the condition was set.
-                lastHeartbeat:
-                  type: string
-                  format: date-time
-                  description: Timestamp of the last agent heartbeat.
-                selector:
-                  type: string
-                  description: Label selector for scaling.
-                replicas:
-                  type: integer
-                  description: Current number of running replicas.
-      subresources:
-        status: {}
-        scale:
-          specReplicasPath: .spec.replicas
-          statusReplicasPath: .status.replicas
-          labelSelectorPath: .status.selector
-      additionalPrinterColumns:
-        - name: Phase
-          type: string
-          jsonPath: .status.phase
-        - name: Tenant
-          type: string
-          jsonPath: .spec.tenantId
-        - name: Age
-          type: date
-          jsonPath: .metadata.creationTimestamp
+                type: array
+              replicas:
+                default: 1
+                description: Replicas is the desired number of agent pod replicas.
+                format: int32
+                maximum: 10
+                minimum: 0
+                type: integer
+              role:
+                default: spoke
+                description: Role is the topology role of the agent ("hub" or "spoke").
+                enum:
+                - hub
+                - spoke
+                type: string
+              systemPrompt:
+                description: SystemPrompt is the fully synthesized system prompt for
+                  the agent.
+                type: string
+              tenantId:
+                description: TenantID is the identifier of the tenant owning this
+                  agent.
+                minLength: 1
+                type: string
+              tier:
+                description: |-
+                  Tier is the logical runtime tier name used by the Operator to select the
+                  appropriate container image, resource requests/limits, and probe timings.
+                  An empty string signals the Operator to apply the implicit default profile.
+                type: string
+            required:
+            - agentName
+            - communityRef
+            - llmConfig
+            - tenantId
+            type: object
+          status:
+            description: TacitoAgentStatus defines the observed state of a TacitoAgent.
+            properties:
+              conditions:
+                description: Conditions represent the latest available observations
+                  of an agent's state.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              lastHeartbeat:
+                description: LastHeartbeat is the timestamp of the last agent heartbeat.
+                format: date-time
+                type: string
+              phase:
+                description: Phase is the current lifecycle phase of the agent.
+                enum:
+                - Pending
+                - Running
+                - Idle
+                - Terminated
+                type: string
+              replicas:
+                description: Replicas is the current number of running replicas.
+                format: int32
+                type: integer
+              selector:
+                description: Selector is the label selector for scaling.
+                type: string
+            required:
+            - replicas
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      scale:
+        labelSelectorPath: .status.selector
+        specReplicasPath: .spec.replicas
+        statusReplicasPath: .status.replicas
+      status: {}

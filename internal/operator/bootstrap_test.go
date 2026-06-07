@@ -82,7 +82,7 @@ func TestMetrics_ExposesCustomMetrics(t *testing.T) {
 	ctx := context.Background()
 	shutdown, err := observability.InitTracer(ctx, "operator-test", "1.0.0", "")
 	require.NoError(t, err)
-	defer shutdown(ctx)
+	defer func() { _ = shutdown(ctx) }()
 	inbound.InitReconcilerMetrics()
 
 	srv := operator.NewServer()

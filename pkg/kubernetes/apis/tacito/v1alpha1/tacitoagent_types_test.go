@@ -73,6 +73,7 @@ func TestTacitoAgentSpec_JSONRoundTrip_AllFields(t *testing.T) {
 		},
 		SystemPrompt: "You are a helpful assistant.",
 		Replicas:     &replicas,
+		Role:         "hub",
 	}
 
 	data, err := json.Marshal(original)
@@ -90,6 +91,7 @@ func TestTacitoAgentSpec_JSONRoundTrip_AllFields(t *testing.T) {
 	assert.Equal(t, *original.LLMConfig.MaxTokens, *decoded.LLMConfig.MaxTokens)
 	assert.Equal(t, original.SystemPrompt, decoded.SystemPrompt)
 	assert.Equal(t, *original.Replicas, *decoded.Replicas)
+	assert.Equal(t, original.Role, decoded.Role)
 }
 
 func TestTacitoAgentSpec_JSONTags_RequiredFields(t *testing.T) {
