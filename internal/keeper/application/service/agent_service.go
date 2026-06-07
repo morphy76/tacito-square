@@ -2,11 +2,15 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
+	sharedports "github.com/morphy76/tacito-square/internal/shared/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/shared/tenant"
+	"github.com/morphy76/tacito-square/pkg/events"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -14,13 +18,22 @@ import (
 type AgentService struct {
 	repo           outbound.AgentRepository
 	crdCoordinator outbound.CRDCoordinator
+	cache          sharedports.Cache
+	publisher      outbound.EventPublisher
 }
 
 // NewAgentService creates a new instance of AgentService.
-func NewAgentService(repo outbound.AgentRepository, crdCoordinator outbound.CRDCoordinator) *AgentService {
+func NewAgentService(
+	repo outbound.AgentRepository,
+	crdCoordinator outbound.CRDCoordinator,
+	cache sharedports.Cache,
+	publisher outbound.EventPublisher,
+) *AgentService {
 	return &AgentService{
 		repo:           repo,
 		crdCoordinator: crdCoordinator,
+		cache:          cache,
+		publisher:      publisher,
 	}
 }
 
@@ -89,23 +102,52 @@ func (s *AgentService) Unassign(ctx context.Context, communityID uuid.UUID, agen
 		return err
 	}
 
-	// 2. Detach parent context to avoid cancellation when HTTP request finishes
-	bgCtx := context.Background()
-
-	// 3. Propagate Tenant context
-	if ten := tenant.FromContext(ctx); ten != nil {
-		bgCtx = tenant.ContextWithTenant(bgCtx, ten)
+	// 2. Delete the registration from PostgreSQL agent_registrations table
+	if err := s.repo.DeleteRegistration(ctx, agentID, communityID); err != nil {
+		return err
 	}
 
-	// 4. Propagate OpenTelemetry span context
+	// 3. Detach parent context to avoid cancellation when HTTP request finishes
+	bgCtx := context.Background()
+
+	// 4. Propagate Tenant context
+	var tenantID string
+	if ten := tenant.FromContext(ctx); ten != nil {
+		bgCtx = tenant.ContextWithTenant(bgCtx, ten)
+		tenantID = ten.FullName()
+	}
+
+	// 5. Propagate OpenTelemetry span context
 	if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
 		bgCtx = trace.ContextWithSpan(bgCtx, span)
 	}
 
-	// 5. Execute expensive K8s CRD coordinator hooks asynchronously out-of-band
+	// 6. Execute expensive K8s CRD coordinator hooks asynchronously out-of-band
 	go func() {
 		_ = s.crdCoordinator.TeardownAgentCRD(bgCtx, agent)
 	}()
+
+	// 7. Clear cache keys
+	if s.cache != nil {
+		agentKey := fmt.Sprintf("communities:%s:agents:%s", communityID.String(), agentID.String())
+		_ = s.cache.Invalidate(bgCtx, agentKey)
+		registryKey := fmt.Sprintf("communities:%s:registry", communityID.String())
+		_ = s.cache.Invalidate(bgCtx, registryKey)
+	}
+
+	// 8. Publish NATS offline status change event
+	if s.publisher != nil {
+		subject := fmt.Sprintf("ts.community.%s.agent.%s.status", communityID.String(), agentID.String())
+		evt := events.DomainEvent{
+			EventID:    uuid.New().String(),
+			SchemaRef:  "urn:tacito:schema:conversational:agent-status:v1",
+			Source:     "keeper",
+			TenantID:   tenantID,
+			OccurredAt: time.Now().UTC().Format(time.RFC3339Nano),
+			Payload:    []byte(`{"status":"offline"}`),
+		}
+		_ = s.publisher.Publish(bgCtx, subject, evt)
+	}
 
 	return nil
 }

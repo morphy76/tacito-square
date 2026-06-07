@@ -50,6 +50,9 @@ func (m *mockPrunerAgentRepository) GetActiveRegistrationsByCommunity(ctx contex
 func (m *mockPrunerAgentRepository) PruneStaleRegistrations(ctx context.Context, threshold time.Duration) ([]agentcard.AgentCommunityRef, error) {
 	return m.pruned, m.err
 }
+func (m *mockPrunerAgentRepository) DeleteRegistration(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error {
+	return nil
+}
 
 type mockPrunerCache struct {
 	invalidated []string

@@ -91,6 +91,7 @@ type AgentRepository interface {
 	GetRegistration(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) (*agentcard.AgentCard, time.Time, error)
 	GetActiveRegistrationsByCommunity(ctx context.Context, communityID uuid.UUID) ([]*agentcard.AgentCard, time.Time, error)
 	PruneStaleRegistrations(ctx context.Context, threshold time.Duration) ([]agentcard.AgentCommunityRef, error)
+	DeleteRegistration(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error
 }
 
 // CommunityRepository defines the persistent storage operations for Community configurations.

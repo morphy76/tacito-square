@@ -85,6 +85,9 @@ func (m *mockAgentRepository) PruneStaleRegistrations(ctx context.Context, thres
 	}
 	return args.Get(0).([]agentcard.AgentCommunityRef), args.Error(1)
 }
+func (m *mockAgentRepository) DeleteRegistration(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error {
+	return m.Called(ctx, agentID, communityID).Error(0)
+}
 
 type mockCommunityRepository struct {
 	mock.Mock

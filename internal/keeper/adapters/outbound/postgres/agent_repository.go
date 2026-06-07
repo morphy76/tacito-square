@@ -639,3 +639,22 @@ func (r *AgentRepository) PruneStaleRegistrations(ctx context.Context, threshold
 	}
 	return prunedRefs, nil
 }
+
+// DeleteRegistration deletes a registered agent card for a community.
+func (r *AgentRepository) DeleteRegistration(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return errors.New("tenant resolution failed")
+	}
+
+	query := `DELETE FROM agent_registrations 
+	WHERE agent_id = $1 AND community_id = $2 AND tenant_id = $3`
+
+	exec := GetExecutor(ctx, r.pool)
+	_, err := exec.Exec(ctx, query, agentID, communityID, ten.FullName())
+	if err != nil {
+		return fmt.Errorf("delete agent registration: %w", err)
+	}
+	return nil
+}
+

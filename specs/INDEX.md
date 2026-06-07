@@ -149,6 +149,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | ID | Title | Status | Severity | File |
 |----|-------|--------|----------|------|
 | BUG-M6.1 | Agent Cards dynamically empty or missing actual values on startup | CLOSED | MEDIUM | [BUG-M6.1](tasks/M6.BUG1/BUG-M6.1.md) |
+| BUG-M6.2 | Unassigning agent from community does not evict registration or cards cache | CLOSED | HIGH | [BUG-M6.2](tasks/M6.BUG2/BUG-M6.2.md) |
 
 ### M7: BFF & UIs
 

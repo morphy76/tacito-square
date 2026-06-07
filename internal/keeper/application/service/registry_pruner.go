@@ -152,6 +152,11 @@ func (p *RegistryPruner) prune() {
 			p.logger.Trace().Str("key", cacheKey).Msg("evicted stale agent card from cache")
 		}
 
+		registryKey := fmt.Sprintf("communities:%s:registry", ref.CommunityID)
+		if errReg := p.cache.Invalidate(refCtx, registryKey); errReg != nil {
+			p.logger.Warn().Err(errReg).Str("key", registryKey).Msg("failed to invalidate stale registry from cache")
+		}
+
 		// 3. Broadcast status change event to NATS
 		subject := fmt.Sprintf("ts.community.%s.agent.%s.status", ref.CommunityID, ref.AgentID)
 		evt := events.DomainEvent{

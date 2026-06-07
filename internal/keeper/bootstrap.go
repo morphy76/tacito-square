@@ -134,14 +134,14 @@ func NewServer(
 		}
 	}
 
-	agentService := service.NewAgentService(agentRepo, crdCoord)
-	communityService := service.NewCommunityService(communityRepo)
-	lifecycleService := service.NewLifecycleService(agentRepo, communityRepo, crdCoord, nc)
-
 	// Events feature
 	eventPublisher := outboundNats.NewNATSEventPublisher(nc)
 	eventSubscriber := outboundNats.NewNATSEventSubscriber(nc)
 	eventService := service.NewEventService(eventPublisher, eventSubscriber)
+
+	agentService := service.NewAgentService(agentRepo, crdCoord, cacheClient, eventPublisher)
+	communityService := service.NewCommunityService(communityRepo)
+	lifecycleService := service.NewLifecycleService(agentRepo, communityRepo, crdCoord, nc)
 
 	// Wire NATS registry subscriber, registry pruner, and registry handler
 	if nc != nil && pool != nil {

@@ -10,6 +10,7 @@ import (
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
 	"github.com/morphy76/tacito-square/internal/shared/tenant"
 	"github.com/morphy76/tacito-square/pkg/agentcard"
+	"github.com/morphy76/tacito-square/pkg/events"
 	"github.com/morphy76/tacito-square/pkg/kubernetes/apis/tacito/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -79,6 +80,9 @@ func (m *mockAgentRepository) PruneStaleRegistrations(ctx context.Context, thres
 	}
 	return args.Get(0).([]agentcard.AgentCommunityRef), args.Error(1)
 }
+func (m *mockAgentRepository) DeleteRegistration(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error {
+	return m.Called(ctx, agentID, communityID).Error(0)
+}
 
 type mockCRDCoordinator struct {
 	mock.Mock
@@ -124,13 +128,41 @@ func (m *mockCRDCoordinator) GetAgentCRDStatus(ctx context.Context, agentID uuid
 	return args.Get(0).(*v1alpha1.TacitoAgentStatus), args.Error(1)
 }
 
+type mockCache struct {
+	mock.Mock
+}
+
+func (m *mockCache) Get(ctx context.Context, key string, dest interface{}) error {
+	args := m.Called(ctx, key, dest)
+	return args.Error(0)
+}
+
+func (m *mockCache) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
+	args := m.Called(ctx, key, value, ttl)
+	return args.Error(0)
+}
+
+func (m *mockCache) Invalidate(ctx context.Context, key string) error {
+	args := m.Called(ctx, key)
+	return args.Error(0)
+}
+
+type mockPublisher struct {
+	mock.Mock
+}
+
+func (m *mockPublisher) Publish(ctx context.Context, subject string, event events.DomainEvent) error {
+	args := m.Called(ctx, subject, event)
+	return args.Error(0)
+}
+
 
 func TestAgentService_Assign_AsynchronousNonBlocking(t *testing.T) {
 	repo := new(mockAgentRepository)
 	submitChan := make(chan struct{})
 	crd := &mockCRDCoordinator{submitChan: submitChan}
 
-	svc := NewAgentService(repo, crd)
+	svc := NewAgentService(repo, crd, nil, nil)
 
 	ten, _ := tenant.New("acme.com", "")
 	ctx := tenant.ContextWithTenant(context.Background(), ten)
@@ -168,7 +200,7 @@ func TestAgentService_Unassign_AsynchronousNonBlocking(t *testing.T) {
 	teardownChan := make(chan struct{})
 	crd := &mockCRDCoordinator{teardownChan: teardownChan}
 
-	svc := NewAgentService(repo, crd)
+	svc := NewAgentService(repo, crd, nil, nil)
 
 	ten, _ := tenant.New("acme.com", "")
 	ctx := tenant.ContextWithTenant(context.Background(), ten)
@@ -179,6 +211,7 @@ func TestAgentService_Unassign_AsynchronousNonBlocking(t *testing.T) {
 
 	repo.On("GetByID", mock.Anything, agentID).Return(agent, nil)
 	repo.On("UnassignFromCommunity", mock.Anything, agentID, commID).Return(nil)
+	repo.On("DeleteRegistration", mock.Anything, agentID, commID).Return(nil)
 	crd.On("TeardownAgentCRD", mock.Anything, mock.Anything).Return(nil)
 
 	start := time.Now()
@@ -199,4 +232,52 @@ func TestAgentService_Unassign_AsynchronousNonBlocking(t *testing.T) {
 
 	repo.AssertExpectations(t)
 	crd.AssertExpectations(t)
+}
+
+func TestAgentService_Unassign_EvictsAndPublishes(t *testing.T) {
+	repo := new(mockAgentRepository)
+	teardownChan := make(chan struct{})
+	crd := &mockCRDCoordinator{teardownChan: teardownChan}
+	cache := new(mockCache)
+	publisher := new(mockPublisher)
+
+	svc := NewAgentService(repo, crd, cache, publisher)
+
+	ten, _ := tenant.New("acme.com", "")
+	ctx := tenant.ContextWithTenant(context.Background(), ten)
+
+	agentID := uuid.New()
+	commID := uuid.New()
+	agent := &model.Agent{ID: agentID, Name: "reactive-agent"}
+
+	repo.On("GetByID", mock.Anything, agentID).Return(agent, nil)
+	repo.On("UnassignFromCommunity", mock.Anything, agentID, commID).Return(nil)
+	repo.On("DeleteRegistration", mock.Anything, agentID, commID).Return(nil)
+	crd.On("TeardownAgentCRD", mock.Anything, mock.Anything).Return(nil)
+
+	// Assertions for cache invalidation
+	agentKey := "communities:" + commID.String() + ":agents:" + agentID.String()
+	registryKey := "communities:" + commID.String() + ":registry"
+	cache.On("Invalidate", mock.Anything, agentKey).Return(nil)
+	cache.On("Invalidate", mock.Anything, registryKey).Return(nil)
+
+	// Assertions for NATS event publication
+	subject := "ts.community." + commID.String() + ".agent." + agentID.String() + ".status"
+	publisher.On("Publish", mock.Anything, subject, mock.Anything).Return(nil)
+
+	err := svc.Unassign(ctx, commID, agentID)
+	assert.NoError(t, err)
+
+	// Wait for background execution to complete
+	select {
+	case <-teardownChan:
+		// Background execution finished successfully
+	case <-time.After(150 * time.Millisecond):
+		t.Fatal("timeout waiting for background TeardownAgentCRD execution")
+	}
+
+	repo.AssertExpectations(t)
+	crd.AssertExpectations(t)
+	cache.AssertExpectations(t)
+	publisher.AssertExpectations(t)
 }
