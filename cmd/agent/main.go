@@ -319,7 +319,11 @@ func main() {
 	})
 
 	// Initialize and start NATS heartbeat publisher
-	heartbeatPublisher := nats.NewHeartbeatPublisher(nc, v, Version, mcpAdapter, logger)
+	var toolExecutor outbound.ToolExecutor
+	if mcpAdapter != nil {
+		toolExecutor = mcpAdapter
+	}
+	heartbeatPublisher := nats.NewHeartbeatPublisher(nc, v, Version, toolExecutor, logger)
 	if err := heartbeatPublisher.Start(ctx); err != nil {
 		logger.Fatal().Err(err).Msg("failed to start heartbeat publisher")
 	}
