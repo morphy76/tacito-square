@@ -446,6 +446,23 @@ func (r *AgentRepository) UnassignFromCommunity(ctx context.Context, agentID uui
 	})
 }
 
+// UpdateStatus updates an agent's status in the database.
+func (r *AgentRepository) UpdateStatus(ctx context.Context, agentID uuid.UUID, status model.AgentStatus) error {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return errors.New("tenant resolution failed")
+	}
+
+	query := `UPDATE agents SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4`
+
+	exec := GetExecutor(ctx, r.pool)
+	_, err := exec.Exec(ctx, query, string(status), time.Now().UTC(), agentID, ten.FullName())
+	if err != nil {
+		return fmt.Errorf("update agent status: %w", err)
+	}
+	return nil
+}
+
 // UpsertRegistration registers an agent's active card.
 func (r *AgentRepository) UpsertRegistration(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID, card *agentcard.AgentCard) error {
 	ten := tenant.FromContext(ctx)
@@ -475,65 +492,71 @@ func (r *AgentRepository) UpsertRegistration(ctx context.Context, agentID uuid.U
 }
 
 // GetRegistration retrieves a registered agent's card.
-func (r *AgentRepository) GetRegistration(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) (*agentcard.AgentCard, error) {
+func (r *AgentRepository) GetRegistration(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) (*agentcard.AgentCard, time.Time, error) {
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
-		return nil, errors.New("tenant resolution failed")
+		return nil, time.Time{}, errors.New("tenant resolution failed")
 	}
 
-	query := `SELECT card FROM agent_registrations 
+	query := `SELECT card, last_seen_at FROM agent_registrations 
 	WHERE agent_id = $1 AND community_id = $2 AND tenant_id = $3`
 
 	var cardBytes []byte
+	var lastSeen time.Time
 	exec := GetExecutor(ctx, r.pool)
-	err := exec.QueryRow(ctx, query, agentID, communityID, ten.FullName()).Scan(&cardBytes)
+	err := exec.QueryRow(ctx, query, agentID, communityID, ten.FullName()).Scan(&cardBytes, &lastSeen)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("registration not found for agent %s in community %s", agentID, communityID)
+			return nil, time.Time{}, fmt.Errorf("registration not found for agent %s in community %s", agentID, communityID)
 		}
-		return nil, fmt.Errorf("get agent registration: %w", err)
+		return nil, time.Time{}, fmt.Errorf("get agent registration: %w", err)
 	}
 
 	var card agentcard.AgentCard
 	if err := json.Unmarshal(cardBytes, &card); err != nil {
-		return nil, fmt.Errorf("unmarshal agent card: %w", err)
+		return nil, time.Time{}, fmt.Errorf("unmarshal agent card: %w", err)
 	}
-	return &card, nil
+	return &card, lastSeen, nil
 }
 
 // GetActiveRegistrationsByCommunity retrieves registrations inside a community.
-func (r *AgentRepository) GetActiveRegistrationsByCommunity(ctx context.Context, communityID uuid.UUID) ([]*agentcard.AgentCard, error) {
+func (r *AgentRepository) GetActiveRegistrationsByCommunity(ctx context.Context, communityID uuid.UUID) ([]*agentcard.AgentCard, time.Time, error) {
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
-		return nil, errors.New("tenant resolution failed")
+		return nil, time.Time{}, errors.New("tenant resolution failed")
 	}
 
-	query := `SELECT card FROM agent_registrations 
+	query := `SELECT card, last_seen_at FROM agent_registrations 
 	WHERE community_id = $1 AND tenant_id = $2 ORDER BY last_seen_at DESC`
 
 	exec := GetExecutor(ctx, r.pool)
 	rows, err := exec.Query(ctx, query, communityID, ten.FullName())
 	if err != nil {
-		return nil, fmt.Errorf("get active registrations by community: %w", err)
+		return nil, time.Time{}, fmt.Errorf("get active registrations by community: %w", err)
 	}
 	defer rows.Close()
 
 	var cards []*agentcard.AgentCard
+	var latestTime time.Time
 	for rows.Next() {
 		var cardBytes []byte
-		if err := rows.Scan(&cardBytes); err != nil {
-			return nil, fmt.Errorf("scan agent card: %w", err)
+		var lastSeen time.Time
+		if err := rows.Scan(&cardBytes, &lastSeen); err != nil {
+			return nil, time.Time{}, fmt.Errorf("scan agent card: %w", err)
+		}
+		if lastSeen.After(latestTime) {
+			latestTime = lastSeen
 		}
 		var card agentcard.AgentCard
 		if err := json.Unmarshal(cardBytes, &card); err != nil {
-			return nil, fmt.Errorf("unmarshal agent card list item: %w", err)
+			return nil, time.Time{}, fmt.Errorf("unmarshal agent card list item: %w", err)
 		}
 		cards = append(cards, &card)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows iteration error: %w", err)
+		return nil, time.Time{}, fmt.Errorf("rows iteration error: %w", err)
 	}
-	return cards, nil
+	return cards, latestTime, nil
 }
 
 // PruneStaleRegistrations deletes registrations missing heartbeats and sets agent status to offline.

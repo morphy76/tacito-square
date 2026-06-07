@@ -63,3 +63,8 @@ Each direction is labeled with one of the following categories:
 | 32 | **Provide a standardized API test suite for the Keeper component**<br>Build a Bruno or Postman collection to verify and regression-test Keeper's HTTP endpoints. | ⚙️ Infra & Quality | **Already Addressed**<br>(Incorp. in draft `SPEC-FR-M9.3`) | **M9: Hardening** | 4 ⭐ | 3 | **0** |
 | 33 | **Establish BFF and Frontend development guidelines**<br>Define guidelines for stateless architecture, avoiding HTTP sessions, and storing auth tokens securely in encrypted cookies. | ⚙️ Infra & Quality | **Already Addressed**<br>(Incorp. in draft `SPEC-FR-M7.1`) | **M7: BFF & UIs** | 4 ⭐ | 3 | **0** |
 | 34 | **Optimize component startup times and container initialization**<br>Profile and streamline system initialization processes to allow faster scaling and cold starts. | ⚙️ Infra & Quality | **Already Addressed**<br>(Refines `SPEC-FR-M2.7`) | **M9: Hardening** | 3 | 2 | **0** |
+
+## Fee entries (before prioritization)
+
+- evaluate to move community end user operations from the keeper to a new gateway component
+- community attributes and usage enforcing, e.g. rate limits, quotas, max resources (e.g. number of agents, knowledge base size, etc.)

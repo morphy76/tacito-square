@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M6.5                                |
-| Status        | ACCEPTED                                    |
+| Status        | VERIFIED                                    |
 | Milestone     | M6                                          |
 | Component     | agent, keeper                               |
 | Depends On    | SPEC-FR-M5.1, SPEC-FR-M6.0                  |

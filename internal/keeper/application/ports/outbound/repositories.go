@@ -2,9 +2,11 @@ package outbound
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
+	"github.com/morphy76/tacito-square/pkg/agentcard"
 )
 
 // LLMBindingRepository defines the persistent storage operations for LLM Provider Bindings.
@@ -83,6 +85,12 @@ type AgentRepository interface {
 
 	AssignToCommunity(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error
 	UnassignFromCommunity(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error
+	UpdateStatus(ctx context.Context, agentID uuid.UUID, status model.AgentStatus) error
+
+	UpsertRegistration(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID, card *agentcard.AgentCard) error
+	GetRegistration(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) (*agentcard.AgentCard, time.Time, error)
+	GetActiveRegistrationsByCommunity(ctx context.Context, communityID uuid.UUID) ([]*agentcard.AgentCard, time.Time, error)
+	PruneStaleRegistrations(ctx context.Context, threshold time.Duration) ([]agentcard.AgentCommunityRef, error)
 }
 
 // CommunityRepository defines the persistent storage operations for Community configurations.

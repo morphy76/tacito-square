@@ -140,7 +140,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | SPEC-FR-M6.2 | NATS Inter-Agent Messaging | DRAFT | agent | [SPEC-FR-M6.2](functional/M6/SPEC-FR-M6.2.md) |
 | SPEC-FR-M6.3 | NATS Subject Namespacing | DRAFT | agent, keeper | [SPEC-FR-M6.3](functional/M6/SPEC-FR-M6.3.md) |
 | SPEC-FR-M6.4 | Thread Management | DRAFT | keeper | [SPEC-FR-M6.4](functional/M6/SPEC-FR-M6.4.md) |
-| SPEC-FR-M6.5 | A2A Agent Cards | IN_PROGRESS | agent, keeper | [SPEC-FR-M6.5](functional/M6/SPEC-FR-M6.5.md) |
+| SPEC-FR-M6.5 | A2A Agent Cards | VERIFIED | agent, keeper | [SPEC-FR-M6.5](functional/M6/SPEC-FR-M6.5.md) |
 | SPEC-FR-M6.6 | Conversation Handoff | DRAFT | agent | [SPEC-FR-M6.6](functional/M6/SPEC-FR-M6.6.md) |
 | SPEC-FR-M6.7 | Specialist Agent Spawn | DRAFT | keeper, agent | [SPEC-FR-M6.7](functional/M6/SPEC-FR-M6.7.md) |
 

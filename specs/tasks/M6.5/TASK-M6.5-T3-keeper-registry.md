@@ -5,7 +5,7 @@
 | Task ID     | TASK-M6.5-T3                          |
 | Spec        | SPEC-FR-M6.5                          |
 | Boundary    | Keeper Registry Ingestion & Pruning   |
-| Status      | DRAFT                                 |
+| Status      | VERIFIED                              |
 | Depends On  | TASK-M6.5-T2                          |
 
 ## Objective

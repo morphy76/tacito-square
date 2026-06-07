@@ -5,7 +5,7 @@
 | Task ID     | TASK-M6.5-T4                                |
 | Spec        | SPEC-FR-M6.5                                |
 | Boundary    | Discovery Queries & Client-side Cache       |
-| Status      | DRAFT                                       |
+| Status      | VERIFIED                                    |
 | Depends On  | TASK-M6.5-T3                                |
 
 ## Objective

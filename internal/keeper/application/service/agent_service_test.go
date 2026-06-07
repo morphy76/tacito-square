@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
 	"github.com/morphy76/tacito-square/internal/shared/tenant"
+	"github.com/morphy76/tacito-square/pkg/agentcard"
 	"github.com/morphy76/tacito-square/pkg/kubernetes/apis/tacito/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -50,6 +51,33 @@ func (m *mockAgentRepository) AssignToCommunity(ctx context.Context, agentID uui
 }
 func (m *mockAgentRepository) UnassignFromCommunity(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error {
 	return m.Called(ctx, agentID, communityID).Error(0)
+}
+func (m *mockAgentRepository) UpdateStatus(ctx context.Context, agentID uuid.UUID, status model.AgentStatus) error {
+	return m.Called(ctx, agentID, status).Error(0)
+}
+func (m *mockAgentRepository) UpsertRegistration(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID, card *agentcard.AgentCard) error {
+	return m.Called(ctx, agentID, communityID, card).Error(0)
+}
+func (m *mockAgentRepository) GetRegistration(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) (*agentcard.AgentCard, time.Time, error) {
+	args := m.Called(ctx, agentID, communityID)
+	if args.Get(0) == nil {
+		return nil, time.Time{}, args.Error(2)
+	}
+	return args.Get(0).(*agentcard.AgentCard), args.Get(1).(time.Time), args.Error(2)
+}
+func (m *mockAgentRepository) GetActiveRegistrationsByCommunity(ctx context.Context, communityID uuid.UUID) ([]*agentcard.AgentCard, time.Time, error) {
+	args := m.Called(ctx, communityID)
+	if args.Get(0) == nil {
+		return nil, time.Time{}, args.Error(2)
+	}
+	return args.Get(0).([]*agentcard.AgentCard), args.Get(1).(time.Time), args.Error(2)
+}
+func (m *mockAgentRepository) PruneStaleRegistrations(ctx context.Context, threshold time.Duration) ([]agentcard.AgentCommunityRef, error) {
+	args := m.Called(ctx, threshold)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]agentcard.AgentCommunityRef), args.Error(1)
 }
 
 type mockCRDCoordinator struct {

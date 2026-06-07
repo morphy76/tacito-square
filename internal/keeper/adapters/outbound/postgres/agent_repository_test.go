@@ -334,15 +334,17 @@ func TestAgentRepository_AgentRegistration(t *testing.T) {
 	})
 
 	t.Run("Get Registration", func(t *testing.T) {
-		fetched, err := repo.GetRegistration(ctx, agent.ID, comm.ID)
+		fetched, lastSeen, err := repo.GetRegistration(ctx, agent.ID, comm.ID)
 		require.NoError(t, err)
+		assert.False(t, lastSeen.IsZero())
 		assert.Equal(t, card.Name, fetched.Name)
 		assert.Equal(t, card.URL, fetched.URL)
 	})
 
 	t.Run("Get Active Registrations By Community", func(t *testing.T) {
-		list, err := repo.GetActiveRegistrationsByCommunity(ctx, comm.ID)
+		list, latestTime, err := repo.GetActiveRegistrationsByCommunity(ctx, comm.ID)
 		require.NoError(t, err)
+		assert.False(t, latestTime.IsZero())
 		assert.Len(t, list, 1)
 		assert.Equal(t, card.Name, list[0].Name)
 	})
@@ -356,7 +358,7 @@ func TestAgentRepository_AgentRegistration(t *testing.T) {
 		assert.Equal(t, comm.ID.String(), prunedRefs[0].CommunityID)
 
 		// Get should fail now
-		_, err = repo.GetRegistration(ctx, agent.ID, comm.ID)
+		_, _, err = repo.GetRegistration(ctx, agent.ID, comm.ID)
 		assert.Error(t, err)
 	})
 
