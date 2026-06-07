@@ -39,7 +39,7 @@ Start a new thread
 {
   "schema_ref": "urn:tacito:schema:conversational:start-thread:v1",
   "payload": {
-    "thread_id": "test-3",
+    "thread_id": "test-5",
     "community_id": "405e81ab-fdba-4570-b0ac-b294cf616961"
   }
 }
@@ -51,7 +51,7 @@ Add a user message
 {
   "schema_ref": "urn:tacito:schema:conversational:add-user-message:v1",
   "payload": {
-    "thread_id": "test-3",
+    "thread_id": "test-5",
     "community_id": "405e81ab-fdba-4570-b0ac-b294cf616961",
     "message": "Hello, how are you?"
   }
@@ -64,7 +64,7 @@ End the thread
 {
   "schema_ref": "urn:tacito:schema:conversational:end-thread:v1",
   "payload": {
-    "thread_id": "test-3",
+    "thread_id": "test-5",
     "community_id": "405e81ab-fdba-4570-b0ac-b294cf616961"
   }
 }
