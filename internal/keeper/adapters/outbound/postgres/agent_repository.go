@@ -562,50 +562,64 @@ func (r *AgentRepository) GetActiveRegistrationsByCommunity(ctx context.Context,
 // PruneStaleRegistrations deletes registrations missing heartbeats and sets agent status to offline.
 func (r *AgentRepository) PruneStaleRegistrations(ctx context.Context, threshold time.Duration) ([]agentcard.AgentCommunityRef, error) {
 	ten := tenant.FromContext(ctx)
-	if ten == nil {
-		return nil, errors.New("tenant resolution failed")
-	}
 
 	cutoff := time.Now().UTC().Add(-threshold)
 
-	var pruned []agentcard.AgentCommunityRef
-	err := ExecuteInTxOrPool(ctx, r.pool, func(tx pgx.Tx) error {
-		// 1. Delete and return pruned agents
-		queryDel := `DELETE FROM agent_registrations 
-		WHERE last_seen_at < $1 AND tenant_id = $2
-		RETURNING agent_id, community_id`
+	type prunedRow struct {
+		agentID     uuid.UUID
+		communityID uuid.UUID
+		tenantID    string
+	}
+	var prunedRows []prunedRow
 
-		rows, err := tx.Query(ctx, queryDel, cutoff, ten.FullName())
+	err := ExecuteInTxOrPool(ctx, r.pool, func(tx pgx.Tx) error {
+		var rows pgx.Rows
+		var err error
+
+		if ten != nil {
+			queryDel := `DELETE FROM agent_registrations 
+			WHERE last_seen_at < $1 AND tenant_id = $2
+			RETURNING agent_id, community_id, tenant_id`
+			rows, err = tx.Query(ctx, queryDel, cutoff, ten.FullName())
+		} else {
+			queryDel := `DELETE FROM agent_registrations 
+			WHERE last_seen_at < $1
+			RETURNING agent_id, community_id, tenant_id`
+			rows, err = tx.Query(ctx, queryDel, cutoff)
+		}
+
 		if err != nil {
 			return fmt.Errorf("delete stale registrations: %w", err)
 		}
 		defer rows.Close()
 
-		var agentIDs []uuid.UUID
 		for rows.Next() {
-			var aID uuid.UUID
-			var cID uuid.UUID
-			if err := rows.Scan(&aID, &cID); err != nil {
+			var rRow prunedRow
+			if err := rows.Scan(&rRow.agentID, &rRow.communityID, &rRow.tenantID); err != nil {
 				return fmt.Errorf("scan pruned registration: %w", err)
 			}
-			agentIDs = append(agentIDs, aID)
-			pruned = append(pruned, agentcard.AgentCommunityRef{
-				AgentID:     aID.String(),
-				CommunityID: cID.String(),
-			})
+			prunedRows = append(prunedRows, rRow)
 		}
 		if err := rows.Err(); err != nil {
 			return fmt.Errorf("rows error: %w", err)
 		}
 
 		// 2. Set status to offline (stopped) in agents table
-		if len(agentIDs) > 0 {
-			queryUpdate := `UPDATE agents SET status = $1, updated_at = $2 
-			WHERE id = ANY($3) AND tenant_id = $4`
-			
-			_, err = tx.Exec(ctx, queryUpdate, string(model.AgentStatusStopped), time.Now().UTC(), agentIDs, ten.FullName())
-			if err != nil {
-				return fmt.Errorf("update pruned agents status: %w", err)
+		if len(prunedRows) > 0 {
+			// Group by tenant for segregated updates
+			prunedByTenant := make(map[string][]uuid.UUID)
+			for _, row := range prunedRows {
+				prunedByTenant[row.tenantID] = append(prunedByTenant[row.tenantID], row.agentID)
+			}
+
+			for tID, agentIDs := range prunedByTenant {
+				queryUpdate := `UPDATE agents SET status = $1, updated_at = $2 
+				WHERE id = ANY($3) AND tenant_id = $4`
+				
+				_, err = tx.Exec(ctx, queryUpdate, string(model.AgentStatusStopped), time.Now().UTC(), agentIDs, tID)
+				if err != nil {
+					return fmt.Errorf("update pruned agents status: %w", err)
+				}
 			}
 		}
 		return nil
@@ -614,5 +628,14 @@ func (r *AgentRepository) PruneStaleRegistrations(ctx context.Context, threshold
 	if err != nil {
 		return nil, err
 	}
-	return pruned, nil
+
+	prunedRefs := make([]agentcard.AgentCommunityRef, 0, len(prunedRows))
+	for _, row := range prunedRows {
+		prunedRefs = append(prunedRefs, agentcard.AgentCommunityRef{
+			AgentID:     row.agentID.String(),
+			CommunityID: row.communityID.String(),
+			TenantID:    row.tenantID,
+		})
+	}
+	return prunedRefs, nil
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/outbound"
 	sharedports "github.com/morphy76/tacito-square/internal/shared/ports/outbound"
+	"github.com/morphy76/tacito-square/internal/shared/tenant"
 	"github.com/morphy76/tacito-square/pkg/events"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
@@ -130,11 +131,21 @@ func (p *RegistryPruner) prune() {
 		p.logger.Trace().
 			Str("agent_id", ref.AgentID).
 			Str("community_id", ref.CommunityID).
+			Str("tenant_id", ref.TenantID).
 			Msg("handling stale agent eviction and status broadcast")
+
+		// Construct tenant context for dynamic propagation
+		refCtx := ctx
+		refTen, errTen := tenant.New(ref.TenantID, "")
+		if errTen == nil {
+			refCtx = tenant.ContextWithTenant(ctx, refTen)
+		} else {
+			p.logger.Warn().Err(errTen).Str("tenant_id", ref.TenantID).Msg("failed to parse tenant ID for context")
+		}
 
 		// 2. Invalidate card from cache
 		cacheKey := fmt.Sprintf("communities:%s:agents:%s", ref.CommunityID, ref.AgentID)
-		err = p.cache.Invalidate(ctx, cacheKey)
+		err = p.cache.Invalidate(refCtx, cacheKey)
 		if err != nil {
 			p.logger.Warn().Err(err).Str("key", cacheKey).Msg("failed to invalidate stale agent card from cache")
 		} else {
@@ -147,12 +158,12 @@ func (p *RegistryPruner) prune() {
 			EventID:    uuid.New().String(),
 			SchemaRef:  "urn:tacito:schema:conversational:agent-status:v1",
 			Source:     "keeper",
-			TenantID:   "default", // tenant is dynamically propagated or default
+			TenantID:   ref.TenantID,
 			OccurredAt: time.Now().UTC().Format(time.RFC3339Nano),
 			Payload:    []byte(`{"status":"offline"}`),
 		}
 
-		err = p.publisher.Publish(ctx, subject, evt)
+		err = p.publisher.Publish(refCtx, subject, evt)
 		if err != nil {
 			p.logger.Warn().Err(err).Str("subject", subject).Msg("failed to publish offline status event")
 		} else {

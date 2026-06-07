@@ -356,6 +356,7 @@ func TestAgentRepository_AgentRegistration(t *testing.T) {
 		assert.Len(t, prunedRefs, 1)
 		assert.Equal(t, agent.ID.String(), prunedRefs[0].AgentID)
 		assert.Equal(t, comm.ID.String(), prunedRefs[0].CommunityID)
+		assert.Equal(t, ten.FullName(), prunedRefs[0].TenantID)
 
 		// Get should fail now
 		_, _, err = repo.GetRegistration(ctx, agent.ID, comm.ID)

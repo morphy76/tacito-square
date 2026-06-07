@@ -81,6 +81,7 @@ func TestRegistryPruner_Pruning(t *testing.T) {
 			{
 				AgentID:     "agent-1",
 				CommunityID: "comm-1",
+				TenantID:    "test-tenant",
 			},
 		},
 	}

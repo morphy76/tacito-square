@@ -49,4 +49,5 @@ type AgentCard struct {
 type AgentCommunityRef struct {
 	AgentID     string `json:"agent_id"`
 	CommunityID string `json:"community_id"`
+	TenantID    string `json:"tenant_id"`
 }
