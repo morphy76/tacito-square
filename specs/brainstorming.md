@@ -68,6 +68,8 @@ Each direction is labeled with one of the following categories:
 
 - all get apis, except well-known like agent cards, should accept query string arguments (managed as shared module, as they will be used across the board) to: limit the reposonse model, by excluding/including fields, sort by field values ascending/descending, simple filtering by field values and values patterns, page and offset arguments for pagination, timestamp formats (RFC3339 with/without fractional seconds, epoch), timezone offset for timestamp conversions,
 - GraphQL APIs can be the primary API surface for the BFF, with REST APIs still operating to serve CLI clients.
+- why empty events {"event_id":"","schema_ref":"","source":"","tenant_id":"","occurred_at":"","payload":null} in SSE?
+- save conversation history for recovery and for long term memory
 - built-in tools and mcp tools in agent cards
 - bug? agent cards con http header expires == last modified
 - evaluate to move community end user operations from the keeper to a new gateway component
