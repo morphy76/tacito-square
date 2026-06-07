@@ -5,7 +5,7 @@
 | Task ID     | TASK-M6.5-T2                          |
 | Spec        | SPEC-FR-M6.5                          |
 | Boundary    | Agent Heartbeat Publisher             |
-| Status      | DRAFT                                 |
+| Status      | IMPLEMENTED                           |
 | Depends On  | TASK-M6.5-T1                          |
 
 ## Objective

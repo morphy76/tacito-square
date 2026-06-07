@@ -10,7 +10,7 @@
 
 ## Objective
 
-Build the community-scoped REST endpoints in the Keeper HTTP server to serve individual Agent Cards, collective Community Cards, and indexes, appending public Cache-Control headers to support proxy caching.
+Build the community-scoped, documented in openapi, REST endpoints in the Keeper HTTP server to serve individual Agent Cards, collective Community Cards, and indexes, appending public Cache-Control headers to support proxy caching.
 
 ## Files
 
@@ -27,7 +27,7 @@ Build the community-scoped REST endpoints in the Keeper HTTP server to serve ind
    - `GET /api/v1/communities/:community_id/agents/:agent_id/.well-known/agent-card.json`
    - `GET /api/v1/communities/:community_id/.well-known/community-card.json`
    - `GET /api/v1/communities/:community_id/.well-known/agent-cards.json`
-3. Assert that the responses return HTTP 200, valid JSON schemas matching specifications, and the header `Cache-Control` equal to `public, max-age=30`.
+3. Assert that the responses return HTTP 200, valid JSON schemas matching specifications, and the header `Cache-Control` equal to `public, max-age=30`. Include, and handle, all the HTTP headers deemed practical for caching, e.g. ETAG, Last-Modified, Expires.
 4. Verify tests fail to compile or route (RED).
 
 ## GREEN Phase
