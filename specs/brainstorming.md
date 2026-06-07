@@ -76,4 +76,5 @@ Each direction is labeled with one of the following categories:
 - evaluate to move community end user operations from the keeper to a new gateway component
 - community attributes and usage enforcing, e.g. rate limits, quotas, max resources (e.g. number of agents, knowledge base size, etc.)
 - deploy a free mcp server to test the mcp integration in standalone agent deployment
+- remove tacitocommunities.tacito.square.io CRD
 
