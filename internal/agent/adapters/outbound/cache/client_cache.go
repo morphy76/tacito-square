@@ -8,11 +8,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/morphy76/tacito-square/internal/agent/application/ports/outbound"
 	"github.com/morphy76/tacito-square/pkg/agentcard"
 	"github.com/morphy76/tacito-square/pkg/events"
 	natsclient "github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
 )
+
+var _ outbound.AgentDiscovery = (*ClientCache)(nil)
 
 // ClientCache implements in-memory caching of community agent cards on the Agent client-side.
 type ClientCache struct {

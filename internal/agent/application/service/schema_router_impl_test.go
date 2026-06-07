@@ -59,6 +59,8 @@ func TestSchemaRouter_StartThread(t *testing.T) {
 	router := service.NewSchemaRouterImpl(
 		"agent-123",
 		"test-agent",
+		"spoke",
+		nil,
 		nil,
 		mockMemory,
 		nil,
@@ -100,7 +102,9 @@ func TestSchemaRouter_AddUserMessage_Success(t *testing.T) {
 	router := service.NewSchemaRouterImpl(
 		"agent-123",
 		"test-agent",
+		"spoke",
 		mockProcessor,
+		nil,
 		&MockShortTermMemory{},
 		nil,
 		nil,
@@ -175,7 +179,9 @@ func TestSchemaRouter_AddUserMessage_LLMFailure_Rollback(t *testing.T) {
 	router := service.NewSchemaRouterImpl(
 		"agent-123",
 		"test-agent",
+		"spoke",
 		mockProcessor,
+		nil,
 		mockMemory,
 		nil,
 		nil,
@@ -251,6 +257,8 @@ func TestSchemaRouter_EndThread_LTM(t *testing.T) {
 	router := service.NewSchemaRouterImpl(
 		"agent-123",
 		"test-agent",
+		"spoke",
+		nil,
 		nil,
 		mockMemory,
 		mockLTM,
@@ -300,6 +308,8 @@ func TestSchemaRouter_EndThread_EmitsHistoryEvent(t *testing.T) {
 	router := service.NewSchemaRouterImpl(
 		"agent-123",
 		"test-agent",
+		"spoke",
+		nil,
 		nil,
 		mockMemory,
 		nil,
@@ -360,6 +370,8 @@ func TestSchemaRouter_UnknownSchemaRef(t *testing.T) {
 	router := service.NewSchemaRouterImpl(
 		"agent-123",
 		"test-agent",
+		"spoke",
+		nil,
 		nil,
 		nil,
 		nil,

@@ -17,21 +17,25 @@ import (
 )
 
 type SchemaRouterImpl struct {
-	agentID   string
-	agentName string
-	processor inbound.MessageProcessor
-	memory    outbound.ShortTermMemory
-	ltm       outbound.LongTermMemory
-	embed     outbound.Embedder
-	brain     outbound.Brain
-	publisher outbound.EventPublisher
-	cfg       *viper.Viper
+	agentID      string
+	agentName    string
+	role         string
+	processor    inbound.MessageProcessor
+	orchestrator *Orchestrator
+	memory       outbound.ShortTermMemory
+	ltm          outbound.LongTermMemory
+	embed        outbound.Embedder
+	brain        outbound.Brain
+	publisher    outbound.EventPublisher
+	cfg          *viper.Viper
 }
 
 func NewSchemaRouterImpl(
 	agentID string,
 	agentName string,
+	role string,
 	processor inbound.MessageProcessor,
+	orchestrator *Orchestrator,
 	memory outbound.ShortTermMemory,
 	ltm outbound.LongTermMemory,
 	embed outbound.Embedder,
@@ -40,15 +44,17 @@ func NewSchemaRouterImpl(
 	cfg *viper.Viper,
 ) *SchemaRouterImpl {
 	return &SchemaRouterImpl{
-		agentID:   agentID,
-		agentName: agentName,
-		processor: processor,
-		memory:    memory,
-		ltm:       ltm,
-		embed:     embed,
-		brain:     brain,
-		publisher: publisher,
-		cfg:       cfg,
+		agentID:      agentID,
+		agentName:    agentName,
+		role:         role,
+		processor:    processor,
+		orchestrator: orchestrator,
+		memory:       memory,
+		ltm:          ltm,
+		embed:        embed,
+		brain:        brain,
+		publisher:    publisher,
+		cfg:          cfg,
 	}
 }
 
@@ -59,6 +65,22 @@ func (r *SchemaRouterImpl) RouteEvent(ctx context.Context, event events.DomainEv
 		Str("tenant_id", event.TenantID).
 		Logger()
 	ctx = logger.WithContext(ctx)
+
+	if r.role == "hub" {
+		switch event.SchemaRef {
+		case events.SchemaConversationalStartThread:
+			return r.handleStartThread(ctx, event)
+		case events.SchemaConversationalAddUserMessage:
+			return r.handleHubAddUserMessage(ctx, event)
+		case events.SchemaConversationalAgentResponse:
+			return r.handleHubSpokeResponse(ctx, event)
+		case events.SchemaConversationalEndThread:
+			return r.handleEndThread(ctx, event)
+		default:
+			logger.Warn().Msg("unsupported event schema under hub role, skipping silently")
+			return nil
+		}
+	}
 
 	switch event.SchemaRef {
 	case events.SchemaConversationalStartThread:
@@ -269,4 +291,44 @@ func (r *SchemaRouterImpl) handleEndThread(ctx context.Context, event events.Dom
 	}
 
 	return nil
+}
+
+func (r *SchemaRouterImpl) handleHubAddUserMessage(ctx context.Context, event events.DomainEvent) error {
+	logger := *zerolog.Ctx(ctx)
+	var payload events.AddUserMessagePayload
+	if err := json.Unmarshal(event.Payload, &payload); err != nil {
+		logger.Error().Err(err).Msg("failed to unmarshal AddUserMessagePayload")
+		return fmt.Errorf("failed to unmarshal add-user-message payload: %w", err)
+	}
+
+	logger = logger.With().Str("thread_id", payload.ThreadID).Logger()
+	ctx = logger.WithContext(ctx)
+
+	if r.orchestrator == nil {
+		logger.Error().Msg("orchestrator not initialized under hub role")
+		return fmt.Errorf("orchestrator not configured")
+	}
+
+	logger.Info().Msg("hub processing incoming user message event")
+	return r.orchestrator.ProcessUserMessage(ctx, event.TenantID, payload.ThreadID, payload, event.EventID)
+}
+
+func (r *SchemaRouterImpl) handleHubSpokeResponse(ctx context.Context, event events.DomainEvent) error {
+	logger := *zerolog.Ctx(ctx)
+	var payload events.AgentResponsePayload
+	if err := json.Unmarshal(event.Payload, &payload); err != nil {
+		logger.Error().Err(err).Msg("failed to unmarshal AgentResponsePayload")
+		return fmt.Errorf("failed to unmarshal agent-response payload: %w", err)
+	}
+
+	logger = logger.With().Str("thread_id", payload.ThreadID).Logger()
+	ctx = logger.WithContext(ctx)
+
+	if r.orchestrator == nil {
+		logger.Error().Msg("orchestrator not initialized under hub role")
+		return fmt.Errorf("orchestrator not configured")
+	}
+
+	logger.Info().Str("spoke_agent", payload.AgentName).Msg("hub processing incoming spoke response event")
+	return r.orchestrator.ProcessSpokeResponse(ctx, event.TenantID, payload.ThreadID, payload)
 }
