@@ -59,6 +59,7 @@ type DeploymentRequest struct {
 type CreateAgentRequest struct {
 	Name            string                 `json:"name" binding:"required"`
 	Description     string                 `json:"description"`
+	Role            string                 `json:"role"`
 	Brain           CreateBrainRequest     `json:"brain" binding:"required"`
 	ShortTermMemory CreateShortTermRequest `json:"short_term_memory" binding:"required"`
 	LongTermMemory  CreateLongTermRequest  `json:"long_term_memory" binding:"required"`
@@ -71,6 +72,7 @@ type CreateAgentRequest struct {
 type UpdateAgentRequest struct {
 	Name            string                 `json:"name" binding:"required"`
 	Description     string                 `json:"description"`
+	Role            string                 `json:"role"`
 	Brain           CreateBrainRequest     `json:"brain" binding:"required"`
 	ShortTermMemory CreateShortTermRequest `json:"short_term_memory" binding:"required"`
 	LongTermMemory  CreateLongTermRequest  `json:"long_term_memory" binding:"required"`
@@ -149,11 +151,17 @@ func (h *AgentHandler) Create(c *gin.Context) {
 		})
 	}
 
+	role := req.Role
+	if role == "" {
+		role = "spoke"
+	}
+
 	agent := &model.Agent{
 		ID:          uuid.New(),
 		TenantID:    ten.FullName(),
 		Name:        req.Name,
 		Description: req.Description,
+		Role:        role,
 		Brain: model.BrainConfig{
 			Model:             req.Brain.Model,
 			Temperature:       temp,
@@ -310,6 +318,7 @@ func (h *AgentHandler) Update(c *gin.Context) {
 		TenantID:        existing.TenantID,
 		Name:            existing.Name,
 		Description:     existing.Description,
+		Role:            existing.Role,
 		Brain:           existing.Brain,
 		ShortTermMemory: existing.ShortTermMemory,
 		LongTermMemory:  existing.LongTermMemory,
@@ -369,6 +378,11 @@ func (h *AgentHandler) Update(c *gin.Context) {
 	existing.TenantID = ten.FullName()
 	existing.Name = req.Name
 	existing.Description = req.Description
+	role := req.Role
+	if role == "" {
+		role = "spoke"
+	}
+	existing.Role = role
 	existing.Brain = model.BrainConfig{
 		Model:             req.Brain.Model,
 		Temperature:       temp,

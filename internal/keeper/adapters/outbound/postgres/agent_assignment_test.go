@@ -185,6 +185,157 @@ func TestAgentRepository_AssignmentLifecycle(t *testing.T) {
 		assert.Contains(t, err.Error(), "is not assigned to community")
 	})
 
+	t.Run("Single-Agent Community Assignment Limit", func(t *testing.T) {
+		// 1. Create a single-agent community
+		singleComm := &model.Community{
+			ID:            uuid.New(),
+			TenantID:      ten.FullName(),
+			Name:          "test-single-agent-comm",
+			Topology:      model.CommunityTopologySingleAgent,
+			Status:        "active",
+			CreatedAt:     time.Now().UTC(),
+			UpdatedAt:     time.Now().UTC(),
+		}
+		err := commRepo.Create(ctx, singleComm)
+		require.NoError(t, err)
+		defer func() {
+			_, _ = pool.Exec(ctx, "DELETE FROM communities WHERE id = $1", singleComm.ID)
+		}()
+
+		// 2. Create agent 1 and assign
+		a1 := &model.Agent{
+			ID:            uuid.New(),
+			TenantID:      ten.FullName(),
+			Name:          "test-a1",
+			Brain:         agent.Brain,
+			ShortTermMemory: agent.ShortTermMemory,
+			LongTermMemory:  agent.LongTermMemory,
+			MCPClients:      []model.MCPClientConfig{},
+			Status:          model.AgentStatusDefined,
+			CreatedAt:       time.Now().UTC(),
+			UpdatedAt:       time.Now().UTC(),
+		}
+		err = repo.Create(ctx, a1)
+		require.NoError(t, err)
+		defer func() {
+			_, _ = pool.Exec(ctx, "DELETE FROM agents WHERE id = $1", a1.ID)
+		}()
+
+		err = repo.AssignToCommunity(ctx, a1.ID, singleComm.ID)
+		require.NoError(t, err)
+
+		// 3. Create agent 2 and attempt to assign (should fail)
+		a2 := &model.Agent{
+			ID:            uuid.New(),
+			TenantID:      ten.FullName(),
+			Name:          "test-a2",
+			Brain:         agent.Brain,
+			ShortTermMemory: agent.ShortTermMemory,
+			LongTermMemory:  agent.LongTermMemory,
+			MCPClients:      []model.MCPClientConfig{},
+			Status:          model.AgentStatusDefined,
+			CreatedAt:       time.Now().UTC(),
+			UpdatedAt:       time.Now().UTC(),
+		}
+		err = repo.Create(ctx, a2)
+		require.NoError(t, err)
+		defer func() {
+			_, _ = pool.Exec(ctx, "DELETE FROM agents WHERE id = $1", a2.ID)
+		}()
+
+		err = repo.AssignToCommunity(ctx, a2.ID, singleComm.ID)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "single-agent topology cannot have more than one agent assigned")
+	})
+
+	t.Run("Hub-Spoke Community Hub Uniqueness Limit", func(t *testing.T) {
+		// 1. Create a hub-spoke community
+		hubSpokeComm := &model.Community{
+			ID:            uuid.New(),
+			TenantID:      ten.FullName(),
+			Name:          "test-hubspoke-comm",
+			Topology:      model.CommunityTopologyHubSpoke,
+			Status:        "active",
+			CreatedAt:     time.Now().UTC(),
+			UpdatedAt:     time.Now().UTC(),
+		}
+		err := commRepo.Create(ctx, hubSpokeComm)
+		require.NoError(t, err)
+		defer func() {
+			_, _ = pool.Exec(ctx, "DELETE FROM communities WHERE id = $1", hubSpokeComm.ID)
+		}()
+
+		// 2. Create hub agent 1 and assign
+		h1 := &model.Agent{
+			ID:            uuid.New(),
+			TenantID:      ten.FullName(),
+			Name:          "test-h1",
+			Role:          "hub",
+			Brain:         agent.Brain,
+			ShortTermMemory: agent.ShortTermMemory,
+			LongTermMemory:  agent.LongTermMemory,
+			MCPClients:      []model.MCPClientConfig{},
+			Status:          model.AgentStatusDefined,
+			CreatedAt:       time.Now().UTC(),
+			UpdatedAt:       time.Now().UTC(),
+		}
+		err = repo.Create(ctx, h1)
+		require.NoError(t, err)
+		defer func() {
+			_, _ = pool.Exec(ctx, "DELETE FROM agents WHERE id = $1", h1.ID)
+		}()
+
+		err = repo.AssignToCommunity(ctx, h1.ID, hubSpokeComm.ID)
+		require.NoError(t, err)
+
+		// 3. Create hub agent 2 and attempt to assign (should fail)
+		h2 := &model.Agent{
+			ID:            uuid.New(),
+			TenantID:      ten.FullName(),
+			Name:          "test-h2",
+			Role:          "hub",
+			Brain:         agent.Brain,
+			ShortTermMemory: agent.ShortTermMemory,
+			LongTermMemory:  agent.LongTermMemory,
+			MCPClients:      []model.MCPClientConfig{},
+			Status:          model.AgentStatusDefined,
+			CreatedAt:       time.Now().UTC(),
+			UpdatedAt:       time.Now().UTC(),
+		}
+		err = repo.Create(ctx, h2)
+		require.NoError(t, err)
+		defer func() {
+			_, _ = pool.Exec(ctx, "DELETE FROM agents WHERE id = $1", h2.ID)
+		}()
+
+		err = repo.AssignToCommunity(ctx, h2.ID, hubSpokeComm.ID)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "hub-spoke topology cannot have more than one hub agent assigned")
+
+		// 4. Create spoke agent and assign (should succeed)
+		spoke1 := &model.Agent{
+			ID:            uuid.New(),
+			TenantID:      ten.FullName(),
+			Name:          "test-spoke1",
+			Role:          "spoke",
+			Brain:         agent.Brain,
+			ShortTermMemory: agent.ShortTermMemory,
+			LongTermMemory:  agent.LongTermMemory,
+			MCPClients:      []model.MCPClientConfig{},
+			Status:          model.AgentStatusDefined,
+			CreatedAt:       time.Now().UTC(),
+			UpdatedAt:       time.Now().UTC(),
+		}
+		err = repo.Create(ctx, spoke1)
+		require.NoError(t, err)
+		defer func() {
+			_, _ = pool.Exec(ctx, "DELETE FROM agents WHERE id = $1", spoke1.ID)
+		}()
+
+		err = repo.AssignToCommunity(ctx, spoke1.ID, hubSpokeComm.ID)
+		assert.NoError(t, err)
+	})
+
 	// Cleanup all records
 	_, _ = pool.Exec(ctx, "DELETE FROM agents WHERE id = $1", agent.ID)
 	_, _ = pool.Exec(ctx, "DELETE FROM communities WHERE id = $1", comm.ID)

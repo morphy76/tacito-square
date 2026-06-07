@@ -20,7 +20,8 @@ const (
 type CommunityTopology string
 
 const (
-	CommunityTopologyHubSpoke CommunityTopology = "hub-spoke"
+	CommunityTopologySingleAgent CommunityTopology = "single-agent"
+	CommunityTopologyHubSpoke    CommunityTopology = "hub-spoke"
 )
 
 type Community struct {
@@ -45,7 +46,7 @@ func (c Community) Validate() error {
 	if c.Name == "" {
 		return errors.New("name is required")
 	}
-	if c.Topology != CommunityTopologyHubSpoke {
+	if c.Topology != CommunityTopologySingleAgent && c.Topology != CommunityTopologyHubSpoke {
 		return errors.New("invalid or unsupported topology")
 	}
 	if c.Status != CommunityStatusCreated &&

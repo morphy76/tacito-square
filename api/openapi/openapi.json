@@ -4183,6 +4183,15 @@
             "example": "QA Testing Agent template",
             "description": "Role description for this agent, highlighting its expertise area."
           },
+          "role": {
+            "type": "string",
+            "enum": [
+              "hub",
+              "spoke"
+            ],
+            "default": "spoke",
+            "description": "Topology role of the agent. Why: Distinguishes routing hubs from specialist spokes."
+          },
           "brain": {
             "allOf": [
               {
@@ -4259,6 +4268,15 @@
             "type": "string",
             "example": "QA Testing Agent template",
             "description": "Refined role explanation for the agent."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "hub",
+              "spoke"
+            ],
+            "default": "spoke",
+            "description": "Updated topology role of the agent."
           },
           "brain": {
             "allOf": [
@@ -4343,6 +4361,15 @@
           "description": {
             "type": "string",
             "description": "Explanation of the agent's functional role."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "hub",
+              "spoke"
+            ],
+            "default": "spoke",
+            "description": "Topology role of the agent."
           },
           "brain": {
             "allOf": [
@@ -4439,9 +4466,10 @@
           "topology": {
             "type": "string",
             "enum": [
+              "single-agent",
               "hub-spoke"
             ],
-            "description": "Collaboration structure. Why: Hub-Spoke forces centralized routing for governance."
+            "description": "Collaboration structure. Why: Single standalone or Hub-Spoke layout."
           },
           "configuration": {
             "type": "object",
@@ -4470,6 +4498,7 @@
           "topology": {
             "type": "string",
             "enum": [
+              "single-agent",
               "hub-spoke"
             ],
             "description": "Selected collaboration structure."
@@ -4524,6 +4553,7 @@
           "topology": {
             "type": "string",
             "enum": [
+              "single-agent",
               "hub-spoke"
             ],
             "description": "Collaboration topology design."

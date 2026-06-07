@@ -51,6 +51,31 @@ func TestAgent_Validation(t *testing.T) {
 			agent: validAgent,
 		},
 		{
+			name: "Valid Agent with hub role",
+			agent: func() Agent {
+				a := validAgent
+				a.Role = "hub"
+				return a
+			}(),
+		},
+		{
+			name: "Valid Agent with spoke role",
+			agent: func() Agent {
+				a := validAgent
+				a.Role = "spoke"
+				return a
+			}(),
+		},
+		{
+			name: "Invalid agent role",
+			agent: func() Agent {
+				a := validAgent
+				a.Role = "invalid-role"
+				return a
+			}(),
+			wantErr: "invalid agent role",
+		},
+		{
 			name: "Missing ID",
 			agent: func() Agent {
 				a := validAgent
