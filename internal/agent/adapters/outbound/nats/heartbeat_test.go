@@ -151,3 +151,58 @@ func TestHeartbeatPublisher_IncludesMCPTools(t *testing.T) {
 		t.Fatal("Timeout waiting for heartbeat message")
 	}
 }
+
+func TestHeartbeatPublisher_ParsesSystemPrompt(t *testing.T) {
+	ns, nc := startTestNatsServer(t)
+	defer ns.Shutdown()
+	defer nc.Close()
+
+	logger := zerolog.New(nil)
+	cfg := viper.New()
+	cfg.Set("name", "test-agent-name")
+	cfg.Set("id", "test-agent")
+	cfg.Set("community.ref", "test-comm")
+	cfg.Set("port", "8081")
+	cfg.Set("system.prompt", `{"description":"Dynamic description from prompt","directives":"Be helpful","skills":[{"name":"DynamicSkill1","description":"A dynamic skill description","content":"some content"}]}`)
+	cfg.Set("capabilities.pushNotifications", true)
+	cfg.Set("capabilities.stateTransitionHistory", true)
+
+	subject := "ts.community.test-comm.agent.test-agent.heartbeat"
+	ch := make(chan []byte, 1)
+	sub, err := nc.Subscribe(subject, func(msg *nats.Msg) {
+		ch <- msg.Data
+	})
+	require.NoError(t, err)
+	defer sub.Unsubscribe()
+
+	pub := agentnats.NewHeartbeatPublisher(nc, cfg, "0.1.0", nil, logger)
+	pub.SetInterval(50 * time.Millisecond)
+
+	ctx := context.Background()
+	err = pub.Start(ctx)
+	require.NoError(t, err)
+	defer pub.Stop()
+
+	select {
+	case data := <-ch:
+		var card agentcard.AgentCard
+		err := json.Unmarshal(data, &card)
+		require.NoError(t, err)
+		assert.Equal(t, "test-agent-name", card.Name)
+		assert.Equal(t, "Dynamic description from prompt", card.Description)
+		assert.Equal(t, "http://localhost:8081", card.URL)
+		assert.Equal(t, "0.1.0", card.Version)
+		assert.True(t, card.Capabilities.PushNotifications)
+		assert.True(t, card.Capabilities.StateTransitionHistory)
+		
+		// Assert dynamic skill is parsed
+		require.Len(t, card.Skills, 1)
+		assert.Equal(t, "skill-DynamicSkill1", card.Skills[0].ID)
+		assert.Equal(t, "DynamicSkill1", card.Skills[0].Name)
+		assert.Equal(t, "A dynamic skill description", card.Skills[0].Description)
+		assert.Contains(t, card.Skills[0].Tags, "dynamic-skill")
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timeout waiting for heartbeat message")
+	}
+}
+

@@ -66,7 +66,7 @@ Each direction is labeled with one of the following categories:
 
 ## Fee entries (before prioritization)
 
-- all get apis should accept query string arguments (managed as shared module, as they will be used across the board) to: limit the reposonse model, by excluding/including fields, sort by field values ascending/descending, simple filtering by field values and values patterns, page and offset arguments for pagination, timestamp formats (RFC3339 with/without fractional seconds, epoch), timezone offset for timestamp conversions,
+- all get apis, except well-known like agent cards, should accept query string arguments (managed as shared module, as they will be used across the board) to: limit the reposonse model, by excluding/including fields, sort by field values ascending/descending, simple filtering by field values and values patterns, page and offset arguments for pagination, timestamp formats (RFC3339 with/without fractional seconds, epoch), timezone offset for timestamp conversions,
 - GraphQL APIs can be the primary API surface for the BFF, with REST APIs still operating to serve CLI clients.
 - evaluate to move community end user operations from the keeper to a new gateway component
 - community attributes and usage enforcing, e.g. rate limits, quotas, max resources (e.g. number of agents, knowledge base size, etc.)

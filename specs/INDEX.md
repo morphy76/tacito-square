@@ -144,6 +144,12 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | SPEC-FR-M6.6 | Conversation Handoff | DRAFT | agent | [SPEC-FR-M6.6](functional/M6/SPEC-FR-M6.6.md) |
 | SPEC-FR-M6.7 | Specialist Agent Spawn | DRAFT | keeper, agent | [SPEC-FR-M6.7](functional/M6/SPEC-FR-M6.7.md) |
 
+### M6: Bugs
+
+| ID | Title | Status | Severity | File |
+|----|-------|--------|----------|------|
+| BUG-M6.1 | Agent Cards dynamically empty or missing actual values on startup | CLOSED | MEDIUM | [BUG-M6.1](tasks/M6.BUG1/BUG-M6.1.md) |
+
 ### M7: BFF & UIs
 
 | ID | Title | Status | Component | File |

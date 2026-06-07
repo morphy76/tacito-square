@@ -180,14 +180,60 @@ func (p *HeartbeatPublisher) publishHeartbeat() {
 
 func (p *HeartbeatPublisher) compileCard(ctx context.Context) (*agentcard.AgentCard, error) {
 	p.logger.Trace().Msg("compiling agent card details")
+
+	// Try parsing system.prompt as JSON to extract description and dynamic skills
+	var dynamicDescription string
+	var dynamicSkills []agentcard.AgentCardSkill
+	sysPrompt := p.cfg.GetString("system.prompt")
+	if sysPrompt != "" {
+		type skillItem struct {
+			Name        string `json:"name"`
+			Description string `json:"description"`
+			Content     string `json:"content"`
+		}
+		type propagatedAgentConfig struct {
+			Description string      `json:"description"`
+			Directives  string      `json:"directives"`
+			Skills      []skillItem `json:"skills"`
+		}
+		var parsedConfig propagatedAgentConfig
+		if json.Unmarshal([]byte(sysPrompt), &parsedConfig) == nil {
+			dynamicDescription = parsedConfig.Description
+			for _, s := range parsedConfig.Skills {
+				dynamicSkills = append(dynamicSkills, agentcard.AgentCardSkill{
+					ID:          "skill-" + s.Name,
+					Name:        s.Name,
+					Description: s.Description,
+					Tags:        []string{"dynamic-skill"},
+				})
+			}
+		}
+	}
+
+	desc := p.cfg.GetString("description")
+	if desc == "" {
+		desc = dynamicDescription
+	}
+
+	urlVal := p.cfg.GetString("url")
+	if urlVal == "" {
+		portVal := p.cfg.GetString("port")
+		if portVal == "" {
+			portVal = "8081"
+		}
+		urlVal = "http://localhost:" + portVal
+	}
+
 	card := &agentcard.AgentCard{
 		Name:        p.cfg.GetString("name"),
-		Description: p.cfg.GetString("description"),
-		URL:         p.cfg.GetString("url"),
+		Description: desc,
+		URL:         urlVal,
 		Version:     p.version,
 		DocumentationURL: p.cfg.GetString("documentation.url"),
 		Capabilities: agentcard.AgentCardCapabilities{
-			Streaming: p.cfg.GetBool("capabilities.streaming"),
+			Streaming:              p.cfg.GetBool("capabilities.streaming"),
+			PushNotifications:      p.cfg.GetBool("capabilities.pushNotifications") || p.cfg.GetBool("capabilities.push_notifications") || p.cfg.GetBool("capabilities.push.notifications"),
+			StateTransitionHistory: p.cfg.GetBool("capabilities.stateTransitionHistory") || p.cfg.GetBool("capabilities.state_transition_history") || p.cfg.GetBool("capabilities.state.transition.history"),
 		},
 		Authentication: agentcard.AgentCardAuthentication{
 			Schemes:     p.cfg.GetStringSlice("capabilities.auth.schemes"),
@@ -229,7 +275,10 @@ func (p *HeartbeatPublisher) compileCard(ctx context.Context) (*agentcard.AgentC
 	}
 	card.Skills = append(card.Skills, staticSkills...)
 
-	// 2. Active tools exposed as skills (e.g. MCP tools)
+	// 2. Dynamic skills extracted from system prompt
+	card.Skills = append(card.Skills, dynamicSkills...)
+
+	// 3. Active tools exposed as skills (e.g. MCP tools)
 	if p.mcpExecutor != nil {
 		p.logger.Trace().Msg("querying active MCP tools list")
 		tools, err := p.mcpExecutor.ListAllowedTools(ctx)
