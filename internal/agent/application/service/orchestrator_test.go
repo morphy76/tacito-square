@@ -418,9 +418,9 @@ func TestOrchestrator_LoopDetection(t *testing.T) {
 		require.NoError(t, err)
 		assert.Nil(t, state)
 
-		// Check publishes contains the progression update, EndThread event, and fallback error message
+		// Check publishes contains the progression update and final response event
 		publishes := mockPublisher.GetPublishes()
-		require.Len(t, publishes, 3)
+		require.Len(t, publishes, 2)
 
 		// Verify progression update
 		var progEvt events.DomainEvent
@@ -429,24 +429,17 @@ func TestOrchestrator_LoopDetection(t *testing.T) {
 		assert.Equal(t, events.SchemaConversationalAgentResponse, progEvt.SchemaRef)
 		assert.Equal(t, "ts.community.comm-1.agent.hub-123.thread.thread-abc.response", publishes[0].Subject)
 
-		// 1. Verify EndThread event sent to spokes
-		var endEvt events.DomainEvent
-		err = json.Unmarshal(publishes[1].Data, &endEvt)
-		require.NoError(t, err)
-		assert.Equal(t, events.SchemaConversationalEndThread, endEvt.SchemaRef)
-		assert.Equal(t, "ts.community.comm-1.agent.all", publishes[1].Subject)
-
-		// 2. Verify Final Response sent to Keeper/BFF
+		// Verify Final Response sent to Keeper/BFF contains the latest spoke response ("Spoke response")
 		var finalEvt events.DomainEvent
-		err = json.Unmarshal(publishes[2].Data, &finalEvt)
+		err = json.Unmarshal(publishes[1].Data, &finalEvt)
 		require.NoError(t, err)
 		assert.Equal(t, events.SchemaConversationalAgentResponse, finalEvt.SchemaRef)
-		assert.Equal(t, "ts.community.comm-1.agent.hub-123.thread.thread-abc.response", publishes[2].Subject)
+		assert.Equal(t, "ts.community.comm-1.agent.hub-123.thread.thread-abc.response", publishes[1].Subject)
 
 		var finalPayload events.AgentResponsePayload
 		err = json.Unmarshal(finalEvt.Payload, &finalPayload)
 		require.NoError(t, err)
 		assert.True(t, finalPayload.Finished)
-		assert.Contains(t, finalPayload.Response, "Orchestration limit exceeded")
+		assert.Equal(t, "Spoke response", finalPayload.Response)
 	})
 }

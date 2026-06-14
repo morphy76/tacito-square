@@ -76,3 +76,8 @@ Each direction is labeled with one of the following categories:
 | 45 | **Save conversation history for recovery and Long-Term Memory**<br>Persist structured conversation history to support crash recovery and feed the Qdrant Long-Term Memory (LTM) pipeline. | 🧠 Cognitive & Agents | **Already Addressed**<br>(Incorp. in draft `SPEC-FR-M6.4`) | **M6: Communities** | 3 | 4 | **0** |
 | 46 | **Enforce community resource attributes and usage quotas**<br>Impose and validate community quotas including rate limits, maximum agent counts, and knowledge base memory bounds. | 🌐 Platform & UX | **Already Addressed**<br>(Incorp. in draft `SPEC-FR-M8.3`/`SPEC-FR-M8.4`) | **M8: Governance** | 3 | 4 | **0** |
 
+## Free
+
+- community topology, sequential
+- hub prompt hardcodings
+- 

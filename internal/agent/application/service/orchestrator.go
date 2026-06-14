@@ -216,38 +216,24 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 			logger.Warn().Err(err).Msg("failed to clear state")
 		}
 
-		// Propagate EndThread event to all Spokes in the community so they clear their STM and terminate
-		endPayload := events.EndThreadPayload{
-			ThreadID:    threadID,
-			CommunityID: o.communityID,
-			Reason:      "Orchestration limit exceeded",
-		}
-		sourceIdentity := fmt.Sprintf("agent/%s", o.agentID)
-		endEvent, err := events.NewDomainEvent(
-			events.SchemaConversationalEndThread,
-			sourceIdentity,
-			tenantID,
-			endPayload,
-		)
-		if err == nil {
-			if eventData, err := json.Marshal(endEvent); err == nil {
-				endSubject := fmt.Sprintf("ts.community.%s.agent.all", o.communityID)
-				logger.Info().Str("subject", endSubject).Msg("publishing EndThread propagation to spokes")
-				_ = o.publisher.Publish(ctx, endSubject, eventData)
-			}
+		// DO NOT send EndThread propagation so spoke memories are preserved and the thread is not terminated.
+
+		// Fallback to the latest response received from the spokes (latestInput)
+		finalResponse := latestInput
+		if finalResponse == "" {
+			finalResponse = "Orchestration limit exceeded without reaching a final answer."
 		}
 
-		// Publish final error response to BFF/Keeper
-		fallbackMsg := "Orchestration limit exceeded without reaching a final answer."
 		respPayload := events.AgentResponsePayload{
 			ThreadID:           threadID,
 			CommunityID:        o.communityID,
 			AgentName:          o.agentName,
 			CorrelationEventID: state.OriginalEventID,
-			Response:           fallbackMsg,
+			Response:           finalResponse,
 			Finished:           true,
 		}
 		
+		sourceIdentity := fmt.Sprintf("agent/%s", o.agentID)
 		responseEvent, err := events.NewDomainEvent(
 			events.SchemaConversationalAgentResponse,
 			sourceIdentity,
@@ -466,8 +452,10 @@ func (o *Orchestrator) compileSystemPrompt(ctx context.Context) (string, error) 
 To coordinate the conversation, you must output a valid JSON response specifying your next step.
 - To delegate tasks to Spoke subagents concurrently, output:
   {"action": "delegate", "spokes": [{"spoke": "<agent_name>", "message": "<task description>"}, ...] }
+- If a specialized Spoke agent asks a clarifying question to the user or indicates that information/details are missing, you must immediately choose the "finalize" action and return that question directly to the user so they can reply.
 - If you have completed the user request and want to finalize the response, output:
   {"action": "finalize", "response": "<final response message to the user>"}
+- Do not delegate the wait state or try to delegate again if you are waiting for user input.
 `)
 
 	return sb.String(), nil
