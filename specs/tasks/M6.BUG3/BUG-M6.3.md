@@ -3,7 +3,7 @@
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
 | ID            | BUG-M6.3                                                           |
-| Status        | OPEN                                                               |
+| Status        | CLOSED                                                             |
 | Severity      | HIGH                                                               |
 | Milestone     | M6 — Communities & Messaging                                       |
 | Affects       | `internal/keeper/application/service/event_service.go`, `internal/keeper/bootstrap.go` |

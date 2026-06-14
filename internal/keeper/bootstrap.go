@@ -137,7 +137,7 @@ func NewServer(
 	// Events feature
 	eventPublisher := outboundNats.NewNATSEventPublisher(nc)
 	eventSubscriber := outboundNats.NewNATSEventSubscriber(nc)
-	eventService := service.NewEventService(eventPublisher, eventSubscriber)
+	eventService := service.NewEventService(eventPublisher, eventSubscriber, communityRepo)
 
 	agentService := service.NewAgentService(agentRepo, crdCoord, cacheClient, eventPublisher)
 	communityService := service.NewCommunityService(communityRepo)

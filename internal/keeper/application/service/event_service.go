@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/outbound"
+	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
 	"github.com/morphy76/tacito-square/internal/shared/tenant"
 	"github.com/morphy76/tacito-square/pkg/events"
 )
@@ -19,13 +20,15 @@ import (
 type EventServiceImpl struct {
 	publisher  outbound.EventPublisher
 	subscriber outbound.EventSubscriber
+	commRepo   outbound.CommunityRepository
 }
 
 // NewEventService constructs a new EventServiceImpl.
-func NewEventService(publisher outbound.EventPublisher, subscriber outbound.EventSubscriber) *EventServiceImpl {
+func NewEventService(publisher outbound.EventPublisher, subscriber outbound.EventSubscriber, commRepo outbound.CommunityRepository) *EventServiceImpl {
 	return &EventServiceImpl{
 		publisher:  publisher,
 		subscriber: subscriber,
+		commRepo:   commRepo,
 	}
 }
 
@@ -89,7 +92,7 @@ func (s *EventServiceImpl) PublishEvent(ctx context.Context, schemaRef string, p
 		}
 
 		if routeInfo.AgentName == "" {
-			subject = fmt.Sprintf("ts.community.%s.agent.all", routeInfo.CommunityID)
+			subject = s.resolveTopologySubject(ctx, routeInfo.CommunityID)
 		} else {
 			subject = fmt.Sprintf("ts.community.%s.agent.%s", routeInfo.CommunityID, routeInfo.AgentName)
 		}
@@ -143,6 +146,33 @@ func (s *EventServiceImpl) PublishEvent(ctx context.Context, schemaRef string, p
 // SubscribeEvents registers a handler for real-time community events streaming.
 func (s *EventServiceImpl) SubscribeEvents(ctx context.Context, tenantID string, handler func(*events.DomainEvent)) (outbound.EventSubscription, error) {
 	return s.subscriber.Subscribe(ctx, "ts.community.>", tenantID, handler)
+}
+
+// resolveTopologySubject determines the NATS subject based on community topology.
+// For hub-spoke communities, routes to the hub agent. For single-agent or unknown
+// communities, falls back to the broadcast subject.
+func (s *EventServiceImpl) resolveTopologySubject(ctx context.Context, communityID string) string {
+	fallback := fmt.Sprintf("ts.community.%s.agent.all", communityID)
+
+	if s.commRepo == nil {
+		return fallback
+	}
+
+	commUUID, err := uuid.Parse(communityID)
+	if err != nil {
+		return fallback
+	}
+
+	community, err := s.commRepo.GetByID(ctx, commUUID)
+	if err != nil {
+		return fallback
+	}
+
+	if community.Topology == model.CommunityTopologyHubSpoke {
+		return fmt.Sprintf("ts.community.%s.agent.hub", communityID)
+	}
+
+	return fallback
 }
 
 func sanitizeMessage(s string) string {

@@ -150,7 +150,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 |----|-------|--------|----------|------|
 | BUG-M6.1 | Agent Cards dynamically empty or missing actual values on startup | CLOSED | MEDIUM | [BUG-M6.1](tasks/M6.BUG1/BUG-M6.1.md) |
 | BUG-M6.2 | Unassigning agent from community does not evict registration or cards cache | CLOSED | HIGH | [BUG-M6.2](tasks/M6.BUG2/BUG-M6.2.md) |
-| BUG-M6.3 | Inbound community events are routed to all spokes in hub-spoke topology instead of the Hub coordinator | OPEN | HIGH | [BUG-M6.3](tasks/M6.BUG3/BUG-M6.3.md) |
+| BUG-M6.3 | Inbound community events are routed to all spokes in hub-spoke topology instead of the Hub coordinator | CLOSED | HIGH | [BUG-M6.3](tasks/M6.BUG3/BUG-M6.3.md) |
 
 
 ### M7: BFF & UIs
