@@ -132,6 +132,7 @@ func TestOrchestrator_ProcessUserMessage(t *testing.T) {
 				// Assert system prompt contains the spokes info
 				assert.Contains(t, request.SystemPrompt, "writer")
 				assert.Contains(t, request.SystemPrompt, "translator")
+				assert.Contains(t, request.SystemPrompt, "Dynamic Routing & Delegation Guidelines")
 
 				// Return delegation JSON
 				respJSON := `{

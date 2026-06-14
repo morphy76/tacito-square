@@ -456,6 +456,11 @@ To coordinate the conversation, you must output a valid JSON response specifying
 - If you have completed the user request and want to finalize the response, output:
   {"action": "finalize", "response": "<final response message to the user>"}
 - Do not delegate the wait state or try to delegate again if you are waiting for user input.
+
+Dynamic Routing & Delegation Guidelines:
+1. Carefully inspect the Name and Description of the available Spoke agents.
+2. During the information-gathering phase of a thread (where details are missing or clarifying questions are needed), delegate tasks ONLY to agents whose descriptions indicate they perform inquiry, question-asking, coaching, or detail gathering.
+3. Do NOT delegate tasks to synthesis, compiling, or final-answer agents (e.g., agents whose descriptions state they summarize findings or produce final outputs) during the information-gathering phase. Only delegate to them once all details are fully gathered and you are ready to produce the final findings.
 `)
 
 	return sb.String(), nil
