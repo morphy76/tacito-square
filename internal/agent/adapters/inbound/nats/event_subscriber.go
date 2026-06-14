@@ -58,8 +58,21 @@ func (s *EventSubscriber) Start(ctx context.Context) error {
 		}
 		s.subs = append(s.subs, subHub)
 
+		// Hub also subscribes to Spoke responses in the community
+		respSubj := fmt.Sprintf("ts.community.%s.agent.*.thread.*.response", s.communityID)
+		respQueueGroup := fmt.Sprintf("hub-queue-group-response-%s", s.communityID)
+		subResp, err := s.nc.QueueSubscribe(respSubj, respQueueGroup,
+			observability.WrapNATSHandler("nats.event_handler", s.logger, s.handleEvent))
+		if err != nil {
+			_ = subHub.Unsubscribe()
+			s.subs = nil
+			return fmt.Errorf("event subscriber: queue subscribe to %s: %w", respSubj, err)
+		}
+		s.subs = append(s.subs, subResp)
+
 		s.logger.Info().
 			Str("hub_subject", hubSubj).
+			Str("response_subject", respSubj).
 			Str("queue_group", queueGroup).
 			Msg("event subscriber started as hub")
 	} else {

@@ -32,6 +32,7 @@ type AgentCardSkill struct {
 
 // AgentCard represents the A2A AgentCard discovery structure.
 type AgentCard struct {
+	AgentID            string                  `json:"agent_id,omitempty"`
 	Name               string                  `json:"name"`
 	Description        string                  `json:"description"`
 	URL                string                  `json:"url"`

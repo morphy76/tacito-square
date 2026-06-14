@@ -108,7 +108,12 @@ func main() {
 		logger.Fatal().Msg("TS_AGENT_COMMUNITY_REF is required but not set")
 	}
 
-	tenantID := v.GetString("tenant.id")
+	tenantID := os.Getenv("TENANT_ID")
+	if tenantID == "" || tenantID == "default" {
+		tenantID = v.GetString("tenant.id")
+	}
+	v.Set("tenant.id", tenantID)
+
 	agentRole := v.GetString("role")
 
 	nc, err := agent.ConnectNATS(natsURL, logger)

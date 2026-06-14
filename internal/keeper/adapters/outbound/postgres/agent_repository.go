@@ -541,6 +541,7 @@ func (r *AgentRepository) GetRegistration(ctx context.Context, agentID uuid.UUID
 	if err := json.Unmarshal(cardBytes, &card); err != nil {
 		return nil, time.Time{}, fmt.Errorf("unmarshal agent card: %w", err)
 	}
+	card.AgentID = agentID.String()
 	return &card, lastSeen, nil
 }
 
@@ -551,7 +552,7 @@ func (r *AgentRepository) GetActiveRegistrationsByCommunity(ctx context.Context,
 		return nil, time.Time{}, errors.New("tenant resolution failed")
 	}
 
-	query := `SELECT card, last_seen_at FROM agent_registrations 
+	query := `SELECT agent_id, card, last_seen_at FROM agent_registrations 
 	WHERE community_id = $1 AND tenant_id = $2 ORDER BY last_seen_at DESC`
 
 	exec := GetExecutor(ctx, r.pool)
@@ -564,9 +565,10 @@ func (r *AgentRepository) GetActiveRegistrationsByCommunity(ctx context.Context,
 	var cards []*agentcard.AgentCard
 	var latestTime time.Time
 	for rows.Next() {
+		var agentID uuid.UUID
 		var cardBytes []byte
 		var lastSeen time.Time
-		if err := rows.Scan(&cardBytes, &lastSeen); err != nil {
+		if err := rows.Scan(&agentID, &cardBytes, &lastSeen); err != nil {
 			return nil, time.Time{}, fmt.Errorf("scan agent card: %w", err)
 		}
 		if lastSeen.After(latestTime) {
@@ -576,6 +578,7 @@ func (r *AgentRepository) GetActiveRegistrationsByCommunity(ctx context.Context,
 		if err := json.Unmarshal(cardBytes, &card); err != nil {
 			return nil, time.Time{}, fmt.Errorf("unmarshal agent card list item: %w", err)
 		}
+		card.AgentID = agentID.String()
 		cards = append(cards, &card)
 	}
 	if err := rows.Err(); err != nil {

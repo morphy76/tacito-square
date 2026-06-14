@@ -66,6 +66,17 @@ func (r *SchemaRouterImpl) RouteEvent(ctx context.Context, event events.DomainEv
 		Logger()
 	ctx = logger.WithContext(ctx)
 
+	if r.cfg != nil {
+		configuredTenant := r.cfg.GetString("tenant.id")
+		if configuredTenant != "" && event.TenantID != configuredTenant {
+			logger.Error().
+				Str("event_tenant_id", event.TenantID).
+				Str("configured_tenant_id", configuredTenant).
+				Msg("tenant mismatch: rejecting request")
+			return fmt.Errorf("tenant mismatch: event tenant %q does not match configured tenant %q", event.TenantID, configuredTenant)
+		}
+	}
+
 	if r.role == "hub" {
 		switch event.SchemaRef {
 		case events.SchemaConversationalStartThread:

@@ -23,4 +23,5 @@ type ThreadLock interface {
 // AgentDiscovery defines the outbound port for listing agent cards in the community registry.
 type AgentDiscovery interface {
 	GetCards(ctx context.Context) ([]*agentcard.AgentCard, error)
+	ResolveAgentID(ctx context.Context, name string) (string, error)
 }

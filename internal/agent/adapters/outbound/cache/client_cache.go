@@ -132,6 +132,14 @@ func (c *ClientCache) handleHeartbeatMsg(msg *natsclient.Msg) {
 		return
 	}
 
+	if c.tenantID != "" && evt.TenantID != c.tenantID {
+		c.logger.Warn().
+			Str("event_tenant_id", evt.TenantID).
+			Str("configured_tenant_id", c.tenantID).
+			Msg("tenant mismatch: ignoring heartbeat")
+		return
+	}
+
 	if evt.SchemaRef != events.SchemaInfrastructureAgentHeartbeat {
 		c.logger.Warn().Str("schema_ref", evt.SchemaRef).Msg("unexpected schema in heartbeat message")
 		return
@@ -227,6 +235,9 @@ func (c *ClientCache) Refresh(ctx context.Context) error {
 	newNames := make(map[string]bool)
 	for _, card := range cards {
 		c.cards[card.Name] = card
+		if card.AgentID != "" {
+			c.idToName[card.AgentID] = card.Name
+		}
 		newNames[card.Name] = true
 	}
 
@@ -245,3 +256,31 @@ func (c *ClientCache) Refresh(ctx context.Context) error {
 	c.logger.Debug().Int("count", len(cards)).Msg("client cache refreshed from keeper registry")
 	return nil
 }
+
+// ResolveAgentID looks up the unique agent_id UUID mapped to a human-readable agent name in the cache.
+func (c *ClientCache) ResolveAgentID(ctx context.Context, name string) (string, error) {
+	c.mu.RLock()
+	for id, mappedName := range c.idToName {
+		if mappedName == name {
+			c.mu.RUnlock()
+			return id, nil
+		}
+	}
+	c.mu.RUnlock()
+
+	// Cache miss: refresh from registry
+	if err := c.Refresh(ctx); err != nil {
+		return "", err
+	}
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	for id, mappedName := range c.idToName {
+		if mappedName == name {
+			return id, nil
+		}
+	}
+	return "", fmt.Errorf("agent ID for name %s not found in cache", name)
+}
+
