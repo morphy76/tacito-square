@@ -139,7 +139,7 @@ func NewServer(
 	eventSubscriber := outboundNats.NewNATSEventSubscriber(nc)
 	eventService := service.NewEventService(eventPublisher, eventSubscriber, communityRepo)
 
-	agentService := service.NewAgentService(agentRepo, crdCoord, cacheClient, eventPublisher)
+	agentService := service.NewAgentService(agentRepo, communityRepo, crdCoord, cacheClient, eventPublisher)
 	communityService := service.NewCommunityService(communityRepo)
 	lifecycleService := service.NewLifecycleService(agentRepo, communityRepo, crdCoord, nc)
 
