@@ -928,3 +928,116 @@ func TestSubmitAgentCRD_EmptyTierPropagated(t *testing.T) {
 	assert.Equal(t, "", fetched.Spec.Tier)
 }
 
+func TestSubmitAgentCRD_HubRolePropagated(t *testing.T) {
+	scheme := runtime.NewScheme()
+	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
+
+	agentID := uuid.New()
+	agent := &model.Agent{
+		ID:       agentID,
+		TenantID: "tenant-1",
+		Name:     "hub-agent",
+		Role:     "hub",
+		Brain: model.BrainConfig{
+			Model: "gpt-4",
+		},
+	}
+
+	err = coordinator.SubmitAgentCRD(context.Background(), agent)
+	assert.NoError(t, err)
+
+	fetched := &v1alpha1.TacitoAgent{}
+	key := types.NamespacedName{Namespace: "tacito", Name: "u-" + agentID.String()}
+	err = fakeClient.Get(context.Background(), key, fetched)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "hub", fetched.Spec.Role)
+}
+
+func TestSubmitAgentCRD_SpokeRolePropagated(t *testing.T) {
+	scheme := runtime.NewScheme()
+	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
+
+	agentID := uuid.New()
+	agent := &model.Agent{
+		ID:       agentID,
+		TenantID: "tenant-1",
+		Name:     "spoke-agent",
+		Role:     "spoke",
+		Brain: model.BrainConfig{
+			Model: "gpt-4",
+		},
+	}
+
+	err = coordinator.SubmitAgentCRD(context.Background(), agent)
+	assert.NoError(t, err)
+
+	fetched := &v1alpha1.TacitoAgent{}
+	key := types.NamespacedName{Namespace: "tacito", Name: "u-" + agentID.String()}
+	err = fakeClient.Get(context.Background(), key, fetched)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "spoke", fetched.Spec.Role)
+}
+
+func TestSubmitAgentCRD_RoleUpdated(t *testing.T) {
+	scheme := runtime.NewScheme()
+	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	agentID := uuid.New()
+
+	// Pre-populate an existing CRD with role "spoke"
+	existing := &v1alpha1.TacitoAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "u-" + agentID.String(),
+			Namespace: "tacito",
+		},
+		Spec: v1alpha1.TacitoAgentSpec{
+			TenantID:  "tenant-1",
+			AgentName: "updating-agent",
+			Role:      "spoke",
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(existing).Build()
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
+
+	// Update model to "hub"
+	agent := &model.Agent{
+		ID:       agentID,
+		TenantID: "tenant-1",
+		Name:     "updating-agent",
+		Role:     "hub",
+		Brain: model.BrainConfig{
+			Model: "gpt-4",
+		},
+	}
+
+	err = coordinator.SubmitAgentCRD(context.Background(), agent)
+	assert.NoError(t, err)
+
+	// Fetch and verify update
+	fetched := &v1alpha1.TacitoAgent{}
+	key := types.NamespacedName{Namespace: "tacito", Name: "u-" + agentID.String()}
+	err = fakeClient.Get(context.Background(), key, fetched)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "hub", fetched.Spec.Role)
+}
+
+

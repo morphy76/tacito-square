@@ -20,12 +20,10 @@ GO             := go
 GOTEST         := $(GO) test
 GOLINT         := $(shell which golangci-lint 2>/dev/null || echo "$(shell go env GOPATH 2>/dev/null)/bin/golangci-lint")
 
-NERDCTL_ADDR   := /var/run/docker/containerd/containerd.sock
 
 .PHONY: all build build-agent build-keeper build-operator build-bff test test-integration test-operator test-e2e test-bench test-race test-contract check-test-tags lint generate \
         escape-analysis escape-agent escape-keeper escape-operator escape-bff \
         docker-build docker-build-agent docker-build-keeper docker-build-operator docker-build-bff docker-push \
-        docker-load docker-load-agent docker-load-keeper docker-load-operator docker-load-bff \
         helm-template helm-install helm-uninstall \
         helm-template-agent helm-install-agent helm-uninstall-agent test-helm-agent \
         helm-infra-deps helm-infra-lint helm-infra-template helm-infra-install helm-infra-uninstall \
@@ -135,20 +133,6 @@ docker-push: ## Push all Docker images
 	docker push $(REGISTRY)tacito-square/keeper:$(KEEPER_VERSION)
 	docker push $(REGISTRY)tacito-square/operator:$(OPERATOR_VERSION)
 	docker push $(REGISTRY)tacito-square/bff:$(BFF_VERSION)
-
-docker-load: docker-load-agent docker-load-keeper docker-load-operator docker-load-bff ## Load all images into Rancher Desktop containerd (k8s.io namespace)
-
-docker-load-agent: ## Load agent image into Rancher Desktop containerd
-	docker save $(REGISTRY)tacito-square/agent:$(AGENT_VERSION) | rdctl shell -- nerdctl --address $(NERDCTL_ADDR) -n k8s.io load
-
-docker-load-keeper: ## Load keeper image into Rancher Desktop containerd
-	docker save $(REGISTRY)tacito-square/keeper:$(KEEPER_VERSION) | rdctl shell -- nerdctl --address $(NERDCTL_ADDR) -n k8s.io load
-
-docker-load-operator: ## Load operator image into Rancher Desktop containerd
-	docker save $(REGISTRY)tacito-square/operator:$(OPERATOR_VERSION) | rdctl shell -- nerdctl --address $(NERDCTL_ADDR) -n k8s.io load
-
-docker-load-bff: ## Load bff image into Rancher Desktop containerd
-	docker save $(REGISTRY)tacito-square/bff:$(BFF_VERSION) | rdctl shell -- nerdctl --address $(NERDCTL_ADDR) -n k8s.io load
 
 ## —— Helm (app) —————————————————————————————————————————
 

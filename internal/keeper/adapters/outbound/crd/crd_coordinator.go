@@ -300,6 +300,7 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 					},
 					MCPClients: mcpClientSpecs,
 					Tier:       agent.Tier,
+					Role:       agent.Role,
 				},
 			}
 			err = c.client.Create(deadlineCtx, crdObj)
@@ -329,6 +330,7 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 		latest.Spec.LLMConfig.CredentialsSecret = credsSecret
 		latest.Spec.MCPClients = mcpClientSpecs
 		latest.Spec.Tier = agent.Tier
+		latest.Spec.Role = agent.Role
 
 		err = c.client.Update(deadlineCtx, latest)
 		if err != nil {

@@ -370,14 +370,10 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 				return fmt.Errorf("failed to marshal task event: %w", err)
 			}
 
-			spokeAgentID, err := o.discovery.ResolveAgentID(ctx, task.Spoke)
-			if err != nil || spokeAgentID == "" {
-				logger.Warn().Err(err).Str("spoke", task.Spoke).Msg("failed to resolve agent ID for spoke, falling back to name")
-				spokeAgentID = task.Spoke
-			}
-
-			subject := fmt.Sprintf("ts.community.%s.agent.%s", o.communityID, spokeAgentID)
-			logger.Info().Str("subject", subject).Str("spoke", task.Spoke).Str("resolved_agent_id", spokeAgentID).Msg("publishing task to spoke agent")
+			// Route to spoke by name: agent names are unique within a community,
+			// and subjects are scoped by communityID (UUID), so this is globally unique.
+			subject := fmt.Sprintf("ts.community.%s.agent.%s", o.communityID, task.Spoke)
+			logger.Info().Str("subject", subject).Str("spoke", task.Spoke).Msg("publishing task to spoke agent")
 			if err := o.publisher.Publish(ctx, subject, eventData); err != nil {
 				return fmt.Errorf("failed to publish task to spoke %s: %w", task.Spoke, err)
 			}

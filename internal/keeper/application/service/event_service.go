@@ -14,6 +14,7 @@ import (
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
 	"github.com/morphy76/tacito-square/internal/shared/tenant"
 	"github.com/morphy76/tacito-square/pkg/events"
+	"github.com/rs/zerolog/log"
 )
 
 // EventServiceImpl implements the EventUseCase and EventStreamUseCase ports.
@@ -43,11 +44,15 @@ func (s *EventServiceImpl) PublishEvent(ctx context.Context, schemaRef string, p
 	}
 
 	// Resolve tenant ID
+	ten := tenant.FromContext(ctx)
 	var tenantID string
-	if ten := tenant.FromContext(ctx); ten != nil {
+	if ten != nil {
 		tenantID = ten.FullName()
 	} else if val, ok := ctx.Value("tenant_id").(string); ok {
 		tenantID = val
+		if parsedTen, err := tenant.New(tenantID, ""); err == nil {
+			ctx = tenant.ContextWithTenant(ctx, parsedTen)
+		}
 	}
 	if tenantID == "" {
 		return events.DomainEvent{}, errors.New("unauthorized: missing tenant context")
@@ -153,25 +158,47 @@ func (s *EventServiceImpl) SubscribeEvents(ctx context.Context, tenantID string,
 // communities, falls back to the broadcast subject.
 func (s *EventServiceImpl) resolveTopologySubject(ctx context.Context, communityID string) string {
 	fallback := fmt.Sprintf("ts.community.%s.agent.all", communityID)
+	logger := log.Ctx(ctx)
 
 	if s.commRepo == nil {
+		logger.Warn().
+			Str("community_id", communityID).
+			Msg("community repository not available: routing to broadcast subject")
 		return fallback
 	}
 
 	commUUID, err := uuid.Parse(communityID)
 	if err != nil {
+		logger.Warn().
+			Str("community_id", communityID).
+			Err(err).
+			Msg("invalid community UUID: routing to broadcast subject")
 		return fallback
 	}
 
 	community, err := s.commRepo.GetByID(ctx, commUUID)
 	if err != nil {
+		logger.Warn().
+			Str("community_id", communityID).
+			Err(err).
+			Msg("failed to resolve community topology: routing to broadcast subject")
 		return fallback
 	}
 
 	if community.Topology == model.CommunityTopologyHubSpoke {
-		return fmt.Sprintf("ts.community.%s.agent.hub", communityID)
+		subject := fmt.Sprintf("ts.community.%s.agent.hub", communityID)
+		logger.Debug().
+			Str("community_id", communityID).
+			Str("topology", string(community.Topology)).
+			Str("subject", subject).
+			Msg("resolved hub-spoke routing subject")
+		return subject
 	}
 
+	logger.Debug().
+		Str("community_id", communityID).
+		Str("topology", string(community.Topology)).
+		Msg("single-agent topology: routing to broadcast subject")
 	return fallback
 }
 

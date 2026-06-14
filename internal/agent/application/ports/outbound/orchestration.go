@@ -21,7 +21,8 @@ type ThreadLock interface {
 }
 
 // AgentDiscovery defines the outbound port for listing agent cards in the community registry.
+// Agent names are unique within a tenant's community, and since subjects include
+// the community UUID, name-based routing is globally unique.
 type AgentDiscovery interface {
 	GetCards(ctx context.Context) ([]*agentcard.AgentCard, error)
-	ResolveAgentID(ctx context.Context, name string) (string, error)
 }

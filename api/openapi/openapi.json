@@ -3086,6 +3086,9 @@
           "skills"
         ],
         "properties": {
+          "agent_id": {
+            "type": "string"
+          },
           "name": {
             "type": "string"
           },

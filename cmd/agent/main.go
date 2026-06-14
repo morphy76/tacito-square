@@ -349,7 +349,7 @@ func main() {
 		v,
 	)
 
-	eventSubscriber := agent.NewEventSubscriber(nc, agentID, communityRef, agentRole, schemaRouter, s3BlobStore, logger)
+	eventSubscriber := agent.NewEventSubscriber(nc, agentName, communityRef, agentRole, schemaRouter, s3BlobStore, logger)
 	if err := eventSubscriber.Start(ctx); err != nil {
 		logger.Fatal().Err(err).Msg("failed to start event subscriber")
 	}

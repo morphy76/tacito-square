@@ -215,7 +215,9 @@ func TestAgentService_Assign_AsynchronousNonBlocking(t *testing.T) {
 	repo.On("GetByID", mock.Anything, agentID).Return(agent, nil)
 	repo.On("List", mock.Anything).Return([]*model.Agent{}, nil)
 	repo.On("AssignToCommunity", mock.Anything, agentID, commID).Return(nil)
-	crd.On("SubmitAgentCRD", mock.Anything, mock.Anything).Return(nil)
+	crd.On("SubmitAgentCRD", mock.Anything, mock.MatchedBy(func(a *model.Agent) bool {
+		return a.CommunityID != nil && *a.CommunityID == commID && a.Status == model.AgentStatusPending
+	})).Return(nil)
 
 	start := time.Now()
 	err := svc.Assign(ctx, commID, agentID)
@@ -390,7 +392,9 @@ func TestAgentService_Assign_AlreadyAssigned_NotRunning(t *testing.T) {
 	repo.On("Update", mock.Anything, mock.MatchedBy(func(a *model.Agent) bool {
 		return a.ID == agentID && a.Status == model.AgentStatusPending
 	})).Return(nil)
-	crd.On("SubmitAgentCRD", mock.Anything, mock.Anything).Return(nil)
+	crd.On("SubmitAgentCRD", mock.Anything, mock.MatchedBy(func(a *model.Agent) bool {
+		return a.CommunityID != nil && *a.CommunityID == commID && a.Status == model.AgentStatusPending
+	})).Return(nil)
 
 	err := svc.Assign(ctx, commID, agentID)
 	assert.NoError(t, err)

@@ -153,6 +153,10 @@ func (s *AgentService) Assign(ctx context.Context, communityID uuid.UUID, agentI
 		return err
 	}
 
+	// Update in-memory state to reflect the assignment and pending status before passing to background task
+	agent.CommunityID = &communityID
+	agent.Status = model.AgentStatusPending
+
 	// 5. Detach parent context to avoid cancellation when HTTP request finishes
 	bgCtx := context.Background()
 
@@ -240,6 +244,10 @@ func (s *AgentService) Unassign(ctx context.Context, communityID uuid.UUID, agen
 	if err := s.repo.DeleteRegistration(ctx, agentID, communityID); err != nil {
 		return err
 	}
+
+	// Update in-memory state to reflect the unassignment and defined status
+	agent.CommunityID = nil
+	agent.Status = model.AgentStatusDefined
 
 	// 3. Detach parent context to avoid cancellation when HTTP request finishes
 	bgCtx := context.Background()

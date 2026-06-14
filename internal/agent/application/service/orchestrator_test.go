@@ -88,10 +88,6 @@ func (m *MockAgentDiscovery) GetCards(ctx context.Context) ([]*agentcard.AgentCa
 	return m.cards, nil
 }
 
-func (m *MockAgentDiscovery) ResolveAgentID(ctx context.Context, name string) (string, error) {
-	return name, nil
-}
-
 type MockEventPublisherOrchestrator struct {
 	mu        sync.Mutex
 	publishes []MockPublishCall
