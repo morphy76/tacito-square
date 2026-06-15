@@ -59,11 +59,10 @@ func TestAgentRepository_AssignmentLifecycle(t *testing.T) {
 		Name:          "test-assign-agent",
 		Description:   "Test agent",
 		Brain: model.BrainConfig{
+			LLMBindingID:      uuid.New(),
 			Model:             "gpt-4o",
 			Temperature:       0.7,
 			MaxTokens:         2048,
-			Endpoint:          "https://api.openai.com/v1",
-			CredentialsSecret: "my-secret-key",
 		},
 		ShortTermMemory: model.ShortTermMemoryConfig{
 			KeyNamespace: "test:short",

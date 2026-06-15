@@ -27,12 +27,13 @@ import (
 
 // K8sCRDCoordinator implements outbound.CRDCoordinator driving ports.
 type K8sCRDCoordinator struct {
-	client     client.Client
-	namespace  string
-	promptRepo outbound.PromptRepository
-	skillRepo  outbound.SkillRepository
-	mcpRepo    outbound.MCPClientRepository
-	natsConn   *nats.Conn
+	client         client.Client
+	namespace      string
+	llmBindingRepo outbound.LLMBindingRepository
+	promptRepo     outbound.PromptRepository
+	skillRepo      outbound.SkillRepository
+	mcpRepo        outbound.MCPClientRepository
+	natsConn       *nats.Conn
 }
 
 var _ outbound.CRDCoordinator = (*K8sCRDCoordinator)(nil)
@@ -40,6 +41,7 @@ var _ outbound.CRDCoordinator = (*K8sCRDCoordinator)(nil)
 // NewK8sCRDCoordinator creates a new K8sCRDCoordinator with a real controller-runtime Client.
 func NewK8sCRDCoordinator(
 	config *rest.Config,
+	llmBindingRepo outbound.LLMBindingRepository,
 	promptRepo outbound.PromptRepository,
 	skillRepo outbound.SkillRepository,
 	mcpRepo outbound.MCPClientRepository,
@@ -59,12 +61,13 @@ func NewK8sCRDCoordinator(
 	}
 
 	return &K8sCRDCoordinator{
-		client:     c,
-		namespace:  "tacito",
-		promptRepo: promptRepo,
-		skillRepo:  skillRepo,
-		mcpRepo:    mcpRepo,
-		natsConn:   nc,
+		client:         c,
+		namespace:      "tacito",
+		llmBindingRepo: llmBindingRepo,
+		promptRepo:     promptRepo,
+		skillRepo:      skillRepo,
+		mcpRepo:        mcpRepo,
+		natsConn:       nc,
 	}, nil
 }
 
@@ -72,6 +75,7 @@ func NewK8sCRDCoordinator(
 func NewK8sCRDCoordinatorWithClient(
 	c client.Client,
 	namespace string,
+	llmBindingRepo outbound.LLMBindingRepository,
 	promptRepo outbound.PromptRepository,
 	skillRepo outbound.SkillRepository,
 	mcpRepo outbound.MCPClientRepository,
@@ -81,12 +85,13 @@ func NewK8sCRDCoordinatorWithClient(
 		namespace = "tacito"
 	}
 	return &K8sCRDCoordinator{
-		client:     c,
-		namespace:  namespace,
-		promptRepo: promptRepo,
-		skillRepo:  skillRepo,
-		mcpRepo:    mcpRepo,
-		natsConn:   nc,
+		client:         c,
+		namespace:      namespace,
+		llmBindingRepo: llmBindingRepo,
+		promptRepo:     promptRepo,
+		skillRepo:      skillRepo,
+		mcpRepo:        mcpRepo,
+		natsConn:       nc,
 	}
 }
 
@@ -214,28 +219,38 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 	deadlineCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	// 1. Resolve LLMConfig values
-	var temp *string
+	// 1. Resolve LLMConfig values by fetching LLMBinding
+	if c.llmBindingRepo == nil {
+		return fmt.Errorf("llmBindingRepo is nil in CRD coordinator")
+	}
+	llmBinding, err := c.llmBindingRepo.GetByID(ctx, agent.Brain.LLMBindingID)
+	if err != nil {
+		return fmt.Errorf("resolving llm binding %s: %w", agent.Brain.LLMBindingID, err)
+	}
+
+	modelName := agent.Brain.Model
+	if modelName == "" {
+		modelName = llmBinding.DefaultModel
+	}
+
+	tempVal := llmBinding.DefaultTemperature
 	if agent.Brain.Temperature != 0.0 {
-		tStr := strconv.FormatFloat(agent.Brain.Temperature, 'f', -1, 64)
-		temp = &tStr
+		tempVal = agent.Brain.Temperature
 	}
+	tStr := strconv.FormatFloat(tempVal, 'f', -1, 64)
+	temp := &tStr
 
-	var maxTokens *int32
+	maxTokensVal := int32(llmBinding.DefaultMaxTokens)
 	if agent.Brain.MaxTokens > 0 {
-		mt := int32(agent.Brain.MaxTokens)
-		maxTokens = &mt
+		maxTokensVal = int32(agent.Brain.MaxTokens)
 	}
+	maxTokens := &maxTokensVal
 
-	var endpoint *string
-	if agent.Brain.Endpoint != "" {
-		endpoint = &agent.Brain.Endpoint
-	}
+	endpoint := &llmBinding.APIBaseURL
 
 	var credsSecret *string
-	if agent.Brain.CredentialsSecret != "" {
-		sName := "s-" + strings.ToLower(agent.ID.String())
-		credsSecret = &sName
+	if llmBinding.APIKeySecretRef != "" {
+		credsSecret = &llmBinding.APIKeySecretRef
 	}
 
 	var communityRef string
@@ -292,7 +307,7 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 					CommunityRef: communityRef,
 					SystemPrompt: systemPrompt,
 					LLMConfig: v1alpha1.LLMConfig{
-						Model:             agent.Brain.Model,
+						Model:             modelName,
 						Temperature:       temp,
 						MaxTokens:         maxTokens,
 						Endpoint:          endpoint,
@@ -323,7 +338,7 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 		latest.Spec.AgentName = agent.Name
 		latest.Spec.CommunityRef = communityRef
 		latest.Spec.SystemPrompt = systemPrompt
-		latest.Spec.LLMConfig.Model = agent.Brain.Model
+		latest.Spec.LLMConfig.Model = modelName
 		latest.Spec.LLMConfig.Temperature = temp
 		latest.Spec.LLMConfig.MaxTokens = maxTokens
 		latest.Spec.LLMConfig.Endpoint = endpoint
@@ -342,57 +357,7 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 
 // reconcileCredentialsSecret creates or updates the Kubernetes Secret s-<agentId> containing the LLM API credentials.
 func (c *K8sCRDCoordinator) reconcileCredentialsSecret(ctx context.Context, agent *model.Agent, owner *v1alpha1.TacitoAgent) error {
-	if agent.Brain.CredentialsSecret == "" {
-		return nil
-	}
-
-	secretName := "s-" + strings.ToLower(agent.ID.String())
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: c.namespace,
-		},
-	}
-
-	// We set owner reference to the TacitoAgent CRD so K8s GC deletes it
-	ownerRef := metav1.OwnerReference{
-		APIVersion: owner.APIVersion,
-		Kind:       owner.Kind,
-		Name:       owner.Name,
-		UID:        owner.UID,
-	}
-	if ownerRef.APIVersion == "" {
-		ownerRef.APIVersion = "tacito.square.io/v1alpha1"
-	}
-	if ownerRef.Kind == "" {
-		ownerRef.Kind = "TacitoAgent"
-	}
-	isController := true
-	blockOwnerDeletion := true
-	ownerRef.Controller = &isController
-	ownerRef.BlockOwnerDeletion = &blockOwnerDeletion
-
-	key := types.NamespacedName{Namespace: c.namespace, Name: secretName}
-	existingSecret := &corev1.Secret{}
-	err := c.client.Get(ctx, key, existingSecret)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			secret.OwnerReferences = []metav1.OwnerReference{ownerRef}
-			secret.Data = map[string][]byte{
-				"api-key": []byte(agent.Brain.CredentialsSecret),
-			}
-			return c.client.Create(ctx, secret)
-		}
-		return err
-	}
-
-	// Update existing secret with new API key if changed
-	existingSecret.OwnerReferences = []metav1.OwnerReference{ownerRef}
-	if existingSecret.Data == nil {
-		existingSecret.Data = make(map[string][]byte)
-	}
-	existingSecret.Data["api-key"] = []byte(agent.Brain.CredentialsSecret)
-	return c.client.Update(ctx, existingSecret)
+	return nil
 }
 
 // TeardownAgentCRD deletes the corresponding TacitoAgent custom resource safely.

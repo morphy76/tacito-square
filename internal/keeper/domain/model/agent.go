@@ -2,7 +2,6 @@ package model
 
 import (
 	"errors"
-	"net/url"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,11 +23,10 @@ const (
 
 // BrainConfig encapsulates Large Language Model settings for the agent.
 type BrainConfig struct {
-	Model             string  `json:"model"`
-	Temperature       float64 `json:"temperature"`
-	MaxTokens         int     `json:"max_tokens"`
-	Endpoint          string  `json:"endpoint"`
-	CredentialsSecret string  `json:"credentials_secret"`
+	LLMBindingID      uuid.UUID `json:"llm_binding_id"`
+	Model             string    `json:"model"`
+	Temperature       float64   `json:"temperature"`
+	MaxTokens         int       `json:"max_tokens"`
 }
 
 // ShortTermMemoryConfig encapsulates Redis ephemeral state configuration.
@@ -97,23 +95,14 @@ func (a Agent) Validate() error {
 	}
 
 	// Brain validations
-	if a.Brain.Model == "" {
-		return errors.New("brain model is required")
+	if a.Brain.LLMBindingID == uuid.Nil {
+		return errors.New("brain llm binding id is required")
 	}
 	if a.Brain.Temperature < 0.0 || a.Brain.Temperature > 2.0 {
 		return errors.New("brain temperature must be between 0.0 and 2.0")
 	}
-	if a.Brain.MaxTokens <= 0 {
-		return errors.New("brain max tokens must be positive")
-	}
-	if a.Brain.Endpoint == "" {
-		return errors.New("brain endpoint is required")
-	}
-	if _, err := url.ParseRequestURI(a.Brain.Endpoint); err != nil {
-		return errors.New("brain endpoint must be a valid URL")
-	}
-	if a.Brain.CredentialsSecret == "" {
-		return errors.New("brain credentials secret is required")
+	if a.Brain.MaxTokens < 0 {
+		return errors.New("brain max tokens must be non-negative")
 	}
 
 	// ShortTermMemory validations

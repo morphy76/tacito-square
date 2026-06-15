@@ -50,6 +50,41 @@ func (m *mockAgentRepository) Delete(ctx context.Context, id uuid.UUID) error {
 func (m *mockAgentRepository) AssignToCommunity(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error {
 	return m.Called(ctx, agentID, communityID).Error(0)
 }
+
+type mockLLMBindingRepository struct {
+	mock.Mock
+}
+
+func (m *mockLLMBindingRepository) Create(ctx context.Context, binding *model.LLMBinding) error {
+	return m.Called(ctx, binding).Error(0)
+}
+func (m *mockLLMBindingRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.LLMBinding, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.LLMBinding), args.Error(1)
+}
+func (m *mockLLMBindingRepository) GetByName(ctx context.Context, name string) (*model.LLMBinding, error) {
+	args := m.Called(ctx, name)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.LLMBinding), args.Error(1)
+}
+func (m *mockLLMBindingRepository) List(ctx context.Context) ([]*model.LLMBinding, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*model.LLMBinding), args.Error(1)
+}
+func (m *mockLLMBindingRepository) Update(ctx context.Context, binding *model.LLMBinding) error {
+	return m.Called(ctx, binding).Error(0)
+}
+func (m *mockLLMBindingRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
 func (m *mockAgentRepository) UnassignFromCommunity(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error {
 	return m.Called(ctx, agentID, communityID).Error(0)
 }
@@ -197,7 +232,7 @@ func TestAgentService_Assign_AsynchronousNonBlocking(t *testing.T) {
 	submitChan := make(chan struct{})
 	crd := &mockCRDCoordinator{submitChan: submitChan}
 
-	svc := NewAgentService(repo, commRepo, crd, nil, nil)
+	svc := NewAgentService(repo, commRepo, crd, nil, nil, new(mockLLMBindingRepository))
 
 	ten, _ := tenant.New("acme.com", "")
 	ctx := tenant.ContextWithTenant(context.Background(), ten)
@@ -244,7 +279,7 @@ func TestAgentService_Unassign_AsynchronousNonBlocking(t *testing.T) {
 	teardownChan := make(chan struct{})
 	crd := &mockCRDCoordinator{teardownChan: teardownChan}
 
-	svc := NewAgentService(repo, nil, crd, nil, nil)
+	svc := NewAgentService(repo, nil, crd, nil, nil, new(mockLLMBindingRepository))
 
 	ten, _ := tenant.New("acme.com", "")
 	ctx := tenant.ContextWithTenant(context.Background(), ten)
@@ -285,7 +320,7 @@ func TestAgentService_Unassign_EvictsAndPublishes(t *testing.T) {
 	cache := new(mockCache)
 	publisher := new(mockPublisher)
 
-	svc := NewAgentService(repo, nil, crd, cache, publisher)
+	svc := NewAgentService(repo, nil, crd, cache, publisher, new(mockLLMBindingRepository))
 
 	ten, _ := tenant.New("acme.com", "")
 	ctx := tenant.ContextWithTenant(context.Background(), ten)
@@ -331,7 +366,7 @@ func TestAgentService_Assign_AlreadyAssigned_Running(t *testing.T) {
 	commRepo := new(mockCommunityRepository)
 	crd := new(mockCRDCoordinator)
 
-	svc := NewAgentService(repo, commRepo, crd, nil, nil)
+	svc := NewAgentService(repo, commRepo, crd, nil, nil, new(mockLLMBindingRepository))
 
 	ten, _ := tenant.New("acme.com", "")
 	ctx := tenant.ContextWithTenant(context.Background(), ten)
@@ -367,7 +402,7 @@ func TestAgentService_Assign_AlreadyAssigned_NotRunning(t *testing.T) {
 	submitChan := make(chan struct{})
 	crd := &mockCRDCoordinator{submitChan: submitChan}
 
-	svc := NewAgentService(repo, commRepo, crd, nil, nil)
+	svc := NewAgentService(repo, commRepo, crd, nil, nil, new(mockLLMBindingRepository))
 
 	ten, _ := tenant.New("acme.com", "")
 	ctx := tenant.ContextWithTenant(context.Background(), ten)
@@ -415,7 +450,7 @@ func TestAgentService_Unassign_AlreadyUnassigned_NotRunning(t *testing.T) {
 	repo := new(mockAgentRepository)
 	crd := new(mockCRDCoordinator)
 
-	svc := NewAgentService(repo, nil, crd, nil, nil)
+	svc := NewAgentService(repo, nil, crd, nil, nil, new(mockLLMBindingRepository))
 
 	ten, _ := tenant.New("acme.com", "")
 	ctx := tenant.ContextWithTenant(context.Background(), ten)
@@ -446,7 +481,7 @@ func TestAgentService_Unassign_AlreadyUnassigned_Running(t *testing.T) {
 	cache := new(mockCache)
 	publisher := new(mockPublisher)
 
-	svc := NewAgentService(repo, nil, crd, cache, publisher)
+	svc := NewAgentService(repo, nil, crd, cache, publisher, new(mockLLMBindingRepository))
 
 	ten, _ := tenant.New("acme.com", "")
 	ctx := tenant.ContextWithTenant(context.Background(), ten)

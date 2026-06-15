@@ -90,11 +90,10 @@ func TestAgentHandlers_Create(t *testing.T) {
 			"name":        "qa-agent",
 			"description": "Agent for QA tests",
 			"brain": map[string]interface{}{
+				"llm_binding_id":     "8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4",
 				"model":              "gpt-4o",
 				"temperature":        0.7,
-				"max_tokens":          2048,
-				"endpoint":           "https://api.openai.com/v1",
-				"credentials_secret": "secret",
+				"max_tokens":         2048,
 			},
 			"short_term_memory": map[string]interface{}{
 				"key_namespace": "qa:short",
@@ -149,11 +148,10 @@ func TestAgentHandlers_Create(t *testing.T) {
 			"description": "Hub agent",
 			"role":        "hub",
 			"brain": map[string]interface{}{
+				"llm_binding_id":     "8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4",
 				"model":              "gpt-4o",
 				"temperature":        0.7,
 				"max_tokens":         2048,
-				"endpoint":           "https://api.openai.com/v1",
-				"credentials_secret": "secret",
 			},
 			"short_term_memory": map[string]interface{}{
 				"key_namespace": "qa:short",
@@ -196,11 +194,10 @@ func TestAgentHandlers_Create(t *testing.T) {
 			"description": "invalid agent role test",
 			"role":        "router",
 			"brain": map[string]interface{}{
+				"llm_binding_id":     "8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4",
 				"model":              "gpt-4o",
 				"temperature":        0.7,
 				"max_tokens":         2048,
-				"endpoint":           "https://api.openai.com/v1",
-				"credentials_secret": "secret",
 			},
 			"short_term_memory": map[string]interface{}{
 				"key_namespace": "qa:short",
@@ -258,11 +255,10 @@ func TestAgentHandlers_Create(t *testing.T) {
 			"name":        "qa-agent",
 			"description": "Agent for QA tests",
 			"brain": map[string]interface{}{
+				"llm_binding_id":     "not-a-valid-uuid",
 				"model":              "gpt-4o",
 				"temperature":        0.7,
-				"max_tokens":          2048,
-				"endpoint":           "not-a-valid-url", // Invalid URL
-				"credentials_secret": "",                // Blank
+				"max_tokens":         2048,
 			},
 			"short_term_memory": map[string]interface{}{
 				"key_namespace": "qa:short",
@@ -402,9 +398,10 @@ func TestAgentHandlers_Update(t *testing.T) {
 			Name:   "qa-agent",
 			Status: model.AgentStatusDefined,
 			Brain: model.BrainConfig{
-				Model:       "gpt-4",
-				Temperature: 0.5,
-				MaxTokens:   1000,
+				LLMBindingID: uuid.MustParse("8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4"),
+				Model:        "gpt-4",
+				Temperature:  0.5,
+				MaxTokens:    1000,
 			},
 			ShortTermMemory: model.ShortTermMemoryConfig{
 				TTLSeconds: 3600,
@@ -418,11 +415,10 @@ func TestAgentHandlers_Update(t *testing.T) {
 			"name":        "qa-agent-updated",
 			"description": "Updated Agent description",
 			"brain": map[string]interface{}{
+				"llm_binding_id":     "8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4",
 				"model":              "gpt-4o",
 				"temperature":        0.7,
-				"max_tokens":          2048,
-				"endpoint":           "https://api.openai.com/v1",
-				"credentials_secret": "secret",
+				"max_tokens":         2048,
 			},
 			"short_term_memory": map[string]interface{}{
 				"key_namespace": "qa:short",
@@ -473,9 +469,10 @@ func TestAgentHandlers_Update(t *testing.T) {
 			Status: model.AgentStatusDefined,
 			Role:   "spoke",
 			Brain: model.BrainConfig{
-				Model:       "gpt-4",
-				Temperature: 0.5,
-				MaxTokens:   1000,
+				LLMBindingID: uuid.MustParse("8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4"),
+				Model:        "gpt-4",
+				Temperature:  0.5,
+				MaxTokens:    1000,
 			},
 			ShortTermMemory: model.ShortTermMemoryConfig{
 				TTLSeconds: 3600,
@@ -490,11 +487,10 @@ func TestAgentHandlers_Update(t *testing.T) {
 			"description": "Updated Agent description",
 			"role":        "hub",
 			"brain": map[string]interface{}{
+				"llm_binding_id":     "8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4",
 				"model":              "gpt-4o",
 				"temperature":        0.7,
-				"max_tokens":          2048,
-				"endpoint":           "https://api.openai.com/v1",
-				"credentials_secret": "secret",
+				"max_tokens":         2048,
 			},
 			"short_term_memory": map[string]interface{}{
 				"key_namespace": "qa:short",
@@ -545,9 +541,10 @@ func TestAgentHandlers_Update(t *testing.T) {
 			Status: model.AgentStatusDefined,
 			Role:   "spoke",
 			Brain: model.BrainConfig{
-				Model:       "gpt-4",
-				Temperature: 0.5,
-				MaxTokens:   1000,
+				LLMBindingID: uuid.MustParse("8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4"),
+				Model:        "gpt-4",
+				Temperature:  0.5,
+				MaxTokens:    1000,
 			},
 			ShortTermMemory: model.ShortTermMemoryConfig{
 				TTLSeconds: 3600,
@@ -562,11 +559,10 @@ func TestAgentHandlers_Update(t *testing.T) {
 			"description": "Updated Agent description",
 			"role":        "router",
 			"brain": map[string]interface{}{
+				"llm_binding_id":     "8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4",
 				"model":              "gpt-4o",
 				"temperature":        0.7,
-				"max_tokens":          2048,
-				"endpoint":           "https://api.openai.com/v1",
-				"credentials_secret": "secret",
+				"max_tokens":         2048,
 			},
 			"short_term_memory": map[string]interface{}{
 				"key_namespace": "qa:short",
@@ -623,11 +619,10 @@ func TestAgentHandlers_Tier(t *testing.T) {
 			"name":        "tier-agent",
 			"description": "Agent with tier",
 			"brain": map[string]interface{}{
+				"llm_binding_id":     "8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4",
 				"model":              "gpt-4o",
 				"temperature":        0.7,
 				"max_tokens":         2048,
-				"endpoint":           "https://api.openai.com/v1",
-				"credentials_secret": "secret",
 			},
 			"short_term_memory": map[string]interface{}{
 				"key_namespace": "tier:short",
@@ -712,9 +707,10 @@ func TestAgentHandlers_Tier(t *testing.T) {
 			Status: model.AgentStatusDefined,
 			Tier:   "standard",
 			Brain: model.BrainConfig{
-				Model:       "gpt-4",
-				Temperature: 0.5,
-				MaxTokens:   1000,
+				LLMBindingID: uuid.MustParse("8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4"),
+				Model:        "gpt-4",
+				Temperature:  0.5,
+				MaxTokens:    1000,
 			},
 			ShortTermMemory: model.ShortTermMemoryConfig{TTLSeconds: 3600},
 			LongTermMemory:  model.LongTermMemoryConfig{VectorDimension: 1536},

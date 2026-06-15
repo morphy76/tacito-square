@@ -156,6 +156,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | BUG-M6.6 | Orchestrator Loop Limit Terminating Threads Instead of Returning Latest Spoke Response | CLOSED | HIGH | [BUG-M6.6](tasks/M6.BUG6/BUG-M6.6.md) |
 | BUG-M6.7 | Agent Messages Pollution and Lack of Classification in Server-Sent Events (SSE) Stream | VERIFIED | HIGH | [BUG-M6.7](tasks/M6.BUG7/BUG-M6.7.md) |
 | BUG-M6.8 | Hardcoded Hub System Prompt and Lack of Template Parameterization | CLOSED | HIGH | [BUG-M6.8](tasks/M6.BUG8/BUG-M6.8.md) |
+| BUG-M6.9 | Agent Brain Embeds LLM Binding Instead of Referring LLM Binding Model | CLOSED | HIGH | [BUG-M6.9](tasks/M6.BUG9/BUG-M6.9.md) |
 
 
 

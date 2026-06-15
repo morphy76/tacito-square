@@ -73,11 +73,10 @@ func TestRegistryHandler_RequestReply(t *testing.T) {
 		Status:      model.AgentStatusAssigned,
 		CommunityID: &comm.ID,
 		Brain: model.BrainConfig{
+			LLMBindingID:      uuid.New(),
 			Model:             "gpt-4",
 			Temperature:       0.7,
 			MaxTokens:         2048,
-			Endpoint:          "http://localhost:8080",
-			CredentialsSecret: "dummy",
 		},
 		ShortTermMemory: model.ShortTermMemoryConfig{TTLSeconds: 60},
 		LongTermMemory:  model.LongTermMemoryConfig{VectorDimension: 1536},

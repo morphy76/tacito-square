@@ -127,9 +127,7 @@ CREATE TABLE IF NOT EXISTS agents (
     community_id UUID REFERENCES communities(id) ON DELETE RESTRICT,
     CONSTRAINT unique_agents_tenant_name UNIQUE (tenant_id, name),
     CONSTRAINT check_agent_brain CHECK (
-        (brain->>'model') IS NOT NULL AND (brain->>'model') <> '' AND
-        (brain->>'endpoint') IS NOT NULL AND (brain->>'endpoint') <> '' AND
-        (brain->>'credentials_secret') IS NOT NULL AND (brain->>'credentials_secret') <> ''
+        (brain->>'llm_binding_id') IS NOT NULL AND (brain->>'llm_binding_id') <> ''
     )
 );
 CREATE INDEX IF NOT EXISTS idx_agents_tenant_id ON agents(tenant_id);

@@ -28,11 +28,10 @@ func NewAgentHandler(repo inbound.AgentUseCase) *AgentHandler {
 }
 
 type CreateBrainRequest struct {
-	Model             string   `json:"model" binding:"required"`
+	LLMBindingID      string   `json:"llm_binding_id" binding:"required,uuid"`
+	Model             string   `json:"model"`
 	Temperature       *float64 `json:"temperature" binding:"omitempty,gte=0.0,lte=2.0"`
 	MaxTokens         int      `json:"max_tokens" binding:"omitempty,gt=0"`
-	Endpoint          string   `json:"endpoint" binding:"required,url"`
-	CredentialsSecret string   `json:"credentials_secret" binding:"required"`
 }
 
 type CreateShortTermRequest struct {
@@ -107,11 +106,17 @@ func (h *AgentHandler) Create(c *gin.Context) {
 		return
 	}
 
-	temp := 0.7
+	llmBindingID, err := uuid.Parse(req.Brain.LLMBindingID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid llm_binding_id uuid"})
+		return
+	}
+
+	var temp float64
 	if req.Brain.Temperature != nil {
 		temp = *req.Brain.Temperature
 	}
-	maxTokens := 2048
+	var maxTokens int
 	if req.Brain.MaxTokens > 0 {
 		maxTokens = req.Brain.MaxTokens
 	}
@@ -163,11 +168,10 @@ func (h *AgentHandler) Create(c *gin.Context) {
 		Description: req.Description,
 		Role:        role,
 		Brain: model.BrainConfig{
-			Model:             req.Brain.Model,
-			Temperature:       temp,
-			MaxTokens:         maxTokens,
-			Endpoint:          req.Brain.Endpoint,
-			CredentialsSecret: req.Brain.CredentialsSecret,
+			LLMBindingID: llmBindingID,
+			Model:        req.Brain.Model,
+			Temperature:  temp,
+			MaxTokens:    maxTokens,
 		},
 		ShortTermMemory: model.ShortTermMemoryConfig{
 			KeyNamespace: req.ShortTermMemory.KeyNamespace,
@@ -331,11 +335,17 @@ func (h *AgentHandler) Update(c *gin.Context) {
 		UpdatedAt:       existing.UpdatedAt,
 	}
 
-	temp := 0.7
+	llmBindingID, err := uuid.Parse(req.Brain.LLMBindingID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid llm_binding_id uuid"})
+		return
+	}
+
+	var temp float64
 	if req.Brain.Temperature != nil {
 		temp = *req.Brain.Temperature
 	}
-	maxTokens := 2048
+	var maxTokens int
 	if req.Brain.MaxTokens > 0 {
 		maxTokens = req.Brain.MaxTokens
 	}
@@ -384,11 +394,10 @@ func (h *AgentHandler) Update(c *gin.Context) {
 	}
 	existing.Role = role
 	existing.Brain = model.BrainConfig{
-		Model:             req.Brain.Model,
-		Temperature:       temp,
-		MaxTokens:         maxTokens,
-		Endpoint:          req.Brain.Endpoint,
-		CredentialsSecret: req.Brain.CredentialsSecret,
+		LLMBindingID: llmBindingID,
+		Model:        req.Brain.Model,
+		Temperature:  temp,
+		MaxTokens:    maxTokens,
 	}
 	existing.ShortTermMemory = model.ShortTermMemoryConfig{
 		KeyNamespace: req.ShortTermMemory.KeyNamespace,

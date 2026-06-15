@@ -128,7 +128,7 @@ func NewServer(
 	promptService := service.NewPromptService(promptRepo)
 	var crdCoord outbound.CRDCoordinator = &noOpCRDCoordinator{}
 	if k8sConfig != nil {
-		crdC, err := crd.NewK8sCRDCoordinator(k8sConfig, promptRepo, skillRepo, mcpRepo, nc)
+		crdC, err := crd.NewK8sCRDCoordinator(k8sConfig, repo, promptRepo, skillRepo, mcpRepo, nc)
 		if err == nil {
 			crdCoord = crdC
 		}
@@ -139,7 +139,7 @@ func NewServer(
 	eventSubscriber := outboundNats.NewNATSEventSubscriber(nc)
 	eventService := service.NewEventService(eventPublisher, eventSubscriber, communityRepo)
 
-	agentService := service.NewAgentService(agentRepo, communityRepo, crdCoord, cacheClient, eventPublisher)
+	agentService := service.NewAgentService(agentRepo, communityRepo, crdCoord, cacheClient, eventPublisher, repo)
 	communityService := service.NewCommunityService(communityRepo)
 	lifecycleService := service.NewLifecycleService(agentRepo, communityRepo, crdCoord, nc)
 

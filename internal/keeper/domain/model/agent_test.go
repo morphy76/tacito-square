@@ -15,11 +15,10 @@ func TestAgent_Validation(t *testing.T) {
 		Name:        "qa-agent",
 		Description: "QA Testing Agent template",
 		Brain: BrainConfig{
+			LLMBindingID:       uuid.New(),
 			Model:              "gpt-4o",
 			Temperature:        0.7,
 			MaxTokens:          2048,
-			Endpoint:           "https://api.openai.com/v1",
-			CredentialsSecret:  "openai-secret-key",
 		},
 		ShortTermMemory: ShortTermMemoryConfig{
 			KeyNamespace: "agent:qa:short",
@@ -103,40 +102,13 @@ func TestAgent_Validation(t *testing.T) {
 			wantErr: "name is required",
 		},
 		{
-			name: "Invalid brain model",
+			name: "Missing LLM Binding ID",
 			agent: func() Agent {
 				a := validAgent
-				a.Brain.Model = ""
+				a.Brain.LLMBindingID = uuid.Nil
 				return a
 			}(),
-			wantErr: "brain model is required",
-		},
-		{
-			name: "Missing brain endpoint",
-			agent: func() Agent {
-				a := validAgent
-				a.Brain.Endpoint = ""
-				return a
-			}(),
-			wantErr: "brain endpoint is required",
-		},
-		{
-			name: "Invalid brain endpoint URL",
-			agent: func() Agent {
-				a := validAgent
-				a.Brain.Endpoint = "not-a-valid-url"
-				return a
-			}(),
-			wantErr: "brain endpoint must be a valid URL",
-		},
-		{
-			name: "Missing brain credentials secret",
-			agent: func() Agent {
-				a := validAgent
-				a.Brain.CredentialsSecret = ""
-				return a
-			}(),
-			wantErr: "brain credentials secret is required",
+			wantErr: "brain llm binding id is required",
 		},
 		{
 			name: "Invalid brain temperature too low",
@@ -160,10 +132,10 @@ func TestAgent_Validation(t *testing.T) {
 			name: "Invalid brain max tokens",
 			agent: func() Agent {
 				a := validAgent
-				a.Brain.MaxTokens = 0
+				a.Brain.MaxTokens = -1
 				return a
 			}(),
-			wantErr: "brain max tokens must be positive",
+			wantErr: "brain max tokens must be non-negative",
 		},
 		{
 			name: "Invalid short term memory ttl",

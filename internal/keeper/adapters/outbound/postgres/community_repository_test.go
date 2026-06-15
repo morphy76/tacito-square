@@ -226,11 +226,10 @@ func TestCommunityRepository_Lifecycle(t *testing.T) {
 			Name:        "test-assigned-agent",
 			Description: "Assigned agent",
 			Brain: model.BrainConfig{
+				LLMBindingID:      uuid.New(),
 				Model:             "gpt-4o",
 				Temperature:       0.7,
 				MaxTokens:         2048,
-				Endpoint:          "https://api.openai.com/v1",
-				CredentialsSecret: "my-secret-key",
 			},
 			ShortTermMemory: model.ShortTermMemoryConfig{
 				KeyNamespace: "test:short",
@@ -309,11 +308,10 @@ func TestCommunityRepository_Lifecycle(t *testing.T) {
 			Name:        "test-mut-agent",
 			Description: "Assigned agent",
 			Brain: model.BrainConfig{
+				LLMBindingID:      uuid.New(),
 				Model:             "gpt-4o",
 				Temperature:       0.7,
 				MaxTokens:         2048,
-				Endpoint:          "https://api.openai.com/v1",
-				CredentialsSecret: "my-secret-key",
 			},
 			ShortTermMemory: model.ShortTermMemoryConfig{
 				KeyNamespace: "test:short",

@@ -44,11 +44,10 @@ func TestTransactionRunner_CommitAndRollback(t *testing.T) {
 		Name:        "tx-agent-success",
 		Description: "A transaction test agent",
 		Brain: model.BrainConfig{
+			LLMBindingID:      uuid.New(),
 			Model:             "gpt-4o",
 			Temperature:       0.7,
 			MaxTokens:         2048,
-			Endpoint:          "https://api.openai.com/v1",
-			CredentialsSecret: "dummy-secret",
 		},
 		ShortTermMemory: model.ShortTermMemoryConfig{
 			KeyNamespace: "tx:short",

@@ -22,6 +22,7 @@ type AgentService struct {
 	crdCoordinator outbound.CRDCoordinator
 	cache          sharedports.Cache
 	publisher      outbound.EventPublisher
+	llmBindingRepo outbound.LLMBindingRepository
 }
 
 // NewAgentService creates a new instance of AgentService.
@@ -31,6 +32,7 @@ func NewAgentService(
 	crdCoordinator outbound.CRDCoordinator,
 	cache sharedports.Cache,
 	publisher outbound.EventPublisher,
+	llmBindingRepo outbound.LLMBindingRepository,
 ) *AgentService {
 	return &AgentService{
 		repo:           repo,
@@ -38,10 +40,14 @@ func NewAgentService(
 		crdCoordinator: crdCoordinator,
 		cache:          cache,
 		publisher:      publisher,
+		llmBindingRepo: llmBindingRepo,
 	}
 }
 
 func (s *AgentService) Create(ctx context.Context, agent *model.Agent) error {
+	if _, err := s.llmBindingRepo.GetByID(ctx, agent.Brain.LLMBindingID); err != nil {
+		return fmt.Errorf("llm binding does not exist: %w", err)
+	}
 	return s.repo.Create(ctx, agent)
 }
 
@@ -54,6 +60,9 @@ func (s *AgentService) List(ctx context.Context) ([]*model.Agent, error) {
 }
 
 func (s *AgentService) Update(ctx context.Context, agent *model.Agent) error {
+	if _, err := s.llmBindingRepo.GetByID(ctx, agent.Brain.LLMBindingID); err != nil {
+		return fmt.Errorf("llm binding does not exist: %w", err)
+	}
 	return s.repo.Update(ctx, agent)
 }
 

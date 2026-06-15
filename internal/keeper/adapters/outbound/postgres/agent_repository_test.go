@@ -72,11 +72,10 @@ func TestAgentRepository_Lifecycle(t *testing.T) {
 		Name:        "test-agent-template",
 		Description: "A test agent template configuration",
 		Brain: model.BrainConfig{
+			LLMBindingID:      uuid.New(),
 			Model:             "gpt-4o",
 			Temperature:       0.7,
 			MaxTokens:         2048,
-			Endpoint:          "https://api.openai.com/v1",
-			CredentialsSecret: "my-secret-key",
 		},
 		ShortTermMemory: model.ShortTermMemoryConfig{
 			KeyNamespace: "test:short",
@@ -295,11 +294,10 @@ func TestAgentRepository_AgentRegistration(t *testing.T) {
 		Name:        "test-agent-reg",
 		Description: "For registration test",
 		Brain: model.BrainConfig{
+			LLMBindingID:      uuid.New(),
 			Model:             "gpt-4o",
 			Temperature:       0.7,
 			MaxTokens:         2048,
-			Endpoint:          "https://api.openai.com/v1",
-			CredentialsSecret: "secret",
 		},
 		ShortTermMemory: model.ShortTermMemoryConfig{
 			KeyNamespace: "test",
