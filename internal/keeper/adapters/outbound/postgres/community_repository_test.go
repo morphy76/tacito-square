@@ -175,7 +175,7 @@ func TestCommunityRepository_Lifecycle(t *testing.T) {
 		err = repo.Create(ctxA, commADup)
 		assert.Error(t, err)
 
-		// Clean up
+		// Cleanup
 		_ = repo.Delete(ctxA, commA.ID)
 		_ = repo.Delete(ctxB, commB.ID)
 	})
@@ -226,10 +226,9 @@ func TestCommunityRepository_Lifecycle(t *testing.T) {
 			Name:        "test-assigned-agent",
 			Description: "Assigned agent",
 			Brain: model.BrainConfig{
-				LLMBindingID:      uuid.New(),
-				Model:             "gpt-4o",
-				Temperature:       0.7,
-				MaxTokens:         2048,
+				LLMBindingID: uuid.New(),
+				Temperature:  ptrFloat64(0.7),
+				MaxTokens:    ptrInt(2048),
 			},
 			ShortTermMemory: model.ShortTermMemoryConfig{
 				KeyNamespace: "test:short",
@@ -308,10 +307,9 @@ func TestCommunityRepository_Lifecycle(t *testing.T) {
 			Name:        "test-mut-agent",
 			Description: "Assigned agent",
 			Brain: model.BrainConfig{
-				LLMBindingID:      uuid.New(),
-				Model:             "gpt-4o",
-				Temperature:       0.7,
-				MaxTokens:         2048,
+				LLMBindingID: uuid.New(),
+				Temperature:  ptrFloat64(0.7),
+				MaxTokens:    ptrInt(2048),
 			},
 			ShortTermMemory: model.ShortTermMemoryConfig{
 				KeyNamespace: "test:short",
@@ -353,3 +351,5 @@ func TestCommunityRepository_Lifecycle(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+

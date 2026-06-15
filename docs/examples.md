@@ -56,24 +56,152 @@
 
 ```json
 {
-  "name": "qa-agent",
-  "llm_binding_id": "99f09cc8-0bf4-48b4-83e5-8840f57a7777",
+  "name": "alone-in-the-darkness",
+  "description": "The sole agent in a single agent community",
+  "role": "spoke",
+  "brain": {
+      "model": "gemini-2.5-flash-lite",
+      "temperature": 0.7,
+      "max_tokens": 512,
+      "endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/",
+      "credentials_secret": "AQ.Ab8RN6IqH3fX5qh4SB3adNCA-J5DpzkYstV0oalqxV9spB6LQQ"
+  },
   "short_term_memory": {
-    "ttl_seconds": 3600,
-    "key_namespace": "agent:qa:short"
+      "key_namespace": "agent:alone:in:the:darkness:short",
+      "ttl_seconds": 3600
   },
   "long_term_memory": {
-    "collection_name": "agent-qa-long",
-    "vector_dimension": 1536
+      "collection_name": "agent-alone-in-the-darkness-long",
+      "vector_dimension": 1536
   },
-  "description": "QA Testing Agent template",
   "skills": [
-    "1af8a9cd-da06-402e-beb9-95952534e6f1",
-    "dce897a2-01b1-4ffc-afc2-b87c512b90cc"
+      "fa1bbc83-b999-4381-9e32-8f5abb8b3e7c",
+      "6666571f-e0a3-42a4-87f5-25e7351f6875"
   ],
-  "prompt_template": "2abd89f1-e51d-461d-90a6-fbd2172a4f79",
-  "mcp_clients": []
+  "prompt_template": "721fcb8c-45e1-45f3-81d7-860d6dc25676",
+  "mcp_clients": null,
 }
+```
+```json
+{
+    "name": "answerer",
+    "description": "This agent is in charge of synthesizing the conversatinal turn, consolidating the researcher's responses, and delivering a clear, structured, and comprehensive final answer on the subject.",
+    "role": "spoke",
+    "brain": {
+        "model": "gemini-2.5-flash-lite",
+        "temperature": 0.7,
+        "max_tokens": 512,
+        "endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/",
+        "credentials_secret": "AQ.Ab8RN6IqH3fX5qh4SB3adNCA-J5DpzkYstV0oalqxV9spB6LQQ"
+    },
+    "short_term_memory": {
+        "key_namespace": "agent:answerer:short",
+        "ttl_seconds": 3600
+    },
+    "long_term_memory": {
+        "collection_name": "agent-answerer-long",
+        "vector_dimension": 1536
+    },
+    "skills": [
+        "fa1bbc83-b999-4381-9e32-8f5abb8b3e7c",
+        "6666571f-e0a3-42a4-87f5-25e7351f6875"
+    ],
+    "prompt_template": "f8d36e8c-1b6e-40f5-bdee-ed460aaa11cd",
+    "mcp_clients": null,
+}
+```
+```json
+{
+    "name": "enquirer",
+    "description": "This agent is in charge to think questions to ask to the researcher in order to improve the researcher awareness about an unknown subject.",
+    "role": "spoke",
+    "brain": {
+        "model": "gemini-2.5-flash-lite",
+        "temperature": 0.7,
+        "max_tokens": 512,
+        "endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/",
+        "credentials_secret": "AQ.Ab8RN6IqH3fX5qh4SB3adNCA-J5DpzkYstV0oalqxV9spB6LQQ"
+    },
+    "short_term_memory": {
+        "key_namespace": "agent:enquirer:short",
+        "ttl_seconds": 3600
+    },
+    "long_term_memory": {
+        "collection_name": "agent-enquirer-long",
+        "vector_dimension": 1536
+    },
+    "skills": [
+        "fa1bbc83-b999-4381-9e32-8f5abb8b3e7c",
+        "6666571f-e0a3-42a4-87f5-25e7351f6875"
+    ],
+    "prompt_template": "dc6c6f05-ffe8-4139-a245-f38fa516b317",
+    "mcp_clients": null,
+}
+```
+```json
+    {
+        "id": "a0aee24a-27c7-4bf8-b75d-9966c83d9f2f",
+        "tenant_id": "acme.com",
+        "name": "enquirer",
+        "description": "This agent is in charge to think questions to ask to the researcher in order to improve the researcher awareness about an unknown subject.",
+        "role": "spoke",
+        "brain": {
+            "model": "gemini-2.5-flash-lite",
+            "temperature": 0.7,
+            "max_tokens": 512,
+            "endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/",
+            "credentials_secret": "AQ.Ab8RN6IqH3fX5qh4SB3adNCA-J5DpzkYstV0oalqxV9spB6LQQ"
+        },
+        "short_term_memory": {
+            "key_namespace": "agent:enquirer:short",
+            "ttl_seconds": 3600
+        },
+        "long_term_memory": {
+            "collection_name": "agent-enquirer-long",
+            "vector_dimension": 1536
+        },
+        "skills": [
+            "fa1bbc83-b999-4381-9e32-8f5abb8b3e7c",
+            "6666571f-e0a3-42a4-87f5-25e7351f6875"
+        ],
+        "prompt_template": "dc6c6f05-ffe8-4139-a245-f38fa516b317",
+        "mcp_clients": null,
+        "status": "running",
+        "community_id": "2ec94f91-712c-4fbb-883c-c928aa44273d",
+        "tier": "",
+        "created_at": "2026-06-08T05:47:18.99391Z",
+        "updated_at": "2026-06-15T21:27:06.989418Z"
+    },
+    {
+        "id": "ab40c50d-fc31-4cd3-aaf4-e3c0936a9a68",
+        "tenant_id": "acme.com",
+        "name": "hub-agent",
+        "description": "In a hub-spoke topology, this agent is the hub, receiving inputs from the outbound, internally delegate subagents to achieve a final answer and, then, export the outputs to the outbound.",
+        "role": "hub",
+        "brain": {
+            "model": "gemini-2.5-flash-lite",
+            "temperature": 0.7,
+            "max_tokens": 512,
+            "endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/",
+            "credentials_secret": "AQ.Ab8RN6IqH3fX5qh4SB3adNCA-J5DpzkYstV0oalqxV9spB6LQQ"
+        },
+        "short_term_memory": {
+            "key_namespace": "agent:hub:short",
+            "ttl_seconds": 3600
+        },
+        "long_term_memory": {
+            "collection_name": "agent-hub-long",
+            "vector_dimension": 1536
+        },
+        "skills": null,
+        "prompt_template": "00000000-0000-0000-0000-000000000000",
+        "mcp_clients": null,
+        "status": "running",
+        "community_id": "2ec94f91-712c-4fbb-883c-c928aa44273d",
+        "tier": "",
+        "created_at": "2026-06-08T05:54:26.056736Z",
+        "updated_at": "2026-06-15T21:27:09.981037Z"
+    }
 ```
 
 ## Community

@@ -96,10 +96,9 @@ func TestSkillRepository_Lifecycle(t *testing.T) {
 			Name:        "test-agent-skill-assoc",
 			Description: "Test agent for skill association",
 			Brain: model.BrainConfig{
-				LLMBindingID:      uuid.New(),
-				Model:             "gpt-4o",
-				Temperature:       0.7,
-				MaxTokens:         2048,
+				LLMBindingID: uuid.New(),
+				Temperature:  ptrFloat64(0.7),
+				MaxTokens:    ptrInt(2048),
 			},
 			ShortTermMemory: model.ShortTermMemoryConfig{
 				KeyNamespace: "test:short",
@@ -219,10 +218,9 @@ func TestSkillRepository_Lifecycle(t *testing.T) {
 			Name:        "test-tenant-b-agent",
 			Description: "Tenant B Agent",
 			Brain: model.BrainConfig{
-				LLMBindingID:      uuid.New(),
-				Model:             "gpt-4o",
-				Temperature:       0.7,
-				MaxTokens:         2048,
+				LLMBindingID: uuid.New(),
+				Temperature:  ptrFloat64(0.7),
+				MaxTokens:    ptrInt(2048),
 			},
 			ShortTermMemory: model.ShortTermMemoryConfig{
 				KeyNamespace: "test:short",
@@ -267,3 +265,5 @@ func TestSkillRepository_Lifecycle(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+

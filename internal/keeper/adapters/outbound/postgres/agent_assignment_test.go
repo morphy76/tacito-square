@@ -53,16 +53,17 @@ func TestAgentRepository_AssignmentLifecycle(t *testing.T) {
 	require.NoError(t, err)
 
 	// Prerequisite: Create Agent
+	temp := 0.7
+	maxTokens := 2048
 	agent := &model.Agent{
 		ID:            uuid.New(),
 		TenantID:      ten.FullName(),
 		Name:          "test-assign-agent",
 		Description:   "Test agent",
 		Brain: model.BrainConfig{
-			LLMBindingID:      uuid.New(),
-			Model:             "gpt-4o",
-			Temperature:       0.7,
-			MaxTokens:         2048,
+			LLMBindingID: uuid.New(),
+			Temperature:  &temp,
+			MaxTokens:    &maxTokens,
 		},
 		ShortTermMemory: model.ShortTermMemoryConfig{
 			KeyNamespace: "test:short",

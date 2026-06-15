@@ -39,10 +39,10 @@ type PromptTemplate struct {
 // PromptCollection represents a suite of templates used together by an agent profile.
 type PromptCollection struct {
 	ID          uuid.UUID   `json:"id"`
-	TenantID    string      `json:"tenant_id"`
+	TenantID    string      `json:"tenant_id,omitempty"`
 	Name        string      `json:"name"`
-	Description string      `json:"description"`
-	Templates   []uuid.UUID `json:"templates"`
+	Description string      `json:"description,omitempty"`
+	Templates   []uuid.UUID `json:"templates,omitempty"`
 	CreatedAt   time.Time   `json:"created_at"`
 	UpdatedAt   time.Time   `json:"updated_at"`
 }

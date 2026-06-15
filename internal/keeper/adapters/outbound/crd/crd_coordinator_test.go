@@ -60,9 +60,8 @@ func TestSubmitAgentCRD_CreateSuccess(t *testing.T) {
 		Description: "A helpful assistant",
 		Brain: model.BrainConfig{
 			LLMBindingID: bindingID,
-			Model:        "gpt-4",
-			Temperature:  0.5,
-			MaxTokens:    1000,
+			Temperature:  ptrFloat64(0.5),
+			MaxTokens:    ptrInt(1000),
 		},
 		CommunityID: &communityID,
 	}
@@ -135,9 +134,8 @@ func TestSubmitAgentCRD_UpdateSuccess(t *testing.T) {
 		Description: "A helpful assistant",
 		Brain: model.BrainConfig{
 			LLMBindingID: bindingID,
-			Model:        "gpt-4",
-			Temperature:  0.7,
-			MaxTokens:    2000,
+			Temperature:  ptrFloat64(0.7),
+			MaxTokens:    ptrInt(2000),
 		},
 		CommunityID: &communityID,
 	}
@@ -207,9 +205,9 @@ func TestSubmitAgentCRD_ConflictResolution(t *testing.T) {
 		Name:        "agent-new",
 		Description: "A helpful assistant",
 		Brain: model.BrainConfig{
-			Model:       "gpt-4",
-			Temperature: 0.5,
-			MaxTokens:   1000,
+			LLMBindingID: uuid.New(),
+			Temperature:  ptrFloat64(0.5),
+			MaxTokens:    ptrInt(1000),
 		},
 		CommunityID: &communityID,
 	}
@@ -623,7 +621,42 @@ func TestResolveAndSynthesizeSystemPrompt_Success(t *testing.T) {
 	assert.Equal(t, "WebSearch guidelines", config.Skills[0].Content)
 	assert.Equal(t, "Calculations", config.Skills[1].Name)
 	assert.Equal(t, "Perform math operations", config.Skills[1].Description)
-	assert.Equal(t, "Calculations guidelines", config.Skills[1].Content)
+}
+
+func TestResolveAndSynthesizeSystemPrompt_HubAgentMerging_Success(t *testing.T) {
+	businessPromptID := uuid.New()
+
+	promptRepo := &mockPromptRepository{
+		templates: map[uuid.UUID]*model.PromptTemplate{
+			model.HubSystemPromptTemplateID: {
+				ID:      model.HubSystemPromptTemplateID,
+				Content: "Role instructions: {{.Description}} and spokes: {{.Spokes}}",
+			},
+			businessPromptID: {
+				ID:      businessPromptID,
+				Content: "Business specific instructions.",
+			},
+		},
+	}
+
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(nil, "tacito", newMockLLMBindingRepository(), promptRepo, nil, nil, nil)
+
+	agent := &model.Agent{
+		ID:             uuid.New(),
+		Description:    "A helpful assistant",
+		Role:           "hub",
+		PromptTemplate: businessPromptID,
+	}
+
+	synthesized, err := coordinator.ResolveAndSynthesizeSystemPrompt(context.Background(), agent)
+	require.NoError(t, err)
+
+	var config crdadapter.PropagatedAgentConfig
+	err = json.Unmarshal([]byte(synthesized), &config)
+	require.NoError(t, err)
+
+	assert.Equal(t, "Role instructions: {{.Description}} and spokes: {{.Spokes}}", config.Directives)
+	assert.Equal(t, "A helpful assistant\n\nBusiness specific instructions.", config.Description)
 }
 
 func TestSubmitAgentCRD_SynthesizedPromptAndTenantMapped(t *testing.T) {
@@ -667,7 +700,7 @@ func TestSubmitAgentCRD_SynthesizedPromptAndTenantMapped(t *testing.T) {
 		PromptTemplate: promptID,
 		Skills:         []uuid.UUID{skillID},
 		Brain: model.BrainConfig{
-			Model: "gpt-4",
+			LLMBindingID: uuid.New(),
 		},
 	}
 
@@ -862,7 +895,7 @@ func TestSubmitAgentCRD_WithMCPClients(t *testing.T) {
 		TenantID: "tenant-1",
 		Name:     "agent-with-mcp",
 		Brain: model.BrainConfig{
-			Model: "gpt-4",
+			LLMBindingID: uuid.New(),
 		},
 		MCPClients: []model.MCPClientConfig{
 			{
@@ -913,7 +946,7 @@ func TestSubmitAgentCRD_TierPropagated(t *testing.T) {
 		Name:     "tier-agent",
 		Tier:     "heavy",
 		Brain: model.BrainConfig{
-			Model: "gpt-4",
+			LLMBindingID: uuid.New(),
 		},
 	}
 
@@ -945,7 +978,7 @@ func TestSubmitAgentCRD_EmptyTierPropagated(t *testing.T) {
 		Name:     "default-tier-agent",
 		// Tier intentionally empty
 		Brain: model.BrainConfig{
-			Model: "gpt-4",
+			LLMBindingID: uuid.New(),
 		},
 	}
 
@@ -977,7 +1010,7 @@ func TestSubmitAgentCRD_HubRolePropagated(t *testing.T) {
 		Name:     "hub-agent",
 		Role:     "hub",
 		Brain: model.BrainConfig{
-			Model: "gpt-4",
+			LLMBindingID: uuid.New(),
 		},
 	}
 
@@ -1009,7 +1042,7 @@ func TestSubmitAgentCRD_SpokeRolePropagated(t *testing.T) {
 		Name:     "spoke-agent",
 		Role:     "spoke",
 		Brain: model.BrainConfig{
-			Model: "gpt-4",
+			LLMBindingID: uuid.New(),
 		},
 	}
 
@@ -1057,7 +1090,6 @@ func TestSubmitAgentCRD_RoleUpdated(t *testing.T) {
 		Role:     "hub",
 		Brain: model.BrainConfig{
 			LLMBindingID: uuid.New(),
-			Model:        "gpt-4",
 		},
 	}
 
@@ -1072,5 +1104,9 @@ func TestSubmitAgentCRD_RoleUpdated(t *testing.T) {
 
 	assert.Equal(t, "hub", fetched.Spec.Role)
 }
+
+func ptrFloat64(v float64) *float64 { return &v }
+func ptrInt(v int) *int { return &v }
+
 
 

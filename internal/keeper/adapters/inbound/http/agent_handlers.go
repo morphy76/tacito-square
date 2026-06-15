@@ -28,10 +28,9 @@ func NewAgentHandler(repo inbound.AgentUseCase) *AgentHandler {
 }
 
 type CreateBrainRequest struct {
-	LLMBindingID      string   `json:"llm_binding_id" binding:"required,uuid"`
-	Model             string   `json:"model"`
-	Temperature       *float64 `json:"temperature" binding:"omitempty,gte=0.0,lte=2.0"`
-	MaxTokens         int      `json:"max_tokens" binding:"omitempty,gt=0"`
+	LLMBindingID string   `json:"llm_binding_id" binding:"required,uuid"`
+	Temperature  *float64 `json:"temperature" binding:"omitempty,gte=0.0,lte=2.0"`
+	MaxTokens    *int     `json:"max_tokens" binding:"omitempty,gt=0"`
 }
 
 type CreateShortTermRequest struct {
@@ -112,14 +111,6 @@ func (h *AgentHandler) Create(c *gin.Context) {
 		return
 	}
 
-	var temp float64
-	if req.Brain.Temperature != nil {
-		temp = *req.Brain.Temperature
-	}
-	var maxTokens int
-	if req.Brain.MaxTokens > 0 {
-		maxTokens = req.Brain.MaxTokens
-	}
 
 	var promptTemplateUUID uuid.UUID
 	if req.PromptTemplate != "" {
@@ -169,9 +160,8 @@ func (h *AgentHandler) Create(c *gin.Context) {
 		Role:        role,
 		Brain: model.BrainConfig{
 			LLMBindingID: llmBindingID,
-			Model:        req.Brain.Model,
-			Temperature:  temp,
-			MaxTokens:    maxTokens,
+			Temperature:  req.Brain.Temperature,
+			MaxTokens:    req.Brain.MaxTokens,
 		},
 		ShortTermMemory: model.ShortTermMemoryConfig{
 			KeyNamespace: req.ShortTermMemory.KeyNamespace,
@@ -341,14 +331,6 @@ func (h *AgentHandler) Update(c *gin.Context) {
 		return
 	}
 
-	var temp float64
-	if req.Brain.Temperature != nil {
-		temp = *req.Brain.Temperature
-	}
-	var maxTokens int
-	if req.Brain.MaxTokens > 0 {
-		maxTokens = req.Brain.MaxTokens
-	}
 
 	var promptTemplateUUID uuid.UUID
 	if req.PromptTemplate != "" {
@@ -395,9 +377,8 @@ func (h *AgentHandler) Update(c *gin.Context) {
 	existing.Role = role
 	existing.Brain = model.BrainConfig{
 		LLMBindingID: llmBindingID,
-		Model:        req.Brain.Model,
-		Temperature:  temp,
-		MaxTokens:    maxTokens,
+		Temperature:  req.Brain.Temperature,
+		MaxTokens:    req.Brain.MaxTokens,
 	}
 	existing.ShortTermMemory = model.ShortTermMemoryConfig{
 		KeyNamespace: req.ShortTermMemory.KeyNamespace,

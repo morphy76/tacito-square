@@ -73,10 +73,9 @@ func TestRegistryHandler_RequestReply(t *testing.T) {
 		Status:      model.AgentStatusAssigned,
 		CommunityID: &comm.ID,
 		Brain: model.BrainConfig{
-			LLMBindingID:      uuid.New(),
-			Model:             "gpt-4",
-			Temperature:       0.7,
-			MaxTokens:         2048,
+			LLMBindingID: uuid.New(),
+			Temperature:  ptrFloat64(0.7),
+			MaxTokens:    ptrInt(2048),
 		},
 		ShortTermMemory: model.ShortTermMemoryConfig{TTLSeconds: 60},
 		LongTermMemory:  model.LongTermMemoryConfig{VectorDimension: 1536},
@@ -136,3 +135,7 @@ func TestRegistryHandler_RequestReply(t *testing.T) {
 	_, exists := redisMock.store[cacheKey]
 	assert.True(t, exists)
 }
+
+func ptrFloat64(v float64) *float64 { return &v }
+func ptrInt(v int) *int { return &v }
+

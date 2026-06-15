@@ -44,10 +44,9 @@ func TestTransactionRunner_CommitAndRollback(t *testing.T) {
 		Name:        "tx-agent-success",
 		Description: "A transaction test agent",
 		Brain: model.BrainConfig{
-			LLMBindingID:      uuid.New(),
-			Model:             "gpt-4o",
-			Temperature:       0.7,
-			MaxTokens:         2048,
+			LLMBindingID: uuid.New(),
+			Temperature:  ptrFloat64(0.7),
+			MaxTokens:    ptrInt(2048),
 		},
 		ShortTermMemory: model.ShortTermMemoryConfig{
 			KeyNamespace: "tx:short",
@@ -104,8 +103,9 @@ func TestTransactionRunner_CommitAndRollback(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "forced transaction rollback failure")
 
-		// Verify the record was not inserted and returns a not found error
 		_, getErr := repo.GetByID(ctx, agentFailed.ID)
 		assert.Error(t, getErr)
 	})
 }
+
+

@@ -162,29 +162,60 @@ type PropagatedAgentConfig struct {
 // ResolveAndSynthesizeSystemPrompt fetches templates and skills out-of-band and compiles them into a system prompt.
 func (c *K8sCRDCoordinator) ResolveAndSynthesizeSystemPrompt(ctx context.Context, agent *model.Agent) (string, error) {
 	var directives string
-	if agent.PromptTemplate != uuid.Nil {
-		tpl, err := c.promptRepo.GetTemplateByID(ctx, agent.PromptTemplate)
-		if err != nil {
-			return "", fmt.Errorf("fetching prompt template: %w", err)
+	description := agent.Description
+
+	if agent.Role == "hub" {
+		if c.promptRepo != nil {
+			// Fetch the role-specific template for hub
+			roleTpl, err := c.promptRepo.GetTemplateByID(ctx, model.HubSystemPromptTemplateID)
+			if err != nil {
+				return "", fmt.Errorf("fetching role-specific hub prompt template: %w", err)
+			}
+			directives = roleTpl.Content
 		}
-		directives = tpl.Content
+
+		// If a business-specific prompt template is provided (and is not the hub template itself)
+		if agent.PromptTemplate != uuid.Nil && agent.PromptTemplate != model.HubSystemPromptTemplateID {
+			if c.promptRepo != nil {
+				businessTpl, err := c.promptRepo.GetTemplateByID(ctx, agent.PromptTemplate)
+				if err != nil {
+					return "", fmt.Errorf("fetching business-specific prompt template: %w", err)
+				}
+				if description != "" {
+					description = description + "\n\n" + businessTpl.Content
+				} else {
+					description = businessTpl.Content
+				}
+			}
+		}
+	} else {
+		// Non-hub agent (spoke or general)
+		if agent.PromptTemplate != uuid.Nil && c.promptRepo != nil {
+			tpl, err := c.promptRepo.GetTemplateByID(ctx, agent.PromptTemplate)
+			if err != nil {
+				return "", fmt.Errorf("fetching prompt template: %w", err)
+			}
+			directives = tpl.Content
+		}
 	}
 
 	var skillsList []SkillConfig
-	for _, skillID := range agent.Skills {
-		skill, err := c.skillRepo.GetByID(ctx, skillID)
-		if err != nil {
-			return "", fmt.Errorf("fetching skill: %w", err)
+	if c.skillRepo != nil {
+		for _, skillID := range agent.Skills {
+			skill, err := c.skillRepo.GetByID(ctx, skillID)
+			if err != nil {
+				return "", fmt.Errorf("fetching skill: %w", err)
+			}
+			skillsList = append(skillsList, SkillConfig{
+				Name:        skill.Name,
+				Description: skill.Description,
+				Content:     skill.Content,
+			})
 		}
-		skillsList = append(skillsList, SkillConfig{
-			Name:        skill.Name,
-			Description: skill.Description,
-			Content:     skill.Content,
-		})
 	}
 
 	config := PropagatedAgentConfig{
-		Description: agent.Description,
+		Description: description,
 		Directives:  directives,
 		Skills:      skillsList,
 	}
@@ -228,21 +259,22 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 		return fmt.Errorf("resolving llm binding %s: %w", agent.Brain.LLMBindingID, err)
 	}
 
-	modelName := agent.Brain.Model
-	if modelName == "" {
-		modelName = llmBinding.DefaultModel
+	modelName := llmBinding.DefaultModel
+
+	var temp *string
+	if agent.Brain.Temperature != nil {
+		tStr := strconv.FormatFloat(*agent.Brain.Temperature, 'f', -1, 64)
+		temp = &tStr
+	} else {
+		tStr := strconv.FormatFloat(llmBinding.DefaultTemperature, 'f', -1, 64)
+		temp = &tStr
 	}
 
-	tempVal := llmBinding.DefaultTemperature
-	if agent.Brain.Temperature != 0.0 {
-		tempVal = agent.Brain.Temperature
-	}
-	tStr := strconv.FormatFloat(tempVal, 'f', -1, 64)
-	temp := &tStr
-
-	maxTokensVal := int32(llmBinding.DefaultMaxTokens)
-	if agent.Brain.MaxTokens > 0 {
-		maxTokensVal = int32(agent.Brain.MaxTokens)
+	var maxTokensVal int32
+	if agent.Brain.MaxTokens != nil {
+		maxTokensVal = int32(*agent.Brain.MaxTokens)
+	} else {
+		maxTokensVal = int32(llmBinding.DefaultMaxTokens)
 	}
 	maxTokens := &maxTokensVal
 

@@ -26,11 +26,11 @@ const (
 
 type Community struct {
 	ID            uuid.UUID              `json:"id"`
-	TenantID      string                 `json:"tenant_id"`
+	TenantID      string                 `json:"tenant_id,omitempty"`
 	Name          string                 `json:"name"`
-	Description   string                 `json:"description"`
+	Description   string                 `json:"description,omitempty"`
 	Topology      CommunityTopology      `json:"topology"`
-	Configuration map[string]interface{} `json:"configuration"`
+	Configuration map[string]interface{} `json:"configuration,omitempty"`
 	Status        CommunityStatus        `json:"status"`
 	CreatedAt     time.Time              `json:"created_at"`
 	UpdatedAt     time.Time              `json:"updated_at"`

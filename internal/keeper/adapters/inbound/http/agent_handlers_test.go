@@ -91,7 +91,6 @@ func TestAgentHandlers_Create(t *testing.T) {
 			"description": "Agent for QA tests",
 			"brain": map[string]interface{}{
 				"llm_binding_id":     "8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4",
-				"model":              "gpt-4o",
 				"temperature":        0.7,
 				"max_tokens":         2048,
 			},
@@ -149,7 +148,6 @@ func TestAgentHandlers_Create(t *testing.T) {
 			"role":        "hub",
 			"brain": map[string]interface{}{
 				"llm_binding_id":     "8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4",
-				"model":              "gpt-4o",
 				"temperature":        0.7,
 				"max_tokens":         2048,
 			},
@@ -195,7 +193,6 @@ func TestAgentHandlers_Create(t *testing.T) {
 			"role":        "router",
 			"brain": map[string]interface{}{
 				"llm_binding_id":     "8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4",
-				"model":              "gpt-4o",
 				"temperature":        0.7,
 				"max_tokens":         2048,
 			},
@@ -256,7 +253,6 @@ func TestAgentHandlers_Create(t *testing.T) {
 			"description": "Agent for QA tests",
 			"brain": map[string]interface{}{
 				"llm_binding_id":     "not-a-valid-uuid",
-				"model":              "gpt-4o",
 				"temperature":        0.7,
 				"max_tokens":         2048,
 			},
@@ -399,9 +395,8 @@ func TestAgentHandlers_Update(t *testing.T) {
 			Status: model.AgentStatusDefined,
 			Brain: model.BrainConfig{
 				LLMBindingID: uuid.MustParse("8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4"),
-				Model:        "gpt-4",
-				Temperature:  0.5,
-				MaxTokens:    1000,
+				Temperature:  ptrFloat64(0.5),
+				MaxTokens:    ptrInt(1000),
 			},
 			ShortTermMemory: model.ShortTermMemoryConfig{
 				TTLSeconds: 3600,
@@ -416,7 +411,6 @@ func TestAgentHandlers_Update(t *testing.T) {
 			"description": "Updated Agent description",
 			"brain": map[string]interface{}{
 				"llm_binding_id":     "8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4",
-				"model":              "gpt-4o",
 				"temperature":        0.7,
 				"max_tokens":         2048,
 			},
@@ -470,9 +464,8 @@ func TestAgentHandlers_Update(t *testing.T) {
 			Role:   "spoke",
 			Brain: model.BrainConfig{
 				LLMBindingID: uuid.MustParse("8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4"),
-				Model:        "gpt-4",
-				Temperature:  0.5,
-				MaxTokens:    1000,
+				Temperature:  ptrFloat64(0.5),
+				MaxTokens:    ptrInt(1000),
 			},
 			ShortTermMemory: model.ShortTermMemoryConfig{
 				TTLSeconds: 3600,
@@ -488,7 +481,6 @@ func TestAgentHandlers_Update(t *testing.T) {
 			"role":        "hub",
 			"brain": map[string]interface{}{
 				"llm_binding_id":     "8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4",
-				"model":              "gpt-4o",
 				"temperature":        0.7,
 				"max_tokens":         2048,
 			},
@@ -542,9 +534,8 @@ func TestAgentHandlers_Update(t *testing.T) {
 			Role:   "spoke",
 			Brain: model.BrainConfig{
 				LLMBindingID: uuid.MustParse("8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4"),
-				Model:        "gpt-4",
-				Temperature:  0.5,
-				MaxTokens:    1000,
+				Temperature:  ptrFloat64(0.5),
+				MaxTokens:    ptrInt(1000),
 			},
 			ShortTermMemory: model.ShortTermMemoryConfig{
 				TTLSeconds: 3600,
@@ -560,7 +551,6 @@ func TestAgentHandlers_Update(t *testing.T) {
 			"role":        "router",
 			"brain": map[string]interface{}{
 				"llm_binding_id":     "8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4",
-				"model":              "gpt-4o",
 				"temperature":        0.7,
 				"max_tokens":         2048,
 			},
@@ -620,7 +610,6 @@ func TestAgentHandlers_Tier(t *testing.T) {
 			"description": "Agent with tier",
 			"brain": map[string]interface{}{
 				"llm_binding_id":     "8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4",
-				"model":              "gpt-4o",
 				"temperature":        0.7,
 				"max_tokens":         2048,
 			},
@@ -708,9 +697,8 @@ func TestAgentHandlers_Tier(t *testing.T) {
 			Tier:   "standard",
 			Brain: model.BrainConfig{
 				LLMBindingID: uuid.MustParse("8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4"),
-				Model:        "gpt-4",
-				Temperature:  0.5,
-				MaxTokens:    1000,
+				Temperature:  ptrFloat64(0.5),
+				MaxTokens:    ptrInt(1000),
 			},
 			ShortTermMemory: model.ShortTermMemoryConfig{TTLSeconds: 3600},
 			LongTermMemory:  model.LongTermMemoryConfig{VectorDimension: 1536},
@@ -741,4 +729,8 @@ func TestAgentHandlers_Tier(t *testing.T) {
 		}
 	})
 }
+
+func ptrFloat64(v float64) *float64 { return &v }
+func ptrInt(v int) *int { return &v }
+
 
