@@ -83,6 +83,8 @@ func (r *SchemaRouterImpl) RouteEvent(ctx context.Context, event events.DomainEv
 			return r.handleStartThread(ctx, event)
 		case events.SchemaConversationalAddUserMessage:
 			return r.handleHubAddUserMessage(ctx, event)
+		case events.SchemaConversationalAgentDelegation:
+			return r.handleHubAgentDelegation(ctx, event)
 		case events.SchemaConversationalAgentResponse:
 			return r.handleHubSpokeResponse(ctx, event)
 		case events.SchemaConversationalEndThread:
@@ -97,7 +99,9 @@ func (r *SchemaRouterImpl) RouteEvent(ctx context.Context, event events.DomainEv
 	case events.SchemaConversationalStartThread:
 		return r.handleStartThread(ctx, event)
 	case events.SchemaConversationalAddUserMessage:
-		return r.handleAddUserMessage(ctx, event)
+		return r.handleAddUserMessage(ctx, event, "standalone")
+	case events.SchemaConversationalAgentDelegation:
+		return r.handleAgentDelegation(ctx, event)
 	case events.SchemaConversationalEndThread:
 		return r.handleEndThread(ctx, event)
 	default:
@@ -126,7 +130,7 @@ func (r *SchemaRouterImpl) handleStartThread(ctx context.Context, event events.D
 	return nil
 }
 
-func (r *SchemaRouterImpl) handleAddUserMessage(ctx context.Context, event events.DomainEvent) error {
+func (r *SchemaRouterImpl) handleAddUserMessage(ctx context.Context, event events.DomainEvent, messageType string) error {
 	logger := *zerolog.Ctx(ctx)
 	var payload events.AddUserMessagePayload
 	if err := json.Unmarshal(event.Payload, &payload); err != nil {
@@ -157,6 +161,7 @@ func (r *SchemaRouterImpl) handleAddUserMessage(ctx context.Context, event event
 		CorrelationEventID: event.EventID,
 		Response:           resp,
 		Finished:           true,
+		MessageType:        messageType,
 	}
 
 	sourceIdentity := fmt.Sprintf("agent/%s", r.agentID)
@@ -322,6 +327,97 @@ func (r *SchemaRouterImpl) handleHubAddUserMessage(ctx context.Context, event ev
 
 	logger.Info().Msg("hub processing incoming user message event")
 	return r.orchestrator.ProcessUserMessage(ctx, event.TenantID, payload.ThreadID, payload, event.EventID)
+}
+
+func (r *SchemaRouterImpl) handleHubAgentDelegation(ctx context.Context, event events.DomainEvent) error {
+	logger := *zerolog.Ctx(ctx)
+	var payload events.AgentDelegationPayload
+	if err := json.Unmarshal(event.Payload, &payload); err != nil {
+		logger.Error().Err(err).Msg("failed to unmarshal AgentDelegationPayload")
+		return fmt.Errorf("failed to unmarshal agent-delegation payload: %w", err)
+	}
+
+	logger = logger.With().Str("thread_id", payload.ThreadID).Logger()
+	ctx = logger.WithContext(ctx)
+
+	if r.orchestrator == nil {
+		logger.Error().Msg("orchestrator not initialized under hub role")
+		return fmt.Errorf("orchestrator not configured")
+	}
+
+	// Convert delegation into an AddUserMessagePayload for orchestrator consumption
+	userPayload := events.AddUserMessagePayload{
+		ThreadID:    payload.ThreadID,
+		CommunityID: payload.CommunityID,
+		Message:     payload.Message,
+	}
+
+	logger.Info().Str("delegating_agent", payload.DelegatingAgent).Msg("hub processing incoming agent-delegation event")
+	return r.orchestrator.ProcessUserMessage(ctx, event.TenantID, payload.ThreadID, userPayload, event.EventID)
+}
+
+func (r *SchemaRouterImpl) handleAgentDelegation(ctx context.Context, event events.DomainEvent) error {
+	logger := *zerolog.Ctx(ctx)
+	var payload events.AgentDelegationPayload
+	if err := json.Unmarshal(event.Payload, &payload); err != nil {
+		logger.Error().Err(err).Msg("failed to unmarshal AgentDelegationPayload")
+		return fmt.Errorf("failed to unmarshal agent-delegation payload: %w", err)
+	}
+
+	logger = logger.With().Str("thread_id", payload.ThreadID).Logger()
+	ctx = logger.WithContext(ctx)
+
+	logger.Info().
+		Str("delegating_agent", payload.DelegatingAgent).
+		Str("target_agent", payload.TargetAgent).
+		Msg("spoke processing incoming agent-delegation event")
+
+	resp, err := r.processor.ProcessIncomingMessage(ctx, event.TenantID, r.agentID, payload.ThreadID, payload.Message)
+	if err != nil {
+		logger.Warn().Err(err).Msg("failed to process delegated message, triggering STM rollback")
+		if rollbackErr := r.memory.RollbackLast(ctx, event.TenantID, r.agentID, payload.ThreadID); rollbackErr != nil {
+			logger.Error().Err(rollbackErr).Msg("failed to rollback last memory entry after LLM failure")
+		}
+		return fmt.Errorf("failed to process delegated message: %w", err)
+	}
+
+	// Construct agent response event with spoke message type
+	respPayload := events.AgentResponsePayload{
+		ThreadID:           payload.ThreadID,
+		CommunityID:        payload.CommunityID,
+		AgentName:          r.agentName,
+		CorrelationEventID: event.EventID,
+		Response:           resp,
+		Finished:           true,
+		MessageType:        "spoke",
+	}
+
+	sourceIdentity := fmt.Sprintf("agent/%s", r.agentID)
+	responseEvent, err := events.NewDomainEvent(
+		events.SchemaConversationalAgentResponse,
+		sourceIdentity,
+		event.TenantID,
+		respPayload,
+	)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to construct agent-response domain event")
+		return fmt.Errorf("failed to create response event: %w", err)
+	}
+
+	eventData, err := json.Marshal(responseEvent)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to marshal agent-response domain event")
+		return fmt.Errorf("failed to marshal response event: %w", err)
+	}
+
+	subject := fmt.Sprintf("ts.community.%s.agent.%s.thread.%s.response", payload.CommunityID, r.agentID, payload.ThreadID)
+	logger.Info().Str("subject", subject).Msg("publishing spoke agent-response event")
+	if err := r.publisher.Publish(ctx, subject, eventData); err != nil {
+		logger.Error().Err(err).Msg("failed to publish agent-response event to NATS")
+		return fmt.Errorf("failed to publish response event: %w", err)
+	}
+
+	return nil
 }
 
 func (r *SchemaRouterImpl) handleHubSpokeResponse(ctx context.Context, event events.DomainEvent) error {

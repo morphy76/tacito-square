@@ -195,17 +195,18 @@ func TestOrchestrator_ProcessUserMessage(t *testing.T) {
 		err = json.Unmarshal(progressEvt.Payload, &progressPayload)
 		require.NoError(t, err)
 		assert.False(t, progressPayload.Finished)
+		assert.Equal(t, "reasoning", progressPayload.MessageType)
 		assert.Contains(t, progressPayload.Response, "Delegating tasks to: [writer, translator]")
 
-		// Verification of tasks sent to Spokes
+		// Verification of tasks sent to Spokes — must use AgentDelegation schema
 		var taskEvt1, taskEvt2 events.DomainEvent
 		err = json.Unmarshal(publishes[1].Data, &taskEvt1)
 		require.NoError(t, err)
 		err = json.Unmarshal(publishes[2].Data, &taskEvt2)
 		require.NoError(t, err)
 
-		assert.Equal(t, events.SchemaConversationalAddUserMessage, taskEvt1.SchemaRef)
-		assert.Equal(t, events.SchemaConversationalAddUserMessage, taskEvt2.SchemaRef)
+		assert.Equal(t, events.SchemaConversationalAgentDelegation, taskEvt1.SchemaRef)
+		assert.Equal(t, events.SchemaConversationalAgentDelegation, taskEvt2.SchemaRef)
 
 		// Ensure correct NATS subjects were targeted
 		subjects := []string{publishes[1].Subject, publishes[2].Subject}
@@ -276,11 +277,13 @@ func TestOrchestrator_ProcessSpokeResponse(t *testing.T) {
 		assert.Contains(t, state.PendingSpokes, "translator")
 		assert.NotContains(t, state.PendingSpokes, "writer")
 
-		// Check memory append call was triggered
+		// Check memory append call was triggered with "user" role and [Observation] prefix
 		assert.Len(t, mockMemory.AppendCalls, 1)
+		assert.Equal(t, "user", mockMemory.AppendCalls[0].Role)
+		assert.Contains(t, mockMemory.AppendCalls[0].Content, "[Observation]")
 		assert.Contains(t, mockMemory.AppendCalls[0].Content, "writer")
 
-		// Check progression publish (Finished: false)
+		// Check progression publish (Finished: false, MessageType: "reasoning")
 		publishes := mockPublisher.GetPublishes()
 		require.Len(t, publishes, 1)
 		var progressEvt events.DomainEvent
@@ -290,6 +293,7 @@ func TestOrchestrator_ProcessSpokeResponse(t *testing.T) {
 		err = json.Unmarshal(progressEvt.Payload, &progressPayload)
 		require.NoError(t, err)
 		assert.False(t, progressPayload.Finished)
+		assert.Equal(t, "reasoning", progressPayload.MessageType)
 		assert.Contains(t, progressPayload.Response, "Received response from writer")
 	})
 
@@ -363,6 +367,7 @@ func TestOrchestrator_ProcessSpokeResponse(t *testing.T) {
 		err = json.Unmarshal(finalEvt.Payload, &finalPayload)
 		require.NoError(t, err)
 		assert.True(t, finalPayload.Finished)
+		assert.Equal(t, "final", finalPayload.MessageType)
 		assert.Equal(t, "Here is the completed translation of the dragon story.", finalPayload.Response)
 		assert.Equal(t, "ts.community.comm-1.agent.hub-123.thread.thread-abc.response", publishes[1].Subject)
 	})
@@ -441,6 +446,7 @@ func TestOrchestrator_LoopDetection(t *testing.T) {
 		err = json.Unmarshal(finalEvt.Payload, &finalPayload)
 		require.NoError(t, err)
 		assert.True(t, finalPayload.Finished)
+		assert.Equal(t, "final", finalPayload.MessageType)
 		assert.Equal(t, "Spoke response", finalPayload.Response)
 	})
 }

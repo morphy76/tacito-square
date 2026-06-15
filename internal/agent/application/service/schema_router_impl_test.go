@@ -158,6 +158,7 @@ func TestSchemaRouter_AddUserMessage_Success(t *testing.T) {
 	assert.Equal(t, "evt-1", respPayload.CorrelationEventID)
 	assert.Equal(t, "LLM Response", respPayload.Response)
 	assert.True(t, respPayload.Finished)
+	assert.Equal(t, "standalone", respPayload.MessageType)
 }
 
 func TestSchemaRouter_AddUserMessage_LLMFailure_Rollback(t *testing.T) {
@@ -391,4 +392,113 @@ func TestSchemaRouter_UnknownSchemaRef(t *testing.T) {
 
 	err := router.RouteEvent(context.Background(), evt)
 	assert.NoError(t, err)
+}
+
+func TestSchemaRouter_AgentDelegation_SpokeResponse(t *testing.T) {
+	mockProcessor := &MockMessageProcessor{
+		ProcessIncomingMessageFunc: func(ctx context.Context, tenantID, agentID, threadID string, payload string) (string, error) {
+			assert.Equal(t, "write about a dragon", payload)
+			return "Once upon a time there was a dragon...", nil
+		},
+	}
+	mockPublisher := &MockEventPublisher{}
+
+	router := service.NewSchemaRouterImpl(
+		"agent-spoke-1",
+		"writer",
+		"spoke",
+		mockProcessor,
+		nil,
+		&MockShortTermMemory{},
+		nil,
+		nil,
+		nil,
+		mockPublisher,
+		nil,
+	)
+
+	payload := events.AgentDelegationPayload{
+		ThreadID:        "thread-abc",
+		CommunityID:     "community-456",
+		DelegatingAgent: "hub-agent",
+		TargetAgent:     "writer",
+		Message:         "write about a dragon",
+	}
+	payloadBytes, err := json.Marshal(payload)
+	require.NoError(t, err)
+
+	evt := events.DomainEvent{
+		EventID:    "evt-deleg-1",
+		SchemaRef:  events.SchemaConversationalAgentDelegation,
+		Source:     "agent/hub-123",
+		TenantID:   "tenant-1",
+		OccurredAt: time.Now().Format(time.RFC3339Nano),
+		Payload:    payloadBytes,
+	}
+
+	err = router.RouteEvent(context.Background(), evt)
+	assert.NoError(t, err)
+
+	require.Len(t, mockProcessor.Calls, 1)
+	require.Len(t, mockPublisher.Calls, 1)
+
+	pubCall := mockPublisher.Calls[0]
+	assert.Equal(t, "ts.community.community-456.agent.agent-spoke-1.thread.thread-abc.response", pubCall.Subject)
+
+	var publishedEvent events.DomainEvent
+	err = json.Unmarshal(pubCall.Data, &publishedEvent)
+	require.NoError(t, err)
+	assert.Equal(t, events.SchemaConversationalAgentResponse, publishedEvent.SchemaRef)
+
+	var respPayload events.AgentResponsePayload
+	err = json.Unmarshal(publishedEvent.Payload, &respPayload)
+	require.NoError(t, err)
+
+	assert.Equal(t, "thread-abc", respPayload.ThreadID)
+	assert.Equal(t, "writer", respPayload.AgentName)
+	assert.Equal(t, "Once upon a time there was a dragon...", respPayload.Response)
+	assert.True(t, respPayload.Finished)
+	assert.Equal(t, "spoke", respPayload.MessageType)
+}
+
+func TestSchemaRouter_AgentDelegation_HubRoutes(t *testing.T) {
+	// When a hub receives an agent-delegation event, it should route to handleHubAddUserMessage
+	// which calls the orchestrator. We use a nil orchestrator to verify it reaches that code path.
+	router := service.NewSchemaRouterImpl(
+		"hub-123",
+		"hub-agent",
+		"hub",
+		nil,
+		nil, // nil orchestrator will cause an error in handleHubAddUserMessage
+		&MockShortTermMemory{},
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+
+	payload := events.AgentDelegationPayload{
+		ThreadID:        "thread-abc",
+		CommunityID:     "community-456",
+		DelegatingAgent: "external-hub",
+		TargetAgent:     "hub-agent",
+		Message:         "coordinate this task",
+	}
+	payloadBytes, err := json.Marshal(payload)
+	require.NoError(t, err)
+
+	evt := events.DomainEvent{
+		EventID:    "evt-deleg-2",
+		SchemaRef:  events.SchemaConversationalAgentDelegation,
+		Source:     "agent/other-hub",
+		TenantID:   "tenant-1",
+		OccurredAt: time.Now().Format(time.RFC3339Nano),
+		Payload:    payloadBytes,
+	}
+
+	err = router.RouteEvent(context.Background(), evt)
+	// Should fail with "orchestrator not configured" since we passed nil orchestrator
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "orchestrator not configured")
 }

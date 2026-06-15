@@ -15,6 +15,9 @@ const (
 
 	// SchemaConversationalThreadHistory is the URN for emitting the full thread history.
 	SchemaConversationalThreadHistory = "urn:tacito:schema:conversational:thread-history:v1"
+
+	// SchemaConversationalAgentDelegation is the URN for inter-agent task delegation.
+	SchemaConversationalAgentDelegation = "urn:tacito:schema:conversational:agent-delegation:v1"
 )
 
 // ThreadTurn represents a single conversational or execution step in a thread.
@@ -87,4 +90,26 @@ type AgentResponsePayload struct {
 
 	// Finished indicates whether this is the final (complete) response chunk.
 	Finished bool `json:"finished"`
+
+	// MessageType classifies this response for UI rendering.
+	// Valid values: "reasoning", "spoke", "final", "standalone".
+	MessageType string `json:"message_type"`
+}
+
+// AgentDelegationPayload is the payload for urn:tacito:schema:conversational:agent-delegation:v1.
+type AgentDelegationPayload struct {
+	// ThreadID identifies the active conversation thread.
+	ThreadID string `json:"thread_id"`
+
+	// CommunityID is the UUID of the target community.
+	CommunityID string `json:"community_id"`
+
+	// DelegatingAgent is the name of the Hub agent delegating the task.
+	DelegatingAgent string `json:"delegating_agent"`
+
+	// TargetAgent is the name of the Spoke agent receiving the task.
+	TargetAgent string `json:"target_agent"`
+
+	// Message is the task description for the Spoke agent.
+	Message string `json:"message"`
 }

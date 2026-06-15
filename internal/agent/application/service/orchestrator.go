@@ -174,8 +174,8 @@ func (o *Orchestrator) ProcessSpokeResponse(ctx context.Context, tenantID, threa
 	delete(state.PendingSpokes, payload.AgentName)
 
 	spokeEntry := model.MemoryEntry{
-		Role:      "assistant",
-		Content:   fmt.Sprintf("Agent %s responded: %s", payload.AgentName, payload.Response),
+		Role:      "user",
+		Content:   fmt.Sprintf("[Observation] Spoke Agent '%s' responded: %s", payload.AgentName, payload.Response),
 		Timestamp: time.Now().UTC(),
 	}
 	if err := o.memory.Append(ctx, tenantID, o.agentID, threadID, spokeEntry); err != nil {
@@ -231,6 +231,7 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 			CorrelationEventID: state.OriginalEventID,
 			Response:           finalResponse,
 			Finished:           true,
+			MessageType:        "final",
 		}
 		
 		sourceIdentity := fmt.Sprintf("agent/%s", o.agentID)
@@ -335,14 +336,16 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 		// Publish task events to all targeted Spokes
 		sourceIdentity := fmt.Sprintf("agent/%s", o.agentID)
 		for _, task := range action.Spokes {
-			taskPayload := events.AddUserMessagePayload{
-				ThreadID:    threadID,
-				CommunityID: o.communityID,
-				Message:     task.Message,
+			taskPayload := events.AgentDelegationPayload{
+				ThreadID:        threadID,
+				CommunityID:     o.communityID,
+				DelegatingAgent: o.agentName,
+				TargetAgent:     task.Spoke,
+				Message:         task.Message,
 			}
 
 			taskEvent, err := events.NewDomainEvent(
-				events.SchemaConversationalAddUserMessage,
+				events.SchemaConversationalAgentDelegation,
 				sourceIdentity,
 				tenantID,
 				taskPayload,
@@ -394,6 +397,7 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 			CorrelationEventID: state.OriginalEventID,
 			Response:           action.Response,
 			Finished:           true,
+			MessageType:        "final",
 		}
 
 		sourceIdentity := fmt.Sprintf("agent/%s", o.agentID)
@@ -461,6 +465,11 @@ Dynamic Routing & Delegation Guidelines:
 1. Carefully inspect the Name and Description of the available Spoke agents.
 2. During the information-gathering phase of a thread (where details are missing or clarifying questions are needed), delegate tasks ONLY to agents whose descriptions indicate they perform inquiry, question-asking, coaching, or detail gathering.
 3. Do NOT delegate tasks to synthesis, compiling, or final-answer agents (e.g., agents whose descriptions state they summarize findings or produce final outputs) during the information-gathering phase. Only delegate to them once all details are fully gathered and you are ready to produce the final findings.
+
+Response Synthesis Guidelines:
+1. Messages prefixed with "[Observation]" in the conversation history are responses received from Spoke agents — they are NOT user messages.
+2. When finalizing, you MUST synthesize and integrate the Spoke observations into a single cohesive, polished response for the user.
+3. Do NOT copy-paste or concatenate Spoke responses verbatim. Rewrite and merge them into a well-structured answer.
 `)
 
 	return sb.String(), nil
@@ -474,6 +483,7 @@ func (o *Orchestrator) emitProgressionEvent(ctx context.Context, tenantID, threa
 		CorrelationEventID: correlationEventID,
 		Response:           message,
 		Finished:           false, // Progression update
+		MessageType:        "reasoning",
 	}
 
 	sourceIdentity := fmt.Sprintf("agent/%s", o.agentID)

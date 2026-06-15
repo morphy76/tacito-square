@@ -3,7 +3,7 @@
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
 | ID            | BUG-M6.7                                                           |
-| Status        | OPEN                                                               |
+| Status        | VERIFIED                                                           |
 | Severity      | HIGH                                                               |
 | Milestone     | M6 — Communities & Messaging                                       |
 | Affects       | `internal/keeper/adapters/inbound/http/event_handlers.go`, `pkg/events/conversational.go`, `internal/agent/application/service/orchestrator.go`, `internal/agent/application/service/schema_router_impl.go` |
