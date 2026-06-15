@@ -16,6 +16,16 @@ const (
 	PromptStatusArchived PromptStatus = "archived"
 )
 
+// HubSystemPromptTemplateID is the system prompt template UUID.
+// It starts with ffffffff to mark it as system-locked.
+var HubSystemPromptTemplateID = uuid.MustParse("ffffffff-0000-0000-0000-000000000001")
+
+// IsSystemLocked checks if a UUID represents a system-locked template.
+// A UUID is system-locked if its first 4 bytes are 0xFF (starts with ffffffff).
+func IsSystemLocked(id uuid.UUID) bool {
+	return id[0] == 0xff && id[1] == 0xff && id[2] == 0xff && id[3] == 0xff
+}
+
 // PromptTemplate represents a single parameterized instruction block.
 type PromptTemplate struct {
 	ID        uuid.UUID    `json:"id"`

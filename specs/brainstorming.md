@@ -79,5 +79,4 @@ Each direction is labeled with one of the following categories:
 ## Free
 
 - community topology, sequential
-- hub prompt hardcodings
 - 

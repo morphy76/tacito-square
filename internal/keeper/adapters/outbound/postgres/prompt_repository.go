@@ -51,7 +51,7 @@ func (r *PromptRepository) GetTemplateByID(ctx context.Context, id uuid.UUID) (*
 	}
 
 	query := `SELECT id, tenant_id, name, content, status, created_at 
-		FROM prompt_templates WHERE id = $1 AND tenant_id = $2`
+		FROM prompt_templates WHERE id = $1 AND (tenant_id = $2 OR tenant_id = 'system')`
 	var t model.PromptTemplate
 	err := r.pool.QueryRow(ctx, query, id, ten.FullName()).Scan(
 		&t.ID, &t.TenantID, &t.Name, &t.Content, &t.Status, &t.CreatedAt,

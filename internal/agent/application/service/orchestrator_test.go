@@ -450,3 +450,55 @@ func TestOrchestrator_LoopDetection(t *testing.T) {
 		assert.Equal(t, "Spoke response", finalPayload.Response)
 	})
 }
+
+func TestOrchestrator_TemplateCompilation(t *testing.T) {
+	mockLock := &MockThreadLock{}
+	mockStateStore := &MockOrchestrationStateStore{}
+	mockDiscovery := &MockAgentDiscovery{
+		cards: []*agentcard.AgentCard{
+			{Name: "researcher", Description: "Searches for info"},
+			{Name: "coder", Description: "Writes code"},
+		},
+	}
+	mockMemory := &MockShortTermMemory{}
+	mockPublisher := &MockEventPublisherOrchestrator{}
+
+	// JSON config resembling production:
+	jsonConfig := `{
+		"description": "You are a dynamic coordinator agent.",
+		"directives": "Custom directives template.\nDescription: {{.Description}}\nSpokes list:\n{{.Spokes}}\nGuidelines:\nCoordinate spokes correctly."
+	}`
+
+	var compiledPrompt string
+	mockBrain := &MockBrain{
+		GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
+			compiledPrompt = request.SystemPrompt
+			return &model.BrainResponse{Content: `{"action": "finalize", "response": "done"}`}, nil
+		},
+	}
+
+	orchestrator := service.NewOrchestrator(
+		"hub-123", "hub-agent", "comm-1",
+		mockBrain, mockStateStore, mockLock, mockDiscovery, mockMemory, mockPublisher,
+		jsonConfig,
+	)
+
+	payload := events.AddUserMessagePayload{
+		ThreadID:    "thread-abc",
+		CommunityID: "comm-1",
+		Message:     "Compile template test.",
+	}
+
+	err := orchestrator.ProcessUserMessage(context.Background(), "tenant-1", "thread-abc", payload, "event-999")
+	assert.NoError(t, err)
+
+	// Verify the template was executed and placeholders resolved:
+	assert.Contains(t, compiledPrompt, "Custom directives template.")
+	assert.Contains(t, compiledPrompt, "Description: You are a dynamic coordinator agent.")
+	assert.Contains(t, compiledPrompt, "Spokes list:")
+	assert.Contains(t, compiledPrompt, "- Name: researcher")
+	assert.Contains(t, compiledPrompt, "  Description: Searches for info")
+	assert.Contains(t, compiledPrompt, "- Name: coder")
+	assert.Contains(t, compiledPrompt, "  Description: Writes code")
+	assert.Contains(t, compiledPrompt, "Guidelines:\nCoordinate spokes correctly.")
+}

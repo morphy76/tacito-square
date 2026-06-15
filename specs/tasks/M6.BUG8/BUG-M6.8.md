@@ -3,7 +3,7 @@
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
 | ID            | BUG-M6.8                                                           |
-| Status        | OPEN                                                               |
+| Status        | CLOSED                                                             |
 | Severity      | HIGH                                                               |
 | Milestone     | M6 — Communities & Messaging                                       |
 | Affects       | internal/agent/application/service/orchestrator.go, internal/keeper/adapters/outbound/crd/crd_coordinator.go, deploy/postgres/migrations |

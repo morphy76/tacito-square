@@ -1,10 +1,12 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/morphy76/tacito-square/internal/agent/application/ports/outbound"
@@ -432,27 +434,49 @@ func (o *Orchestrator) compileSystemPrompt(ctx context.Context) (string, error) 
 		return "", err
 	}
 
-	var sb strings.Builder
-	sb.WriteString(o.basePrompt)
-	sb.WriteString("\n\nYou have access to the following specialized Spoke agents in this community:\n")
+	var spokesSb strings.Builder
 	for _, card := range cards {
 		if card.Name == o.agentName {
 			continue
 		}
-		sb.WriteString(fmt.Sprintf("- Name: %s\n", card.Name))
+		spokesSb.WriteString(fmt.Sprintf("- Name: %s\n", card.Name))
 		if card.Description != "" {
-			sb.WriteString(fmt.Sprintf("  Description: %s\n", card.Description))
+			spokesSb.WriteString(fmt.Sprintf("  Description: %s\n", card.Description))
 		}
 		if len(card.Skills) > 0 {
 			var skills []string
 			for _, skill := range card.Skills {
 				skills = append(skills, skill.Name)
 			}
-			sb.WriteString(fmt.Sprintf("  Skills: %s\n", strings.Join(skills, ", ")))
+			spokesSb.WriteString(fmt.Sprintf("  Skills: %s\n", strings.Join(skills, ", ")))
+		}
+	}
+	spokesStr := spokesSb.String()
+
+	// Parse basePrompt to see if it is a JSON PropagatedAgentConfig
+	var parsedConfig PropagatedAgentConfig
+	var templateStr string
+	var descriptionStr string
+
+	if json.Unmarshal([]byte(o.basePrompt), &parsedConfig) == nil {
+		templateStr = parsedConfig.Directives
+		descriptionStr = parsedConfig.Description
+	} else {
+		// Fallback for tests/unstructured prompts
+		if strings.Contains(o.basePrompt, ".Spokes") {
+			templateStr = o.basePrompt
+		} else {
+			descriptionStr = o.basePrompt
 		}
 	}
 
-	sb.WriteString(`
+	// If the template string is empty, fallback to the default Hub instructions
+	if templateStr == "" {
+		templateStr = `{{if .Description}}{{.Description}}{{else}}You are a helpful orchestrator agent.{{end}}
+
+You have access to the following specialized Spoke agents in this community:
+{{.Spokes}}
+
 To coordinate the conversation, you must output a valid JSON response specifying your next step.
 - To delegate tasks to Spoke subagents concurrently, output:
   {"action": "delegate", "spokes": [{"spoke": "<agent_name>", "message": "<task description>"}, ...] }
@@ -469,10 +493,25 @@ Dynamic Routing & Delegation Guidelines:
 Response Synthesis Guidelines:
 1. Messages prefixed with "[Observation]" in the conversation history are responses received from Spoke agents — they are NOT user messages.
 2. When finalizing, you MUST synthesize and integrate the Spoke observations into a single cohesive, polished response for the user.
-3. Do NOT copy-paste or concatenate Spoke responses verbatim. Rewrite and merge them into a well-structured answer.
-`)
+3. Do NOT copy-paste or concatenate Spoke responses verbatim. Rewrite and merge them into a well-structured answer.`
+	}
 
-	return sb.String(), nil
+	tmpl, err := template.New("hub_system_prompt").Parse(templateStr)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse system prompt template: %w", err)
+	}
+
+	data := map[string]interface{}{
+		"Description": descriptionStr,
+		"Spokes":      spokesStr,
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", fmt.Errorf("failed to execute system prompt template: %w", err)
+	}
+
+	return buf.String(), nil
 }
 
 func (o *Orchestrator) emitProgressionEvent(ctx context.Context, tenantID, threadID, correlationEventID, message string) error {

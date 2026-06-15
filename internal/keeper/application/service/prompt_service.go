@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/outbound"
@@ -29,10 +30,16 @@ func (s *PromptService) ListTemplates(ctx context.Context) ([]*model.PromptTempl
 }
 
 func (s *PromptService) UpdateTemplate(ctx context.Context, template *model.PromptTemplate) error {
+	if model.IsSystemLocked(template.ID) {
+		return fmt.Errorf("cannot update system-locked prompt template: %s", template.ID)
+	}
 	return s.repo.UpdateTemplate(ctx, template)
 }
 
 func (s *PromptService) DeleteTemplate(ctx context.Context, id uuid.UUID) error {
+	if model.IsSystemLocked(id) {
+		return fmt.Errorf("cannot delete system-locked prompt template: %s", id)
+	}
 	return s.repo.DeleteTemplate(ctx, id)
 }
 
