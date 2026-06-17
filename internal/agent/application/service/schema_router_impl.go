@@ -85,7 +85,7 @@ func (r *SchemaRouterImpl) RouteEvent(ctx context.Context, event events.DomainEv
 			return r.handleHubAddUserMessage(ctx, event)
 		case events.SchemaConversationalAgentDelegation:
 			return r.handleHubAgentDelegation(ctx, event)
-		case events.SchemaConversationalAgentResponse:
+		case events.SchemaConversationalAgentSpokeResponse:
 			return r.handleHubSpokeResponse(ctx, event)
 		case events.SchemaConversationalEndThread:
 			return r.handleEndThread(ctx, event)
@@ -99,7 +99,7 @@ func (r *SchemaRouterImpl) RouteEvent(ctx context.Context, event events.DomainEv
 	case events.SchemaConversationalStartThread:
 		return r.handleStartThread(ctx, event)
 	case events.SchemaConversationalAddUserMessage:
-		return r.handleAddUserMessage(ctx, event, "standalone")
+		return r.handleAddUserMessage(ctx, event)
 	case events.SchemaConversationalAgentDelegation:
 		return r.handleAgentDelegation(ctx, event)
 	case events.SchemaConversationalEndThread:
@@ -130,7 +130,7 @@ func (r *SchemaRouterImpl) handleStartThread(ctx context.Context, event events.D
 	return nil
 }
 
-func (r *SchemaRouterImpl) handleAddUserMessage(ctx context.Context, event events.DomainEvent, messageType string) error {
+func (r *SchemaRouterImpl) handleAddUserMessage(ctx context.Context, event events.DomainEvent) error {
 	logger := *zerolog.Ctx(ctx)
 	var payload events.AddUserMessagePayload
 	if err := json.Unmarshal(event.Payload, &payload); err != nil {
@@ -153,6 +153,12 @@ func (r *SchemaRouterImpl) handleAddUserMessage(ctx context.Context, event event
 		return fmt.Errorf("failed to process message: %w", err)
 	}
 
+	// Polish the response using the brain before emitting the final agent-response event
+	polishedResp, err := r.ensureHumanReadable(ctx, resp)
+	if err == nil {
+		resp = polishedResp
+	}
+
 	// Construct agent response event
 	respPayload := events.AgentResponsePayload{
 		ThreadID:           payload.ThreadID,
@@ -161,7 +167,6 @@ func (r *SchemaRouterImpl) handleAddUserMessage(ctx context.Context, event event
 		CorrelationEventID: event.EventID,
 		Response:           resp,
 		Finished:           true,
-		MessageType:        messageType,
 	}
 
 	sourceIdentity := fmt.Sprintf("agent/%s", r.agentID)
@@ -381,7 +386,7 @@ func (r *SchemaRouterImpl) handleAgentDelegation(ctx context.Context, event even
 		return fmt.Errorf("failed to process delegated message: %w", err)
 	}
 
-	// Construct agent response event with spoke message type
+	// Construct agent response event for Spoke response
 	respPayload := events.AgentResponsePayload{
 		ThreadID:           payload.ThreadID,
 		CommunityID:        payload.CommunityID,
@@ -389,12 +394,11 @@ func (r *SchemaRouterImpl) handleAgentDelegation(ctx context.Context, event even
 		CorrelationEventID: event.EventID,
 		Response:           resp,
 		Finished:           true,
-		MessageType:        "spoke",
 	}
 
 	sourceIdentity := fmt.Sprintf("agent/%s", r.agentID)
 	responseEvent, err := events.NewDomainEvent(
-		events.SchemaConversationalAgentResponse,
+		events.SchemaConversationalAgentSpokeResponse,
 		sourceIdentity,
 		event.TenantID,
 		respPayload,
@@ -438,4 +442,20 @@ func (r *SchemaRouterImpl) handleHubSpokeResponse(ctx context.Context, event eve
 
 	logger.Info().Str("spoke_agent", payload.AgentName).Msg("hub processing incoming spoke response event")
 	return r.orchestrator.ProcessSpokeResponse(ctx, event.TenantID, payload.ThreadID, payload)
+}
+
+func (r *SchemaRouterImpl) ensureHumanReadable(ctx context.Context, text string) (string, error) {
+	if r.brain == nil {
+		return text, nil
+	}
+
+	prompt := fmt.Sprintf("Please review the following response. If it is already a clean, human-readable, and polished message, output it exactly as-is. If it contains raw data, observation logs, or is unstructured, rewrite and polish it to be a clear, cohesive, and human-friendly final answer to the user. Maintain all facts and details.\n\nResponse to review:\n%s", text)
+	resp, err := r.brain.Generate(ctx, model.BrainRequest{
+		Prompt:       prompt,
+		SystemPrompt: "You are a polishing assistant. Your task is to ensure that the response is human-readable, polished, and friendly, while preserving all facts.",
+	})
+	if err != nil {
+		return text, err
+	}
+	return resp.Content, nil
 }

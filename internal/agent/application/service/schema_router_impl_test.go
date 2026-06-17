@@ -158,7 +158,6 @@ func TestSchemaRouter_AddUserMessage_Success(t *testing.T) {
 	assert.Equal(t, "evt-1", respPayload.CorrelationEventID)
 	assert.Equal(t, "LLM Response", respPayload.Response)
 	assert.True(t, respPayload.Finished)
-	assert.Equal(t, "standalone", respPayload.MessageType)
 }
 
 func TestSchemaRouter_AddUserMessage_LLMFailure_Rollback(t *testing.T) {
@@ -448,7 +447,7 @@ func TestSchemaRouter_AgentDelegation_SpokeResponse(t *testing.T) {
 	var publishedEvent events.DomainEvent
 	err = json.Unmarshal(pubCall.Data, &publishedEvent)
 	require.NoError(t, err)
-	assert.Equal(t, events.SchemaConversationalAgentResponse, publishedEvent.SchemaRef)
+	assert.Equal(t, events.SchemaConversationalAgentSpokeResponse, publishedEvent.SchemaRef)
 
 	var respPayload events.AgentResponsePayload
 	err = json.Unmarshal(publishedEvent.Payload, &respPayload)
@@ -458,7 +457,6 @@ func TestSchemaRouter_AgentDelegation_SpokeResponse(t *testing.T) {
 	assert.Equal(t, "writer", respPayload.AgentName)
 	assert.Equal(t, "Once upon a time there was a dragon...", respPayload.Response)
 	assert.True(t, respPayload.Finished)
-	assert.Equal(t, "spoke", respPayload.MessageType)
 }
 
 func TestSchemaRouter_AgentDelegation_HubRoutes(t *testing.T) {
@@ -501,4 +499,66 @@ func TestSchemaRouter_AgentDelegation_HubRoutes(t *testing.T) {
 	// Should fail with "orchestrator not configured" since we passed nil orchestrator
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "orchestrator not configured")
+}
+
+func TestSchemaRouter_AddUserMessage_Polishing(t *testing.T) {
+	mockProcessor := &MockMessageProcessor{
+		ProcessIncomingMessageFunc: func(ctx context.Context, tenantID, agentID, threadID string, payload string) (string, error) {
+			return "Raw Unpolished Answer", nil
+		},
+	}
+	mockPublisher := &MockEventPublisher{}
+	mockBrain := &MockBrain{
+		GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
+			assert.Contains(t, request.Prompt, "Raw Unpolished Answer")
+			return &model.BrainResponse{Content: "Polished: Raw Unpolished Answer"}, nil
+		},
+	}
+
+	router := service.NewSchemaRouterImpl(
+		"agent-123",
+		"test-agent",
+		"spoke",
+		mockProcessor,
+		nil,
+		&MockShortTermMemory{},
+		nil,
+		nil,
+		mockBrain,
+		mockPublisher,
+		nil,
+	)
+
+	payload := events.AddUserMessagePayload{
+		ThreadID:    "thread-abc",
+		CommunityID: "community-456",
+		Message:     "Hello, agent",
+	}
+	payloadBytes, err := json.Marshal(payload)
+	require.NoError(t, err)
+
+	evt := events.DomainEvent{
+		EventID:    "evt-1",
+		SchemaRef:  events.SchemaConversationalAddUserMessage,
+		Source:     "keeper",
+		TenantID:   "tenant-1",
+		OccurredAt: time.Now().Format(time.RFC3339Nano),
+		Payload:    payloadBytes,
+	}
+
+	err = router.RouteEvent(context.Background(), evt)
+	assert.NoError(t, err)
+
+	require.Len(t, mockPublisher.Calls, 1)
+	pubCall := mockPublisher.Calls[0]
+
+	var publishedEvent events.DomainEvent
+	err = json.Unmarshal(pubCall.Data, &publishedEvent)
+	require.NoError(t, err)
+
+	var respPayload events.AgentResponsePayload
+	err = json.Unmarshal(publishedEvent.Payload, &respPayload)
+	require.NoError(t, err)
+
+	assert.Equal(t, "Polished: Raw Unpolished Answer", respPayload.Response)
 }

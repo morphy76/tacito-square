@@ -226,6 +226,12 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 			finalResponse = "Orchestration limit exceeded without reaching a final answer."
 		}
 
+		// Use brain to ensure the final answer is human-readable
+		polishedResponse, err := o.ensureHumanReadable(ctx, finalResponse)
+		if err == nil {
+			finalResponse = polishedResponse
+		}
+
 		respPayload := events.AgentResponsePayload{
 			ThreadID:           threadID,
 			CommunityID:        o.communityID,
@@ -233,7 +239,6 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 			CorrelationEventID: state.OriginalEventID,
 			Response:           finalResponse,
 			Finished:           true,
-			MessageType:        "final",
 		}
 		
 		sourceIdentity := fmt.Sprintf("agent/%s", o.agentID)
@@ -381,10 +386,17 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 			logger.Warn().Err(err).Msg("failed to clear state")
 		}
 
+		finalResponse := action.Response
+		polishedResponse, err := o.ensureHumanReadable(ctx, finalResponse)
+		if err == nil {
+			finalResponse = polishedResponse
+			action.Response = polishedResponse
+		}
+
 		// Append final response to memory history
 		assistantEntry := model.MemoryEntry{
 			Role:      "assistant",
-			Content:   action.Response,
+			Content:   finalResponse,
 			Timestamp: time.Now().UTC(),
 		}
 		if err := o.memory.Append(ctx, tenantID, o.agentID, threadID, assistantEntry); err != nil {
@@ -397,9 +409,8 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 			CommunityID:        o.communityID,
 			AgentName:          o.agentName,
 			CorrelationEventID: state.OriginalEventID,
-			Response:           action.Response,
+			Response:           finalResponse,
 			Finished:           true,
-			MessageType:        "final",
 		}
 
 		sourceIdentity := fmt.Sprintf("agent/%s", o.agentID)
@@ -522,12 +533,11 @@ func (o *Orchestrator) emitProgressionEvent(ctx context.Context, tenantID, threa
 		CorrelationEventID: correlationEventID,
 		Response:           message,
 		Finished:           false, // Progression update
-		MessageType:        "reasoning",
 	}
 
 	sourceIdentity := fmt.Sprintf("agent/%s", o.agentID)
 	responseEvent, err := events.NewDomainEvent(
-		events.SchemaConversationalAgentResponse,
+		events.SchemaConversationalAgentReasoning,
 		sourceIdentity,
 		tenantID,
 		respPayload,
@@ -544,4 +554,20 @@ func (o *Orchestrator) emitProgressionEvent(ctx context.Context, tenantID, threa
 	// Publish to standard response subject: ts.community.{community_id}.agent.{agent_id}.thread.{thread_id}.response
 	subject := fmt.Sprintf("ts.community.%s.agent.%s.thread.%s.response", o.communityID, o.agentID, threadID)
 	return o.publisher.Publish(ctx, subject, eventData)
+}
+
+func (o *Orchestrator) ensureHumanReadable(ctx context.Context, text string) (string, error) {
+	if o.brain == nil {
+		return text, nil
+	}
+
+	prompt := fmt.Sprintf("Please review the following response. If it is already a clean, human-readable, and polished message, output it exactly as-is. If it contains raw data, observation logs, or is unstructured, rewrite and polish it to be a clear, cohesive, and human-friendly final answer to the user. Maintain all facts and details.\n\nResponse to review:\n%s", text)
+	resp, err := o.brain.Generate(ctx, model.BrainRequest{
+		Prompt:       prompt,
+		SystemPrompt: "You are a polishing assistant. Your task is to ensure that the response is human-readable, polished, and friendly, while preserving all facts.",
+	})
+	if err != nil {
+		return text, err
+	}
+	return resp.Content, nil
 }

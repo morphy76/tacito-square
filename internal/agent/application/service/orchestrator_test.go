@@ -190,12 +190,11 @@ func TestOrchestrator_ProcessUserMessage(t *testing.T) {
 		var progressEvt events.DomainEvent
 		err = json.Unmarshal(publishes[0].Data, &progressEvt)
 		require.NoError(t, err)
-		assert.Equal(t, events.SchemaConversationalAgentResponse, progressEvt.SchemaRef)
+		assert.Equal(t, events.SchemaConversationalAgentReasoning, progressEvt.SchemaRef)
 		var progressPayload events.AgentResponsePayload
 		err = json.Unmarshal(progressEvt.Payload, &progressPayload)
 		require.NoError(t, err)
 		assert.False(t, progressPayload.Finished)
-		assert.Equal(t, "reasoning", progressPayload.MessageType)
 		assert.Contains(t, progressPayload.Response, "Delegating tasks to: [writer, translator]")
 
 		// Verification of tasks sent to Spokes — must use AgentDelegation schema
@@ -283,17 +282,17 @@ func TestOrchestrator_ProcessSpokeResponse(t *testing.T) {
 		assert.Contains(t, mockMemory.AppendCalls[0].Content, "[Observation]")
 		assert.Contains(t, mockMemory.AppendCalls[0].Content, "writer")
 
-		// Check progression publish (Finished: false, MessageType: "reasoning")
+		// Check progression publish (Finished: false)
 		publishes := mockPublisher.GetPublishes()
 		require.Len(t, publishes, 1)
 		var progressEvt events.DomainEvent
 		err = json.Unmarshal(publishes[0].Data, &progressEvt)
 		require.NoError(t, err)
+		assert.Equal(t, events.SchemaConversationalAgentReasoning, progressEvt.SchemaRef)
 		var progressPayload events.AgentResponsePayload
 		err = json.Unmarshal(progressEvt.Payload, &progressPayload)
 		require.NoError(t, err)
 		assert.False(t, progressPayload.Finished)
-		assert.Equal(t, "reasoning", progressPayload.MessageType)
 		assert.Contains(t, progressPayload.Response, "Received response from writer")
 	})
 
@@ -319,13 +318,19 @@ func TestOrchestrator_ProcessSpokeResponse(t *testing.T) {
 		err := mockStateStore.SaveState(context.Background(), "tenant-1", "thread-abc", initialState)
 		require.NoError(t, err)
 
+		calls := 0
 		mockBrain := &MockBrain{
 			GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
-				respJSON := `{
-					"action": "finalize",
-					"response": "Here is the completed translation of the dragon story."
-				}`
-				return &model.BrainResponse{Content: respJSON}, nil
+				calls++
+				if calls == 1 {
+					respJSON := `{
+						"action": "finalize",
+						"response": "Here is the completed translation of the dragon story."
+					}`
+					return &model.BrainResponse{Content: respJSON}, nil
+				}
+				// Polishing call
+				return &model.BrainResponse{Content: "Polished final translation"}, nil
 			},
 		}
 
@@ -367,8 +372,7 @@ func TestOrchestrator_ProcessSpokeResponse(t *testing.T) {
 		err = json.Unmarshal(finalEvt.Payload, &finalPayload)
 		require.NoError(t, err)
 		assert.True(t, finalPayload.Finished)
-		assert.Equal(t, "final", finalPayload.MessageType)
-		assert.Equal(t, "Here is the completed translation of the dragon story.", finalPayload.Response)
+		assert.Equal(t, "Polished final translation", finalPayload.Response)
 		assert.Equal(t, "ts.community.comm-1.agent.hub-123.thread.thread-abc.response", publishes[1].Subject)
 	})
 }
@@ -396,8 +400,7 @@ func TestOrchestrator_LoopDetection(t *testing.T) {
 
 		mockBrain := &MockBrain{
 			GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
-				t.Fatal("Brain should not be called when loop limit is exceeded")
-				return nil, nil
+				return &model.BrainResponse{Content: "Polished fallback response"}, nil
 			},
 		}
 
@@ -432,7 +435,7 @@ func TestOrchestrator_LoopDetection(t *testing.T) {
 		var progEvt events.DomainEvent
 		err = json.Unmarshal(publishes[0].Data, &progEvt)
 		require.NoError(t, err)
-		assert.Equal(t, events.SchemaConversationalAgentResponse, progEvt.SchemaRef)
+		assert.Equal(t, events.SchemaConversationalAgentReasoning, progEvt.SchemaRef)
 		assert.Equal(t, "ts.community.comm-1.agent.hub-123.thread.thread-abc.response", publishes[0].Subject)
 
 		// Verify Final Response sent to Keeper/BFF contains the latest spoke response ("Spoke response")
@@ -446,8 +449,7 @@ func TestOrchestrator_LoopDetection(t *testing.T) {
 		err = json.Unmarshal(finalEvt.Payload, &finalPayload)
 		require.NoError(t, err)
 		assert.True(t, finalPayload.Finished)
-		assert.Equal(t, "final", finalPayload.MessageType)
-		assert.Equal(t, "Spoke response", finalPayload.Response)
+		assert.Equal(t, "Polished fallback response", finalPayload.Response)
 	})
 }
 
@@ -470,10 +472,15 @@ func TestOrchestrator_TemplateCompilation(t *testing.T) {
 	}`
 
 	var compiledPrompt string
+	calls := 0
 	mockBrain := &MockBrain{
 		GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
-			compiledPrompt = request.SystemPrompt
-			return &model.BrainResponse{Content: `{"action": "finalize", "response": "done"}`}, nil
+			calls++
+			if calls == 1 {
+				compiledPrompt = request.SystemPrompt
+				return &model.BrainResponse{Content: `{"action": "finalize", "response": "done"}`}, nil
+			}
+			return &model.BrainResponse{Content: "polished done"}, nil
 		},
 	}
 

@@ -1,16 +1,46 @@
 # Some APIs examples
 
+brain: f84fe2b3-b6bf-4133-9935-18ed0c164357
+skill off: 5e6e792b-8289-49ba-9eb2-4ba23b27cbc1
+skill on: c027f061-7dec-4bcb-8e69-19fbbf85b521
+
+prompt answer: 15b529e7-da0c-48ae-93e4-d49e0bf7f9c1
+prompt enquirer: ba19e316-6a62-4467-92af-cc0e2fed17b6
+prompt sys: c88fdaaf-c3d3-4419-83de-05f88b90a61c
+prompt pessimistic: 40d4a2ee-c22b-4ab6-8356-424f326d6318
+prompt optimistic: 186fe6cc-50c8-4d14-991e-c69b9fdf0a71
+
+alone: 22a1f37c-e0fe-46bd-899e-c1d51804d5b4
+answerer: aac51ddb-e09c-41ef-b74f-76e08355f8dd
+enquirer: b6513d92-e98f-4bee-ad24-932bbb391fa4
+orch: 980e1a05-9e0f-46a0-a242-0d35bd940f7d
+optimistic: 38a3d373-1561-44cf-a7b2-e885f987d60c
+pessimistic: 70411ae0-53e7-43fc-acfc-f8f898f59b68
+
+single-agent: 7632e041-2e56-47ba-8b6e-ab56ee3eda63
+multi: 8f559a1d-2de5-496f-bac7-bdc6ebff3daa
+
 ## Create LLM binding
+
+> [!NOTE]
+> The `api_key_secret_ref` field refers to an existing external Kubernetes Secret name in the target namespace (e.g., `tacito`). This secret must contain a key named `api-key` holding the actual API key value.
+>
+> To create this secret, run:
+> ```bash
+> kubectl create secret generic gemini-api-key --from-literal=api-key="YOUR_ACTUAL_API_KEY" -n tacito
+> ```
 
 ```json
 {
-  "name": "gemini-2.5-flash-lite",
-  "description": "QA Testing Agent template",
-  "model": "gemini-2.5-flash-lite",
-  "temperature": 0.7,
-  "max_tokens": 2048,
-  "endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/",
-  "credentials_secret": "A[...]Q"
+  "name": "The Brain - light",
+  "provider": "openai",
+  "api_base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+  "api_key_secret_ref": "gemini-api-key",
+  "default_model": "gemini-2.5-flash-lite",
+  "description": "Light brain for development purposes",
+  "default_temperature": 0.7,
+  "default_max_tokens": 512,
+  "timeout_seconds": 30
 }
 ```
 
@@ -48,7 +78,19 @@
 ```json
 {
   "name": "system-behavior",
-  "content": "You are a helpful AI assistant which is expert of social psicology and provides existential answers which help the participants to evaluate their life critically."
+  "content": "You are a helpful AI assistant which is expert of social psicology and provides, in a clear and concise way, existential answers which help the participants to evaluate their life critically."
+}
+```
+```json
+{
+  "name": "a-pessimistic-opinion",
+  "content": "You always think that things will go wrong and you always try to find the worst possible outcome of every situation. You have an exact science of finding why everything will fail."
+}
+```
+```json
+{
+  "name": "an-optimistic-opinion",
+  "content": "You always think that things will go right and you always try to find the best possible outcome of every situation. You have an exact science of finding why everything will work."
 }
 ```
 
@@ -57,152 +99,130 @@
 ```json
 {
   "name": "alone-in-the-darkness",
-  "description": "The sole agent in a single agent community",
-  "role": "spoke",
   "brain": {
-      "model": "gemini-2.5-flash-lite",
-      "temperature": 0.7,
-      "max_tokens": 512,
-      "endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/",
-      "credentials_secret": "AQ.Ab8RN6IqH3fX5qh4SB3adNCA-J5DpzkYstV0oalqxV9spB6LQQ"
+    "llm_binding_id": "f84fe2b3-b6bf-4133-9935-18ed0c164357"
   },
   "short_term_memory": {
-      "key_namespace": "agent:alone:in:the:darkness:short",
-      "ttl_seconds": 3600
+    "ttl_seconds": 3600,
+    "key_namespace": "agent:alone-in-the-darkness:short"
   },
   "long_term_memory": {
       "collection_name": "agent-alone-in-the-darkness-long",
       "vector_dimension": 1536
   },
+  "description": "An agent that lives alone who is in charge of everything",
+  "role": "spoke",
   "skills": [
-      "fa1bbc83-b999-4381-9e32-8f5abb8b3e7c",
-      "6666571f-e0a3-42a4-87f5-25e7351f6875"
+    "5e6e792b-8289-49ba-9eb2-4ba23b27cbc1",
+    "c027f061-7dec-4bcb-8e69-19fbbf85b521"
   ],
-  "prompt_template": "721fcb8c-45e1-45f3-81d7-860d6dc25676",
-  "mcp_clients": null,
+  "prompt_template": "c88fdaaf-c3d3-4419-83de-05f88b90a61c"
 }
 ```
 ```json
 {
-    "name": "answerer",
-    "description": "This agent is in charge of synthesizing the conversatinal turn, consolidating the researcher's responses, and delivering a clear, structured, and comprehensive final answer on the subject.",
-    "role": "spoke",
-    "brain": {
-        "model": "gemini-2.5-flash-lite",
-        "temperature": 0.7,
-        "max_tokens": 512,
-        "endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/",
-        "credentials_secret": "AQ.Ab8RN6IqH3fX5qh4SB3adNCA-J5DpzkYstV0oalqxV9spB6LQQ"
-    },
-    "short_term_memory": {
-        "key_namespace": "agent:answerer:short",
-        "ttl_seconds": 3600
-    },
-    "long_term_memory": {
-        "collection_name": "agent-answerer-long",
-        "vector_dimension": 1536
-    },
-    "skills": [
-        "fa1bbc83-b999-4381-9e32-8f5abb8b3e7c",
-        "6666571f-e0a3-42a4-87f5-25e7351f6875"
-    ],
-    "prompt_template": "f8d36e8c-1b6e-40f5-bdee-ed460aaa11cd",
-    "mcp_clients": null,
+  "name": "optimistic",
+  "description": "This agent thinks that everyhing will work and always try to find the best possible outcome of every situation. He is the opposite of pessimistic. Enthusiastic.",
+  "brain": {
+    "llm_binding_id": "f84fe2b3-b6bf-4133-9935-18ed0c164357"
+  },
+  "short_term_memory": {
+    "ttl_seconds": 3600,
+    "key_namespace": "agent:optimistic:short"
+  },
+  "long_term_memory": {
+      "collection_name": "agent-optimistic-long",
+      "vector_dimension": 1536
+  },
+  "role": "spoke",
+  "prompt_template": "186fe6cc-50c8-4d14-991e-c69b9fdf0a71"
 }
 ```
 ```json
 {
-    "name": "enquirer",
-    "description": "This agent is in charge to think questions to ask to the researcher in order to improve the researcher awareness about an unknown subject.",
-    "role": "spoke",
-    "brain": {
-        "model": "gemini-2.5-flash-lite",
-        "temperature": 0.7,
-        "max_tokens": 512,
-        "endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/",
-        "credentials_secret": "AQ.Ab8RN6IqH3fX5qh4SB3adNCA-J5DpzkYstV0oalqxV9spB6LQQ"
-    },
-    "short_term_memory": {
-        "key_namespace": "agent:enquirer:short",
-        "ttl_seconds": 3600
-    },
-    "long_term_memory": {
-        "collection_name": "agent-enquirer-long",
-        "vector_dimension": 1536
-    },
-    "skills": [
-        "fa1bbc83-b999-4381-9e32-8f5abb8b3e7c",
-        "6666571f-e0a3-42a4-87f5-25e7351f6875"
-    ],
-    "prompt_template": "dc6c6f05-ffe8-4139-a245-f38fa516b317",
-    "mcp_clients": null,
+  "name": "pessimistic",
+  "description": "This agent thinks that everyhing will fail and always try to find the worst possible outcome of every situation. He is the opposite of optimistic. Disenthusiastic.",
+  "brain": {
+    "llm_binding_id": "f84fe2b3-b6bf-4133-9935-18ed0c164357"
+  },
+  "short_term_memory": {
+    "ttl_seconds": 3600,
+    "key_namespace": "agent:pessimistic:short"
+  },
+  "long_term_memory": {
+      "collection_name": "agent-pessimistic-long",
+      "vector_dimension": 1536
+  },
+  "role": "spoke",
+  "prompt_template": "40d4a2ee-c22b-4ab6-8356-424f326d6318"
 }
 ```
 ```json
-    {
-        "id": "a0aee24a-27c7-4bf8-b75d-9966c83d9f2f",
-        "tenant_id": "acme.com",
-        "name": "enquirer",
-        "description": "This agent is in charge to think questions to ask to the researcher in order to improve the researcher awareness about an unknown subject.",
-        "role": "spoke",
-        "brain": {
-            "model": "gemini-2.5-flash-lite",
-            "temperature": 0.7,
-            "max_tokens": 512,
-            "endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/",
-            "credentials_secret": "AQ.Ab8RN6IqH3fX5qh4SB3adNCA-J5DpzkYstV0oalqxV9spB6LQQ"
-        },
-        "short_term_memory": {
-            "key_namespace": "agent:enquirer:short",
-            "ttl_seconds": 3600
-        },
-        "long_term_memory": {
-            "collection_name": "agent-enquirer-long",
-            "vector_dimension": 1536
-        },
-        "skills": [
-            "fa1bbc83-b999-4381-9e32-8f5abb8b3e7c",
-            "6666571f-e0a3-42a4-87f5-25e7351f6875"
-        ],
-        "prompt_template": "dc6c6f05-ffe8-4139-a245-f38fa516b317",
-        "mcp_clients": null,
-        "status": "running",
-        "community_id": "2ec94f91-712c-4fbb-883c-c928aa44273d",
-        "tier": "",
-        "created_at": "2026-06-08T05:47:18.99391Z",
-        "updated_at": "2026-06-15T21:27:06.989418Z"
-    },
-    {
-        "id": "ab40c50d-fc31-4cd3-aaf4-e3c0936a9a68",
-        "tenant_id": "acme.com",
-        "name": "hub-agent",
-        "description": "In a hub-spoke topology, this agent is the hub, receiving inputs from the outbound, internally delegate subagents to achieve a final answer and, then, export the outputs to the outbound.",
-        "role": "hub",
-        "brain": {
-            "model": "gemini-2.5-flash-lite",
-            "temperature": 0.7,
-            "max_tokens": 512,
-            "endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/",
-            "credentials_secret": "AQ.Ab8RN6IqH3fX5qh4SB3adNCA-J5DpzkYstV0oalqxV9spB6LQQ"
-        },
-        "short_term_memory": {
-            "key_namespace": "agent:hub:short",
-            "ttl_seconds": 3600
-        },
-        "long_term_memory": {
-            "collection_name": "agent-hub-long",
-            "vector_dimension": 1536
-        },
-        "skills": null,
-        "prompt_template": "00000000-0000-0000-0000-000000000000",
-        "mcp_clients": null,
-        "status": "running",
-        "community_id": "2ec94f91-712c-4fbb-883c-c928aa44273d",
-        "tier": "",
-        "created_at": "2026-06-08T05:54:26.056736Z",
-        "updated_at": "2026-06-15T21:27:09.981037Z"
-    }
+{
+  "name": "answerer",
+  "description": "This agent is in charge of synthesizing the conversatinal turn, consolidating the researcher's responses, and delivering a clear, structured, and comprehensive final answer on the subject.",
+  "brain": {
+    "llm_binding_id": "f84fe2b3-b6bf-4133-9935-18ed0c164357"
+  },
+  "short_term_memory": {
+    "ttl_seconds": 3600,
+    "key_namespace": "agent:answerer:short"
+  },
+  "long_term_memory": {
+      "collection_name": "agent-answerer-long",
+      "vector_dimension": 1536
+  },
+  "role": "spoke",
+  "prompt_template": "15b529e7-da0c-48ae-93e4-d49e0bf7f9c1"
+}
 ```
+```json
+{
+  "name": "enquirer",
+  "description": "This agent is in charge to think questions to ask to the researcher in order to improve the researcher awareness about an unknown subject.",
+  "brain": {
+    "llm_binding_id": "f84fe2b3-b6bf-4133-9935-18ed0c164357"
+  },
+  "short_term_memory": {
+    "ttl_seconds": 3600,
+    "key_namespace": "agent:enquirer:short"
+  },
+  "long_term_memory": {
+      "collection_name": "agent-enquirer-long",
+      "vector_dimension": 1536
+  },
+  "role": "spoke",
+  "skills": [
+    "5e6e792b-8289-49ba-9eb2-4ba23b27cbc1",
+    "c027f061-7dec-4bcb-8e69-19fbbf85b521"
+  ],
+  "prompt_template": "ba19e316-6a62-4467-92af-cc0e2fed17b6"
+}
+```
+```json
+{
+  "name": "orchestrator",
+  "description": "In a hub-spoke topology, this agent is the hub, receiving inputs from the outbound, internally delegate subagents to achieve a final answer and, then, export the outputs to the outbound.",
+  "brain": {
+    "llm_binding_id": "f84fe2b3-b6bf-4133-9935-18ed0c164357"
+  },
+  "short_term_memory": {
+    "ttl_seconds": 3600,
+    "key_namespace": "agent:orchestrator:short"
+  },
+  "long_term_memory": {
+      "collection_name": "agent-orchestrator-long",
+      "vector_dimension": 1536
+  },
+  "role": "hub",
+  "skills": [
+    "5e6e792b-8289-49ba-9eb2-4ba23b27cbc1",
+    "c027f061-7dec-4bcb-8e69-19fbbf85b521"
+  ],
+  "prompt_template": "c88fdaaf-c3d3-4419-83de-05f88b90a61c"
+}
+```
+
 
 ## Community
 
@@ -210,16 +230,14 @@
 {
   "name": "multi-agent",
   "description": "This comunity is used to verify that multi agent commmunities operate as expected pasing through an hb agent",
-  "topology": "hub-spoke",
-  "configuration": {}
+  "topology": "hub-spoke"
 }
 ```
 ```json
 {
   "name": "single-agent",
   "description": "This comunity is used to verify that single agent commmunities still operate as expected",
-  "topology": "single-agent",
-  "configuration": {}
+  "topology": "single-agent"
 }
 ```
 
@@ -231,8 +249,8 @@ Start a new thread
 {
   "schema_ref": "urn:tacito:schema:conversational:start-thread:v1",
   "payload": {
-    "thread_id": "test-20",
-    "community_id": "2ec94f91-712c-4fbb-883c-c928aa44273d"
+    "thread_id": "test-5",
+    "community_id": "8f559a1d-2de5-496f-bac7-bdc6ebff3daa"
   }
 }
 ```
@@ -243,21 +261,19 @@ Add a user message
 {
   "schema_ref": "urn:tacito:schema:conversational:add-user-message:v1",
   "payload": {
-    "thread_id": "test-20",
-    "community_id": "2ec94f91-712c-4fbb-883c-c928aa44273d",
-    "message": "Hello, my name is Riccardo, can you help me with a friend?"
+    "thread_id": "test-5",
+    "community_id": "8f559a1d-2de5-496f-bac7-bdc6ebff3daa",
+    "message": "Hello, my name is Riccardo. I need you help."
   }
 }
 ```
-
-End the thread
 
 ```json
 {
   "schema_ref": "urn:tacito:schema:conversational:end-thread:v1",
   "payload": {
-    "thread_id": "test-20",
-    "community_id": "2ec94f91-712c-4fbb-883c-c928aa44273d"
+    "thread_id": "test-5",
+    "community_id": "8f559a1d-2de5-496f-bac7-bdc6ebff3daa"
   }
 }
 ```

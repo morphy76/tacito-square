@@ -10,7 +10,7 @@ const (
 	// SchemaConversationalEndThread is the URN for ending a thread.
 	SchemaConversationalEndThread = "urn:tacito:schema:conversational:end-thread:v1"
 
-	// SchemaConversationalAgentResponse is the URN for agent reasoning responses.
+	// SchemaConversationalAgentResponse is the URN for agent final responses.
 	SchemaConversationalAgentResponse = "urn:tacito:schema:conversational:agent-response:v1"
 
 	// SchemaConversationalThreadHistory is the URN for emitting the full thread history.
@@ -18,6 +18,15 @@ const (
 
 	// SchemaConversationalAgentDelegation is the URN for inter-agent task delegation.
 	SchemaConversationalAgentDelegation = "urn:tacito:schema:conversational:agent-delegation:v1"
+
+	// SchemaConversationalAgentReasoning is the URN for agent coordination reasoning updates.
+	SchemaConversationalAgentReasoning = "urn:tacito:schema:conversational:agent-reasoning:v1"
+
+	// SchemaConversationalAgentSpokeResponse is the URN for spoke agent responses back to the hub.
+	SchemaConversationalAgentSpokeResponse = "urn:tacito:schema:conversational:agent-spoke-response:v1"
+
+	// SchemaConversationalAgentToolEvaluation is the URN for agent tool execution/evaluation updates.
+	SchemaConversationalAgentToolEvaluation = "urn:tacito:schema:conversational:agent-tool-evaluation:v1"
 )
 
 // ThreadTurn represents a single conversational or execution step in a thread.
@@ -71,7 +80,7 @@ type EndThreadPayload struct {
 	Reason string `json:"reason,omitempty"`
 }
 
-// AgentResponsePayload is the payload for urn:tacito:schema:conversational:agent-response:v1.
+// AgentResponsePayload is the payload for agent-response, agent-reasoning, and agent-spoke-response schemas.
 type AgentResponsePayload struct {
 	// ThreadID correlates this response to its originating thread.
 	ThreadID string `json:"thread_id"`
@@ -90,10 +99,6 @@ type AgentResponsePayload struct {
 
 	// Finished indicates whether this is the final (complete) response chunk.
 	Finished bool `json:"finished"`
-
-	// MessageType classifies this response for UI rendering.
-	// Valid values: "reasoning", "spoke", "final", "standalone".
-	MessageType string `json:"message_type"`
 }
 
 // AgentDelegationPayload is the payload for urn:tacito:schema:conversational:agent-delegation:v1.
