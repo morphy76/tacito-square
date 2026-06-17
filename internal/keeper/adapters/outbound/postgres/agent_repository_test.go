@@ -67,16 +67,16 @@ func TestAgentRepository_Lifecycle(t *testing.T) {
 	err = skillRepo.Create(ctx, sk)
 	require.NoError(t, err)
 
+	tempVal := 0.7
+	maxTokensVal := 2048
 	agent := &model.Agent{
 		ID:          uuid.New(),
 		Name:        "test-agent-template",
 		Description: "A test agent template configuration",
 		Brain: model.BrainConfig{
-			Model:             "gpt-4o",
-			Temperature:       0.7,
-			MaxTokens:         2048,
-			Endpoint:          "https://api.openai.com/v1",
-			CredentialsSecret: "my-secret-key",
+			LLMBindingID: uuid.New(),
+			Temperature:  &tempVal,
+			MaxTokens:    &maxTokensVal,
 		},
 		ShortTermMemory: model.ShortTermMemoryConfig{
 			KeyNamespace: "test:short",
@@ -108,7 +108,7 @@ func TestAgentRepository_Lifecycle(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, agent.ID, fetched.ID)
 		assert.Equal(t, agent.Name, fetched.Name)
-		assert.Equal(t, agent.Brain.Model, fetched.Brain.Model)
+		assert.Equal(t, agent.Brain.LLMBindingID, fetched.Brain.LLMBindingID)
 		assert.Equal(t, agent.ShortTermMemory.KeyNamespace, fetched.ShortTermMemory.KeyNamespace)
 		assert.Equal(t, agent.LongTermMemory.CollectionName, fetched.LongTermMemory.CollectionName)
 		assert.Equal(t, agent.PromptTemplate, fetched.PromptTemplate)
@@ -145,7 +145,7 @@ func TestAgentRepository_Lifecycle(t *testing.T) {
 
 	t.Run("Update Agent", func(t *testing.T) {
 		agent.Description = "Updated description"
-		agent.Brain.Temperature = 0.9
+		agent.Brain.Temperature = ptrFloat64(0.9)
 		agent.Status = model.AgentStatusActive
 		agent.Skills = []uuid.UUID{} // Clear skills
 		agent.MCPClients = append(agent.MCPClients, model.MCPClientConfig{ClientID: uuid.New()})
@@ -156,7 +156,7 @@ func TestAgentRepository_Lifecycle(t *testing.T) {
 		fetched, err := repo.GetByID(ctx, agent.ID)
 		require.NoError(t, err)
 		assert.Equal(t, "Updated description", fetched.Description)
-		assert.Equal(t, 0.9, fetched.Brain.Temperature)
+		assert.Equal(t, 0.9, *fetched.Brain.Temperature)
 		assert.Equal(t, model.AgentStatusActive, fetched.Status)
 		assert.Empty(t, fetched.Skills)
 		assert.Len(t, fetched.MCPClients, 2)
@@ -295,11 +295,9 @@ func TestAgentRepository_AgentRegistration(t *testing.T) {
 		Name:        "test-agent-reg",
 		Description: "For registration test",
 		Brain: model.BrainConfig{
-			Model:             "gpt-4o",
-			Temperature:       0.7,
-			MaxTokens:         2048,
-			Endpoint:          "https://api.openai.com/v1",
-			CredentialsSecret: "secret",
+			LLMBindingID: uuid.New(),
+			Temperature:  ptrFloat64(0.7),
+			MaxTokens:    ptrInt(2048),
 		},
 		ShortTermMemory: model.ShortTermMemoryConfig{
 			KeyNamespace: "test",
@@ -367,3 +365,7 @@ func TestAgentRepository_AgentRegistration(t *testing.T) {
 	_ = repo.Delete(ctx, agent.ID)
 	_ = commRepo.Delete(ctx, comm.ID)
 }
+
+func ptrFloat64(v float64) *float64 { return &v }
+func ptrInt(v int) *int { return &v }
+

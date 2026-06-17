@@ -175,7 +175,7 @@ func TestCommunityRepository_Lifecycle(t *testing.T) {
 		err = repo.Create(ctxA, commADup)
 		assert.Error(t, err)
 
-		// Clean up
+		// Cleanup
 		_ = repo.Delete(ctxA, commA.ID)
 		_ = repo.Delete(ctxB, commB.ID)
 	})
@@ -226,11 +226,9 @@ func TestCommunityRepository_Lifecycle(t *testing.T) {
 			Name:        "test-assigned-agent",
 			Description: "Assigned agent",
 			Brain: model.BrainConfig{
-				Model:             "gpt-4o",
-				Temperature:       0.7,
-				MaxTokens:         2048,
-				Endpoint:          "https://api.openai.com/v1",
-				CredentialsSecret: "my-secret-key",
+				LLMBindingID: uuid.New(),
+				Temperature:  ptrFloat64(0.7),
+				MaxTokens:    ptrInt(2048),
 			},
 			ShortTermMemory: model.ShortTermMemoryConfig{
 				KeyNamespace: "test:short",
@@ -265,6 +263,86 @@ func TestCommunityRepository_Lifecycle(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("Topology Mutability Guard", func(t *testing.T) {
+		// 1. Create a community
+		cMut := &model.Community{
+			ID:            uuid.New(),
+			TenantID:      ten.FullName(),
+			Name:          "test-mut-community",
+			Topology:      model.CommunityTopologySingleAgent,
+			Status:        model.CommunityStatusCreated,
+			CreatedAt:     time.Now().UTC(),
+			UpdatedAt:     time.Now().UTC(),
+		}
+		err := repo.Create(ctx, cMut)
+		require.NoError(t, err)
+		defer func() {
+			_, _ = pool.Exec(ctx, "DELETE FROM communities WHERE id = $1", cMut.ID)
+		}()
+
+		// 2. We should be able to update topology to hub-spoke when 0 agents are assigned
+		cMut.Topology = model.CommunityTopologyHubSpoke
+		err = repo.Update(ctx, cMut)
+		assert.NoError(t, err)
+
+		// 3. Create an agent and assign to this community
+		agentRepo := NewAgentRepository(pool)
+		pt := &model.PromptTemplate{
+			ID:        uuid.New(),
+			Name:      "test-mut-prompt",
+			Content:   "You are an assistant",
+			Status:    model.PromptStatusActive,
+			CreatedAt: time.Now().UTC(),
+		}
+		promptRepo := NewPromptRepository(pool)
+		err = promptRepo.CreateTemplate(ctx, pt)
+		require.NoError(t, err)
+		defer func() {
+			_, _ = pool.Exec(ctx, "DELETE FROM prompt_templates WHERE id = $1", pt.ID)
+		}()
+
+		agent := &model.Agent{
+			ID:          uuid.New(),
+			TenantID:    ten.FullName(),
+			Name:        "test-mut-agent",
+			Description: "Assigned agent",
+			Brain: model.BrainConfig{
+				LLMBindingID: uuid.New(),
+				Temperature:  ptrFloat64(0.7),
+				MaxTokens:    ptrInt(2048),
+			},
+			ShortTermMemory: model.ShortTermMemoryConfig{
+				KeyNamespace: "test:short",
+				TTLSeconds:   3600,
+			},
+			LongTermMemory: model.LongTermMemoryConfig{
+				CollectionName:  "test-long",
+				VectorDimension: 1536,
+			},
+			Skills:         []uuid.UUID{},
+			PromptTemplate: pt.ID,
+			MCPClients:     []model.MCPClientConfig{},
+			Status:         model.AgentStatusDefined,
+			CommunityID:    nil,
+			CreatedAt:      time.Now().UTC(),
+			UpdatedAt:      time.Now().UTC(),
+		}
+		err = agentRepo.Create(ctx, agent)
+		require.NoError(t, err)
+		defer func() {
+			_, _ = pool.Exec(ctx, "DELETE FROM agents WHERE id = $1", agent.ID)
+		}()
+
+		err = agentRepo.AssignToCommunity(ctx, agent.ID, cMut.ID)
+		require.NoError(t, err)
+
+		// 4. Try to change topology back to single-agent (should fail)
+		cMut.Topology = model.CommunityTopologySingleAgent
+		err = repo.Update(ctx, cMut)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "cannot change topology of a community with assigned agents")
+	})
+
 	t.Run("Delete Community", func(t *testing.T) {
 		err := repo.Delete(ctx, comm.ID)
 		require.NoError(t, err)
@@ -273,3 +351,5 @@ func TestCommunityRepository_Lifecycle(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+

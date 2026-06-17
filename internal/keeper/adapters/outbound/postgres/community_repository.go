@@ -163,6 +163,27 @@ func (r *CommunityRepository) Update(ctx context.Context, c *model.Community) er
 		return fmt.Errorf("marshal community config: %w", err)
 	}
 
+	// Fetch existing community topology to check if it's changing
+	var existingTopology string
+	err = r.pool.QueryRow(ctx, `SELECT topology FROM communities WHERE id = $1 AND tenant_id = $2`, c.ID, c.TenantID).Scan(&existingTopology)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("community not found: %s", c.ID)
+		}
+		return fmt.Errorf("check existing community topology: %w", err)
+	}
+
+	if existingTopology != string(c.Topology) {
+		var count int
+		err = r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM agents WHERE community_id = $1`, c.ID).Scan(&count)
+		if err != nil {
+			return fmt.Errorf("check community agents count for topology update: %w", err)
+		}
+		if count > 0 {
+			return fmt.Errorf("cannot change topology of a community with assigned agents")
+		}
+	}
+
 	query := `UPDATE communities SET 
 		name = $1, description = $2, topology = $3, configuration = $4, status = $5, updated_at = $6
 	WHERE id = $7 AND tenant_id = $8`

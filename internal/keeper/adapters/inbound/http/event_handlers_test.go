@@ -263,3 +263,56 @@ func TestStreamEvents_HTTP_SSE_Blacklisted(t *testing.T) {
 	assert.NotContains(t, resp.Body.String(), "agent-heartbeat")
 }
 
+func TestStreamEvents_HTTP_SSE_AgentDelegation(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	pubUC := new(mockEventUseCase)
+	streamUC := new(mockEventStreamUseCase)
+	handler := NewEventHandler(pubUC, streamUC)
+
+	r := gin.New()
+	r.Use(testTenantMiddleware())
+	r.GET("/api/v1/events/stream", handler.StreamEvents)
+
+	sub := new(mockSubscription)
+	sub.On("Stop").Return(nil)
+
+	// Mock SubscribeEvents to invoke handler with an agent-delegation event
+	streamUC.On("SubscribeEvents", mock.Anything, "test-tenant.com", mock.Anything).
+		Run(func(args mock.Arguments) {
+			h := args.Get(2).(func(*events.DomainEvent))
+			evt := &events.DomainEvent{
+				EventID:    "evt-deleg-1",
+				SchemaRef:  events.SchemaConversationalAgentDelegation,
+				Source:     "agent/hub-123",
+				TenantID:   "test-tenant.com",
+				OccurredAt: "2026-06-06T08:00:00Z",
+				Payload:    json.RawMessage(`{"thread_id":"t-1","community_id":"c-1","delegating_agent":"hub","target_agent":"writer","message":"write"}`),
+			}
+			h(evt)
+		}).
+		Return(sub, nil)
+
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/events/stream", nil)
+	resp := httptest.NewRecorder()
+	closedChan := make(chan bool, 1)
+	customWriter := &closeNotifyingRecorder{
+		ResponseRecorder: resp,
+		closed:           closedChan,
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	req = req.WithContext(ctx)
+
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		closedChan <- true
+		cancel()
+	}()
+
+	r.ServeHTTP(customWriter, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Contains(t, resp.Body.String(), "event: agent-delegation")
+	assert.Contains(t, resp.Body.String(), "id: evt-deleg-1")
+	assert.Contains(t, resp.Body.String(), `data: {`)
+}

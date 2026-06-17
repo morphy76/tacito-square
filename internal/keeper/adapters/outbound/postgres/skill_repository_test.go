@@ -96,11 +96,9 @@ func TestSkillRepository_Lifecycle(t *testing.T) {
 			Name:        "test-agent-skill-assoc",
 			Description: "Test agent for skill association",
 			Brain: model.BrainConfig{
-				Model:             "gpt-4o",
-				Temperature:       0.7,
-				MaxTokens:         2048,
-				Endpoint:          "https://api.openai.com/v1",
-				CredentialsSecret: "my-secret-key",
+				LLMBindingID: uuid.New(),
+				Temperature:  ptrFloat64(0.7),
+				MaxTokens:    ptrInt(2048),
 			},
 			ShortTermMemory: model.ShortTermMemoryConfig{
 				KeyNamespace: "test:short",
@@ -220,11 +218,9 @@ func TestSkillRepository_Lifecycle(t *testing.T) {
 			Name:        "test-tenant-b-agent",
 			Description: "Tenant B Agent",
 			Brain: model.BrainConfig{
-				Model:             "gpt-4o",
-				Temperature:       0.7,
-				MaxTokens:         2048,
-				Endpoint:          "https://api.openai.com/v1",
-				CredentialsSecret: "my-secret-key",
+				LLMBindingID: uuid.New(),
+				Temperature:  ptrFloat64(0.7),
+				MaxTokens:    ptrInt(2048),
 			},
 			ShortTermMemory: model.ShortTermMemoryConfig{
 				KeyNamespace: "test:short",
@@ -269,3 +265,5 @@ func TestSkillRepository_Lifecycle(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+

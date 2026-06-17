@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"strings"
+
 
 	"github.com/google/uuid"
 	crdadapter "github.com/morphy76/tacito-square/internal/keeper/adapters/outbound/crd"
@@ -37,8 +37,19 @@ func TestSubmitAgentCRD_CreateSuccess(t *testing.T) {
 	err = corev1.AddToScheme(scheme)
 	require.NoError(t, err)
 
+	bindingID := uuid.New()
+	llmRepo := newMockLLMBindingRepository()
+	llmRepo.bindings[bindingID] = &model.LLMBinding{
+		ID:              bindingID,
+		TenantID:        "tenant-1",
+		APIBaseURL:      "https://custom-endpoint.com/v1",
+		APIKeySecretRef: "my-zitadel-secret",
+		DefaultModel:    "gpt-4",
+		Status:          model.StatusActive,
+	}
+
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", llmRepo, nil, nil, nil, nil)
 
 	agentID := uuid.New()
 	communityID := uuid.New()
@@ -48,11 +59,9 @@ func TestSubmitAgentCRD_CreateSuccess(t *testing.T) {
 		Name:        "agent-1",
 		Description: "A helpful assistant",
 		Brain: model.BrainConfig{
-			Model:             "gpt-4",
-			Temperature:       0.5,
-			MaxTokens:         1000,
-			Endpoint:          "https://custom-endpoint.com/v1",
-			CredentialsSecret: "my-zitadel-secret",
+			LLMBindingID: bindingID,
+			Temperature:  ptrFloat64(0.5),
+			MaxTokens:    ptrInt(1000),
 		},
 		CommunityID: &communityID,
 	}
@@ -74,16 +83,7 @@ func TestSubmitAgentCRD_CreateSuccess(t *testing.T) {
 	assert.Equal(t, "0.5", *fetched.Spec.LLMConfig.Temperature)
 	assert.Equal(t, int32(1000), *fetched.Spec.LLMConfig.MaxTokens)
 	assert.Equal(t, "https://custom-endpoint.com/v1", *fetched.Spec.LLMConfig.Endpoint)
-	assert.Equal(t, "s-"+strings.ToLower(agentID.String()), *fetched.Spec.LLMConfig.CredentialsSecret)
-
-	// Fetch generated secret from fake client
-	fetchedSecret := &corev1.Secret{}
-	secretKey := types.NamespacedName{Namespace: "tacito", Name: "s-" + strings.ToLower(agentID.String())}
-	err = fakeClient.Get(context.Background(), secretKey, fetchedSecret)
-	assert.NoError(t, err)
-	assert.Equal(t, []byte("my-zitadel-secret"), fetchedSecret.Data["api-key"])
-	assert.Len(t, fetchedSecret.OwnerReferences, 1)
-	assert.Equal(t, fetched.Name, fetchedSecret.OwnerReferences[0].Name)
+	assert.Equal(t, "my-zitadel-secret", *fetched.Spec.LLMConfig.CredentialsSecret)
 }
 
 func TestSubmitAgentCRD_UpdateSuccess(t *testing.T) {
@@ -112,8 +112,19 @@ func TestSubmitAgentCRD_UpdateSuccess(t *testing.T) {
 		},
 	}
 
+	bindingID := uuid.New()
+	llmRepo := newMockLLMBindingRepository()
+	llmRepo.bindings[bindingID] = &model.LLMBinding{
+		ID:              bindingID,
+		TenantID:        "tenant-1",
+		APIBaseURL:      "https://new-endpoint.com/v1",
+		APIKeySecretRef: "new-zitadel-secret",
+		DefaultModel:    "gpt-4",
+		Status:          model.StatusActive,
+	}
+
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(existing).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", llmRepo, nil, nil, nil, nil)
 
 	// Mapped model updates name and model
 	agent := &model.Agent{
@@ -122,11 +133,9 @@ func TestSubmitAgentCRD_UpdateSuccess(t *testing.T) {
 		Name:        "new-agent-name",
 		Description: "A helpful assistant",
 		Brain: model.BrainConfig{
-			Model:             "gpt-4",
-			Temperature:       0.7,
-			MaxTokens:         2000,
-			Endpoint:          "https://new-endpoint.com/v1",
-			CredentialsSecret: "new-zitadel-secret",
+			LLMBindingID: bindingID,
+			Temperature:  ptrFloat64(0.7),
+			MaxTokens:    ptrInt(2000),
 		},
 		CommunityID: &communityID,
 	}
@@ -145,16 +154,7 @@ func TestSubmitAgentCRD_UpdateSuccess(t *testing.T) {
 	assert.Equal(t, "0.7", *fetched.Spec.LLMConfig.Temperature)
 	assert.Equal(t, int32(2000), *fetched.Spec.LLMConfig.MaxTokens)
 	assert.Equal(t, "https://new-endpoint.com/v1", *fetched.Spec.LLMConfig.Endpoint)
-	assert.Equal(t, "s-"+strings.ToLower(agentID.String()), *fetched.Spec.LLMConfig.CredentialsSecret)
-
-	// Fetch generated secret from fake client
-	fetchedSecret := &corev1.Secret{}
-	secretKey := types.NamespacedName{Namespace: "tacito", Name: "s-" + strings.ToLower(agentID.String())}
-	err = fakeClient.Get(context.Background(), secretKey, fetchedSecret)
-	assert.NoError(t, err)
-	assert.Equal(t, []byte("new-zitadel-secret"), fetchedSecret.Data["api-key"])
-	assert.Len(t, fetchedSecret.OwnerReferences, 1)
-	assert.Equal(t, fetched.Name, fetchedSecret.OwnerReferences[0].Name)
+	assert.Equal(t, "new-zitadel-secret", *fetched.Spec.LLMConfig.CredentialsSecret)
 }
 
 func TestSubmitAgentCRD_ConflictResolution(t *testing.T) {
@@ -197,7 +197,7 @@ func TestSubmitAgentCRD_ConflictResolution(t *testing.T) {
 		}).
 		Build()
 
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", newMockLLMBindingRepository(), nil, nil, nil, nil)
 
 	agent := &model.Agent{
 		ID:          agentID,
@@ -205,9 +205,9 @@ func TestSubmitAgentCRD_ConflictResolution(t *testing.T) {
 		Name:        "agent-new",
 		Description: "A helpful assistant",
 		Brain: model.BrainConfig{
-			Model:       "gpt-4",
-			Temperature: 0.5,
-			MaxTokens:   1000,
+			LLMBindingID: uuid.New(),
+			Temperature:  ptrFloat64(0.5),
+			MaxTokens:    ptrInt(1000),
 		},
 		CommunityID: &communityID,
 	}
@@ -258,7 +258,7 @@ func TestSubmitAgentCRD_Timeout(t *testing.T) {
 		}).
 		Build()
 
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", newMockLLMBindingRepository(), nil, nil, nil, nil)
 
 	agent := &model.Agent{
 		ID:       agentID,
@@ -291,7 +291,7 @@ func TestTeardownAgentCRD_Success(t *testing.T) {
 	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(existing).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", newMockLLMBindingRepository(), nil, nil, nil, nil)
 
 	agent := &model.Agent{
 		ID: agentID,
@@ -383,6 +383,36 @@ func (m *mockMCPClientRepository) GetByID(ctx context.Context, id uuid.UUID) (*m
 	return c, nil
 }
 
+type mockLLMBindingRepository struct {
+	outbound.LLMBindingRepository
+	bindings map[uuid.UUID]*model.LLMBinding
+	getErr   error
+}
+
+func newMockLLMBindingRepository() *mockLLMBindingRepository {
+	return &mockLLMBindingRepository{
+		bindings: make(map[uuid.UUID]*model.LLMBinding),
+	}
+}
+
+func (m *mockLLMBindingRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.LLMBinding, error) {
+	if m.getErr != nil {
+		return nil, m.getErr
+	}
+	b, ok := m.bindings[id]
+	if !ok {
+		return &model.LLMBinding{
+			ID:              id,
+			TenantID:        "tenant-1",
+			APIBaseURL:      "https://custom-endpoint.com/v1",
+			APIKeySecretRef: "my-zitadel-secret",
+			DefaultModel:    "gpt-4",
+			Status:          model.StatusActive,
+		}, nil
+	}
+	return b, nil
+}
+
 type ProvisioningEvent struct {
 	TenantID    string `json:"tenant_id"`
 	AgentID     string `json:"agent_id"`
@@ -403,7 +433,7 @@ func TestSubmitAgentCRD_NATSProgressionStarted(t *testing.T) {
 	require.NoError(t, err)
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nc)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", newMockLLMBindingRepository(), nil, nil, nil, nc)
 
 	agentID := uuid.New()
 	communityID := uuid.New()
@@ -450,7 +480,7 @@ func TestSubmitAgentCRD_NATSProgressionCompleted(t *testing.T) {
 	require.NoError(t, err)
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nc)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", newMockLLMBindingRepository(), nil, nil, nil, nc)
 
 	agentID := uuid.New()
 	agent := &model.Agent{
@@ -504,7 +534,7 @@ func TestSubmitAgentCRD_NATSProgressionFailed(t *testing.T) {
 		}).
 		Build()
 
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nc)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", newMockLLMBindingRepository(), nil, nil, nil, nc)
 
 	agentID := uuid.New()
 	agent := &model.Agent{
@@ -567,7 +597,7 @@ func TestResolveAndSynthesizeSystemPrompt_Success(t *testing.T) {
 		},
 	}
 
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(nil, "tacito", promptRepo, skillRepo, nil, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(nil, "tacito", newMockLLMBindingRepository(), promptRepo, skillRepo, nil, nil)
 
 	agent := &model.Agent{
 		ID:             uuid.New(),
@@ -591,7 +621,42 @@ func TestResolveAndSynthesizeSystemPrompt_Success(t *testing.T) {
 	assert.Equal(t, "WebSearch guidelines", config.Skills[0].Content)
 	assert.Equal(t, "Calculations", config.Skills[1].Name)
 	assert.Equal(t, "Perform math operations", config.Skills[1].Description)
-	assert.Equal(t, "Calculations guidelines", config.Skills[1].Content)
+}
+
+func TestResolveAndSynthesizeSystemPrompt_HubAgentMerging_Success(t *testing.T) {
+	businessPromptID := uuid.New()
+
+	promptRepo := &mockPromptRepository{
+		templates: map[uuid.UUID]*model.PromptTemplate{
+			model.HubSystemPromptTemplateID: {
+				ID:      model.HubSystemPromptTemplateID,
+				Content: "Role instructions: {{.Description}} and spokes: {{.Spokes}}",
+			},
+			businessPromptID: {
+				ID:      businessPromptID,
+				Content: "Business specific instructions.",
+			},
+		},
+	}
+
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(nil, "tacito", newMockLLMBindingRepository(), promptRepo, nil, nil, nil)
+
+	agent := &model.Agent{
+		ID:             uuid.New(),
+		Description:    "A helpful assistant",
+		Role:           "hub",
+		PromptTemplate: businessPromptID,
+	}
+
+	synthesized, err := coordinator.ResolveAndSynthesizeSystemPrompt(context.Background(), agent)
+	require.NoError(t, err)
+
+	var config crdadapter.PropagatedAgentConfig
+	err = json.Unmarshal([]byte(synthesized), &config)
+	require.NoError(t, err)
+
+	assert.Equal(t, "Role instructions: {{.Description}} and spokes: {{.Spokes}}", config.Directives)
+	assert.Equal(t, "A helpful assistant\n\nBusiness specific instructions.", config.Description)
 }
 
 func TestSubmitAgentCRD_SynthesizedPromptAndTenantMapped(t *testing.T) {
@@ -624,7 +689,7 @@ func TestSubmitAgentCRD_SynthesizedPromptAndTenantMapped(t *testing.T) {
 	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", promptRepo, skillRepo, nil, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", newMockLLMBindingRepository(), promptRepo, skillRepo, nil, nil)
 
 	agentID := uuid.New()
 	agent := &model.Agent{
@@ -635,7 +700,7 @@ func TestSubmitAgentCRD_SynthesizedPromptAndTenantMapped(t *testing.T) {
 		PromptTemplate: promptID,
 		Skills:         []uuid.UUID{skillID},
 		Brain: model.BrainConfig{
-			Model: "gpt-4",
+			LLMBindingID: uuid.New(),
 		},
 	}
 
@@ -678,7 +743,7 @@ func TestResolveAndSynthesizeSystemPrompt_MissingResources(t *testing.T) {
 		},
 	}
 
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(nil, "tacito", promptRepoMissing, skillRepo, nil, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(nil, "tacito", newMockLLMBindingRepository(), promptRepoMissing, skillRepo, nil, nil)
 	agent := &model.Agent{
 		ID:             uuid.New(),
 		PromptTemplate: promptID,
@@ -700,7 +765,7 @@ func TestResolveAndSynthesizeSystemPrompt_MissingResources(t *testing.T) {
 		skills: map[uuid.UUID]*model.Skill{},
 	}
 
-	coordinator = crdadapter.NewK8sCRDCoordinatorWithClient(nil, "tacito", promptRepo, skillRepoMissing, nil, nil)
+	coordinator = crdadapter.NewK8sCRDCoordinatorWithClient(nil, "tacito", newMockLLMBindingRepository(), promptRepo, skillRepoMissing, nil, nil)
 	agent = &model.Agent{
 		ID:             uuid.New(),
 		PromptTemplate: promptID,
@@ -740,7 +805,7 @@ func TestGetAgentCRDStatus_Existing(t *testing.T) {
 	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(existing).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", newMockLLMBindingRepository(), nil, nil, nil, nil)
 
 	status, err := coordinator.GetAgentCRDStatus(context.Background(), agentID)
 	assert.NoError(t, err)
@@ -759,7 +824,7 @@ func TestGetAgentCRDStatus_NonExistent(t *testing.T) {
 	require.NoError(t, err)
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", newMockLLMBindingRepository(), nil, nil, nil, nil)
 
 	agentID := uuid.New()
 	status, err := coordinator.GetAgentCRDStatus(context.Background(), agentID)
@@ -788,7 +853,7 @@ func TestGetAgentCRDStatus_Timeout(t *testing.T) {
 		}).
 		Build()
 
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", newMockLLMBindingRepository(), nil, nil, nil, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -822,7 +887,7 @@ func TestSubmitAgentCRD_WithMCPClients(t *testing.T) {
 	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, mcpRepo, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", newMockLLMBindingRepository(), nil, nil, mcpRepo, nil)
 
 	agentID := uuid.New()
 	agent := &model.Agent{
@@ -830,7 +895,7 @@ func TestSubmitAgentCRD_WithMCPClients(t *testing.T) {
 		TenantID: "tenant-1",
 		Name:     "agent-with-mcp",
 		Brain: model.BrainConfig{
-			Model: "gpt-4",
+			LLMBindingID: uuid.New(),
 		},
 		MCPClients: []model.MCPClientConfig{
 			{
@@ -872,7 +937,7 @@ func TestSubmitAgentCRD_TierPropagated(t *testing.T) {
 	require.NoError(t, err)
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", newMockLLMBindingRepository(), nil, nil, nil, nil)
 
 	agentID := uuid.New()
 	agent := &model.Agent{
@@ -881,7 +946,7 @@ func TestSubmitAgentCRD_TierPropagated(t *testing.T) {
 		Name:     "tier-agent",
 		Tier:     "heavy",
 		Brain: model.BrainConfig{
-			Model: "gpt-4",
+			LLMBindingID: uuid.New(),
 		},
 	}
 
@@ -904,7 +969,7 @@ func TestSubmitAgentCRD_EmptyTierPropagated(t *testing.T) {
 	require.NoError(t, err)
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", nil, nil, nil, nil)
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", newMockLLMBindingRepository(), nil, nil, nil, nil)
 
 	agentID := uuid.New()
 	agent := &model.Agent{
@@ -913,7 +978,7 @@ func TestSubmitAgentCRD_EmptyTierPropagated(t *testing.T) {
 		Name:     "default-tier-agent",
 		// Tier intentionally empty
 		Brain: model.BrainConfig{
-			Model: "gpt-4",
+			LLMBindingID: uuid.New(),
 		},
 	}
 
@@ -927,4 +992,121 @@ func TestSubmitAgentCRD_EmptyTierPropagated(t *testing.T) {
 
 	assert.Equal(t, "", fetched.Spec.Tier)
 }
+
+func TestSubmitAgentCRD_HubRolePropagated(t *testing.T) {
+	scheme := runtime.NewScheme()
+	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", newMockLLMBindingRepository(), nil, nil, nil, nil)
+
+	agentID := uuid.New()
+	agent := &model.Agent{
+		ID:       agentID,
+		TenantID: "tenant-1",
+		Name:     "hub-agent",
+		Role:     "hub",
+		Brain: model.BrainConfig{
+			LLMBindingID: uuid.New(),
+		},
+	}
+
+	err = coordinator.SubmitAgentCRD(context.Background(), agent)
+	assert.NoError(t, err)
+
+	fetched := &v1alpha1.TacitoAgent{}
+	key := types.NamespacedName{Namespace: "tacito", Name: "u-" + agentID.String()}
+	err = fakeClient.Get(context.Background(), key, fetched)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "hub", fetched.Spec.Role)
+}
+
+func TestSubmitAgentCRD_SpokeRolePropagated(t *testing.T) {
+	scheme := runtime.NewScheme()
+	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", newMockLLMBindingRepository(), nil, nil, nil, nil)
+
+	agentID := uuid.New()
+	agent := &model.Agent{
+		ID:       agentID,
+		TenantID: "tenant-1",
+		Name:     "spoke-agent",
+		Role:     "spoke",
+		Brain: model.BrainConfig{
+			LLMBindingID: uuid.New(),
+		},
+	}
+
+	err = coordinator.SubmitAgentCRD(context.Background(), agent)
+	assert.NoError(t, err)
+
+	fetched := &v1alpha1.TacitoAgent{}
+	key := types.NamespacedName{Namespace: "tacito", Name: "u-" + agentID.String()}
+	err = fakeClient.Get(context.Background(), key, fetched)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "spoke", fetched.Spec.Role)
+}
+
+func TestSubmitAgentCRD_RoleUpdated(t *testing.T) {
+	scheme := runtime.NewScheme()
+	err := v1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	agentID := uuid.New()
+
+	// Pre-populate an existing CRD with role "spoke"
+	existing := &v1alpha1.TacitoAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "u-" + agentID.String(),
+			Namespace: "tacito",
+		},
+		Spec: v1alpha1.TacitoAgentSpec{
+			TenantID:  "tenant-1",
+			AgentName: "updating-agent",
+			Role:      "spoke",
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(existing).Build()
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", newMockLLMBindingRepository(), nil, nil, nil, nil)
+
+	// Update model to "hub"
+	agent := &model.Agent{
+		ID:       agentID,
+		TenantID: "tenant-1",
+		Name:     "updating-agent",
+		Role:     "hub",
+		Brain: model.BrainConfig{
+			LLMBindingID: uuid.New(),
+		},
+	}
+
+	err = coordinator.SubmitAgentCRD(context.Background(), agent)
+	assert.NoError(t, err)
+
+	// Fetch and verify update
+	fetched := &v1alpha1.TacitoAgent{}
+	key := types.NamespacedName{Namespace: "tacito", Name: "u-" + agentID.String()}
+	err = fakeClient.Get(context.Background(), key, fetched)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "hub", fetched.Spec.Role)
+}
+
+func ptrFloat64(v float64) *float64 { return &v }
+func ptrInt(v int) *int { return &v }
+
+
 

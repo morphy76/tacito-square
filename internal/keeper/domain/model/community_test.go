@@ -33,6 +33,14 @@ func TestCommunity_Validation(t *testing.T) {
 			community: validCommunity,
 		},
 		{
+			name: "Valid community single-agent topology",
+			community: func() Community {
+				c := validCommunity
+				c.Topology = CommunityTopologySingleAgent
+				return c
+			}(),
+		},
+		{
 			name: "Missing ID",
 			community: func() Community {
 				c := validCommunity

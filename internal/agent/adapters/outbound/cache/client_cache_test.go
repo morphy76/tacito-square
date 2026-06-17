@@ -155,3 +155,95 @@ func TestClientCache_RegistryRequestReply(t *testing.T) {
 	require.Len(t, list, 1)
 	assert.Equal(t, "agent-beta", list[0].Name)
 }
+
+func TestClientCache_ResolveAgentID(t *testing.T) {
+	ns, nc := startTestNatsServer(t)
+	defer ns.Shutdown()
+	defer nc.Close()
+
+	logger := zerolog.New(nil)
+	communityID := "comm-123"
+	tenantID := "tenant-456"
+
+	cache := agentcache.NewClientCache(nc, communityID, tenantID, logger)
+	err := cache.Start(context.Background())
+	require.NoError(t, err)
+	defer cache.Stop()
+
+	// Simulate a heartbeat for agent-uuid-123
+	card := &agentcard.AgentCard{
+		Name:        "agent-gamma",
+		Description: "Gamma agent",
+		URL:         "http://agent-gamma",
+		Version:     "1.0.0",
+	}
+	evt, err := events.NewDomainEvent(
+		events.SchemaInfrastructureAgentHeartbeat,
+		"agent/agent-uuid-123",
+		tenantID,
+		card,
+	)
+	require.NoError(t, err)
+	evtBytes, err := json.Marshal(evt)
+	require.NoError(t, err)
+
+	hbSubject := fmt.Sprintf("ts.community.%s.agent.agent-uuid-123.heartbeat", communityID)
+	msg := nats.NewMsg(hbSubject)
+	msg.Data = evtBytes
+	msg.Header.Set("X-Tacito-Schema", evt.SchemaRef)
+	msg.Header.Set("X-Tacito-Source", evt.Source)
+	msg.Header.Set("X-Tacito-Tenant", evt.TenantID)
+	msg.Header.Set("X-Tacito-Event-ID", evt.EventID)
+	msg.Header.Set("X-Tacito-Occurred", evt.OccurredAt)
+
+	err = nc.PublishMsg(msg)
+	require.NoError(t, err)
+
+	// Wait for subscription processing
+	time.Sleep(100 * time.Millisecond)
+
+	// Resolve agent-gamma -> should return agent-uuid-123
+	resolvedID, err := cache.ResolveAgentID(context.Background(), "agent-gamma")
+	require.NoError(t, err)
+	assert.Equal(t, "agent-uuid-123", resolvedID)
+
+	// Resolve non-existent agent -> should fail
+	_, err = cache.ResolveAgentID(context.Background(), "agent-non-existent")
+	assert.Error(t, err)
+}
+
+func TestClientCache_ResolveAgentID_RefreshCacheMiss(t *testing.T) {
+	ns, nc := startTestNatsServer(t)
+	defer ns.Shutdown()
+	defer nc.Close()
+
+	logger := zerolog.New(nil)
+	communityID := "comm-123"
+	tenantID := "tenant-456"
+
+	cache := agentcache.NewClientCache(nc, communityID, tenantID, logger)
+	err := cache.Start(context.Background())
+	require.NoError(t, err)
+	defer cache.Stop()
+
+	// Set up NATS responder to simulate registry request-reply
+	requestSubject := fmt.Sprintf("ts.community.%s.registry.request", communityID)
+	card := &agentcard.AgentCard{
+		AgentID:     "agent-uuid-999",
+		Name:        "agent-delta",
+		Description: "Delta agent",
+		URL:         "http://agent-delta",
+		Version:     "1.0.0",
+	}
+	reqSub, err := nc.Subscribe(requestSubject, func(msg *nats.Msg) {
+		resp, _ := json.Marshal([]*agentcard.AgentCard{card})
+		msg.Respond(resp)
+	})
+	require.NoError(t, err)
+	defer reqSub.Unsubscribe()
+
+	// Resolve agent-delta -> should result in a cache miss, trigger Refresh, and successfully resolve to agent-uuid-999
+	resolvedID, err := cache.ResolveAgentID(context.Background(), "agent-delta")
+	require.NoError(t, err)
+	assert.Equal(t, "agent-uuid-999", resolvedID)
+}

@@ -2,7 +2,7 @@
 
 | Field      | Value |
 |------------|-------|
-| Status     | ⬜ PLANNED |
+| Status     | ⏳ IN_PROGRESS |
 
 ## Goal
 

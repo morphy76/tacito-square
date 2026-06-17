@@ -13,6 +13,10 @@ func TestConstantsExist(t *testing.T) {
 	assert.Equal(t, "urn:tacito:schema:conversational:add-user-message:v1", events.SchemaConversationalAddUserMessage)
 	assert.Equal(t, "urn:tacito:schema:conversational:end-thread:v1", events.SchemaConversationalEndThread)
 	assert.Equal(t, "urn:tacito:schema:conversational:agent-response:v1", events.SchemaConversationalAgentResponse)
+	assert.Equal(t, "urn:tacito:schema:conversational:agent-delegation:v1", events.SchemaConversationalAgentDelegation)
+	assert.Equal(t, "urn:tacito:schema:conversational:agent-reasoning:v1", events.SchemaConversationalAgentReasoning)
+	assert.Equal(t, "urn:tacito:schema:conversational:agent-spoke-response:v1", events.SchemaConversationalAgentSpokeResponse)
+	assert.Equal(t, "urn:tacito:schema:conversational:agent-tool-evaluation:v1", events.SchemaConversationalAgentToolEvaluation)
 }
 
 func TestStartThreadPayload_JSON(t *testing.T) {
@@ -88,6 +92,7 @@ func TestAgentResponsePayload_JSON(t *testing.T) {
 	}
 	data, err := json.Marshal(p)
 	assert.NoError(t, err)
+	assert.NotContains(t, string(data), `"message_type"`)
 
 	var pDecoded events.AgentResponsePayload
 	err = json.Unmarshal(data, &pDecoded)
@@ -98,4 +103,25 @@ func TestAgentResponsePayload_JSON(t *testing.T) {
 	assert.Equal(t, p.CorrelationEventID, pDecoded.CorrelationEventID)
 	assert.Equal(t, p.Response, pDecoded.Response)
 	assert.Equal(t, p.Finished, pDecoded.Finished)
+}
+
+func TestAgentDelegationPayload_JSON(t *testing.T) {
+	p := events.AgentDelegationPayload{
+		ThreadID:        "t-123",
+		CommunityID:     "c-456",
+		DelegatingAgent: "hub-agent",
+		TargetAgent:     "writer",
+		Message:         "write about a dragon",
+	}
+	data, err := json.Marshal(p)
+	assert.NoError(t, err)
+
+	var pDecoded events.AgentDelegationPayload
+	err = json.Unmarshal(data, &pDecoded)
+	assert.NoError(t, err)
+	assert.Equal(t, p.ThreadID, pDecoded.ThreadID)
+	assert.Equal(t, p.CommunityID, pDecoded.CommunityID)
+	assert.Equal(t, p.DelegatingAgent, pDecoded.DelegatingAgent)
+	assert.Equal(t, p.TargetAgent, pDecoded.TargetAgent)
+	assert.Equal(t, p.Message, pDecoded.Message)
 }

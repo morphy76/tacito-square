@@ -28,15 +28,15 @@ const (
 // MCPClient defines the configuration needed for an agent to communicate with an MCP client/server gateway.
 type MCPClient struct {
 	ID            uuid.UUID       `json:"id"`
-	TenantID      string          `json:"tenant_id"`
+	TenantID      string          `json:"tenant_id,omitempty"`
 	Name          string          `json:"name"`
-	Description   string          `json:"description"`
+	Description   string          `json:"description,omitempty"`
 	Transport     Transport       `json:"transport"`
-	Command       string          `json:"command"`
-	Args          []string        `json:"args"`
-	Env           map[string]string `json:"env"`
-	URL           string          `json:"url"`
-	AuthSecretRef string          `json:"auth_secret_ref"`
+	Command       string          `json:"command,omitempty"`
+	Args          []string        `json:"args,omitempty"`
+	Env           map[string]string `json:"env,omitempty"`
+	URL           string          `json:"url,omitempty"`
+	AuthSecretRef string          `json:"auth_secret_ref,omitempty"`
 	Status        MCPClientStatus `json:"status"`
 	CreatedAt     time.Time       `json:"created_at"`
 	UpdatedAt     time.Time       `json:"updated_at"`

@@ -111,6 +111,12 @@ type TacitoAgentSpec struct {
 	// An empty string signals the Operator to apply the implicit default profile.
 	// +optional
 	Tier string `json:"tier,omitempty"`
+
+	// Role is the topology role of the agent ("hub" or "spoke").
+	// +optional
+	// +kubebuilder:validation:Enum=hub;spoke
+	// +kubebuilder:default="spoke"
+	Role string `json:"role,omitempty"`
 }
 
 // TacitoAgentStatus defines the observed state of a TacitoAgent.

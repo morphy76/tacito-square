@@ -71,6 +71,7 @@ func TestBuildDeployment_TenantIDAndBasicEnv(t *testing.T) {
 	assert.Equal(t, "my-brainy-agent", envMap["TS_AGENT_NAME"])
 	assert.Equal(t, "community-xyz", envMap["TS_AGENT_COMMUNITY_REF"])
 	assert.Equal(t, "gpt-4o", envMap["TS_AGENT_BRAIN_MODEL"])
+	assert.Equal(t, "spoke", envMap["TS_AGENT_ROLE"])
 }
 
 func TestBuildDeployment_LLMDefaultsAndOverrides(t *testing.T) {
@@ -458,4 +459,39 @@ func TestBuildDeployment_TierResolution(t *testing.T) {
 	assert.Equal(t, "my-default-agent:latest", containerDefault.Image)
 	assert.Equal(t, "100m", containerDefault.Resources.Requests.Cpu().String())
 	assert.Equal(t, "256Mi", containerDefault.Resources.Limits.Memory().String())
+}
+
+func TestBuildDeployment_RoleMapping(t *testing.T) {
+	logger := zerolog.Nop()
+	cfg := viper.New()
+	fakeClient := fake.NewClientBuilder().Build()
+	svc := service.NewReconcileAgentService(fakeClient, logger, cfg, nil)
+
+	// Test 1: Explicit Role "hub"
+	agentHub := &v1alpha1.TacitoAgent{
+		Spec: v1alpha1.TacitoAgentSpec{
+			Role: "hub",
+		},
+	}
+	depHub, err := svc.BuildDeployment(context.Background(), agentHub)
+	assert.NoError(t, err)
+	envMapHub := make(map[string]string)
+	for _, env := range depHub.Spec.Template.Spec.Containers[0].Env {
+		envMapHub[env.Name] = env.Value
+	}
+	assert.Equal(t, "hub", envMapHub["TS_AGENT_ROLE"])
+
+	// Test 2: Explicit Role "spoke"
+	agentSpoke := &v1alpha1.TacitoAgent{
+		Spec: v1alpha1.TacitoAgentSpec{
+			Role: "spoke",
+		},
+	}
+	depSpoke, err := svc.BuildDeployment(context.Background(), agentSpoke)
+	assert.NoError(t, err)
+	envMapSpoke := make(map[string]string)
+	for _, env := range depSpoke.Spec.Template.Spec.Containers[0].Env {
+		envMapSpoke[env.Name] = env.Value
+	}
+	assert.Equal(t, "spoke", envMapSpoke["TS_AGENT_ROLE"])
 }

@@ -61,11 +61,11 @@ func (r *AgentRepository) Create(ctx context.Context, a *model.Agent) error {
 
 	return ExecuteInTxOrPool(ctx, r.pool, func(tx pgx.Tx) error {
 		query := `INSERT INTO agents (
-			id, tenant_id, name, description, brain, short_term_memory, long_term_memory, prompt_template, mcp_clients, status, community_id, tier, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`
+			id, tenant_id, name, description, role, brain, short_term_memory, long_term_memory, prompt_template, mcp_clients, status, community_id, tier, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`
 
 		_, err = tx.Exec(ctx, query,
-			a.ID, a.TenantID, a.Name, a.Description, brainJSON, shortTermJSON, longTermJSON, promptTemplate, mcpClientsJSON, a.Status, a.CommunityID, a.Tier, a.CreatedAt, a.UpdatedAt,
+			a.ID, a.TenantID, a.Name, a.Description, a.Role, brainJSON, shortTermJSON, longTermJSON, promptTemplate, mcpClientsJSON, a.Status, a.CommunityID, a.Tier, a.CreatedAt, a.UpdatedAt,
 		)
 		if err != nil {
 			return fmt.Errorf("insert agent: %w", err)
@@ -86,7 +86,7 @@ func (r *AgentRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Age
 	}
 
 	query := `SELECT 
-		id, tenant_id, name, description, brain, short_term_memory, long_term_memory, prompt_template, mcp_clients, status, community_id, tier, created_at, updated_at
+		id, tenant_id, name, description, role, brain, short_term_memory, long_term_memory, prompt_template, mcp_clients, status, community_id, tier, created_at, updated_at
 	FROM agents WHERE id = $1 AND tenant_id = $2`
 
 	var a model.Agent
@@ -98,7 +98,7 @@ func (r *AgentRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Age
 
 	exec := GetExecutor(ctx, r.pool)
 	err := exec.QueryRow(ctx, query, id, ten.FullName()).Scan(
-		&a.ID, &a.TenantID, &a.Name, &a.Description, &brainBytes, &shortBytes, &longBytes, &promptTemplate, &mcpBytes, &a.Status, &a.CommunityID, &a.Tier, &a.CreatedAt, &a.UpdatedAt,
+		&a.ID, &a.TenantID, &a.Name, &a.Description, &a.Role, &brainBytes, &shortBytes, &longBytes, &promptTemplate, &mcpBytes, &a.Status, &a.CommunityID, &a.Tier, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -141,7 +141,7 @@ func (r *AgentRepository) GetByName(ctx context.Context, name string) (*model.Ag
 	}
 
 	query := `SELECT 
-		id, tenant_id, name, description, brain, short_term_memory, long_term_memory, prompt_template, mcp_clients, status, community_id, tier, created_at, updated_at
+		id, tenant_id, name, description, role, brain, short_term_memory, long_term_memory, prompt_template, mcp_clients, status, community_id, tier, created_at, updated_at
 	FROM agents WHERE name = $1 AND tenant_id = $2`
 
 	var a model.Agent
@@ -153,7 +153,7 @@ func (r *AgentRepository) GetByName(ctx context.Context, name string) (*model.Ag
 
 	exec := GetExecutor(ctx, r.pool)
 	err := exec.QueryRow(ctx, query, name, ten.FullName()).Scan(
-		&a.ID, &a.TenantID, &a.Name, &a.Description, &brainBytes, &shortBytes, &longBytes, &promptTemplate, &mcpBytes, &a.Status, &a.CommunityID, &a.Tier, &a.CreatedAt, &a.UpdatedAt,
+		&a.ID, &a.TenantID, &a.Name, &a.Description, &a.Role, &brainBytes, &shortBytes, &longBytes, &promptTemplate, &mcpBytes, &a.Status, &a.CommunityID, &a.Tier, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -196,7 +196,7 @@ func (r *AgentRepository) List(ctx context.Context) ([]*model.Agent, error) {
 	}
 
 	query := `SELECT 
-		id, tenant_id, name, description, brain, short_term_memory, long_term_memory, prompt_template, mcp_clients, status, community_id, tier, created_at, updated_at
+		id, tenant_id, name, description, role, brain, short_term_memory, long_term_memory, prompt_template, mcp_clients, status, community_id, tier, created_at, updated_at
 	FROM agents WHERE tenant_id = $1 ORDER BY name ASC`
 
 	exec := GetExecutor(ctx, r.pool)
@@ -216,7 +216,7 @@ func (r *AgentRepository) List(ctx context.Context) ([]*model.Agent, error) {
 		var promptTemplate *uuid.UUID
 
 		err := rows.Scan(
-			&a.ID, &a.TenantID, &a.Name, &a.Description, &brainBytes, &shortBytes, &longBytes, &promptTemplate, &mcpBytes, &a.Status, &a.CommunityID, &a.Tier, &a.CreatedAt, &a.UpdatedAt,
+			&a.ID, &a.TenantID, &a.Name, &a.Description, &a.Role, &brainBytes, &shortBytes, &longBytes, &promptTemplate, &mcpBytes, &a.Status, &a.CommunityID, &a.Tier, &a.CreatedAt, &a.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan agent: %w", err)
@@ -285,12 +285,12 @@ func (r *AgentRepository) Update(ctx context.Context, a *model.Agent) error {
 
 	return ExecuteInTxOrPool(ctx, r.pool, func(tx pgx.Tx) error {
 		query := `UPDATE agents SET 
-			name = $1, description = $2, brain = $3, short_term_memory = $4, long_term_memory = $5, prompt_template = $6, mcp_clients = $7, status = $8, community_id = $9, tier = $10, updated_at = $11
-		WHERE id = $12 AND tenant_id = $13`
+			name = $1, description = $2, role = $3, brain = $4, short_term_memory = $5, long_term_memory = $6, prompt_template = $7, mcp_clients = $8, status = $9, community_id = $10, tier = $11, updated_at = $12
+		WHERE id = $13 AND tenant_id = $14`
 
 		a.UpdatedAt = time.Now().UTC()
 		cmdTag, err := tx.Exec(ctx, query,
-			a.Name, a.Description, brainJSON, shortTermJSON, longTermJSON, promptTemplate, mcpClientsJSON, a.Status, a.CommunityID, a.Tier, a.UpdatedAt, a.ID, a.TenantID,
+			a.Name, a.Description, a.Role, brainJSON, shortTermJSON, longTermJSON, promptTemplate, mcpClientsJSON, a.Status, a.CommunityID, a.Tier, a.UpdatedAt, a.ID, a.TenantID,
 		)
 		if err != nil {
 			return fmt.Errorf("update agent: %w", err)
@@ -373,7 +373,8 @@ func (r *AgentRepository) AssignToCommunity(ctx context.Context, agentID uuid.UU
 	return ExecuteInTxOrPool(ctx, r.pool, func(tx pgx.Tx) error {
 		// 1. Verify community exists and belongs to the tenant, and is active/created
 		var commStatus string
-		err := tx.QueryRow(ctx, `SELECT status FROM communities WHERE id = $1 AND tenant_id = $2`, communityID, ten.FullName()).Scan(&commStatus)
+		var topology string
+		err := tx.QueryRow(ctx, `SELECT status, topology FROM communities WHERE id = $1 AND tenant_id = $2`, communityID, ten.FullName()).Scan(&commStatus, &topology)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return fmt.Errorf("community not found: %s", communityID)
@@ -387,7 +388,8 @@ func (r *AgentRepository) AssignToCommunity(ctx context.Context, agentID uuid.UU
 		// 2. Verify agent exists, belongs to tenant, and is not already assigned
 		var currentCommID *uuid.UUID
 		var agentStatus string
-		err = tx.QueryRow(ctx, `SELECT community_id, status FROM agents WHERE id = $1 AND tenant_id = $2 FOR UPDATE`, agentID, ten.FullName()).Scan(&currentCommID, &agentStatus)
+		var agentRole string
+		err = tx.QueryRow(ctx, `SELECT community_id, status, role FROM agents WHERE id = $1 AND tenant_id = $2 FOR UPDATE`, agentID, ten.FullName()).Scan(&currentCommID, &agentStatus, &agentRole)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return fmt.Errorf("agent not found: %s", agentID)
@@ -397,6 +399,29 @@ func (r *AgentRepository) AssignToCommunity(ctx context.Context, agentID uuid.UU
 
 		if currentCommID != nil {
 			return fmt.Errorf("agent already assigned to community: %s", currentCommID)
+		}
+
+		// Verify topology constraints
+		if topology == string(model.CommunityTopologySingleAgent) {
+			var count int
+			err = tx.QueryRow(ctx, `SELECT COUNT(*) FROM agents WHERE community_id = $1`, communityID).Scan(&count)
+			if err != nil {
+				return fmt.Errorf("check community agents count: %w", err)
+			}
+			if count >= 1 {
+				return fmt.Errorf("community with single-agent topology cannot have more than one agent assigned")
+			}
+		} else if topology == string(model.CommunityTopologyHubSpoke) {
+			if agentRole == "hub" {
+				var hubCount int
+				err = tx.QueryRow(ctx, `SELECT COUNT(*) FROM agents WHERE community_id = $1 AND role = 'hub'`, communityID).Scan(&hubCount)
+				if err != nil {
+					return fmt.Errorf("check community hubs count: %w", err)
+				}
+				if hubCount >= 1 {
+					return fmt.Errorf("community with hub-spoke topology cannot have more than one hub agent assigned")
+				}
+			}
 		}
 
 		// 3. Update agent assignment
@@ -516,6 +541,7 @@ func (r *AgentRepository) GetRegistration(ctx context.Context, agentID uuid.UUID
 	if err := json.Unmarshal(cardBytes, &card); err != nil {
 		return nil, time.Time{}, fmt.Errorf("unmarshal agent card: %w", err)
 	}
+	card.AgentID = agentID.String()
 	return &card, lastSeen, nil
 }
 
@@ -526,7 +552,7 @@ func (r *AgentRepository) GetActiveRegistrationsByCommunity(ctx context.Context,
 		return nil, time.Time{}, errors.New("tenant resolution failed")
 	}
 
-	query := `SELECT card, last_seen_at FROM agent_registrations 
+	query := `SELECT agent_id, card, last_seen_at FROM agent_registrations 
 	WHERE community_id = $1 AND tenant_id = $2 ORDER BY last_seen_at DESC`
 
 	exec := GetExecutor(ctx, r.pool)
@@ -539,9 +565,10 @@ func (r *AgentRepository) GetActiveRegistrationsByCommunity(ctx context.Context,
 	var cards []*agentcard.AgentCard
 	var latestTime time.Time
 	for rows.Next() {
+		var agentID uuid.UUID
 		var cardBytes []byte
 		var lastSeen time.Time
-		if err := rows.Scan(&cardBytes, &lastSeen); err != nil {
+		if err := rows.Scan(&agentID, &cardBytes, &lastSeen); err != nil {
 			return nil, time.Time{}, fmt.Errorf("scan agent card: %w", err)
 		}
 		if lastSeen.After(latestTime) {
@@ -551,6 +578,7 @@ func (r *AgentRepository) GetActiveRegistrationsByCommunity(ctx context.Context,
 		if err := json.Unmarshal(cardBytes, &card); err != nil {
 			return nil, time.Time{}, fmt.Errorf("unmarshal agent card list item: %w", err)
 		}
+		card.AgentID = agentID.String()
 		cards = append(cards, &card)
 	}
 	if err := rows.Err(); err != nil {

@@ -250,6 +250,10 @@ func (h *CommunityHandler) Update(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
+		if strings.Contains(err.Error(), "cannot change topology") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		reqLogger.Error().Err(err).Msg("failed to update community")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

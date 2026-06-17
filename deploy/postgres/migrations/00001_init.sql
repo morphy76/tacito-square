@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS communities (
     tenant_id VARCHAR(255) NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    topology VARCHAR(50) NOT NULL DEFAULT 'hub-spoke',
+    topology VARCHAR(50) NOT NULL DEFAULT 'single-agent',
     configuration JSONB NOT NULL DEFAULT '{}',
     status VARCHAR(50) NOT NULL DEFAULT 'created',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -114,6 +114,7 @@ CREATE TABLE IF NOT EXISTS agents (
     tenant_id VARCHAR(255) NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT,
+    role VARCHAR(50) NOT NULL DEFAULT 'spoke',
     brain JSONB NOT NULL,
     short_term_memory JSONB NOT NULL,
     long_term_memory JSONB NOT NULL,
@@ -126,9 +127,7 @@ CREATE TABLE IF NOT EXISTS agents (
     community_id UUID REFERENCES communities(id) ON DELETE RESTRICT,
     CONSTRAINT unique_agents_tenant_name UNIQUE (tenant_id, name),
     CONSTRAINT check_agent_brain CHECK (
-        (brain->>'model') IS NOT NULL AND (brain->>'model') <> '' AND
-        (brain->>'endpoint') IS NOT NULL AND (brain->>'endpoint') <> '' AND
-        (brain->>'credentials_secret') IS NOT NULL AND (brain->>'credentials_secret') <> ''
+        (brain->>'llm_binding_id') IS NOT NULL AND (brain->>'llm_binding_id') <> ''
     )
 );
 CREATE INDEX IF NOT EXISTS idx_agents_tenant_id ON agents(tenant_id);
@@ -150,6 +149,37 @@ CREATE TABLE IF NOT EXISTS agent_registrations (
 );
 CREATE INDEX IF NOT EXISTS idx_agent_registrations_tenant_id ON agent_registrations(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_agent_registrations_community ON agent_registrations(community_id);
+
+INSERT INTO prompt_templates (id, tenant_id, name, content, status, created_at)
+VALUES (
+    'ffffffff-0000-0000-0000-000000000001',
+    'system',
+    'hub-system-prompt',
+    '{{if .Description}}{{.Description}}{{else}}You are a helpful orchestrator agent.{{end}}
+
+You have access to the following specialized Spoke agents in this community:
+{{.Spokes}}
+
+To coordinate the conversation, you must output a valid JSON response specifying your next step.
+- To delegate tasks to Spoke subagents concurrently, output:
+  {"action": "delegate", "spokes": [{"spoke": "<agent_name>", "message": "<task description>"}, ...] }
+- If a specialized Spoke agent asks a clarifying question to the user or indicates that information/details are missing, you must immediately choose the "finalize" action and return that question directly to the user so they can reply.
+- If you have completed the user request and want to finalize the response, output:
+  {"action": "finalize", "response": "<final response message to the user>"}
+- Do not delegate the wait state or try to delegate again if you are waiting for user input.
+
+Dynamic Routing & Delegation Guidelines:
+1. Carefully inspect the Name and Description of the available Spoke agents.
+2. During the information-gathering phase of a thread (where details are missing or clarifying questions are needed), delegate tasks ONLY to agents whose descriptions indicate they perform inquiry, question-asking, coaching, or detail gathering.
+3. Do NOT delegate tasks to synthesis, compiling, or final-answer agents (e.g., agents whose descriptions state they summarize findings or produce final outputs) during the information-gathering phase. Only delegate to them once all details are fully gathered and you are ready to produce the final findings.
+
+Response Synthesis Guidelines:
+1. Messages prefixed with "[Observation]" in the conversation history are responses received from Spoke agents — they are NOT user messages.
+2. When finalizing, you MUST synthesize and integrate the Spoke observations into a single cohesive, polished response for the user.
+3. Do NOT copy-paste or concatenate Spoke responses verbatim. Rewrite and merge them into a well-structured answer.',
+    'active',
+    NOW()
+) ON CONFLICT (id) DO NOTHING;
 -- +goose StatementEnd
 
 -- +goose Down

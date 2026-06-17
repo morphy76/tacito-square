@@ -90,11 +90,9 @@ func TestAgentHandlers_Create(t *testing.T) {
 			"name":        "qa-agent",
 			"description": "Agent for QA tests",
 			"brain": map[string]interface{}{
-				"model":              "gpt-4o",
+				"llm_binding_id":     "8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4",
 				"temperature":        0.7,
-				"max_tokens":          2048,
-				"endpoint":           "https://api.openai.com/v1",
-				"credentials_secret": "secret",
+				"max_tokens":         2048,
 			},
 			"short_term_memory": map[string]interface{}{
 				"key_namespace": "qa:short",
@@ -114,10 +112,10 @@ func TestAgentHandlers_Create(t *testing.T) {
 		}
 
 		var capturedCtx context.Context
-		var capturedAgentID uuid.UUID
+		var capturedAgent *model.Agent
 		repo.On("Create", mock.Anything, mock.AnythingOfType("*model.Agent")).Return(nil).Run(func(args mock.Arguments) {
 			capturedCtx = args.Get(0).(context.Context)
-			capturedAgentID = args.Get(1).(*model.Agent).ID
+			capturedAgent = args.Get(1).(*model.Agent)
 		})
 
 		body, _ := json.Marshal(payload)
@@ -128,11 +126,95 @@ func TestAgentHandlers_Create(t *testing.T) {
 		r.ServeHTTP(resp, req)
 
 		assert.Equal(t, http.StatusCreated, resp.Code)
-		assert.Equal(t, "/api/v1/agents/"+capturedAgentID.String(), resp.Header().Get("Location"))
+		assert.Equal(t, "/api/v1/agents/"+capturedAgent.ID.String(), resp.Header().Get("Location"))
 		assert.Empty(t, resp.Body.String())
 		if assert.NotNil(t, capturedCtx) {
 			assert.ErrorIs(t, capturedCtx.Err(), context.Canceled)
 		}
+		assert.Equal(t, "spoke", capturedAgent.Role)
+	})
+
+	t.Run("Create Agent with Hub Role Successfully", func(t *testing.T) {
+		repo := new(MockAgentRepository)
+		handler := NewAgentHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.POST("/api/v1/agents", handler.Create)
+
+		payload := map[string]interface{}{
+			"name":        "hub-agent",
+			"description": "Hub agent",
+			"role":        "hub",
+			"brain": map[string]interface{}{
+				"llm_binding_id":     "8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4",
+				"temperature":        0.7,
+				"max_tokens":         2048,
+			},
+			"short_term_memory": map[string]interface{}{
+				"key_namespace": "qa:short",
+				"ttl_seconds":   3600,
+			},
+			"long_term_memory": map[string]interface{}{
+				"collection_name":  "qa-long",
+				"vector_dimension": 1536,
+			},
+		}
+
+		var capturedAgent *model.Agent
+		repo.On("Create", mock.Anything, mock.AnythingOfType("*model.Agent")).Return(nil).Run(func(args mock.Arguments) {
+			capturedAgent = args.Get(1).(*model.Agent)
+		})
+
+		body, _ := json.Marshal(payload)
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/agents", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusCreated, resp.Code)
+		if assert.NotNil(t, capturedAgent) {
+			assert.Equal(t, "hub", capturedAgent.Role)
+		}
+	})
+
+	t.Run("Create Agent with Invalid Role Fails", func(t *testing.T) {
+		repo := new(MockAgentRepository)
+		handler := NewAgentHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.POST("/api/v1/agents", handler.Create)
+
+		payload := map[string]interface{}{
+			"name":        "invalid-agent",
+			"description": "invalid agent role test",
+			"role":        "router",
+			"brain": map[string]interface{}{
+				"llm_binding_id":     "8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4",
+				"temperature":        0.7,
+				"max_tokens":         2048,
+			},
+			"short_term_memory": map[string]interface{}{
+				"key_namespace": "qa:short",
+				"ttl_seconds":   3600,
+			},
+			"long_term_memory": map[string]interface{}{
+				"collection_name":  "qa-long",
+				"vector_dimension": 1536,
+			},
+		}
+
+		body, _ := json.Marshal(payload)
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/agents", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusBadRequest, resp.Code)
+		assert.Contains(t, resp.Body.String(), "invalid agent role")
 	})
 
 	t.Run("Create Agent Validation Failure (Missing name)", func(t *testing.T) {
@@ -170,11 +252,9 @@ func TestAgentHandlers_Create(t *testing.T) {
 			"name":        "qa-agent",
 			"description": "Agent for QA tests",
 			"brain": map[string]interface{}{
-				"model":              "gpt-4o",
+				"llm_binding_id":     "not-a-valid-uuid",
 				"temperature":        0.7,
-				"max_tokens":          2048,
-				"endpoint":           "not-a-valid-url", // Invalid URL
-				"credentials_secret": "",                // Blank
+				"max_tokens":         2048,
 			},
 			"short_term_memory": map[string]interface{}{
 				"key_namespace": "qa:short",
@@ -314,9 +394,9 @@ func TestAgentHandlers_Update(t *testing.T) {
 			Name:   "qa-agent",
 			Status: model.AgentStatusDefined,
 			Brain: model.BrainConfig{
-				Model:       "gpt-4",
-				Temperature: 0.5,
-				MaxTokens:   1000,
+				LLMBindingID: uuid.MustParse("8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4"),
+				Temperature:  ptrFloat64(0.5),
+				MaxTokens:    ptrInt(1000),
 			},
 			ShortTermMemory: model.ShortTermMemoryConfig{
 				TTLSeconds: 3600,
@@ -330,11 +410,9 @@ func TestAgentHandlers_Update(t *testing.T) {
 			"name":        "qa-agent-updated",
 			"description": "Updated Agent description",
 			"brain": map[string]interface{}{
-				"model":              "gpt-4o",
+				"llm_binding_id":     "8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4",
 				"temperature":        0.7,
-				"max_tokens":          2048,
-				"endpoint":           "https://api.openai.com/v1",
-				"credentials_secret": "secret",
+				"max_tokens":         2048,
 			},
 			"short_term_memory": map[string]interface{}{
 				"key_namespace": "qa:short",
@@ -346,8 +424,11 @@ func TestAgentHandlers_Update(t *testing.T) {
 			},
 		}
 
+		var capturedAgent *model.Agent
 		repo.On("GetByID", mock.Anything, id).Return(existing, nil)
-		repo.On("Update", mock.Anything, mock.AnythingOfType("*model.Agent")).Return(nil)
+		repo.On("Update", mock.Anything, mock.AnythingOfType("*model.Agent")).Return(nil).Run(func(args mock.Arguments) {
+			capturedAgent = args.Get(1).(*model.Agent)
+		})
 
 		body, _ := json.Marshal(payload)
 		req, _ := http.NewRequest(http.MethodPut, "/api/v1/agents/"+id.String(), bytes.NewBuffer(body))
@@ -362,6 +443,138 @@ func TestAgentHandlers_Update(t *testing.T) {
 		err := json.Unmarshal(resp.Body.Bytes(), &respBody)
 		assert.NoError(t, err)
 		assert.Equal(t, "qa-agent", respBody["name"])
+		if assert.NotNil(t, capturedAgent) {
+			assert.Equal(t, "spoke", capturedAgent.Role)
+		}
+	})
+
+	t.Run("Update Agent Role successfully", func(t *testing.T) {
+		repo := new(MockAgentRepository)
+		handler := NewAgentHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.PUT("/api/v1/agents/:id", handler.Update)
+
+		id := uuid.New()
+		existing := &model.Agent{
+			ID:     id,
+			Name:   "qa-agent",
+			Status: model.AgentStatusDefined,
+			Role:   "spoke",
+			Brain: model.BrainConfig{
+				LLMBindingID: uuid.MustParse("8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4"),
+				Temperature:  ptrFloat64(0.5),
+				MaxTokens:    ptrInt(1000),
+			},
+			ShortTermMemory: model.ShortTermMemoryConfig{
+				TTLSeconds: 3600,
+			},
+			LongTermMemory: model.LongTermMemoryConfig{
+				VectorDimension: 1536,
+			},
+		}
+
+		payload := map[string]interface{}{
+			"name":        "qa-agent-updated",
+			"description": "Updated Agent description",
+			"role":        "hub",
+			"brain": map[string]interface{}{
+				"llm_binding_id":     "8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4",
+				"temperature":        0.7,
+				"max_tokens":         2048,
+			},
+			"short_term_memory": map[string]interface{}{
+				"key_namespace": "qa:short",
+				"ttl_seconds":   1800,
+			},
+			"long_term_memory": map[string]interface{}{
+				"collection_name":  "qa-long",
+				"vector_dimension": 1536,
+			},
+		}
+
+		var capturedAgent *model.Agent
+		repo.On("GetByID", mock.Anything, id).Return(existing, nil)
+		repo.On("Update", mock.Anything, mock.AnythingOfType("*model.Agent")).Return(nil).Run(func(args mock.Arguments) {
+			capturedAgent = args.Get(1).(*model.Agent)
+		})
+
+		body, _ := json.Marshal(payload)
+		req, _ := http.NewRequest(http.MethodPut, "/api/v1/agents/"+id.String(), bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
+
+		var respBody map[string]interface{}
+		err := json.Unmarshal(resp.Body.Bytes(), &respBody)
+		assert.NoError(t, err)
+		assert.Equal(t, "spoke", respBody["role"]) // previousValue returned
+		if assert.NotNil(t, capturedAgent) {
+			assert.Equal(t, "hub", capturedAgent.Role)
+		}
+	})
+
+	t.Run("Update Agent with Invalid Role Fails", func(t *testing.T) {
+		repo := new(MockAgentRepository)
+		handler := NewAgentHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.PUT("/api/v1/agents/:id", handler.Update)
+
+		id := uuid.New()
+		existing := &model.Agent{
+			ID:     id,
+			Name:   "qa-agent",
+			Status: model.AgentStatusDefined,
+			Role:   "spoke",
+			Brain: model.BrainConfig{
+				LLMBindingID: uuid.MustParse("8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4"),
+				Temperature:  ptrFloat64(0.5),
+				MaxTokens:    ptrInt(1000),
+			},
+			ShortTermMemory: model.ShortTermMemoryConfig{
+				TTLSeconds: 3600,
+			},
+			LongTermMemory: model.LongTermMemoryConfig{
+				VectorDimension: 1536,
+			},
+		}
+
+		payload := map[string]interface{}{
+			"name":        "qa-agent-updated",
+			"description": "Updated Agent description",
+			"role":        "router",
+			"brain": map[string]interface{}{
+				"llm_binding_id":     "8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4",
+				"temperature":        0.7,
+				"max_tokens":         2048,
+			},
+			"short_term_memory": map[string]interface{}{
+				"key_namespace": "qa:short",
+				"ttl_seconds":   1800,
+			},
+			"long_term_memory": map[string]interface{}{
+				"collection_name":  "qa-long",
+				"vector_dimension": 1536,
+			},
+		}
+
+		repo.On("GetByID", mock.Anything, id).Return(existing, nil)
+
+		body, _ := json.Marshal(payload)
+		req, _ := http.NewRequest(http.MethodPut, "/api/v1/agents/"+id.String(), bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusBadRequest, resp.Code)
+		assert.Contains(t, resp.Body.String(), "invalid agent role")
 	})
 }
 
@@ -396,11 +609,9 @@ func TestAgentHandlers_Tier(t *testing.T) {
 			"name":        "tier-agent",
 			"description": "Agent with tier",
 			"brain": map[string]interface{}{
-				"model":              "gpt-4o",
+				"llm_binding_id":     "8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4",
 				"temperature":        0.7,
 				"max_tokens":         2048,
-				"endpoint":           "https://api.openai.com/v1",
-				"credentials_secret": "secret",
 			},
 			"short_term_memory": map[string]interface{}{
 				"key_namespace": "tier:short",
@@ -485,9 +696,9 @@ func TestAgentHandlers_Tier(t *testing.T) {
 			Status: model.AgentStatusDefined,
 			Tier:   "standard",
 			Brain: model.BrainConfig{
-				Model:       "gpt-4",
-				Temperature: 0.5,
-				MaxTokens:   1000,
+				LLMBindingID: uuid.MustParse("8fa6b8cb-2b8e-4a6c-9a40-d9d1be6596b4"),
+				Temperature:  ptrFloat64(0.5),
+				MaxTokens:    ptrInt(1000),
 			},
 			ShortTermMemory: model.ShortTermMemoryConfig{TTLSeconds: 3600},
 			LongTermMemory:  model.LongTermMemoryConfig{VectorDimension: 1536},
@@ -518,4 +729,8 @@ func TestAgentHandlers_Tier(t *testing.T) {
 		}
 	})
 }
+
+func ptrFloat64(v float64) *float64 { return &v }
+func ptrInt(v int) *int { return &v }
+
 

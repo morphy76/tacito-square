@@ -136,9 +136,9 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | ID | Title | Status | Component | File |
 |----|-------|--------|-----------|------|
 | SPEC-FR-M6.0 | Event-Driven Architecture Foundation & Conversational Schema | VERIFIED | shared, keeper, agent | [SPEC-FR-M6.0](functional/M6/SPEC-FR-M6.0.md) |
-| SPEC-FR-M6.1 | Community Topology (Hub-Spoke) | DRAFT | keeper, agent | [SPEC-FR-M6.1](functional/M6/SPEC-FR-M6.1.md) |
+| SPEC-FR-M6.1 | Community Topology (Hub-Spoke) | VERIFIED | keeper, agent | [SPEC-FR-M6.1](functional/M6/SPEC-FR-M6.1.md) |
 | SPEC-FR-M6.2 | NATS Inter-Agent Messaging | DRAFT | agent | [SPEC-FR-M6.2](functional/M6/SPEC-FR-M6.2.md) |
-| SPEC-FR-M6.3 | NATS Subject Namespacing | DRAFT | agent, keeper | [SPEC-FR-M6.3](functional/M6/SPEC-FR-M6.3.md) |
+| SPEC-FR-M6.3 | NATS Subject Namespacing | VERIFIED | agent, keeper | [SPEC-FR-M6.3](functional/M6/SPEC-FR-M6.3.md) |
 | SPEC-FR-M6.4 | Thread Management | DRAFT | conversation-hub | [SPEC-FR-M6.4](functional/M6/SPEC-FR-M6.4.md) |
 | SPEC-FR-M6.5 | A2A Agent Cards | VERIFIED | agent, keeper | [SPEC-FR-M6.5](functional/M6/SPEC-FR-M6.5.md) |
 | SPEC-FR-M6.6 | Conversation Handoff | DRAFT | agent | [SPEC-FR-M6.6](functional/M6/SPEC-FR-M6.6.md) |
@@ -150,6 +150,15 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 |----|-------|--------|----------|------|
 | BUG-M6.1 | Agent Cards dynamically empty or missing actual values on startup | CLOSED | MEDIUM | [BUG-M6.1](tasks/M6.BUG1/BUG-M6.1.md) |
 | BUG-M6.2 | Unassigning agent from community does not evict registration or cards cache | CLOSED | HIGH | [BUG-M6.2](tasks/M6.BUG2/BUG-M6.2.md) |
+| BUG-M6.3 | Inbound community events are routed to all spokes in hub-spoke topology instead of the Hub coordinator | CLOSED | HIGH | [BUG-M6.3](tasks/M6.BUG3/BUG-M6.3.md) |
+| BUG-M6.4 | Redundant Assignment or Unassignment Fails to Reconcile Deployment Status | CLOSED | MEDIUM | [BUG-M6.4](tasks/M6.BUG4/BUG-M6.4.md) |
+| BUG-M6.5 | Hub Agent Deployed with Role 'spoke' in Hub-Spoke Community | CLOSED | HIGH | [BUG-M6.5](tasks/M6.BUG5/BUG-M6.5.md) |
+| BUG-M6.6 | Orchestrator Loop Limit Terminating Threads Instead of Returning Latest Spoke Response | CLOSED | HIGH | [BUG-M6.6](tasks/M6.BUG6/BUG-M6.6.md) |
+| BUG-M6.7 | Agent Messages Pollution and Lack of Classification in Server-Sent Events (SSE) Stream | VERIFIED | HIGH | [BUG-M6.7](tasks/M6.BUG7/BUG-M6.7.md) |
+| BUG-M6.8 | Hardcoded Hub System Prompt and Lack of Template Parameterization | CLOSED | HIGH | [BUG-M6.8](tasks/M6.BUG8/BUG-M6.8.md) |
+| BUG-M6.9 | Agent Brain Embeds LLM Binding Instead of Referring LLM Binding Model | CLOSED | HIGH | [BUG-M6.9](tasks/M6.BUG9/BUG-M6.9.md) |
+
+
 
 ### M7: BFF & UIs
 
@@ -216,7 +225,7 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 | M3 | Keeper Core | ✔️ IMPLEMENTED | 8 | [M3](milestones/M3-keeper-core.md) |
 | M4 | Operator Core | ✔️ IMPLEMENTED | 5 | [M4](milestones/M4-operator-core.md) |
 | M5 | Agent Core | ⏳ IN_PROGRESS | 9 | [M5](milestones/M5-agent-core.md) |
-| M6 | Communities & Messaging | ⬜ PLANNED | 7 | [M6](milestones/M6-communities.md) |
+| M6 | Communities & Messaging | ⏳ IN_PROGRESS | 7 | [M6](milestones/M6-communities.md) |
 | M7 | BFF & UIs | ⬜ PLANNED | 4 | [M7](milestones/M7-bff-uis.md) |
 | M8 | Governance | ⬜ PLANNED | 10 | [M8](milestones/M8-governance.md) |
 | M9 | Hardening | ⬜ PLANNED | 7 | [M9](milestones/M9-hardening.md) |

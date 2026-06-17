@@ -17,21 +17,25 @@ import (
 )
 
 type SchemaRouterImpl struct {
-	agentID   string
-	agentName string
-	processor inbound.MessageProcessor
-	memory    outbound.ShortTermMemory
-	ltm       outbound.LongTermMemory
-	embed     outbound.Embedder
-	brain     outbound.Brain
-	publisher outbound.EventPublisher
-	cfg       *viper.Viper
+	agentID      string
+	agentName    string
+	role         string
+	processor    inbound.MessageProcessor
+	orchestrator *Orchestrator
+	memory       outbound.ShortTermMemory
+	ltm          outbound.LongTermMemory
+	embed        outbound.Embedder
+	brain        outbound.Brain
+	publisher    outbound.EventPublisher
+	cfg          *viper.Viper
 }
 
 func NewSchemaRouterImpl(
 	agentID string,
 	agentName string,
+	role string,
 	processor inbound.MessageProcessor,
+	orchestrator *Orchestrator,
 	memory outbound.ShortTermMemory,
 	ltm outbound.LongTermMemory,
 	embed outbound.Embedder,
@@ -40,15 +44,17 @@ func NewSchemaRouterImpl(
 	cfg *viper.Viper,
 ) *SchemaRouterImpl {
 	return &SchemaRouterImpl{
-		agentID:   agentID,
-		agentName: agentName,
-		processor: processor,
-		memory:    memory,
-		ltm:       ltm,
-		embed:     embed,
-		brain:     brain,
-		publisher: publisher,
-		cfg:       cfg,
+		agentID:      agentID,
+		agentName:    agentName,
+		role:         role,
+		processor:    processor,
+		orchestrator: orchestrator,
+		memory:       memory,
+		ltm:          ltm,
+		embed:        embed,
+		brain:        brain,
+		publisher:    publisher,
+		cfg:          cfg,
 	}
 }
 
@@ -60,11 +66,42 @@ func (r *SchemaRouterImpl) RouteEvent(ctx context.Context, event events.DomainEv
 		Logger()
 	ctx = logger.WithContext(ctx)
 
+	if r.cfg != nil {
+		configuredTenant := r.cfg.GetString("tenant.id")
+		if configuredTenant != "" && event.TenantID != configuredTenant {
+			logger.Error().
+				Str("event_tenant_id", event.TenantID).
+				Str("configured_tenant_id", configuredTenant).
+				Msg("tenant mismatch: rejecting request")
+			return fmt.Errorf("tenant mismatch: event tenant %q does not match configured tenant %q", event.TenantID, configuredTenant)
+		}
+	}
+
+	if r.role == "hub" {
+		switch event.SchemaRef {
+		case events.SchemaConversationalStartThread:
+			return r.handleStartThread(ctx, event)
+		case events.SchemaConversationalAddUserMessage:
+			return r.handleHubAddUserMessage(ctx, event)
+		case events.SchemaConversationalAgentDelegation:
+			return r.handleHubAgentDelegation(ctx, event)
+		case events.SchemaConversationalAgentSpokeResponse:
+			return r.handleHubSpokeResponse(ctx, event)
+		case events.SchemaConversationalEndThread:
+			return r.handleEndThread(ctx, event)
+		default:
+			logger.Warn().Msg("unsupported event schema under hub role, skipping silently")
+			return nil
+		}
+	}
+
 	switch event.SchemaRef {
 	case events.SchemaConversationalStartThread:
 		return r.handleStartThread(ctx, event)
 	case events.SchemaConversationalAddUserMessage:
 		return r.handleAddUserMessage(ctx, event)
+	case events.SchemaConversationalAgentDelegation:
+		return r.handleAgentDelegation(ctx, event)
 	case events.SchemaConversationalEndThread:
 		return r.handleEndThread(ctx, event)
 	default:
@@ -114,6 +151,12 @@ func (r *SchemaRouterImpl) handleAddUserMessage(ctx context.Context, event event
 			logger.Error().Err(rollbackErr).Msg("failed to rollback last memory entry after LLM failure")
 		}
 		return fmt.Errorf("failed to process message: %w", err)
+	}
+
+	// Polish the response using the brain before emitting the final agent-response event
+	polishedResp, err := r.ensureHumanReadable(ctx, resp)
+	if err == nil {
+		resp = polishedResp
 	}
 
 	// Construct agent response event
@@ -269,4 +312,150 @@ func (r *SchemaRouterImpl) handleEndThread(ctx context.Context, event events.Dom
 	}
 
 	return nil
+}
+
+func (r *SchemaRouterImpl) handleHubAddUserMessage(ctx context.Context, event events.DomainEvent) error {
+	logger := *zerolog.Ctx(ctx)
+	var payload events.AddUserMessagePayload
+	if err := json.Unmarshal(event.Payload, &payload); err != nil {
+		logger.Error().Err(err).Msg("failed to unmarshal AddUserMessagePayload")
+		return fmt.Errorf("failed to unmarshal add-user-message payload: %w", err)
+	}
+
+	logger = logger.With().Str("thread_id", payload.ThreadID).Logger()
+	ctx = logger.WithContext(ctx)
+
+	if r.orchestrator == nil {
+		logger.Error().Msg("orchestrator not initialized under hub role")
+		return fmt.Errorf("orchestrator not configured")
+	}
+
+	logger.Info().Msg("hub processing incoming user message event")
+	return r.orchestrator.ProcessUserMessage(ctx, event.TenantID, payload.ThreadID, payload, event.EventID)
+}
+
+func (r *SchemaRouterImpl) handleHubAgentDelegation(ctx context.Context, event events.DomainEvent) error {
+	logger := *zerolog.Ctx(ctx)
+	var payload events.AgentDelegationPayload
+	if err := json.Unmarshal(event.Payload, &payload); err != nil {
+		logger.Error().Err(err).Msg("failed to unmarshal AgentDelegationPayload")
+		return fmt.Errorf("failed to unmarshal agent-delegation payload: %w", err)
+	}
+
+	logger = logger.With().Str("thread_id", payload.ThreadID).Logger()
+	ctx = logger.WithContext(ctx)
+
+	if r.orchestrator == nil {
+		logger.Error().Msg("orchestrator not initialized under hub role")
+		return fmt.Errorf("orchestrator not configured")
+	}
+
+	// Convert delegation into an AddUserMessagePayload for orchestrator consumption
+	userPayload := events.AddUserMessagePayload{
+		ThreadID:    payload.ThreadID,
+		CommunityID: payload.CommunityID,
+		Message:     payload.Message,
+	}
+
+	logger.Info().Str("delegating_agent", payload.DelegatingAgent).Msg("hub processing incoming agent-delegation event")
+	return r.orchestrator.ProcessUserMessage(ctx, event.TenantID, payload.ThreadID, userPayload, event.EventID)
+}
+
+func (r *SchemaRouterImpl) handleAgentDelegation(ctx context.Context, event events.DomainEvent) error {
+	logger := *zerolog.Ctx(ctx)
+	var payload events.AgentDelegationPayload
+	if err := json.Unmarshal(event.Payload, &payload); err != nil {
+		logger.Error().Err(err).Msg("failed to unmarshal AgentDelegationPayload")
+		return fmt.Errorf("failed to unmarshal agent-delegation payload: %w", err)
+	}
+
+	logger = logger.With().Str("thread_id", payload.ThreadID).Logger()
+	ctx = logger.WithContext(ctx)
+
+	logger.Info().
+		Str("delegating_agent", payload.DelegatingAgent).
+		Str("target_agent", payload.TargetAgent).
+		Msg("spoke processing incoming agent-delegation event")
+
+	resp, err := r.processor.ProcessIncomingMessage(ctx, event.TenantID, r.agentID, payload.ThreadID, payload.Message)
+	if err != nil {
+		logger.Warn().Err(err).Msg("failed to process delegated message, triggering STM rollback")
+		if rollbackErr := r.memory.RollbackLast(ctx, event.TenantID, r.agentID, payload.ThreadID); rollbackErr != nil {
+			logger.Error().Err(rollbackErr).Msg("failed to rollback last memory entry after LLM failure")
+		}
+		return fmt.Errorf("failed to process delegated message: %w", err)
+	}
+
+	// Construct agent response event for Spoke response
+	respPayload := events.AgentResponsePayload{
+		ThreadID:           payload.ThreadID,
+		CommunityID:        payload.CommunityID,
+		AgentName:          r.agentName,
+		CorrelationEventID: event.EventID,
+		Response:           resp,
+		Finished:           true,
+	}
+
+	sourceIdentity := fmt.Sprintf("agent/%s", r.agentID)
+	responseEvent, err := events.NewDomainEvent(
+		events.SchemaConversationalAgentSpokeResponse,
+		sourceIdentity,
+		event.TenantID,
+		respPayload,
+	)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to construct agent-response domain event")
+		return fmt.Errorf("failed to create response event: %w", err)
+	}
+
+	eventData, err := json.Marshal(responseEvent)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to marshal agent-response domain event")
+		return fmt.Errorf("failed to marshal response event: %w", err)
+	}
+
+	subject := fmt.Sprintf("ts.community.%s.agent.%s.thread.%s.response", payload.CommunityID, r.agentID, payload.ThreadID)
+	logger.Info().Str("subject", subject).Msg("publishing spoke agent-response event")
+	if err := r.publisher.Publish(ctx, subject, eventData); err != nil {
+		logger.Error().Err(err).Msg("failed to publish agent-response event to NATS")
+		return fmt.Errorf("failed to publish response event: %w", err)
+	}
+
+	return nil
+}
+
+func (r *SchemaRouterImpl) handleHubSpokeResponse(ctx context.Context, event events.DomainEvent) error {
+	logger := *zerolog.Ctx(ctx)
+	var payload events.AgentResponsePayload
+	if err := json.Unmarshal(event.Payload, &payload); err != nil {
+		logger.Error().Err(err).Msg("failed to unmarshal AgentResponsePayload")
+		return fmt.Errorf("failed to unmarshal agent-response payload: %w", err)
+	}
+
+	logger = logger.With().Str("thread_id", payload.ThreadID).Logger()
+	ctx = logger.WithContext(ctx)
+
+	if r.orchestrator == nil {
+		logger.Error().Msg("orchestrator not initialized under hub role")
+		return fmt.Errorf("orchestrator not configured")
+	}
+
+	logger.Info().Str("spoke_agent", payload.AgentName).Msg("hub processing incoming spoke response event")
+	return r.orchestrator.ProcessSpokeResponse(ctx, event.TenantID, payload.ThreadID, payload)
+}
+
+func (r *SchemaRouterImpl) ensureHumanReadable(ctx context.Context, text string) (string, error) {
+	if r.brain == nil {
+		return text, nil
+	}
+
+	prompt := fmt.Sprintf("Please review the following response. If it is already a clean, human-readable, and polished message, output it exactly as-is. If it contains raw data, observation logs, or is unstructured, rewrite and polish it to be a clear, cohesive, and human-friendly final answer to the user. Maintain all facts and details.\n\nResponse to review:\n%s", text)
+	resp, err := r.brain.Generate(ctx, model.BrainRequest{
+		Prompt:       prompt,
+		SystemPrompt: "You are a polishing assistant. Your task is to ensure that the response is human-readable, polished, and friendly, while preserving all facts.",
+	})
+	if err != nil {
+		return text, err
+	}
+	return resp.Content, nil
 }

@@ -24,14 +24,14 @@ type EchoReply struct {
 type AgentEchoResult struct {
 	AgentName string `json:"agent_name"`
 	Decorated string `json:"decorated"`
-	Error     string `json:"error"`
+	Error     string `json:"error,omitempty"`
 }
 
 // CommunityEchoResponse is the HTTP response payload of the echo endpoint.
 type CommunityEchoResponse struct {
 	CommunityID   string            `json:"community_id"`
 	WokeCommunity bool              `json:"woke_community"`
-	Results       []AgentEchoResult `json:"results"`
+	Results       []AgentEchoResult `json:"results,omitempty"`
 }
 
 // SanitizeMessage strips non-printable Unicode characters from s and truncates to 1000 characters.

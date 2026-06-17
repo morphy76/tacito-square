@@ -11,21 +11,25 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/outbound"
+	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
 	"github.com/morphy76/tacito-square/internal/shared/tenant"
 	"github.com/morphy76/tacito-square/pkg/events"
+	"github.com/rs/zerolog/log"
 )
 
 // EventServiceImpl implements the EventUseCase and EventStreamUseCase ports.
 type EventServiceImpl struct {
 	publisher  outbound.EventPublisher
 	subscriber outbound.EventSubscriber
+	commRepo   outbound.CommunityRepository
 }
 
 // NewEventService constructs a new EventServiceImpl.
-func NewEventService(publisher outbound.EventPublisher, subscriber outbound.EventSubscriber) *EventServiceImpl {
+func NewEventService(publisher outbound.EventPublisher, subscriber outbound.EventSubscriber, commRepo outbound.CommunityRepository) *EventServiceImpl {
 	return &EventServiceImpl{
 		publisher:  publisher,
 		subscriber: subscriber,
+		commRepo:   commRepo,
 	}
 }
 
@@ -40,11 +44,15 @@ func (s *EventServiceImpl) PublishEvent(ctx context.Context, schemaRef string, p
 	}
 
 	// Resolve tenant ID
+	ten := tenant.FromContext(ctx)
 	var tenantID string
-	if ten := tenant.FromContext(ctx); ten != nil {
+	if ten != nil {
 		tenantID = ten.FullName()
 	} else if val, ok := ctx.Value("tenant_id").(string); ok {
 		tenantID = val
+		if parsedTen, err := tenant.New(tenantID, ""); err == nil {
+			ctx = tenant.ContextWithTenant(ctx, parsedTen)
+		}
 	}
 	if tenantID == "" {
 		return events.DomainEvent{}, errors.New("unauthorized: missing tenant context")
@@ -89,7 +97,7 @@ func (s *EventServiceImpl) PublishEvent(ctx context.Context, schemaRef string, p
 		}
 
 		if routeInfo.AgentName == "" {
-			subject = fmt.Sprintf("ts.community.%s.agent.all", routeInfo.CommunityID)
+			subject = s.resolveTopologySubject(ctx, routeInfo.CommunityID)
 		} else {
 			subject = fmt.Sprintf("ts.community.%s.agent.%s", routeInfo.CommunityID, routeInfo.AgentName)
 		}
@@ -143,6 +151,55 @@ func (s *EventServiceImpl) PublishEvent(ctx context.Context, schemaRef string, p
 // SubscribeEvents registers a handler for real-time community events streaming.
 func (s *EventServiceImpl) SubscribeEvents(ctx context.Context, tenantID string, handler func(*events.DomainEvent)) (outbound.EventSubscription, error) {
 	return s.subscriber.Subscribe(ctx, "ts.community.>", tenantID, handler)
+}
+
+// resolveTopologySubject determines the NATS subject based on community topology.
+// For hub-spoke communities, routes to the hub agent. For single-agent or unknown
+// communities, falls back to the broadcast subject.
+func (s *EventServiceImpl) resolveTopologySubject(ctx context.Context, communityID string) string {
+	fallback := fmt.Sprintf("ts.community.%s.agent.all", communityID)
+	logger := log.Ctx(ctx)
+
+	if s.commRepo == nil {
+		logger.Warn().
+			Str("community_id", communityID).
+			Msg("community repository not available: routing to broadcast subject")
+		return fallback
+	}
+
+	commUUID, err := uuid.Parse(communityID)
+	if err != nil {
+		logger.Warn().
+			Str("community_id", communityID).
+			Err(err).
+			Msg("invalid community UUID: routing to broadcast subject")
+		return fallback
+	}
+
+	community, err := s.commRepo.GetByID(ctx, commUUID)
+	if err != nil {
+		logger.Warn().
+			Str("community_id", communityID).
+			Err(err).
+			Msg("failed to resolve community topology: routing to broadcast subject")
+		return fallback
+	}
+
+	if community.Topology == model.CommunityTopologyHubSpoke {
+		subject := fmt.Sprintf("ts.community.%s.agent.hub", communityID)
+		logger.Debug().
+			Str("community_id", communityID).
+			Str("topology", string(community.Topology)).
+			Str("subject", subject).
+			Msg("resolved hub-spoke routing subject")
+		return subject
+	}
+
+	logger.Debug().
+		Str("community_id", communityID).
+		Str("topology", string(community.Topology)).
+		Msg("single-agent topology: routing to broadcast subject")
+	return fallback
 }
 
 func sanitizeMessage(s string) string {

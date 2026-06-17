@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -9,17 +10,17 @@ import (
 )
 
 func TestAgent_Validation(t *testing.T) {
+	temp := 0.7
+	maxTokens := 2048
 	validAgent := Agent{
 		ID:          uuid.New(),
 		TenantID:    "test-tenant.com",
 		Name:        "qa-agent",
 		Description: "QA Testing Agent template",
 		Brain: BrainConfig{
-			Model:              "gpt-4o",
-			Temperature:        0.7,
-			MaxTokens:          2048,
-			Endpoint:           "https://api.openai.com/v1",
-			CredentialsSecret:  "openai-secret-key",
+			LLMBindingID: uuid.New(),
+			Temperature:  &temp,
+			MaxTokens:    &maxTokens,
 		},
 		ShortTermMemory: ShortTermMemoryConfig{
 			KeyNamespace: "agent:qa:short",
@@ -51,6 +52,31 @@ func TestAgent_Validation(t *testing.T) {
 			agent: validAgent,
 		},
 		{
+			name: "Valid Agent with hub role",
+			agent: func() Agent {
+				a := validAgent
+				a.Role = "hub"
+				return a
+			}(),
+		},
+		{
+			name: "Valid Agent with spoke role",
+			agent: func() Agent {
+				a := validAgent
+				a.Role = "spoke"
+				return a
+			}(),
+		},
+		{
+			name: "Invalid agent role",
+			agent: func() Agent {
+				a := validAgent
+				a.Role = "invalid-role"
+				return a
+			}(),
+			wantErr: "invalid agent role",
+		},
+		{
 			name: "Missing ID",
 			agent: func() Agent {
 				a := validAgent
@@ -78,46 +104,20 @@ func TestAgent_Validation(t *testing.T) {
 			wantErr: "name is required",
 		},
 		{
-			name: "Invalid brain model",
+			name: "Missing LLM Binding ID",
 			agent: func() Agent {
 				a := validAgent
-				a.Brain.Model = ""
+				a.Brain.LLMBindingID = uuid.Nil
 				return a
 			}(),
-			wantErr: "brain model is required",
-		},
-		{
-			name: "Missing brain endpoint",
-			agent: func() Agent {
-				a := validAgent
-				a.Brain.Endpoint = ""
-				return a
-			}(),
-			wantErr: "brain endpoint is required",
-		},
-		{
-			name: "Invalid brain endpoint URL",
-			agent: func() Agent {
-				a := validAgent
-				a.Brain.Endpoint = "not-a-valid-url"
-				return a
-			}(),
-			wantErr: "brain endpoint must be a valid URL",
-		},
-		{
-			name: "Missing brain credentials secret",
-			agent: func() Agent {
-				a := validAgent
-				a.Brain.CredentialsSecret = ""
-				return a
-			}(),
-			wantErr: "brain credentials secret is required",
+			wantErr: "brain llm binding id is required",
 		},
 		{
 			name: "Invalid brain temperature too low",
 			agent: func() Agent {
 				a := validAgent
-				a.Brain.Temperature = -0.1
+				val := -0.1
+				a.Brain.Temperature = &val
 				return a
 			}(),
 			wantErr: "brain temperature must be between 0.0 and 2.0",
@@ -126,7 +126,8 @@ func TestAgent_Validation(t *testing.T) {
 			name: "Invalid brain temperature too high",
 			agent: func() Agent {
 				a := validAgent
-				a.Brain.Temperature = 2.1
+				val := 2.1
+				a.Brain.Temperature = &val
 				return a
 			}(),
 			wantErr: "brain temperature must be between 0.0 and 2.0",
@@ -135,10 +136,20 @@ func TestAgent_Validation(t *testing.T) {
 			name: "Invalid brain max tokens",
 			agent: func() Agent {
 				a := validAgent
-				a.Brain.MaxTokens = 0
+				val := -1
+				a.Brain.MaxTokens = &val
 				return a
 			}(),
-			wantErr: "brain max tokens must be positive",
+			wantErr: "brain max tokens must be non-negative",
+		},
+		{
+			name: "Valid Agent with nil Brain Temperature and MaxTokens overrides",
+			agent: func() Agent {
+				a := validAgent
+				a.Brain.Temperature = nil
+				a.Brain.MaxTokens = nil
+				return a
+			}(),
 		},
 		{
 			name: "Invalid short term memory ttl",
@@ -260,3 +271,32 @@ func TestAgent_Validation(t *testing.T) {
 		})
 	}
 }
+
+func TestAgent_JSONSerialization(t *testing.T) {
+	a := Agent{
+		ID:        uuid.New(),
+		Name:      "test-agent",
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	data, err := json.Marshal(a)
+	assert.NoError(t, err)
+
+	var m map[string]interface{}
+	err = json.Unmarshal(data, &m)
+	assert.NoError(t, err)
+
+	// Omitted empty/nil fields
+	assert.NotContains(t, m, "skills")
+	assert.NotContains(t, m, "mcp_clients")
+	assert.NotContains(t, m, "community_id")
+	assert.NotContains(t, m, "description")
+	assert.NotContains(t, m, "role")
+	assert.NotContains(t, m, "tier")
+
+	// Present required/non-empty fields
+	assert.Contains(t, m, "id")
+	assert.Contains(t, m, "name")
+}
+

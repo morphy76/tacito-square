@@ -197,6 +197,11 @@ func (h *PromptHandler) UpdateTemplate(c *gin.Context) {
 		return
 	}
 
+	if model.IsSystemLocked(id) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "cannot modify system-locked prompt template"})
+		return
+	}
+
 	var req UpdatePromptTemplateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -263,6 +268,11 @@ func (h *PromptHandler) DeleteTemplate(c *gin.Context) {
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid uuid"})
+		return
+	}
+
+	if model.IsSystemLocked(id) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "cannot modify system-locked prompt template"})
 		return
 	}
 

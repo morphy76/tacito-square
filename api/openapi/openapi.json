@@ -3086,6 +3086,9 @@
           "skills"
         ],
         "properties": {
+          "agent_id": {
+            "type": "string"
+          },
           "name": {
             "type": "string"
           },
@@ -4066,33 +4069,23 @@
       "BrainConfig": {
         "type": "object",
         "required": [
-          "model"
+          "llm_binding_id"
         ],
         "properties": {
-          "model": {
+          "llm_binding_id": {
             "type": "string",
-            "example": "gpt-4o",
-            "description": "Target LLM model string (e.g. gpt-4o). Why: Tells the inference engine what architecture to query."
+            "format": "uuid",
+            "description": "System-generated unique UUID of the referenced LLM binding. Why: Decouples agent config from connection details."
           },
           "temperature": {
             "type": "number",
             "example": 0.7,
-            "description": "Model sampling temperature. Why: Determines predictability vs creativity of generated content."
+            "description": "Model sampling temperature override. Why: Determines predictability vs creativity of generated content."
           },
           "max_tokens": {
             "type": "integer",
             "example": 2048,
-            "description": "Token output limit. Why: Sets strict usage boundaries to avoid cascading latency or processing costs."
-          },
-          "endpoint": {
-            "type": "string",
-            "example": "https://api.openai.com/v1",
-            "description": "Direct model endpoint URL override. Why: Allows bypassing the standard binding URL for private test proxies."
-          },
-          "credentials_secret": {
-            "type": "string",
-            "example": "openai-secret-key",
-            "description": "Secret ref containing access tokens. Why: Authenticates outbound calls securely."
+            "description": "Token output limit override. Why: Sets strict usage boundaries to avoid cascading latency or processing costs."
           }
         },
         "description": "Defines the agent's cognitive brain. Why: Selects the LLM provider, target model, and parameters (like temperature) that govern agent reasoning."
@@ -4183,6 +4176,15 @@
             "example": "QA Testing Agent template",
             "description": "Role description for this agent, highlighting its expertise area."
           },
+          "role": {
+            "type": "string",
+            "enum": [
+              "hub",
+              "spoke"
+            ],
+            "default": "spoke",
+            "description": "Topology role of the agent. Why: Distinguishes routing hubs from specialist spokes."
+          },
           "brain": {
             "allOf": [
               {
@@ -4259,6 +4261,15 @@
             "type": "string",
             "example": "QA Testing Agent template",
             "description": "Refined role explanation for the agent."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "hub",
+              "spoke"
+            ],
+            "default": "spoke",
+            "description": "Updated topology role of the agent."
           },
           "brain": {
             "allOf": [
@@ -4343,6 +4354,15 @@
           "description": {
             "type": "string",
             "description": "Explanation of the agent's functional role."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "hub",
+              "spoke"
+            ],
+            "default": "spoke",
+            "description": "Topology role of the agent."
           },
           "brain": {
             "allOf": [
@@ -4439,9 +4459,10 @@
           "topology": {
             "type": "string",
             "enum": [
+              "single-agent",
               "hub-spoke"
             ],
-            "description": "Collaboration structure. Why: Hub-Spoke forces centralized routing for governance."
+            "description": "Collaboration structure. Why: Single standalone or Hub-Spoke layout."
           },
           "configuration": {
             "type": "object",
@@ -4470,6 +4491,7 @@
           "topology": {
             "type": "string",
             "enum": [
+              "single-agent",
               "hub-spoke"
             ],
             "description": "Selected collaboration structure."
@@ -4524,6 +4546,7 @@
           "topology": {
             "type": "string",
             "enum": [
+              "single-agent",
               "hub-spoke"
             ],
             "description": "Collaboration topology design."

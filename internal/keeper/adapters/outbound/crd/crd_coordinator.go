@@ -27,12 +27,13 @@ import (
 
 // K8sCRDCoordinator implements outbound.CRDCoordinator driving ports.
 type K8sCRDCoordinator struct {
-	client     client.Client
-	namespace  string
-	promptRepo outbound.PromptRepository
-	skillRepo  outbound.SkillRepository
-	mcpRepo    outbound.MCPClientRepository
-	natsConn   *nats.Conn
+	client         client.Client
+	namespace      string
+	llmBindingRepo outbound.LLMBindingRepository
+	promptRepo     outbound.PromptRepository
+	skillRepo      outbound.SkillRepository
+	mcpRepo        outbound.MCPClientRepository
+	natsConn       *nats.Conn
 }
 
 var _ outbound.CRDCoordinator = (*K8sCRDCoordinator)(nil)
@@ -40,6 +41,7 @@ var _ outbound.CRDCoordinator = (*K8sCRDCoordinator)(nil)
 // NewK8sCRDCoordinator creates a new K8sCRDCoordinator with a real controller-runtime Client.
 func NewK8sCRDCoordinator(
 	config *rest.Config,
+	llmBindingRepo outbound.LLMBindingRepository,
 	promptRepo outbound.PromptRepository,
 	skillRepo outbound.SkillRepository,
 	mcpRepo outbound.MCPClientRepository,
@@ -59,12 +61,13 @@ func NewK8sCRDCoordinator(
 	}
 
 	return &K8sCRDCoordinator{
-		client:     c,
-		namespace:  "tacito",
-		promptRepo: promptRepo,
-		skillRepo:  skillRepo,
-		mcpRepo:    mcpRepo,
-		natsConn:   nc,
+		client:         c,
+		namespace:      "tacito",
+		llmBindingRepo: llmBindingRepo,
+		promptRepo:     promptRepo,
+		skillRepo:      skillRepo,
+		mcpRepo:        mcpRepo,
+		natsConn:       nc,
 	}, nil
 }
 
@@ -72,6 +75,7 @@ func NewK8sCRDCoordinator(
 func NewK8sCRDCoordinatorWithClient(
 	c client.Client,
 	namespace string,
+	llmBindingRepo outbound.LLMBindingRepository,
 	promptRepo outbound.PromptRepository,
 	skillRepo outbound.SkillRepository,
 	mcpRepo outbound.MCPClientRepository,
@@ -81,12 +85,13 @@ func NewK8sCRDCoordinatorWithClient(
 		namespace = "tacito"
 	}
 	return &K8sCRDCoordinator{
-		client:     c,
-		namespace:  namespace,
-		promptRepo: promptRepo,
-		skillRepo:  skillRepo,
-		mcpRepo:    mcpRepo,
-		natsConn:   nc,
+		client:         c,
+		namespace:      namespace,
+		llmBindingRepo: llmBindingRepo,
+		promptRepo:     promptRepo,
+		skillRepo:      skillRepo,
+		mcpRepo:        mcpRepo,
+		natsConn:       nc,
 	}
 }
 
@@ -157,29 +162,60 @@ type PropagatedAgentConfig struct {
 // ResolveAndSynthesizeSystemPrompt fetches templates and skills out-of-band and compiles them into a system prompt.
 func (c *K8sCRDCoordinator) ResolveAndSynthesizeSystemPrompt(ctx context.Context, agent *model.Agent) (string, error) {
 	var directives string
-	if agent.PromptTemplate != uuid.Nil {
-		tpl, err := c.promptRepo.GetTemplateByID(ctx, agent.PromptTemplate)
-		if err != nil {
-			return "", fmt.Errorf("fetching prompt template: %w", err)
+	description := agent.Description
+
+	if agent.Role == "hub" {
+		if c.promptRepo != nil {
+			// Fetch the role-specific template for hub
+			roleTpl, err := c.promptRepo.GetTemplateByID(ctx, model.HubSystemPromptTemplateID)
+			if err != nil {
+				return "", fmt.Errorf("fetching role-specific hub prompt template: %w", err)
+			}
+			directives = roleTpl.Content
 		}
-		directives = tpl.Content
+
+		// If a business-specific prompt template is provided (and is not the hub template itself)
+		if agent.PromptTemplate != uuid.Nil && agent.PromptTemplate != model.HubSystemPromptTemplateID {
+			if c.promptRepo != nil {
+				businessTpl, err := c.promptRepo.GetTemplateByID(ctx, agent.PromptTemplate)
+				if err != nil {
+					return "", fmt.Errorf("fetching business-specific prompt template: %w", err)
+				}
+				if description != "" {
+					description = description + "\n\n" + businessTpl.Content
+				} else {
+					description = businessTpl.Content
+				}
+			}
+		}
+	} else {
+		// Non-hub agent (spoke or general)
+		if agent.PromptTemplate != uuid.Nil && c.promptRepo != nil {
+			tpl, err := c.promptRepo.GetTemplateByID(ctx, agent.PromptTemplate)
+			if err != nil {
+				return "", fmt.Errorf("fetching prompt template: %w", err)
+			}
+			directives = tpl.Content
+		}
 	}
 
 	var skillsList []SkillConfig
-	for _, skillID := range agent.Skills {
-		skill, err := c.skillRepo.GetByID(ctx, skillID)
-		if err != nil {
-			return "", fmt.Errorf("fetching skill: %w", err)
+	if c.skillRepo != nil {
+		for _, skillID := range agent.Skills {
+			skill, err := c.skillRepo.GetByID(ctx, skillID)
+			if err != nil {
+				return "", fmt.Errorf("fetching skill: %w", err)
+			}
+			skillsList = append(skillsList, SkillConfig{
+				Name:        skill.Name,
+				Description: skill.Description,
+				Content:     skill.Content,
+			})
 		}
-		skillsList = append(skillsList, SkillConfig{
-			Name:        skill.Name,
-			Description: skill.Description,
-			Content:     skill.Content,
-		})
 	}
 
 	config := PropagatedAgentConfig{
-		Description: agent.Description,
+		Description: description,
 		Directives:  directives,
 		Skills:      skillsList,
 	}
@@ -214,28 +250,39 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 	deadlineCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	// 1. Resolve LLMConfig values
+	// 1. Resolve LLMConfig values by fetching LLMBinding
+	if c.llmBindingRepo == nil {
+		return fmt.Errorf("llmBindingRepo is nil in CRD coordinator")
+	}
+	llmBinding, err := c.llmBindingRepo.GetByID(ctx, agent.Brain.LLMBindingID)
+	if err != nil {
+		return fmt.Errorf("resolving llm binding %s: %w", agent.Brain.LLMBindingID, err)
+	}
+
+	modelName := llmBinding.DefaultModel
+
 	var temp *string
-	if agent.Brain.Temperature != 0.0 {
-		tStr := strconv.FormatFloat(agent.Brain.Temperature, 'f', -1, 64)
+	if agent.Brain.Temperature != nil {
+		tStr := strconv.FormatFloat(*agent.Brain.Temperature, 'f', -1, 64)
+		temp = &tStr
+	} else {
+		tStr := strconv.FormatFloat(llmBinding.DefaultTemperature, 'f', -1, 64)
 		temp = &tStr
 	}
 
-	var maxTokens *int32
-	if agent.Brain.MaxTokens > 0 {
-		mt := int32(agent.Brain.MaxTokens)
-		maxTokens = &mt
+	var maxTokensVal int32
+	if agent.Brain.MaxTokens != nil {
+		maxTokensVal = int32(*agent.Brain.MaxTokens)
+	} else {
+		maxTokensVal = int32(llmBinding.DefaultMaxTokens)
 	}
+	maxTokens := &maxTokensVal
 
-	var endpoint *string
-	if agent.Brain.Endpoint != "" {
-		endpoint = &agent.Brain.Endpoint
-	}
+	endpoint := &llmBinding.APIBaseURL
 
 	var credsSecret *string
-	if agent.Brain.CredentialsSecret != "" {
-		sName := "s-" + strings.ToLower(agent.ID.String())
-		credsSecret = &sName
+	if llmBinding.APIKeySecretRef != "" {
+		credsSecret = &llmBinding.APIKeySecretRef
 	}
 
 	var communityRef string
@@ -292,7 +339,7 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 					CommunityRef: communityRef,
 					SystemPrompt: systemPrompt,
 					LLMConfig: v1alpha1.LLMConfig{
-						Model:             agent.Brain.Model,
+						Model:             modelName,
 						Temperature:       temp,
 						MaxTokens:         maxTokens,
 						Endpoint:          endpoint,
@@ -300,6 +347,7 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 					},
 					MCPClients: mcpClientSpecs,
 					Tier:       agent.Tier,
+					Role:       agent.Role,
 				},
 			}
 			err = c.client.Create(deadlineCtx, crdObj)
@@ -322,13 +370,14 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 		latest.Spec.AgentName = agent.Name
 		latest.Spec.CommunityRef = communityRef
 		latest.Spec.SystemPrompt = systemPrompt
-		latest.Spec.LLMConfig.Model = agent.Brain.Model
+		latest.Spec.LLMConfig.Model = modelName
 		latest.Spec.LLMConfig.Temperature = temp
 		latest.Spec.LLMConfig.MaxTokens = maxTokens
 		latest.Spec.LLMConfig.Endpoint = endpoint
 		latest.Spec.LLMConfig.CredentialsSecret = credsSecret
 		latest.Spec.MCPClients = mcpClientSpecs
 		latest.Spec.Tier = agent.Tier
+		latest.Spec.Role = agent.Role
 
 		err = c.client.Update(deadlineCtx, latest)
 		if err != nil {
@@ -340,57 +389,7 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 
 // reconcileCredentialsSecret creates or updates the Kubernetes Secret s-<agentId> containing the LLM API credentials.
 func (c *K8sCRDCoordinator) reconcileCredentialsSecret(ctx context.Context, agent *model.Agent, owner *v1alpha1.TacitoAgent) error {
-	if agent.Brain.CredentialsSecret == "" {
-		return nil
-	}
-
-	secretName := "s-" + strings.ToLower(agent.ID.String())
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: c.namespace,
-		},
-	}
-
-	// We set owner reference to the TacitoAgent CRD so K8s GC deletes it
-	ownerRef := metav1.OwnerReference{
-		APIVersion: owner.APIVersion,
-		Kind:       owner.Kind,
-		Name:       owner.Name,
-		UID:        owner.UID,
-	}
-	if ownerRef.APIVersion == "" {
-		ownerRef.APIVersion = "tacito.square.io/v1alpha1"
-	}
-	if ownerRef.Kind == "" {
-		ownerRef.Kind = "TacitoAgent"
-	}
-	isController := true
-	blockOwnerDeletion := true
-	ownerRef.Controller = &isController
-	ownerRef.BlockOwnerDeletion = &blockOwnerDeletion
-
-	key := types.NamespacedName{Namespace: c.namespace, Name: secretName}
-	existingSecret := &corev1.Secret{}
-	err := c.client.Get(ctx, key, existingSecret)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			secret.OwnerReferences = []metav1.OwnerReference{ownerRef}
-			secret.Data = map[string][]byte{
-				"api-key": []byte(agent.Brain.CredentialsSecret),
-			}
-			return c.client.Create(ctx, secret)
-		}
-		return err
-	}
-
-	// Update existing secret with new API key if changed
-	existingSecret.OwnerReferences = []metav1.OwnerReference{ownerRef}
-	if existingSecret.Data == nil {
-		existingSecret.Data = make(map[string][]byte)
-	}
-	existingSecret.Data["api-key"] = []byte(agent.Brain.CredentialsSecret)
-	return c.client.Update(ctx, existingSecret)
+	return nil
 }
 
 // TeardownAgentCRD deletes the corresponding TacitoAgent custom resource safely.

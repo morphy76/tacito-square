@@ -2,7 +2,6 @@ package model
 
 import (
 	"errors"
-	"net/url"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,11 +23,9 @@ const (
 
 // BrainConfig encapsulates Large Language Model settings for the agent.
 type BrainConfig struct {
-	Model             string  `json:"model"`
-	Temperature       float64 `json:"temperature"`
-	MaxTokens         int     `json:"max_tokens"`
-	Endpoint          string  `json:"endpoint"`
-	CredentialsSecret string  `json:"credentials_secret"`
+	LLMBindingID uuid.UUID `json:"llm_binding_id"`
+	Temperature  *float64  `json:"temperature,omitempty"`
+	MaxTokens    *int      `json:"max_tokens,omitempty"`
 }
 
 // ShortTermMemoryConfig encapsulates Redis ephemeral state configuration.
@@ -46,26 +43,27 @@ type LongTermMemoryConfig struct {
 // MCPClientConfig encapsulates custom configurations for attached MCP clients.
 type MCPClientConfig struct {
 	ClientID     uuid.UUID         `json:"client_id"`
-	CustomEnv    map[string]string `json:"custom_env"`
-	CustomArgs   []string          `json:"custom_args"`
-	AllowedTools []string          `json:"allowed_tools"`
+	CustomEnv    map[string]string `json:"custom_env,omitempty"`
+	CustomArgs   []string          `json:"custom_args,omitempty"`
+	AllowedTools []string          `json:"allowed_tools,omitempty"`
 }
 
 // Agent represents the aggregate root for an Agent Template within Keeper.
 type Agent struct {
 	ID              uuid.UUID             `json:"id"`
-	TenantID        string                `json:"tenant_id"`
+	TenantID        string                `json:"tenant_id,omitempty"`
 	Name            string                `json:"name"`
-	Description     string                `json:"description"`
+	Description     string                `json:"description,omitempty"`
+	Role            string                `json:"role,omitempty"`
 	Brain           BrainConfig           `json:"brain"`
 	ShortTermMemory ShortTermMemoryConfig `json:"short_term_memory"`
 	LongTermMemory  LongTermMemoryConfig  `json:"long_term_memory"`
-	Skills          []uuid.UUID           `json:"skills"`
-	PromptTemplate  uuid.UUID             `json:"prompt_template"`
-	MCPClients      []MCPClientConfig     `json:"mcp_clients"`
+	Skills          []uuid.UUID           `json:"skills,omitempty"`
+	PromptTemplate  uuid.UUID             `json:"prompt_template,omitempty"`
+	MCPClients      []MCPClientConfig     `json:"mcp_clients,omitempty"`
 	Status          AgentStatus           `json:"status"`
-	CommunityID     *uuid.UUID            `json:"community_id"`
-	Tier            string                `json:"tier"`
+	CommunityID     *uuid.UUID            `json:"community_id,omitempty"`
+	Tier            string                `json:"tier,omitempty"`
 	CreatedAt       time.Time             `json:"created_at"`
 	UpdatedAt       time.Time             `json:"updated_at"`
 }
@@ -81,6 +79,9 @@ func (a Agent) Validate() error {
 	if a.Name == "" {
 		return errors.New("name is required")
 	}
+	if a.Role != "" && a.Role != "hub" && a.Role != "spoke" {
+		return errors.New("invalid agent role")
+	}
 	if a.Status != AgentStatusDefined && a.Status != AgentStatusAssigned && a.Status != AgentStatusActive && a.Status != AgentStatusTerminated &&
 		a.Status != AgentStatusStopped && a.Status != AgentStatusPending && a.Status != AgentStatusRunning && a.Status != AgentStatusError {
 		return errors.New("invalid agent status")
@@ -93,23 +94,14 @@ func (a Agent) Validate() error {
 	}
 
 	// Brain validations
-	if a.Brain.Model == "" {
-		return errors.New("brain model is required")
+	if a.Brain.LLMBindingID == uuid.Nil {
+		return errors.New("brain llm binding id is required")
 	}
-	if a.Brain.Temperature < 0.0 || a.Brain.Temperature > 2.0 {
+	if a.Brain.Temperature != nil && (*a.Brain.Temperature < 0.0 || *a.Brain.Temperature > 2.0) {
 		return errors.New("brain temperature must be between 0.0 and 2.0")
 	}
-	if a.Brain.MaxTokens <= 0 {
-		return errors.New("brain max tokens must be positive")
-	}
-	if a.Brain.Endpoint == "" {
-		return errors.New("brain endpoint is required")
-	}
-	if _, err := url.ParseRequestURI(a.Brain.Endpoint); err != nil {
-		return errors.New("brain endpoint must be a valid URL")
-	}
-	if a.Brain.CredentialsSecret == "" {
-		return errors.New("brain credentials secret is required")
+	if a.Brain.MaxTokens != nil && *a.Brain.MaxTokens < 0 {
+		return errors.New("brain max tokens must be non-negative")
 	}
 
 	// ShortTermMemory validations

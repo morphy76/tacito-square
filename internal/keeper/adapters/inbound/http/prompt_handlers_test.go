@@ -286,3 +286,58 @@ func TestPromptHandlers_ListCollections(t *testing.T) {
 		assert.Equal(t, "[]", resp.Body.String())
 	})
 }
+
+func TestPromptHandlers_SystemImmutability(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("Update System Prompt Template Fails", func(t *testing.T) {
+		repo := new(MockPromptUseCase)
+		handler := NewPromptHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.PUT("/api/v1/prompts/:id", handler.UpdateTemplate)
+
+		systemID := "ffffffff-0000-0000-0000-000000000001"
+		payload := map[string]interface{}{
+			"name":    "should-fail",
+			"content": "new content",
+			"status":  "active",
+		}
+
+		body, _ := json.Marshal(payload)
+		req, _ := http.NewRequest(http.MethodPut, "/api/v1/prompts/"+systemID, bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusBadRequest, resp.Code)
+		var respBody map[string]interface{}
+		err := json.Unmarshal(resp.Body.Bytes(), &respBody)
+		assert.NoError(t, err)
+		assert.Contains(t, respBody["error"], "cannot modify system-locked prompt template")
+	})
+
+	t.Run("Delete System Prompt Template Fails", func(t *testing.T) {
+		repo := new(MockPromptUseCase)
+		handler := NewPromptHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.DELETE("/api/v1/prompts/:id", handler.DeleteTemplate)
+
+		systemID := "ffffffff-0000-0000-0000-000000000001"
+		req, _ := http.NewRequest(http.MethodDelete, "/api/v1/prompts/"+systemID, nil)
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusBadRequest, resp.Code)
+		var respBody map[string]interface{}
+		err := json.Unmarshal(resp.Body.Bytes(), &respBody)
+		assert.NoError(t, err)
+		assert.Contains(t, respBody["error"], "cannot modify system-locked prompt template")
+	})
+}
+

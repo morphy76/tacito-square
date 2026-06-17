@@ -19,10 +19,10 @@ const (
 // Skill defines a single Skill capability.
 type Skill struct {
 	ID          uuid.UUID   `json:"id"`
-	TenantID    string      `json:"tenant_id"`
+	TenantID    string      `json:"tenant_id,omitempty"`
 	Name        string      `json:"name"`
-	Description string      `json:"description"`
-	Content     string      `json:"content"`
+	Description string      `json:"description,omitempty"`
+	Content     string      `json:"content,omitempty"`
 	Status      SkillStatus `json:"status"`
 	CreatedAt   time.Time   `json:"created_at"`
 	UpdatedAt   time.Time   `json:"updated_at"`
@@ -31,10 +31,10 @@ type Skill struct {
 // SkillCollection represents a group of skill capabilities.
 type SkillCollection struct {
 	ID          uuid.UUID   `json:"id"`
-	TenantID    string      `json:"tenant_id"`
+	TenantID    string      `json:"tenant_id,omitempty"`
 	Name        string      `json:"name"`
-	Description string      `json:"description"`
-	Skills      []uuid.UUID `json:"skills"`
+	Description string      `json:"description,omitempty"`
+	Skills      []uuid.UUID `json:"skills,omitempty"`
 	CreatedAt   time.Time   `json:"created_at"`
 	UpdatedAt   time.Time   `json:"updated_at"`
 }

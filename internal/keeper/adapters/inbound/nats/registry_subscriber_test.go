@@ -121,11 +121,9 @@ func TestRegistry_Ingestion(t *testing.T) {
 		Status:      model.AgentStatusAssigned,
 		CommunityID: &comm.ID,
 		Brain: model.BrainConfig{
-			Model:             "gpt-4",
-			Temperature:       0.7,
-			MaxTokens:         2048,
-			Endpoint:          "http://localhost:8080",
-			CredentialsSecret: "dummy",
+			LLMBindingID: uuid.New(),
+			Temperature:  ptrFloat64(0.7),
+			MaxTokens:    ptrInt(2048),
 		},
 		ShortTermMemory: model.ShortTermMemoryConfig{TTLSeconds: 60},
 		LongTermMemory:  model.LongTermMemoryConfig{VectorDimension: 1536},
@@ -200,3 +198,4 @@ func TestRegistry_Ingestion(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, card.Name, cachedCard.Name)
 }
+

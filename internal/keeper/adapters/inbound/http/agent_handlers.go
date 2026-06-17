@@ -28,11 +28,9 @@ func NewAgentHandler(repo inbound.AgentUseCase) *AgentHandler {
 }
 
 type CreateBrainRequest struct {
-	Model             string   `json:"model" binding:"required"`
-	Temperature       *float64 `json:"temperature" binding:"omitempty,gte=0.0,lte=2.0"`
-	MaxTokens         int      `json:"max_tokens" binding:"omitempty,gt=0"`
-	Endpoint          string   `json:"endpoint" binding:"required,url"`
-	CredentialsSecret string   `json:"credentials_secret" binding:"required"`
+	LLMBindingID string   `json:"llm_binding_id" binding:"required,uuid"`
+	Temperature  *float64 `json:"temperature" binding:"omitempty,gte=0.0,lte=2.0"`
+	MaxTokens    *int     `json:"max_tokens" binding:"omitempty,gt=0"`
 }
 
 type CreateShortTermRequest struct {
@@ -59,6 +57,7 @@ type DeploymentRequest struct {
 type CreateAgentRequest struct {
 	Name            string                 `json:"name" binding:"required"`
 	Description     string                 `json:"description"`
+	Role            string                 `json:"role"`
 	Brain           CreateBrainRequest     `json:"brain" binding:"required"`
 	ShortTermMemory CreateShortTermRequest `json:"short_term_memory" binding:"required"`
 	LongTermMemory  CreateLongTermRequest  `json:"long_term_memory" binding:"required"`
@@ -71,6 +70,7 @@ type CreateAgentRequest struct {
 type UpdateAgentRequest struct {
 	Name            string                 `json:"name" binding:"required"`
 	Description     string                 `json:"description"`
+	Role            string                 `json:"role"`
 	Brain           CreateBrainRequest     `json:"brain" binding:"required"`
 	ShortTermMemory CreateShortTermRequest `json:"short_term_memory" binding:"required"`
 	LongTermMemory  CreateLongTermRequest  `json:"long_term_memory" binding:"required"`
@@ -105,14 +105,12 @@ func (h *AgentHandler) Create(c *gin.Context) {
 		return
 	}
 
-	temp := 0.7
-	if req.Brain.Temperature != nil {
-		temp = *req.Brain.Temperature
+	llmBindingID, err := uuid.Parse(req.Brain.LLMBindingID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid llm_binding_id uuid"})
+		return
 	}
-	maxTokens := 2048
-	if req.Brain.MaxTokens > 0 {
-		maxTokens = req.Brain.MaxTokens
-	}
+
 
 	var promptTemplateUUID uuid.UUID
 	if req.PromptTemplate != "" {
@@ -149,17 +147,21 @@ func (h *AgentHandler) Create(c *gin.Context) {
 		})
 	}
 
+	role := req.Role
+	if role == "" {
+		role = "spoke"
+	}
+
 	agent := &model.Agent{
 		ID:          uuid.New(),
 		TenantID:    ten.FullName(),
 		Name:        req.Name,
 		Description: req.Description,
+		Role:        role,
 		Brain: model.BrainConfig{
-			Model:             req.Brain.Model,
-			Temperature:       temp,
-			MaxTokens:         maxTokens,
-			Endpoint:          req.Brain.Endpoint,
-			CredentialsSecret: req.Brain.CredentialsSecret,
+			LLMBindingID: llmBindingID,
+			Temperature:  req.Brain.Temperature,
+			MaxTokens:    req.Brain.MaxTokens,
 		},
 		ShortTermMemory: model.ShortTermMemoryConfig{
 			KeyNamespace: req.ShortTermMemory.KeyNamespace,
@@ -310,6 +312,7 @@ func (h *AgentHandler) Update(c *gin.Context) {
 		TenantID:        existing.TenantID,
 		Name:            existing.Name,
 		Description:     existing.Description,
+		Role:            existing.Role,
 		Brain:           existing.Brain,
 		ShortTermMemory: existing.ShortTermMemory,
 		LongTermMemory:  existing.LongTermMemory,
@@ -322,14 +325,12 @@ func (h *AgentHandler) Update(c *gin.Context) {
 		UpdatedAt:       existing.UpdatedAt,
 	}
 
-	temp := 0.7
-	if req.Brain.Temperature != nil {
-		temp = *req.Brain.Temperature
+	llmBindingID, err := uuid.Parse(req.Brain.LLMBindingID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid llm_binding_id uuid"})
+		return
 	}
-	maxTokens := 2048
-	if req.Brain.MaxTokens > 0 {
-		maxTokens = req.Brain.MaxTokens
-	}
+
 
 	var promptTemplateUUID uuid.UUID
 	if req.PromptTemplate != "" {
@@ -369,12 +370,15 @@ func (h *AgentHandler) Update(c *gin.Context) {
 	existing.TenantID = ten.FullName()
 	existing.Name = req.Name
 	existing.Description = req.Description
+	role := req.Role
+	if role == "" {
+		role = "spoke"
+	}
+	existing.Role = role
 	existing.Brain = model.BrainConfig{
-		Model:             req.Brain.Model,
-		Temperature:       temp,
-		MaxTokens:         maxTokens,
-		Endpoint:          req.Brain.Endpoint,
-		CredentialsSecret: req.Brain.CredentialsSecret,
+		LLMBindingID: llmBindingID,
+		Temperature:  req.Brain.Temperature,
+		MaxTokens:    req.Brain.MaxTokens,
 	}
 	existing.ShortTermMemory = model.ShortTermMemoryConfig{
 		KeyNamespace: req.ShortTermMemory.KeyNamespace,
