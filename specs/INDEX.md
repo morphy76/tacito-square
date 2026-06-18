@@ -48,34 +48,9 @@ Milestones 1, 2, and 3 have been completed and consolidated into a single summar
 | BUG-M4.8 | OTel Trace Context Not Propagated Across NATS Boundary in Echo Flow | CLOSED | HIGH | [BUG-M4.8](tasks/M4.BUG8/BUG-M4.8.md) |
 
 
-### M5: Agent Core
+### M5 Summary
 
-| ID | Title | Status | Component | File |
-|----|-------|--------|-----------|------|
-| SPEC-FR-M5.1 | Agent Configuration from CRD Spec | VERIFIED | agent | [SPEC-FR-M5.1](functional/M5/SPEC-FR-M5.1.md) |
-| SPEC-FR-M5.2 | LLM Reasoning (Brain Adapter) | VERIFIED | agent | [SPEC-FR-M5.2](functional/M5/SPEC-FR-M5.2.md) |
-| SPEC-FR-M5.3 | Short-Term Memory (Redis) | VERIFIED | agent | [SPEC-FR-M5.3](functional/M5/SPEC-FR-M5.3.md) |
-| SPEC-FR-M5.4 | Long-Term Memory (Qdrant) | VERIFIED | agent | [SPEC-FR-M5.4](functional/M5/SPEC-FR-M5.4.md) |
-| SPEC-FR-M5.5 | Tool Invocation (MCP) | VERIFIED | agent | [SPEC-FR-M5.5](functional/M5/SPEC-FR-M5.5.md) |
-| SPEC-FR-M5.6 | Object Storage (S3/MinIO) | VERIFIED | agent | [SPEC-FR-M5.6](functional/M5/SPEC-FR-M5.6.md) |
-| SPEC-FR-M5.7 | Standalone Agent Deployment Helm Chart | VERIFIED | deploy | [SPEC-FR-M5.7](functional/M5/SPEC-FR-M5.7.md) |
-| SPEC-FR-M5.9 | Flexible Agent Runtime Tiers & Deployment Customization | VERIFIED | keeper, operator, deploy | [SPEC-FR-M5.9](functional/M5/SPEC-FR-M5.9.md) |
-| SPEC-FR-M5.10 | Agent Cognitive Architecture & Reasoning Loop | VERIFIED | agent | [SPEC-FR-M5.10](functional/M5/SPEC-FR-M5.10.md) |
-
-
-
-
-
-
-
-### M5: Bugs
-
-| ID | Title | Status | Severity | File |
-|----|-------|--------|----------|------|
-| BUG-M5.2 | Unified Skills and Prompts Misinterpretation and Flattened Keeper-Agent Interface | CLOSED | HIGH | [BUG-M5.2](tasks/M5.BUG2/BUG-M5.2.md) |
-| BUG-M5.4 | Agent Tooling Violates MCP-First Architecture due to Mock Tools Embedded in Core Engine | CLOSED | MEDIUM | [BUG-M5.4](tasks/M5.BUG4/BUG-M5.4.md) |
-| BUG-M5.5 | Agent Component Does Not Export Prometheus Metrics | CLOSED | HIGH | [BUG-M5.5](tasks/M5.BUG5/BUG-M5.5.md) |
-| BUG-M5.6 | Pod Memory Exhaustion and Message Pressure under Large Payload Processing | CLOSED | HIGH | [BUG-M5.6](tasks/M5.BUG6/BUG-M5.6.md) |
+Milestone 5 has been completed and consolidated. For the complete list of specifications and resolved bugs, refer to the [Milestone M5: Agent Core Summary](milestones/M5-summary.md).
 
 
 
@@ -173,7 +148,7 @@ Milestones 1, 2, and 3 have been completed and consolidated into a single summar
 | M2 | Application Helm Chart & Component Scaffolding | ✔️ IMPLEMENTED | 10 | [M1-M2-M3 Summary](milestones/M1-M2-M3-summary.md) |
 | M3 | Keeper Core | ✔️ IMPLEMENTED | 8 | [M1-M2-M3 Summary](milestones/M1-M2-M3-summary.md) |
 | M4 | Operator Core | ✔️ IMPLEMENTED | 5 | [M4](milestones/M4-operator-core.md) |
-| M5 | Agent Core | ⏳ IN_PROGRESS | 9 | [M5](milestones/M5-agent-core.md) |
+| M5 | Agent Core | ✔️ IMPLEMENTED | 9 | [M5 Summary](milestones/M5-summary.md) |
 | M6 | Communities & Messaging | ⏳ IN_PROGRESS | 7 | [M6](milestones/M6-communities.md) |
 | M7 | BFF & UIs | ⬜ PLANNED | 4 | [M7](milestones/M7-bff-uis.md) |
 | M8 | Governance | ⬜ PLANNED | 10 | [M8](milestones/M8-governance.md) |
