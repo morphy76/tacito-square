@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/morphy76/tacito-square/internal/agent/application/ports/inbound"
 	"github.com/morphy76/tacito-square/internal/shared/observability"
@@ -23,6 +25,10 @@ type EventSubscriber struct {
 	blobStore   outbound.BlobStore
 	logger      zerolog.Logger
 	subs        []*natsclient.Subscription
+
+	ctx         context.Context
+	cancel      context.CancelFunc
+	wg          sync.WaitGroup
 }
 
 func NewEventSubscriber(
@@ -41,83 +47,181 @@ func NewEventSubscriber(
 		role:        role,
 		router:      router,
 		blobStore:   blobStore,
-		logger:      logger,
+		logger:      logger.With().Str("component", "event_subscriber").Logger(),
 	}
 }
 
 func (s *EventSubscriber) Start(ctx context.Context) error {
 	s.subs = nil
+	s.ctx, s.cancel = context.WithCancel(ctx)
+
+	js, err := s.nc.JetStream()
+	if err != nil {
+		return fmt.Errorf("event subscriber: get JetStream context: %w", err)
+	}
+
+	// Assert streams
+	_, err = js.AddStream(&natsclient.StreamConfig{
+		Name:     "TACITO_EVENTS",
+		Subjects: []string{"ts.community.>"},
+		MaxAge:   7 * 24 * time.Hour,
+	})
+	if err != nil && !strings.Contains(err.Error(), "stream name already in use") {
+		return fmt.Errorf("event subscriber: create TACITO_EVENTS stream: %w", err)
+	}
+
+	_, err = js.AddStream(&natsclient.StreamConfig{
+		Name:     "TACITO_DLQ",
+		Subjects: []string{"ts.dlq.community.>"},
+		MaxAge:   7 * 24 * time.Hour,
+	})
+	if err != nil && !strings.Contains(err.Error(), "stream name already in use") {
+		return fmt.Errorf("event subscriber: create TACITO_DLQ stream: %w", err)
+	}
 
 	if s.role == "hub" {
 		hubSubj := fmt.Sprintf("ts.community.%s.agent.hub", s.communityID)
-		queueGroup := fmt.Sprintf("hub-queue-group-%s", s.communityID)
-		subHub, err := s.nc.QueueSubscribe(hubSubj, queueGroup,
-			observability.WrapNATSHandler("nats.event_handler", s.logger, s.handleEvent))
-		if err != nil {
-			return fmt.Errorf("event subscriber: queue subscribe to %s: %w", hubSubj, err)
+		durableHub := fmt.Sprintf("hub-subscriber-%s", s.communityID)
+		if err := s.startPullLoop(s.ctx, js, hubSubj, durableHub); err != nil {
+			s.cancel()
+			return err
 		}
-		s.subs = append(s.subs, subHub)
 
-		// Hub also subscribes to Spoke responses in the community
 		respSubj := fmt.Sprintf("ts.community.%s.agent.*.thread.*.response", s.communityID)
-		respQueueGroup := fmt.Sprintf("hub-queue-group-response-%s", s.communityID)
-		subResp, err := s.nc.QueueSubscribe(respSubj, respQueueGroup,
-			observability.WrapNATSHandler("nats.event_handler", s.logger, s.handleEvent))
-		if err != nil {
-			_ = subHub.Unsubscribe()
-			s.subs = nil
-			return fmt.Errorf("event subscriber: queue subscribe to %s: %w", respSubj, err)
+		durableResp := fmt.Sprintf("hub-response-subscriber-%s", s.communityID)
+		if err := s.startPullLoop(s.ctx, js, respSubj, durableResp); err != nil {
+			s.cancel()
+			return err
 		}
-		s.subs = append(s.subs, subResp)
-
-		s.logger.Info().
-			Str("hub_subject", hubSubj).
-			Str("response_subject", respSubj).
-			Str("queue_group", queueGroup).
-			Msg("event subscriber started as hub")
 	} else {
-		// 1. Subscribe to specific agent subject
 		agentSubj := fmt.Sprintf("ts.community.%s.agent.%s", s.communityID, s.agentName)
-		subAgent, err := s.nc.Subscribe(agentSubj,
-			observability.WrapNATSHandler("nats.event_handler", s.logger, s.handleEvent))
-		if err != nil {
-			return fmt.Errorf("event subscriber: subscribe to %s: %w", agentSubj, err)
+		durableAgent := fmt.Sprintf("spoke-subscriber-%s-%s", s.communityID, s.agentName)
+		if err := s.startPullLoop(s.ctx, js, agentSubj, durableAgent); err != nil {
+			s.cancel()
+			return err
 		}
-		s.subs = append(s.subs, subAgent)
 
-		// 2. Subscribe to community broadcast subject
 		allSubj := fmt.Sprintf("ts.community.%s.agent.all", s.communityID)
-		subAll, err := s.nc.Subscribe(allSubj,
-			observability.WrapNATSHandler("nats.event_handler", s.logger, s.handleEvent))
-		if err != nil {
-			_ = subAgent.Unsubscribe()
-			s.subs = nil
-			return fmt.Errorf("event subscriber: subscribe to %s: %w", allSubj, err)
+		durableAll := fmt.Sprintf("spoke-broadcast-subscriber-%s-%s", s.communityID, s.agentName)
+		if err := s.startPullLoop(s.ctx, js, allSubj, durableAll); err != nil {
+			s.cancel()
+			return err
 		}
-		s.subs = append(s.subs, subAll)
-
-		s.logger.Info().
-			Str("agent_subject", agentSubj).
-			Str("broadcast_subject", allSubj).
-			Msg("event subscriber started as spoke")
 	}
+
+	return nil
+}
+
+func (s *EventSubscriber) startPullLoop(ctx context.Context, js natsclient.JetStreamContext, subject, durableName string) error {
+	// Configure durable pull consumer
+	sub, err := js.PullSubscribe(subject, durableName, natsclient.PullMaxWaiting(128))
+	if err != nil {
+		return fmt.Errorf("pull subscribe to %s: %w", subject, err)
+	}
+	s.subs = append(s.subs, sub)
+
+	s.wg.Add(1)
+	go func() {
+		defer s.wg.Done()
+		s.logger.Info().Str("subject", subject).Str("durable", durableName).Msg("started pull consumer worker loop")
+
+		for {
+			select {
+			case <-ctx.Done():
+				s.logger.Debug().Str("subject", subject).Msg("stopping pull consumer worker loop (context cancelled)")
+				return
+			default:
+				// Fetch 1 message at a time with a short timeout to check loop context cancellation
+				fetchCtx, fetchCancel := context.WithTimeout(ctx, 1*time.Second)
+				msgs, err := sub.Fetch(1, natsclient.Context(fetchCtx))
+				fetchCancel()
+
+				if err != nil {
+					if err == natsclient.ErrTimeout || err == context.DeadlineExceeded || ctx.Err() != nil {
+						continue
+					}
+					s.logger.Warn().Err(err).Str("subject", subject).Msg("error fetching from JetStream pull consumer")
+					time.Sleep(500 * time.Millisecond) // backoff on connection/stream issues
+					continue
+				}
+
+				for _, msg := range msgs {
+					s.processAndAck(ctx, js, msg)
+				}
+			}
+		}
+	}()
+
 	return nil
 }
 
 func (s *EventSubscriber) Stop() error {
+	if s.cancel != nil {
+		s.cancel()
+	}
+	s.wg.Wait()
+
 	var errs []string
 	for _, sub := range s.subs {
 		if sub != nil {
-			if err := sub.Drain(); err != nil {
+			if err := sub.Unsubscribe(); err != nil {
 				errs = append(errs, err.Error())
 			}
 		}
 	}
 	s.subs = nil
+
 	if len(errs) > 0 {
-		return fmt.Errorf("failed to drain some subscriptions: %s", strings.Join(errs, ", "))
+		return fmt.Errorf("failed to unsubscribe pull consumers: %s", strings.Join(errs, ", "))
 	}
 	return nil
+}
+
+func (s *EventSubscriber) processAndAck(ctx context.Context, js natsclient.JetStreamContext, msg *natsclient.Msg) {
+	ctx = observability.ExtractNATSContext(ctx, msg)
+	logger := observability.WithContext(s.logger, ctx).With().
+		Str("subject", msg.Subject).
+		Logger()
+	ctx = logger.WithContext(ctx)
+
+	// Check delivery count for DLQ routing
+	meta, err := msg.Metadata()
+	if err == nil && meta.NumDelivered > 5 {
+		logger.Warn().Uint64("num_delivered", meta.NumDelivered).Msg("message exceeded maximum delivery attempts, routing to DLQ")
+
+		dlqSubject := strings.Replace(msg.Subject, "ts.community.", "ts.dlq.community.", 1)
+
+		// Publish to DLQ
+		dlqMsg := natsclient.NewMsg(dlqSubject)
+		dlqMsg.Data = msg.Data
+		dlqMsg.Header = make(natsclient.Header)
+		for k, v := range msg.Header {
+			dlqMsg.Header[k] = v
+		}
+		dlqMsg.Header.Set("Nats-Msg-Id", msg.Header.Get("Nats-Msg-Id"))
+		dlqMsg.Header.Set("X-Tacito-DLQ-Original-Subject", msg.Subject)
+		dlqMsg.Header.Set("X-Tacito-DLQ-Attempts", fmt.Sprintf("%d", meta.NumDelivered))
+
+		if _, err := js.PublishMsg(dlqMsg, natsclient.Context(ctx)); err != nil {
+			logger.Error().Err(err).Msg("failed to publish message to DLQ stream, will retry processing")
+			_ = msg.Nak()
+			return
+		}
+
+		logger.Info().Msg("message successfully routed to DLQ stream, acknowledging original message")
+		_ = msg.Ack()
+		return
+	}
+
+	// Standard processing
+	if err := s.handleEvent(ctx, logger, msg); err != nil {
+		logger.Error().Err(err).Msg("failed to process message, negative-acknowledging")
+		_ = msg.Nak()
+		return
+	}
+
+	// Success, acknowledge
+	_ = msg.Ack()
 }
 
 func (s *EventSubscriber) handleEvent(ctx context.Context, logger zerolog.Logger, msg *natsclient.Msg) error {
@@ -166,3 +270,4 @@ func (s *EventSubscriber) handleEvent(ctx context.Context, logger zerolog.Logger
 
 	return nil
 }
+

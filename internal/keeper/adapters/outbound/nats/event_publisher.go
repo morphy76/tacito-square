@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/morphy76/tacito-square/pkg/events"
@@ -37,9 +38,24 @@ func (p *NATSEventPublisher) Publish(ctx context.Context, subject string, event 
 	// Inject trace context
 	observability.InjectNATSContext(ctx, msg)
 
+	if strings.HasPrefix(subject, "ts.community.") {
+		js, err := p.nc.JetStream()
+		if err != nil {
+			return fmt.Errorf("failed to get NATS JetStream context: %w", err)
+		}
+		// Set native Nats-Msg-Id for deduplication
+		msg.Header.Set("Nats-Msg-Id", event.EventID)
+
+		if _, err := js.PublishMsg(msg, natsclient.Context(ctx)); err != nil {
+			return fmt.Errorf("failed to publish NATS JetStream message: %w", err)
+		}
+		return nil
+	}
+
 	if err := p.nc.PublishMsg(msg); err != nil {
 		return fmt.Errorf("failed to publish NATS message: %w", err)
 	}
 
 	return nil
 }
+
