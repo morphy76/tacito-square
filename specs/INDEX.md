@@ -18,60 +18,9 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 
 ## Functional Requirement Specs
 
-### M1: Infrastructure Helm Chart
+### M1, M2 & M3 Summary
 
-| ID | Title | Status | Component | File |
-|----|-------|--------|-----------|------|
-| SPEC-FR-M1.1 | Infrastructure Helm Chart | IMPLEMENTED | deploy | [SPEC-FR-M1.1](functional/M1/SPEC-FR-M1.1.md) |
-| SPEC-FR-M1.2 | Makefile Infrastructure Targets | IMPLEMENTED | build | [SPEC-FR-M1.2](functional/M1/SPEC-FR-M1.2.md) |
-
-### M2: Application Helm Chart & Component Scaffolding
-
-| ID | Title | Status | Component | File |
-|----|-------|--------|-----------|------|
-| SPEC-FR-M2.1 | Application Helm Chart (infra-free, binding interfaces) | IMPLEMENTED | deploy | [SPEC-FR-M2.1](functional/M2/SPEC-FR-M2.1.md) |
-| SPEC-FR-M2.2 | Shared Foundation Library | IMPLEMENTED | shared | [SPEC-FR-M2.2](functional/M2/SPEC-FR-M2.2.md) |
-| SPEC-FR-M2.3 | Keeper Hello World | IMPLEMENTED | keeper | [SPEC-FR-M2.3](functional/M2/SPEC-FR-M2.3.md) |
-| SPEC-FR-M2.4 | Agent Hello World | IMPLEMENTED | agent | [SPEC-FR-M2.4](functional/M2/SPEC-FR-M2.4.md) |
-| SPEC-FR-M2.5 | Operator Hello World | IMPLEMENTED | operator | [SPEC-FR-M2.5](functional/M2/SPEC-FR-M2.5.md) |
-| SPEC-FR-M2.6 | BFF Hello World | IMPLEMENTED | bff | [SPEC-FR-M2.6](functional/M2/SPEC-FR-M2.6.md) |
-| SPEC-FR-M2.7 | Container Images (distroless, multi-stage) | IMPLEMENTED | build | [SPEC-FR-M2.7](functional/M2/SPEC-FR-M2.7.md) |
-| SPEC-FR-M2.9 | Project Documentation | IMPLEMENTED | docs | [SPEC-FR-M2.9](functional/M2/SPEC-FR-M2.9.md) |
-| SPEC-FR-M2.10 | Avoid Bitnami (Leverage Free & Non-Commercial Infrastructural Dependencies) | IMPLEMENTED | deploy | [SPEC-FR-M2.10](functional/M2/SPEC-FR-M2.10.md) |
-| SPEC-FR-M2.11 | Secured Infrastructure Provisioning (Initial Provisioning & TLS Enforcement) | IMPLEMENTED | deploy | [SPEC-FR-M2.11](functional/M2/SPEC-FR-M2.11.md) |
-
-### M3: Keeper Core
-
-| ID | Title | Status | Component | File |
-|----|-------|--------|-----------|------|
-| SPEC-FR-M3.1 | LLM Provider Bindings & CRUD API | IMPLEMENTED | keeper | [SPEC-FR-M3.1](functional/M3/SPEC-FR-M3.1.md) |
-| SPEC-FR-M3.2 | MCP Servers & CRUD API | IMPLEMENTED | keeper | [SPEC-FR-M3.2](functional/M3/SPEC-FR-M3.2.md) |
-| SPEC-FR-M3.3 | Skill Collections & CRUD API | IMPLEMENTED | keeper | [SPEC-FR-M3.3](functional/M3/SPEC-FR-M3.3.md) |
-| SPEC-FR-M3.4 | Prompt Collections & CRUD API | IMPLEMENTED | keeper | [SPEC-FR-M3.4](functional/M3/SPEC-FR-M3.4.md) |
-| SPEC-FR-M3.5 | Agent Domain Model & CRUD API | IMPLEMENTED | keeper | [SPEC-FR-M3.5](functional/M3/SPEC-FR-M3.5.md) |
-| SPEC-FR-M3.6 | Community Domain Model & CRUD API | IMPLEMENTED | keeper | [SPEC-FR-M3.6](functional/M3/SPEC-FR-M3.6.md) |
-| SPEC-FR-M3.7 | Agent-Community Assignment | IMPLEMENTED | keeper | [SPEC-FR-M3.7](functional/M3/SPEC-FR-M3.7.md) |
-| SPEC-FR-M3.8 | PostgreSQL Persistence & Migrations | IMPLEMENTED | keeper | [SPEC-FR-M3.8](functional/M3/SPEC-FR-M3.8.md) |
-
-### M3: Bugs
-
-| ID | Title | Status | Severity | File |
-|----|-------|--------|----------|------|
-| BUG-M3.1 | Supporting Entity Models Lack Tenant Segregation | CLOSED | HIGH | [BUG-M3.1](tasks/M3.BUG1/BUG-M3.1.md) |
-| BUG-M3.2 | Silent Route Registration Failure due to PostgreSQL Coupling in Keeper Bootstrap | CLOSED | HIGH | [BUG-M3.2](tasks/M3.BUG2/BUG-M3.2.md) |
-| BUG-M3.3 | Hexagonal Architecture Violations (Missing Application Service Layer & Flat Bounded Contexts) | CLOSED | HIGH | [BUG-M3.3](tasks/M3.BUG3/BUG-M3.3.md) |
-| BUG-M3.4 | Broken Observability Context Propagation & Domain Metric Gaps | CLOSED | HIGH | [BUG-M3.4](tasks/M3.BUG4/BUG-M3.4.md) |
-| BUG-M3.5 | Missing OpenAPI Contract Tests | CLOSED | MEDIUM | [BUG-M3.5](tasks/M3.BUG5/BUG-M3.5.md) |
-| BUG-M3.6 | Synchronous Blocking Side-Effects in Agent-Community Assignment | CLOSED | HIGH | [BUG-M3.6](tasks/M3.BUG6/BUG-M3.6.md) |
-| BUG-M3.7 | Health Probes Missing NATS and Redis Dependency Checks | CLOSED | MEDIUM | [BUG-M3.7](tasks/M3.BUG7/BUG-M3.7.md) |
-| BUG-M3.8 | Stack Dependencies & Migration Framework Deviations | CLOSED | MEDIUM | [BUG-M3.8](tasks/M3.BUG8/BUG-M3.8.md) |
-| BUG-M3.9 | Misaligned Environment Variable Bindings for Keeper Deployment in Helm Chart | CLOSED | HIGH | [BUG-M3.9](tasks/M3.BUG9/BUG-M3.9.md) |
-| BUG-M3.10 | Inconsistent Logging of Trace ID and Tenant Context Across Keeper Entities | CLOSED | HIGH | [BUG-M3.10](tasks/M3.BUG10/BUG-M3.10.md) |
-| BUG-M3.11 | Inconsistent REST API Semantics and Null Empty Collections in List Endpoints | CLOSED | MEDIUM | [BUG-M3.11](tasks/M3.BUG11/BUG-M3.11.md) |
-| BUG-M3.12 | Agent Definition Lacks Strict Enforcement of Brain Requirement | CLOSED | HIGH | [BUG-M3.12](tasks/M3.BUG12/BUG-M3.12.md) |
-| BUG-M3.13 | Inconsistent REST API Behaviors, Prompts, and Skills | CLOSED | MEDIUM | [BUG-M3.13](tasks/M3.BUG13/BUG-M3.13.md) |
-| BUG-M3.14 | POST REST Calls Missing Location HTTP Header | CLOSED | MEDIUM | [BUG-M3.14](tasks/M3.BUG14/BUG-M3.14.md) |
-| BUG-M3.15 | POST REST Calls Lack Cancel Context | CLOSED | MEDIUM | [BUG-M3.15](tasks/M3.BUG15/BUG-M3.15.md) |
+Milestones 1, 2, and 3 have been completed and consolidated into a single summary. For the complete list of specifications and resolved bugs, refer to the [Milestones M1, M2 & M3 Summary](milestones/M1-M2-M3-summary.md).
 
 
 ### M4: Operator Core
@@ -220,9 +169,9 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 
 | Milestone | Title | Status | Specs | File |
 |-----------|-------|--------|-------|------|
-| M1 | Infrastructure Helm Chart | ✔️ IMPLEMENTED | 2 | [M1](milestones/M1-infrastructure.md) |
-| M2 | Application Helm Chart & Component Scaffolding | ✔️ IMPLEMENTED | 10 | [M2](milestones/M2-packaging.md) |
-| M3 | Keeper Core | ✔️ IMPLEMENTED | 8 | [M3](milestones/M3-keeper-core.md) |
+| M1 | Infrastructure Helm Chart | ✔️ IMPLEMENTED | 2 | [M1-M2-M3 Summary](milestones/M1-M2-M3-summary.md) |
+| M2 | Application Helm Chart & Component Scaffolding | ✔️ IMPLEMENTED | 10 | [M1-M2-M3 Summary](milestones/M1-M2-M3-summary.md) |
+| M3 | Keeper Core | ✔️ IMPLEMENTED | 8 | [M1-M2-M3 Summary](milestones/M1-M2-M3-summary.md) |
 | M4 | Operator Core | ✔️ IMPLEMENTED | 5 | [M4](milestones/M4-operator-core.md) |
 | M5 | Agent Core | ⏳ IN_PROGRESS | 9 | [M5](milestones/M5-agent-core.md) |
 | M6 | Communities & Messaging | ⏳ IN_PROGRESS | 7 | [M6](milestones/M6-communities.md) |
