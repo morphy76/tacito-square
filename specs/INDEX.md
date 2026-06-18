@@ -23,29 +23,9 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 Milestones 1, 2, and 3 have been completed and consolidated into a single summary. For the complete list of specifications and resolved bugs, refer to the [Milestones M1, M2 & M3 Summary](milestones/M1-M2-M3-summary.md).
 
 
-### M4: Operator Core
+### M4 Summary
 
-| ID | Title | Status | Component | File |
-|----|-------|--------|-----------|------|
-| SPEC-FR-M4.1 | Agent CRD Definition & Registration | IMPLEMENTED | operator | [SPEC-FR-M4.1](functional/M4/SPEC-FR-M4.1.md) |
-| SPEC-FR-M4.2 | AgentCommunity CRD Definition | REJECTED | operator | [SPEC-FR-M4.2](functional/M4/SPEC-FR-M4.2.md) |
-| SPEC-FR-M4.3 | Reconciliation Controller | IMPLEMENTED | operator | [SPEC-FR-M4.3](functional/M4/SPEC-FR-M4.3.md) |
-| SPEC-FR-M4.6 | Agent CRD Submission | IMPLEMENTED | keeper | [SPEC-FR-M4.6](functional/M4/SPEC-FR-M4.6.md) |
-| SPEC-FR-M4.7 | Agent & Community Lifecycle Management REST API | IMPLEMENTED | keeper, operator | [SPEC-FR-M4.7](functional/M4/SPEC-FR-M4.7.md) |
-| SPEC-FR-M4.8 | Community Echo Endpoint | IMPLEMENTED | keeper, agent | [SPEC-FR-M4.8](functional/M4/SPEC-FR-M4.8.md) |
-
-### M4: Bugs
-
-| ID | Title | Status | Severity | File |
-|----|-------|--------|----------|------|
-| BUG-M4.1 | Assigned Agent Pods Fail to Deploy Due to Stubbed Operator Reconciliation Service | CLOSED | HIGH | [BUG-M4.1](tasks/M4.BUG1/BUG-M4.1.md) |
-| BUG-M4.2 | Health and Metrics Endpoints Leak Tracing Spans | CLOSED | MEDIUM | [BUG-M4.2](tasks/M4.BUG2/BUG-M4.2.md) |
-| BUG-M4.3 | Overlapping Observability Frameworks with Prometheus and OpenTelemetry | CLOSED | HIGH | [BUG-M4.3](tasks/M4.BUG3/BUG-M4.3.md) |
-| BUG-M4.4 | Redundant Infrastructure Monitoring Services (Prometheus Server & Zipkin Tracing) | CLOSED | MEDIUM | [BUG-M4.4](tasks/M4.BUG4/BUG-M4.4.md) |
-| BUG-M4.5 | Echo Endpoint Fails with 503 Due to Static Database Status Check | CLOSED | HIGH | [BUG-M4.5](tasks/M4.BUG5/BUG-M4.5.md) |
-| BUG-M4.6 | Echo Message Fails to Dispatch Due to NATS Subject Mismatch (Name vs UUID) | CLOSED | HIGH | [BUG-M4.6](tasks/M4.BUG6/BUG-M4.6.md) |
-| BUG-M4.7 | Agent Pod Never Subscribes to NATS Echo Subject — EchoSubscriber Not Wired in Bootstrap | CLOSED | HIGH | [BUG-M4.7](tasks/M4.BUG7/BUG-M4.7.md) |
-| BUG-M4.8 | OTel Trace Context Not Propagated Across NATS Boundary in Echo Flow | CLOSED | HIGH | [BUG-M4.8](tasks/M4.BUG8/BUG-M4.8.md) |
+Milestone 4 has been completed and consolidated. For the complete list of specifications and resolved bugs, refer to the [Milestone M4: Operator Core Summary](milestones/M4-summary.md).
 
 
 ### M5 Summary
@@ -147,7 +127,7 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | M1 | Infrastructure Helm Chart | ✔️ IMPLEMENTED | 2 | [M1-M2-M3 Summary](milestones/M1-M2-M3-summary.md) |
 | M2 | Application Helm Chart & Component Scaffolding | ✔️ IMPLEMENTED | 10 | [M1-M2-M3 Summary](milestones/M1-M2-M3-summary.md) |
 | M3 | Keeper Core | ✔️ IMPLEMENTED | 8 | [M1-M2-M3 Summary](milestones/M1-M2-M3-summary.md) |
-| M4 | Operator Core | ✔️ IMPLEMENTED | 5 | [M4](milestones/M4-operator-core.md) |
+| M4 | Operator Core | ✔️ IMPLEMENTED | 5 | [M4 Summary](milestones/M4-summary.md) |
 | M5 | Agent Core | ✔️ IMPLEMENTED | 9 | [M5 Summary](milestones/M5-summary.md) |
 | M6 | Communities & Messaging | ⏳ IN_PROGRESS | 7 | [M6](milestones/M6-communities.md) |
 | M7 | BFF & UIs | ⬜ PLANNED | 4 | [M7](milestones/M7-bff-uis.md) |
