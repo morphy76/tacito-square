@@ -43,7 +43,7 @@ all while remaining accountable, observable, and scalable.
 ### Rules
 
 All development workflows, task management, and testing lifecycles are codified and actively enforced by the Agent Rules. In particular:
-- Refer to [.agents/rules/spec_driven_development.md](file:///Users/R.Pasquini/Projects/side/tacito-square/.agents/rules/spec_driven_development.md) for strict Spec-Driven & Test-Driven (TDD) compliance and task organization rules.
+- Refer to [.agents/rules/spec-driven-development.md](file:///Users/R.Pasquini/Projects/side/tacito-square/.agents/rules/spec-driven-development.md) for strict Spec-Driven & Test-Driven (TDD) compliance and task organization rules.
 - Refer to all other `.agents/rules/*.md` files for architectural, infrastructural, and non-functional rules.
 
 

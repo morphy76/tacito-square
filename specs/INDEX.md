@@ -8,11 +8,11 @@ Non-functional requirements (NFRs) are codified as **Agent Rules** inside `.agen
 
 | Rule | Title & Description | Target Glob | Superseded Specs |
 |------|---------------------|-------------|------------------|
-| [spec_driven_development](file:///Users/R.Pasquini/Projects/side/tacito-square/.agents/rules/spec_driven_development.md) | **Spec-Driven & Test-Driven (TDD) Guidelines**: Enforces strict "no code without functional spec" rule, task tracking, and Red/Green/Refactor loops. | `**/*.{go,ts,md}` | — |
-| [cloud_first](file:///Users/R.Pasquini/Projects/side/tacito-square/.agents/rules/cloud_first.md) | **Cloud-First & Multitenancy Guidelines**: Ephemeral design, circuit breakers, retries, statelessness, multitenancy resolution, API-first and contract-based isolation. | `**/*.{go,ts}` | `SPEC-NFR-CLOUD`, `SPEC-NFR-MULTITENANCY`, `SPEC-NFR-OPENAPI` |
-| [k8s_best_practices](file:///Users/R.Pasquini/Projects/side/tacito-square/.agents/rules/k8s_best_practices.md) | **Kubernetes Best Practices**: Horizontal Pod Autoscaling (HPA) templates, dependency-aware health probes, and distroless container images. | `**/*.{go,ts,yaml,Dockerfile}` | `SPEC-NFR-HPA`, `SPEC-NFR-HEALTH`, `SPEC-NFR-STACK` (Docker base) |
+| [spec_driven_development](file:///Users/R.Pasquini/Projects/side/tacito-square/.agents/rules/spec-driven-development.md) | **Spec-Driven & Test-Driven (TDD) Guidelines**: Enforces strict "no code without functional spec" rule, task tracking, and Red/Green/Refactor loops. | `**/*.{go,ts,md}` | — |
+| [cloud_first](file:///Users/R.Pasquini/Projects/side/tacito-square/.agents/rules/cloud-first.md) | **Cloud-First & Multitenancy Guidelines**: Ephemeral design, circuit breakers, retries, statelessness, multitenancy resolution, API-first and contract-based isolation. | `**/*.{go,ts}` | `SPEC-NFR-CLOUD`, `SPEC-NFR-MULTITENANCY`, `SPEC-NFR-OPENAPI` |
+| [k8s_best_practices](file:///Users/R.Pasquini/Projects/side/tacito-square/.agents/rules/k8s-best-practices.md) | **Kubernetes Best Practices**: Horizontal Pod Autoscaling (HPA) templates, dependency-aware health probes, and distroless container images. | `**/*.{go,ts,yaml,Dockerfile}` | `SPEC-NFR-HPA`, `SPEC-NFR-HEALTH`, `SPEC-NFR-STACK` (Docker base) |
 | [observability](file:///Users/R.Pasquini/Projects/side/tacito-square/.agents/rules/observability.md) | **Observability Standards**: Prometheus metric endpoints, OpenTelemetry traces, and zerolog/winston structured JSON logging. | `**/*.{go,ts}` | `SPEC-NFR-OBSERVABILITY`, `SPEC-NFR-LOG` |
-| [code_architecture](file:///Users/R.Pasquini/Projects/side/tacito-square/.agents/rules/code_architecture.md) | **Code Architecture Guidelines**: Hexagonal (Ports & Adapters) domain boundaries and reactive Go concurrency primitives. | `**/*.{go,ts}` | `SPEC-NFR-HEXAGONAL`, `SPEC-NFR-REACTIVE` |
+| [code_architecture](file:///Users/R.Pasquini/Projects/side/tacito-square/.agents/rules/code-architecture.md) | **Code Architecture Guidelines**: Hexagonal (Ports & Adapters) domain boundaries and reactive Go concurrency primitives. | `**/*.{go,ts}` | `SPEC-NFR-HEXAGONAL`, `SPEC-NFR-REACTIVE` |
 | [nonfunctional](file:///Users/R.Pasquini/Projects/side/tacito-square/.agents/rules/nonfunctional.md) | **General NFR & Stack Constraints**: Approved library locks, monorepo Makefiles, SemVer component release lifecycles, and Gin conventions. | `*` | `SPEC-NFR-STACK`, `SPEC-NFR-BUILDING`, `SPEC-NFR-VERSIONING`, `SPEC-NFR-HTTP` |
 
 
@@ -41,7 +41,7 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 |----|-------|--------|-----------|------|
 | SPEC-FR-M6.0 | Event-Driven Architecture Foundation & Conversational Schema | VERIFIED | shared, keeper, agent | [SPEC-FR-M6.0](functional/M6/SPEC-FR-M6.0.md) |
 | SPEC-FR-M6.1 | Community Topology (Hub-Spoke) | VERIFIED | keeper, agent | [SPEC-FR-M6.1](functional/M6/SPEC-FR-M6.1.md) |
-| SPEC-FR-M6.2 | NATS Inter-Agent Messaging | DRAFT | agent | [SPEC-FR-M6.2](functional/M6/SPEC-FR-M6.2.md) |
+| SPEC-FR-M6.2 | NATS Inter-Agent Messaging | ACCEPTED | agent | [SPEC-FR-M6.2](functional/M6/SPEC-FR-M6.2.md) |
 | SPEC-FR-M6.3 | NATS Subject Namespacing | VERIFIED | agent, keeper | [SPEC-FR-M6.3](functional/M6/SPEC-FR-M6.3.md) |
 | SPEC-FR-M6.4 | Thread Management | DRAFT | conversation-hub | [SPEC-FR-M6.4](functional/M6/SPEC-FR-M6.4.md) |
 | SPEC-FR-M6.5 | A2A Agent Cards | VERIFIED | agent, keeper | [SPEC-FR-M6.5](functional/M6/SPEC-FR-M6.5.md) |
