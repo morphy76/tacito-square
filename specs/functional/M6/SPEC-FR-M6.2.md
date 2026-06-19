@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M6.2                                |
-| Status        | ACCEPTED                                    |
+| Status        | VERIFIED                                    |
 | Milestone     | M6                                          |
 | Component     | agent, keeper, bff                          |
 | Depends On    | SPEC-FR-M6.0                                |
@@ -18,7 +18,7 @@ This specification defines the migration of critical event subjects to NATS JetS
 ## Specification
 
 1. **JetStream Stream Configuration**:
-   - The system MUST define and configure a JetStream stream named `TACITO_EVENTS` covering subject pattern `ts.community.>`.
+   - The system MUST define and configure a JetStream stream named `TACITO_EVENTS` covering specific conversational subjects: `ts.community.*.agent.hub`, `ts.community.*.agent.all`, `ts.community.*.agent.*`, `ts.community.*.agent.*.thread.*.response`, and `ts.community.*.agent.*.thread.*.history`.
    - The system MUST define and configure a Dead Letter Queue stream named `TACITO_DLQ` covering subject pattern `ts.dlq.community.>`.
    - The stream retention policy MUST be configured with limits-based retention (e.g., max age of 7 days, max message count, or max bytes capacity).
    - Storage type MUST be configurable (file-based in production, in-memory in testing).

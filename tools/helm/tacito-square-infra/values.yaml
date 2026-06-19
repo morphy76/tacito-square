@@ -8,6 +8,8 @@ tls:
 nats:
   enabled: true
   config:
+    jetstream:
+      enabled: true
     nats:
       tls:
         enabled: false

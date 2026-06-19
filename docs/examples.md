@@ -249,8 +249,8 @@ Start a new thread
 {
   "schema_ref": "urn:tacito:schema:conversational:start-thread:v1",
   "payload": {
-    "thread_id": "test-5",
-    "community_id": "405e81ab-fdba-4570-b0ac-b294cf616961"
+    "thread_id": "test-8",
+    "community_id": "8f559a1d-2de5-496f-bac7-bdc6ebff3daa"
   }
 }
 ```
@@ -261,9 +261,9 @@ Add a user message
 {
   "schema_ref": "urn:tacito:schema:conversational:add-user-message:v1",
   "payload": {
-    "thread_id": "test-5",
-    "community_id": "405e81ab-fdba-4570-b0ac-b294cf616961",
-    "message": "Hello, how are you?"
+    "thread_id": "test-8",
+    "community_id": "8f559a1d-2de5-496f-bac7-bdc6ebff3daa",
+    "message": "Hello, my name is Riccardo, how are you?"
   }
 }
 ```
@@ -272,8 +272,8 @@ Add a user message
 {
   "schema_ref": "urn:tacito:schema:conversational:end-thread:v1",
   "payload": {
-    "thread_id": "test-5",
-    "community_id": "405e81ab-fdba-4570-b0ac-b294cf616961"
+    "thread_id": "test-8",
+    "community_id": "8f559a1d-2de5-496f-bac7-bdc6ebff3daa"
   }
 }
 ```

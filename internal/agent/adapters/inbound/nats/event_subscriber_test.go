@@ -88,8 +88,10 @@ func (m *mockBlobStore) Exists(ctx context.Context, key string) (bool, error) {
 
 func startTestNatsServer(t *testing.T) (*server.Server, *nats.Conn) {
 	opts := &server.Options{
-		Host: "127.0.0.1",
-		Port: -1,
+		Host:      "127.0.0.1",
+		Port:      -1,
+		JetStream: true,
+		StoreDir:  t.TempDir(),
 	}
 	ns, err := server.NewServer(opts)
 	require.NoError(t, err)
@@ -100,6 +102,25 @@ func startTestNatsServer(t *testing.T) (*server.Server, *nats.Conn) {
 	}
 
 	nc, err := nats.Connect(ns.ClientURL())
+	require.NoError(t, err)
+
+	// Pre-create TACITO_EVENTS and TACITO_DLQ streams for tests
+	js, err := nc.JetStream()
+	require.NoError(t, err)
+	_, err = js.AddStream(&nats.StreamConfig{
+		Name:     "TACITO_EVENTS",
+		Subjects: []string{
+			"ts.community.*.agent.*",
+			"ts.community.*.agent.*.thread.*.response",
+			"ts.community.*.agent.*.thread.*.history",
+		},
+	})
+	require.NoError(t, err)
+
+	_, err = js.AddStream(&nats.StreamConfig{
+		Name:     "TACITO_DLQ",
+		Subjects: []string{"ts.dlq.community.>"},
+	})
 	require.NoError(t, err)
 
 	return ns, nc
@@ -320,3 +341,76 @@ func TestEventSubscriber_HubQueueGroupLoadBalancing(t *testing.T) {
 	assert.Greater(t, len(calls1), 0, "Subscriber 1 should process at least one message")
 	assert.Greater(t, len(calls2), 0, "Subscriber 2 should process at least one message")
 }
+
+func TestEventSubscriber_DLQRouting(t *testing.T) {
+	ns, nc := startTestNatsServer(t)
+	defer ns.Shutdown()
+	defer nc.Close()
+
+	logger := zerolog.New(nil)
+
+	// Mock Router that always fails to trigger redeliveries
+	mockRouter := &MockSchemaRouter{
+		RouteEventFunc: func(ctx context.Context, event events.DomainEvent) error {
+			return fmt.Errorf("intentional transient error processing event %s", event.EventID)
+		},
+	}
+
+	sub := agentnats.NewEventSubscriber(nc, "agent-alpha", "comm-1", "spoke", mockRouter, nil, logger)
+
+	err := sub.Start(context.Background())
+	require.NoError(t, err)
+	defer func() { _ = sub.Stop() }()
+
+	payload := events.StartThreadPayload{
+		ThreadID:    "thread-abc",
+		CommunityID: "comm-1",
+	}
+	payloadBytes, err := json.Marshal(payload)
+	require.NoError(t, err)
+
+	evt := events.DomainEvent{
+		EventID:    "evt-dlq-123",
+		SchemaRef:  events.SchemaConversationalStartThread,
+		Source:     "keeper",
+		TenantID:   "tenant-1",
+		OccurredAt: time.Now().UTC().Format(time.RFC3339Nano),
+		Payload:    payloadBytes,
+	}
+
+	evtBytes, err := json.Marshal(evt)
+	require.NoError(t, err)
+
+	// Publish directly to the subject that is monitored by the stream
+	js, err := nc.JetStream()
+	require.NoError(t, err)
+
+	msg := nats.NewMsg("ts.community.comm-1.agent.agent-alpha")
+	msg.Data = evtBytes
+	msg.Header.Set("X-Tacito-Schema", events.SchemaConversationalStartThread)
+	msg.Header.Set("X-Tacito-Tenant", "tenant-1")
+	msg.Header.Set("Nats-Msg-Id", evt.EventID)
+
+	_, err = js.PublishMsg(msg)
+	require.NoError(t, err)
+
+	// Wait for the message to be processed, retried 5 times, and eventually routed to the DLQ stream
+	// We check the DLQ stream for the presence of the event
+	dlqChan := make(chan *nats.Msg, 1)
+	dlqSub, err := nc.Subscribe("ts.dlq.community.>", func(m *nats.Msg) {
+		dlqChan <- m
+	})
+	require.NoError(t, err)
+	defer dlqSub.Unsubscribe()
+
+	select {
+	case dlqMsg := <-dlqChan:
+		var received events.DomainEvent
+		err := json.Unmarshal(dlqMsg.Data, &received)
+		require.NoError(t, err)
+		assert.Equal(t, "evt-dlq-123", received.EventID)
+	case <-time.After(3 * time.Second):
+		t.Fatal("timed out waiting for message to be routed to DLQ")
+	}
+}
+
