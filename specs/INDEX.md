@@ -41,7 +41,7 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 |----|-------|--------|-----------|------|
 | SPEC-FR-M6.0 | Event-Driven Architecture Foundation & Conversational Schema | VERIFIED | shared, keeper, agent | [SPEC-FR-M6.0](functional/M6/SPEC-FR-M6.0.md) |
 | SPEC-FR-M6.1 | Community Topology (Hub-Spoke) | VERIFIED | keeper, agent | [SPEC-FR-M6.1](functional/M6/SPEC-FR-M6.1.md) |
-| SPEC-FR-M6.2 | NATS Inter-Agent Messaging | IMPLEMENTED | agent | [SPEC-FR-M6.2](functional/M6/SPEC-FR-M6.2.md) |
+| SPEC-FR-M6.2 | NATS Inter-Agent Messaging | VERIFIED | agent | [SPEC-FR-M6.2](functional/M6/SPEC-FR-M6.2.md) |
 | SPEC-FR-M6.3 | NATS Subject Namespacing | VERIFIED | agent, keeper | [SPEC-FR-M6.3](functional/M6/SPEC-FR-M6.3.md) |
 | SPEC-FR-M6.4 | Thread Management | DRAFT | conversation-hub | [SPEC-FR-M6.4](functional/M6/SPEC-FR-M6.4.md) |
 | SPEC-FR-M6.5 | A2A Agent Cards | VERIFIED | agent, keeper | [SPEC-FR-M6.5](functional/M6/SPEC-FR-M6.5.md) |

@@ -61,22 +61,40 @@ func (s *EventSubscriber) Start(ctx context.Context) error {
 	}
 
 	// Assert streams
-	_, err = js.AddStream(&natsclient.StreamConfig{
+	streamCfg := &natsclient.StreamConfig{
 		Name:     "TACITO_EVENTS",
-		Subjects: []string{"ts.community.>"},
+		Subjects: []string{
+			"ts.community.*.agent.*",
+			"ts.community.*.agent.*.thread.*.response",
+			"ts.community.*.agent.*.thread.*.history",
+		},
 		MaxAge:   7 * 24 * time.Hour,
-	})
-	if err != nil && !strings.Contains(err.Error(), "stream name already in use") {
-		return fmt.Errorf("event subscriber: create TACITO_EVENTS stream: %w", err)
+	}
+	_, err = js.AddStream(streamCfg)
+	if err != nil {
+		if strings.Contains(err.Error(), "stream name already in use") {
+			if _, updateErr := js.UpdateStream(streamCfg); updateErr != nil {
+				s.logger.Warn().Err(updateErr).Msg("failed to update TACITO_EVENTS stream configuration, proceeding with existing stream")
+			}
+		} else {
+			return fmt.Errorf("event subscriber: create TACITO_EVENTS stream: %w", err)
+		}
 	}
 
-	_, err = js.AddStream(&natsclient.StreamConfig{
+	dlqCfg := &natsclient.StreamConfig{
 		Name:     "TACITO_DLQ",
 		Subjects: []string{"ts.dlq.community.>"},
 		MaxAge:   7 * 24 * time.Hour,
-	})
-	if err != nil && !strings.Contains(err.Error(), "stream name already in use") {
-		return fmt.Errorf("event subscriber: create TACITO_DLQ stream: %w", err)
+	}
+	_, err = js.AddStream(dlqCfg)
+	if err != nil {
+		if strings.Contains(err.Error(), "stream name already in use") {
+			if _, updateErr := js.UpdateStream(dlqCfg); updateErr != nil {
+				s.logger.Warn().Err(updateErr).Msg("failed to update TACITO_DLQ stream configuration, proceeding with existing stream")
+			}
+		} else {
+			return fmt.Errorf("event subscriber: create TACITO_DLQ stream: %w", err)
+		}
 	}
 
 	if s.role == "hub" {

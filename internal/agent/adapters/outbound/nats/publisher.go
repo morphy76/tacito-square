@@ -26,7 +26,7 @@ func (p *NATSEventPublisher) Publish(ctx context.Context, subject string, data [
 		isDomainEvent = true
 	}
 
-	if strings.HasPrefix(subject, "ts.community.") {
+	if isStreamSubject(subject) {
 		js, err := p.nc.JetStream()
 		if err != nil {
 			return fmt.Errorf("failed to get NATS JetStream context: %w", err)
@@ -73,5 +73,16 @@ func (p *NATSEventPublisher) Publish(ctx context.Context, subject string, data [
 
 	return p.nc.Publish(subject, data)
 }
+
+func isStreamSubject(subject string) bool {
+	if !strings.HasPrefix(subject, "ts.community.") {
+		return false
+	}
+	if strings.Contains(subject, ".registry.request") || strings.HasSuffix(subject, ".heartbeat") || strings.HasSuffix(subject, ".status") {
+		return false
+	}
+	return true
+}
+
 
 

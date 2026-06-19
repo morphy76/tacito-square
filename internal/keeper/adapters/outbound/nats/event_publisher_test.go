@@ -37,7 +37,11 @@ func startTestNatsServer(t *testing.T) (*server.Server, *nats.Conn) {
 	require.NoError(t, err)
 	_, err = js.AddStream(&nats.StreamConfig{
 		Name:     "TACITO_EVENTS",
-		Subjects: []string{"ts.community.>"},
+		Subjects: []string{
+			"ts.community.*.agent.*",
+			"ts.community.*.agent.*.thread.*.response",
+			"ts.community.*.agent.*.thread.*.history",
+		},
 	})
 	require.NoError(t, err)
 
@@ -191,7 +195,11 @@ func TestNATSEventPublisher_Publish_JetStream(t *testing.T) {
 	require.NoError(t, err)
 	_, err = js.AddStream(&nats.StreamConfig{
 		Name:     "TACITO_EVENTS",
-		Subjects: []string{"ts.community.>"},
+		Subjects: []string{
+			"ts.community.*.agent.*",
+			"ts.community.*.agent.*.thread.*.response",
+			"ts.community.*.agent.*.thread.*.history",
+		},
 	})
 	require.NoError(t, err)
 
