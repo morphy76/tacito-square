@@ -43,7 +43,6 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | SPEC-FR-M6.1 | Community Topology (Hub-Spoke) | VERIFIED | keeper, agent | [SPEC-FR-M6.1](functional/M6/SPEC-FR-M6.1.md) |
 | SPEC-FR-M6.2 | NATS Inter-Agent Messaging | VERIFIED | agent | [SPEC-FR-M6.2](functional/M6/SPEC-FR-M6.2.md) |
 | SPEC-FR-M6.3 | NATS Subject Namespacing | VERIFIED | agent, keeper | [SPEC-FR-M6.3](functional/M6/SPEC-FR-M6.3.md) |
-| SPEC-FR-M6.4 | Thread Management | DRAFT | conversation-hub | [SPEC-FR-M6.4](functional/M6/SPEC-FR-M6.4.md) |
 | SPEC-FR-M6.5 | A2A Agent Cards | VERIFIED | agent, keeper | [SPEC-FR-M6.5](functional/M6/SPEC-FR-M6.5.md) |
 | SPEC-FR-M6.6 | Conversation Handoff | DRAFT | agent | [SPEC-FR-M6.6](functional/M6/SPEC-FR-M6.6.md) |
 | SPEC-FR-M6.7 | Specialist Agent Spawn | DRAFT | keeper, agent | [SPEC-FR-M6.7](functional/M6/SPEC-FR-M6.7.md) |
@@ -119,6 +118,14 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | SPEC-FR-M10.1 | A2A HTTP Gateway | DRAFT | keeper | [SPEC-FR-M10.1](functional/M10/SPEC-FR-M10.1.md) |
 | SPEC-FR-M10.2 | External Agent Registry | DRAFT | keeper | [SPEC-FR-M10.2](functional/M10/SPEC-FR-M10.2.md) |
 | SPEC-FR-M10.3 | Spawning MCP Servers using CRD from Keeper | DRAFT | keeper, operator | [SPEC-FR-M10.3](functional/M10/SPEC-FR-M10.3.md) |
+| SPEC-FR-M10.4 | Thread Management | DRAFT | conversation-hub | [SPEC-FR-M10.4](functional/M10/SPEC-FR-M10.4.md) |
+
+### M11: Extensions & Advanced Topologies
+
+| ID | Title | Status | Component | File |
+|----|-------|--------|-----------|------|
+| SPEC-FR-M11.1 | Decentralized P2P Topology & Handoff | DRAFT | agent, keeper, operator | [SPEC-FR-M11.1](functional/M11/SPEC-FR-M11.1.md) |
+| SPEC-FR-M11.2 | Shared Hive Short-Term Memory (Community STM) | DRAFT | agent | [SPEC-FR-M11.2](functional/M11/SPEC-FR-M11.2.md) |
 
 ## Milestones
 
@@ -133,5 +140,6 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | M7 | BFF & UIs | ⬜ PLANNED | 4 | [M7](milestones/M7-bff-uis.md) |
 | M8 | Governance | ⬜ PLANNED | 10 | [M8](milestones/M8-governance.md) |
 | M9 | Hardening | ⬜ PLANNED | 7 | [M9](milestones/M9-hardening.md) |
-| M10 | Federation | ⬜ PLANNED | 2 | [M10](milestones/M10-federation.md) |
+| M10 | Federation | ⬜ PLANNED | 4 | [M10](milestones/M10-federation.md) |
+| M11 | Extensions & Advanced Topologies | ⬜ PLANNED | 2 | [M11](milestones/M11-extensions.md) |
 

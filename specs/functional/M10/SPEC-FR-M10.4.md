@@ -1,10 +1,10 @@
-# SPEC-FR-M6.4: Thread Management
+# SPEC-FR-M10.4: Thread Management
 
 | Field         | Value                                                         |
 |---------------|---------------------------------------------------------------|
-| ID            | SPEC-FR-M6.4                                                  |
+| ID            | SPEC-FR-M10.4                                                 |
 | Status        | DRAFT                                                         |
-| Milestone     | M6                                                            |
+| Milestone     | M10                                                           |
 | Component     | conversation-hub                                              |
 | Depends On    | SPEC-FR-M3.6, SPEC-FR-M6.0                                    |
 | Supersedes    | none                                                          |
