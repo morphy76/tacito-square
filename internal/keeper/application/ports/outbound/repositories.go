@@ -85,7 +85,7 @@ type AgentRepository interface {
 
 	AssignToCommunity(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error
 	UnassignFromCommunity(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error
-	UpdateStatus(ctx context.Context, agentID uuid.UUID, status model.AgentStatus) error
+	UpdateStatus(ctx context.Context, agentID uuid.UUID, status model.AgentStatus) (bool, error)
 
 	UpsertRegistration(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID, card *agentcard.AgentCard) error
 	GetRegistration(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) (*agentcard.AgentCard, time.Time, error)

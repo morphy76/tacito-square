@@ -88,8 +88,9 @@ func (m *mockLLMBindingRepository) Delete(ctx context.Context, id uuid.UUID) err
 func (m *mockAgentRepository) UnassignFromCommunity(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error {
 	return m.Called(ctx, agentID, communityID).Error(0)
 }
-func (m *mockAgentRepository) UpdateStatus(ctx context.Context, agentID uuid.UUID, status model.AgentStatus) error {
-	return m.Called(ctx, agentID, status).Error(0)
+func (m *mockAgentRepository) UpdateStatus(ctx context.Context, agentID uuid.UUID, status model.AgentStatus) (bool, error) {
+	args := m.Called(ctx, agentID, status)
+	return args.Bool(0), args.Error(1)
 }
 func (m *mockAgentRepository) UpsertRegistration(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID, card *agentcard.AgentCard) error {
 	return m.Called(ctx, agentID, communityID, card).Error(0)

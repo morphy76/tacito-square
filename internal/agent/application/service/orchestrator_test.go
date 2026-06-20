@@ -124,7 +124,16 @@ func TestOrchestrator_ProcessUserMessage(t *testing.T) {
 				{Name: "translator", Description: "Translates things"},
 			},
 		}
-		mockMemory := &MockShortTermMemory{}
+		mockMemory := &MockShortTermMemory{
+			GetFunc: func(ctx context.Context, tenantID, agentID, threadID string, limit int) ([]model.MemoryEntry, error) {
+				return []model.MemoryEntry{
+					{
+						Role:    "user",
+						Content: "Do writer and translator tasks.",
+					},
+				}, nil
+			},
+		}
 		mockPublisher := &MockEventPublisherOrchestrator{}
 
 		// Mock Brain returning a delegate action with multiple spokes
@@ -207,6 +216,17 @@ func TestOrchestrator_ProcessUserMessage(t *testing.T) {
 
 		assert.Equal(t, events.SchemaConversationalAgentDelegation, taskEvt1.SchemaRef)
 		assert.Equal(t, events.SchemaConversationalAgentDelegation, taskEvt2.SchemaRef)
+
+		var payload1, payload2 events.AgentDelegationPayload
+		err = json.Unmarshal(taskEvt1.Payload, &payload1)
+		require.NoError(t, err)
+		err = json.Unmarshal(taskEvt2.Payload, &payload2)
+		require.NoError(t, err)
+
+		assert.Len(t, payload1.ContextHistory, 1)
+		assert.Equal(t, "Do writer and translator tasks.", payload1.ContextHistory[0].Content)
+		assert.Len(t, payload2.ContextHistory, 1)
+		assert.Equal(t, "Do writer and translator tasks.", payload2.ContextHistory[0].Content)
 
 		// Ensure correct NATS subjects were targeted
 		subjects := []string{publishes[1].Subject, publishes[2].Subject}

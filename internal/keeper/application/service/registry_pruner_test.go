@@ -36,8 +36,8 @@ func (m *mockPrunerAgentRepository) AssignToCommunity(ctx context.Context, agent
 func (m *mockPrunerAgentRepository) UnassignFromCommunity(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error {
 	return nil
 }
-func (m *mockPrunerAgentRepository) UpdateStatus(ctx context.Context, agentID uuid.UUID, status model.AgentStatus) error {
-	return nil
+func (m *mockPrunerAgentRepository) UpdateStatus(ctx context.Context, agentID uuid.UUID, status model.AgentStatus) (bool, error) {
+	return false, nil
 }
 func (m *mockPrunerAgentRepository) UpsertRegistration(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID, card *agentcard.AgentCard) error {
 	return nil

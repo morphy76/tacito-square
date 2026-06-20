@@ -468,6 +468,23 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 			logger.Warn().Err(err).Msg("failed to publish flow progression event")
 		}
 
+		// Fetch Context History from Hub's STM
+		history, err := o.memory.Get(ctx, tenantID, o.agentID, threadID, 15)
+		if err != nil {
+			logger.Warn().Err(err).Msg("failed to load short-term memory for context history propagation, using empty history")
+			history = []model.MemoryEntry{}
+		}
+
+		var contextHistory []events.ThreadTurn
+		for _, turn := range history {
+			contextHistory = append(contextHistory, events.ThreadTurn{
+				Role:      turn.Role,
+				Content:   turn.Content,
+				Timestamp: turn.Timestamp.Format(time.RFC3339),
+				Metadata:  turn.Metadata,
+			})
+		}
+
 		// Publish task events to all targeted Spokes
 		sourceIdentity := fmt.Sprintf("agent/%s", o.agentID)
 		for _, task := range action.Spokes {
@@ -477,6 +494,7 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 				DelegatingAgent: o.agentName,
 				TargetAgent:     task.Spoke,
 				Message:         task.Message,
+				ContextHistory:  contextHistory,
 			}
 
 			taskEvent, err := events.NewDomainEvent(

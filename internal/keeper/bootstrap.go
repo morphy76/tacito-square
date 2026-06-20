@@ -145,7 +145,7 @@ func NewServer(
 
 	// Wire NATS registry subscriber, registry pruner, and registry handler
 	if nc != nil && pool != nil {
-		subscriber := keepernats.NewRegistrySubscriber(nc, agentRepo, cacheClient, logger)
+		subscriber := keepernats.NewRegistrySubscriber(nc, agentRepo, cacheClient, eventPublisher, logger)
 		pruner := service.NewRegistryPruner(agentRepo, cacheClient, eventPublisher, logger)
 		handler := keepernats.NewRegistryHandler(nc, agentRepo, cacheClient, logger)
 

@@ -27,6 +27,7 @@ type RegistrySubscriber struct {
 	nc        *nats.Conn
 	agentRepo outbound.AgentRepository
 	cache     sharedports.Cache
+	publisher outbound.EventPublisher
 	logger    zerolog.Logger
 	sub       *nats.Subscription
 	tracer    trace.Tracer
@@ -37,12 +38,14 @@ func NewRegistrySubscriber(
 	nc *nats.Conn,
 	agentRepo outbound.AgentRepository,
 	cache sharedports.Cache,
+	publisher outbound.EventPublisher,
 	logger zerolog.Logger,
 ) *RegistrySubscriber {
 	return &RegistrySubscriber{
 		nc:        nc,
 		agentRepo: agentRepo,
 		cache:     cache,
+		publisher: publisher,
 		logger:    logger.With().Str("component", "registry_subscriber").Logger(),
 		tracer:    otel.Tracer("registry_subscriber"),
 	}
@@ -137,11 +140,30 @@ func (s *RegistrySubscriber) handleHeartbeat(ctx context.Context, logger zerolog
 		return fmt.Errorf("upsert agent registration: %w", err)
 	}
 
-	err = s.agentRepo.UpdateStatus(ctx, agentUUID, model.AgentStatusRunning)
+	changed, err := s.agentRepo.UpdateStatus(ctx, agentUUID, model.AgentStatusRunning)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("update agent status: %w", err)
+	}
+
+	if changed && s.publisher != nil {
+		// Broadcast status change event to NATS
+		subject := fmt.Sprintf("ts.community.%s.agent.%s.status", commIDStr, agentIDStr)
+		evt := events.DomainEvent{
+			EventID:    uuid.New().String(),
+			SchemaRef:  "urn:tacito:schema:conversational:agent-status:v1",
+			Source:     "keeper",
+			TenantID:   tenantID,
+			OccurredAt: time.Now().UTC().Format(time.RFC3339Nano),
+			Payload:    []byte(`{"status":"online"}`),
+		}
+		err = s.publisher.Publish(ctx, subject, evt)
+		if err != nil {
+			logger.Warn().Err(err).Str("subject", subject).Msg("failed to publish online status event")
+		} else {
+			logger.Trace().Str("subject", subject).Msg("published online status event successfully")
+		}
 	}
 
 	// Update cache
