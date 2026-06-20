@@ -168,7 +168,17 @@ func (o *Orchestrator) ProcessSpokeResponse(ctx context.Context, tenantID, threa
 	}
 
 	// 3. Validate if we were waiting for this Spoke
-	originalMsg, pending := state.PendingSpokes[payload.AgentName]
+	var matchedSpokeKey string
+	var originalMsg string
+	var pending bool
+	for k, v := range state.PendingSpokes {
+		if strings.EqualFold(k, payload.AgentName) {
+			matchedSpokeKey = k
+			originalMsg = v
+			pending = true
+			break
+		}
+	}
 	if !pending {
 		logger.Warn().Str("spoke", payload.AgentName).Msg("received response from spoke we were not waiting for, ignoring")
 		return nil
@@ -185,18 +195,7 @@ func (o *Orchestrator) ProcessSpokeResponse(ctx context.Context, tenantID, threa
 	isHandoff := false
 	cleanedResponse := payload.Response
 	if strings.Contains(cleanedResponse, `"suggest_handoff"`) {
-		if strings.Contains(cleanedResponse, "```json") {
-			parts := strings.Split(cleanedResponse, "```json")
-			if len(parts) > 1 {
-				cleanedResponse = strings.Split(parts[1], "```")[0]
-			}
-		} else if strings.Contains(cleanedResponse, "```") {
-			parts := strings.Split(cleanedResponse, "```")
-			if len(parts) > 1 {
-				cleanedResponse = strings.Split(parts[1], "```")[0]
-			}
-		}
-		cleanedResponse = strings.TrimSpace(cleanedResponse)
+		cleanedResponse = CleanAndExtractJSON(cleanedResponse)
 		if err := json.Unmarshal([]byte(cleanedResponse), &handoff); err == nil && handoff.Action == "suggest_handoff" && handoff.Target != "" {
 			isHandoff = true
 		}
@@ -208,8 +207,9 @@ func (o *Orchestrator) ProcessSpokeResponse(ctx context.Context, tenantID, threa
 		cards, err := o.discovery.GetCards(ctx)
 		if err == nil {
 			for _, card := range cards {
-				if card.Name == handoff.Target {
+				if strings.EqualFold(card.Name, handoff.Target) {
 					targetCard = card
+					handoff.Target = card.Name // Normalize target to official name
 					break
 				}
 			}
@@ -217,14 +217,14 @@ func (o *Orchestrator) ProcessSpokeResponse(ctx context.Context, tenantID, threa
 	}
 
 	// Remove delegating spoke from pending list
-	delete(state.PendingSpokes, payload.AgentName)
+	delete(state.PendingSpokes, matchedSpokeKey)
 
 	if targetCard != nil {
 		// Handoff Execution
 		logger.Info().Str("target_spoke", handoff.Target).Msg("executing coordinated handoff delegation")
 
 		// 1. Hub Memory Logging
-		observation := fmt.Sprintf("[Observation] Spoke Agent '%s' suggested handoff to '%s' because: %s", payload.AgentName, handoff.Target, handoff.Reason)
+		observation := fmt.Sprintf("[Observation] Spoke Agent '%s' suggested handoff to '%s' because: %s", matchedSpokeKey, handoff.Target, handoff.Reason)
 		spokeEntry := model.MemoryEntry{
 			Role:      "user",
 			Content:   observation,
@@ -245,7 +245,7 @@ func (o *Orchestrator) ProcessSpokeResponse(ctx context.Context, tenantID, threa
 		}
 
 		// 4. Emit progression update
-		progMsg := fmt.Sprintf("Executing handoff from %s to %s...", payload.AgentName, handoff.Target)
+		progMsg := fmt.Sprintf("Executing handoff from %s to %s...", matchedSpokeKey, handoff.Target)
 		if err := o.emitProgressionEvent(ctx, tenantID, threadID, state.OriginalEventID, progMsg); err != nil {
 			logger.Warn().Err(err).Msg("failed to publish flow progression event")
 		}
@@ -305,7 +305,7 @@ func (o *Orchestrator) ProcessSpokeResponse(ctx context.Context, tenantID, threa
 	// Normal Flow / Fallback when handoff is target-invalid or not requested
 	spokeEntry := model.MemoryEntry{
 		Role:      "user",
-		Content:   fmt.Sprintf("[Observation] Spoke Agent '%s' responded: %s", payload.AgentName, payload.Response),
+		Content:   fmt.Sprintf("[Observation] Spoke Agent '%s' responded: %s", matchedSpokeKey, payload.Response),
 		Timestamp: time.Now().UTC(),
 	}
 	if err := o.memory.Append(ctx, tenantID, o.agentID, threadID, spokeEntry); err != nil {
@@ -313,7 +313,7 @@ func (o *Orchestrator) ProcessSpokeResponse(ctx context.Context, tenantID, threa
 	}
 
 	// Emit progression update
-	progMsg := fmt.Sprintf("Received response from %s.", payload.AgentName)
+	progMsg := fmt.Sprintf("Received response from %s.", matchedSpokeKey)
 	if err := o.emitProgressionEvent(ctx, tenantID, threadID, state.OriginalEventID, progMsg); err != nil {
 		logger.Warn().Err(err).Msg("failed to publish flow progression event")
 	}
@@ -400,6 +400,22 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 		history = []model.MemoryEntry{}
 	}
 
+	// To avoid duplicating the latest message (since the LLM adapter automatically
+	// appends the BrainRequest.Prompt as a user message, but the caller of
+	// runOrchestrationTurn has already appended the latest message to STM),
+	// we extract the latest message from history to use as the Prompt, and pass
+	// the preceding history entries as the History.
+	var promptForBrain string
+	var historyForBrain []model.MemoryEntry
+
+	if len(history) > 0 {
+		promptForBrain = history[len(history)-1].Content
+		historyForBrain = history[:len(history)-1]
+	} else {
+		promptForBrain = latestInput
+		historyForBrain = history
+	}
+
 	// 3. Compile prompt detailing available specialized Spoke agents
 	systemPrompt, err := o.compileSystemPrompt(ctx)
 	if err != nil {
@@ -408,9 +424,9 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 
 	// 4. Invoke Brain (LLM) for routing turn
 	brainReq := model.BrainRequest{
-		Prompt:       latestInput,
+		Prompt:       promptForBrain,
 		SystemPrompt: systemPrompt,
-		History:      history,
+		History:      historyForBrain,
 	}
 
 	resp, err := o.brain.Generate(ctx, brainReq)
@@ -420,19 +436,7 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 
 	// 5. Parse action decision
 	var action OrchestrationAction
-	cleanedContent := resp.Content
-	if strings.Contains(cleanedContent, "```json") {
-		parts := strings.Split(cleanedContent, "```json")
-		if len(parts) > 1 {
-			cleanedContent = strings.Split(parts[1], "```")[0]
-		}
-	} else if strings.Contains(cleanedContent, "```") {
-		parts := strings.Split(cleanedContent, "```")
-		if len(parts) > 1 {
-			cleanedContent = strings.Split(parts[1], "```")[0]
-		}
-	}
-	cleanedContent = strings.TrimSpace(cleanedContent)
+	cleanedContent := CleanAndExtractJSON(resp.Content)
 
 	if err := json.Unmarshal([]byte(cleanedContent), &action); err != nil {
 		// Fallback: treat text as a final answer
@@ -449,13 +453,34 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 			return fmt.Errorf("brain decided to delegate but list of spokes is empty")
 		}
 
+		// Discover card names from registry to normalize casing of spokes
+		cards, err := o.discovery.GetCards(ctx)
+		if err != nil {
+			logger.Warn().Err(err).Msg("failed to load agent cards for normalization, using raw brain output names")
+		}
+
 		// Save state with map of pending spokes
 		state.Status = "waiting_spoke"
 		state.PendingSpokes = make(map[string]string)
 		var spokeNames []string
+		var normalizedSpokes []SpokeTask
+
 		for _, task := range action.Spokes {
-			state.PendingSpokes[task.Spoke] = task.Message
-			spokeNames = append(spokeNames, task.Spoke)
+			officialName := task.Spoke
+			if err == nil {
+				for _, card := range cards {
+					if strings.EqualFold(card.Name, task.Spoke) {
+						officialName = card.Name
+						break
+					}
+				}
+			}
+			state.PendingSpokes[officialName] = task.Message
+			spokeNames = append(spokeNames, officialName)
+			normalizedSpokes = append(normalizedSpokes, SpokeTask{
+				Spoke:   officialName,
+				Message: task.Message,
+			})
 		}
 
 		if err := o.stateStore.SaveState(ctx, tenantID, threadID, *state); err != nil {
@@ -487,7 +512,7 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 
 		// Publish task events to all targeted Spokes
 		sourceIdentity := fmt.Sprintf("agent/%s", o.agentID)
-		for _, task := range action.Spokes {
+		for _, task := range normalizedSpokes {
 			taskPayload := events.AgentDelegationPayload{
 				ThreadID:        threadID,
 				CommunityID:     o.communityID,
@@ -707,10 +732,10 @@ func (o *Orchestrator) ensureHumanReadable(ctx context.Context, text string) (st
 		return text, nil
 	}
 
-	prompt := fmt.Sprintf("Please review the following response. If it is already a clean, human-readable, and polished message, output it exactly as-is. If it contains raw data, observation logs, or is unstructured, rewrite and polish it to be a clear, cohesive, and human-friendly final answer to the user. Maintain all facts and details.\n\nResponse to review:\n%s", text)
+	prompt := fmt.Sprintf("Please review the following response. If it is already a clean, human-readable, and polished message, output it exactly as-is. If it contains raw data, observation logs, or is unstructured, rewrite and polish it to be a clear, cohesive, and human-friendly final answer to the user. Maintain all facts and details. Do not include any explanations, introduction, or conversational filler.\n\nResponse to review:\n%s", text)
 	resp, err := o.brain.Generate(ctx, model.BrainRequest{
 		Prompt:       prompt,
-		SystemPrompt: "You are a polishing assistant. Your task is to ensure that the response is human-readable, polished, and friendly, while preserving all facts.",
+		SystemPrompt: "You are a polishing assistant. Your task is to output ONLY the final, polished response. Do NOT include any introduction, explanations, meta-commentary, or preamble (such as 'Here is the polished version:', 'I have reviewed the response', or 'It looks like you provided a JSON object'). Simply output the polished response message directly.",
 	})
 	if err != nil {
 		return text, err

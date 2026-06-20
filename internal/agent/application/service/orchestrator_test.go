@@ -688,3 +688,259 @@ func TestOrchestrator_TemplateCompilation(t *testing.T) {
 	assert.Contains(t, compiledPrompt, "  Description: Writes code")
 	assert.Contains(t, compiledPrompt, "Guidelines:\nCoordinate spokes correctly.")
 }
+
+func TestOrchestrator_CaseInsensitiveRouting(t *testing.T) {
+	t.Run("delegate normalization: brain outputs lowercase, registry is capitalized, pending state and NATS subject use official capitalized name", func(t *testing.T) {
+		mockLock := &MockThreadLock{}
+		mockStateStore := &MockOrchestrationStateStore{}
+		mockDiscovery := &MockAgentDiscovery{
+			cards: []*agentcard.AgentCard{
+				{Name: "Translator", Description: "Translates text"},
+			},
+		}
+		mockMemory := &MockShortTermMemory{}
+		mockPublisher := &MockEventPublisherOrchestrator{}
+
+		mockBrain := &MockBrain{
+			GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
+				// Brain outputs lowercase 'translator'
+				respJSON := `{
+					"action": "delegate",
+					"spokes": [{"spoke": "translator", "message": "translate hello"}]
+				}`
+				return &model.BrainResponse{Content: respJSON}, nil
+			},
+		}
+
+		orchestrator := service.NewOrchestrator(
+			"hub-123", "hub-agent", "comm-1",
+			mockBrain, mockStateStore, mockLock, mockDiscovery, mockMemory, mockPublisher,
+			"You are the coordinator.",
+		)
+
+		payload := events.AddUserMessagePayload{
+			ThreadID:    "thread-abc",
+			CommunityID: "comm-1",
+			Message:     "Hello world",
+		}
+
+		err := orchestrator.ProcessUserMessage(context.Background(), "tenant-1", "thread-abc", payload, "event-999")
+		assert.NoError(t, err)
+
+		// Assert pending spoke state in Redis is normalized to official name "Translator"
+		state, err := mockStateStore.GetState(context.Background(), "tenant-1", "thread-abc")
+		require.NoError(t, err)
+		require.NotNil(t, state)
+		assert.Contains(t, state.PendingSpokes, "Translator")
+		assert.NotContains(t, state.PendingSpokes, "translator")
+
+		// Assert published NATS message subject uses normalized name "Translator"
+		publishes := mockPublisher.GetPublishes()
+		require.Len(t, publishes, 2) // 1 reasoning/progression event, 1 delegation event
+		
+		var delegationEvt events.DomainEvent
+		err = json.Unmarshal(publishes[1].Data, &delegationEvt)
+		require.NoError(t, err)
+		assert.Equal(t, events.SchemaConversationalAgentDelegation, delegationEvt.SchemaRef)
+		assert.Equal(t, "ts.community.comm-1.agent.Translator", publishes[1].Subject)
+
+		var delegationPayload events.AgentDelegationPayload
+		err = json.Unmarshal(delegationEvt.Payload, &delegationPayload)
+		require.NoError(t, err)
+		assert.Equal(t, "Translator", delegationPayload.TargetAgent)
+	})
+
+	t.Run("response match: spoke responds with capitalized name, pending is capitalized, matches, clears, finalizes", func(t *testing.T) {
+		mockLock := &MockThreadLock{}
+		mockStateStore := &MockOrchestrationStateStore{}
+		mockDiscovery := &MockAgentDiscovery{}
+		mockMemory := &MockShortTermMemory{}
+		mockPublisher := &MockEventPublisherOrchestrator{}
+
+		initialState := model.OrchestrationState{
+			ThreadID:    "thread-abc",
+			CommunityID: "comm-1",
+			Status:      "waiting_spoke",
+			PendingSpokes: map[string]string{
+				"Translator": "task detail",
+			},
+			OriginalEventID: "event-999",
+			LoopCount:       1,
+			MaxLoops:        5,
+		}
+		err := mockStateStore.SaveState(context.Background(), "tenant-1", "thread-abc", initialState)
+		require.NoError(t, err)
+
+		calls := 0
+		mockBrain := &MockBrain{
+			GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
+				calls++
+				if calls == 1 {
+					respJSON := `{"action": "finalize", "response": "done"}`
+					return &model.BrainResponse{Content: respJSON}, nil
+				}
+				return &model.BrainResponse{Content: "polished done"}, nil
+			},
+		}
+
+		orchestrator := service.NewOrchestrator(
+			"hub-123", "hub-agent", "comm-1",
+			mockBrain, mockStateStore, mockLock, mockDiscovery, mockMemory, mockPublisher,
+			"You are the coordinator.",
+		)
+
+		// Spoke responds with capitalized name "Translator" (or lowercase "translator")
+		spokeResponse := events.AgentResponsePayload{
+			ThreadID:           "thread-abc",
+			CommunityID:        "comm-1",
+			AgentName:          "translator", // Test case-insensitivity on lookup
+			CorrelationEventID: "event-task",
+			Response:           "Bonjour",
+			Finished:           true,
+		}
+
+		err = orchestrator.ProcessSpokeResponse(context.Background(), "tenant-1", "thread-abc", spokeResponse)
+		assert.NoError(t, err)
+
+		// State cleared/deleted
+		state, err := mockStateStore.GetState(context.Background(), "tenant-1", "thread-abc")
+		require.NoError(t, err)
+		assert.Nil(t, state)
+
+		// Assert memory entry uses normalized name
+		assert.Len(t, mockMemory.AppendCalls, 2) // 1 user/observation entry, 1 assistant entry
+		assert.Contains(t, mockMemory.AppendCalls[0].Content, "Spoke Agent 'Translator' responded")
+	})
+}
+
+func TestOrchestrator_HistorySplitting(t *testing.T) {
+	t.Run("user message: history is split correctly", func(t *testing.T) {
+		mockLock := &MockThreadLock{}
+		mockStateStore := &MockOrchestrationStateStore{}
+		mockDiscovery := &MockAgentDiscovery{}
+		
+		userMessage := "Hello, I need help"
+		mockMemory := &MockShortTermMemory{
+			GetFunc: func(ctx context.Context, tenantID, agentID, threadID string, limit int) ([]model.MemoryEntry, error) {
+				return []model.MemoryEntry{
+					{
+						Role:    "user",
+						Content: userMessage,
+					},
+				}, nil
+			},
+		}
+		mockPublisher := &MockEventPublisherOrchestrator{}
+
+		var capturedReq model.BrainRequest
+		calls := 0
+		mockBrain := &MockBrain{
+			GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
+				calls++
+				if calls == 1 {
+					capturedReq = request
+					respJSON := `{"action": "finalize", "response": "done"}`
+					return &model.BrainResponse{Content: respJSON}, nil
+				}
+				return &model.BrainResponse{Content: "polished done"}, nil
+			},
+		}
+
+		orchestrator := service.NewOrchestrator(
+			"hub-123", "hub-agent", "comm-1",
+			mockBrain, mockStateStore, mockLock, mockDiscovery, mockMemory, mockPublisher,
+			"You are the coordinator.",
+		)
+
+		payload := events.AddUserMessagePayload{
+			ThreadID:    "thread-abc",
+			CommunityID: "comm-1",
+			Message:     userMessage,
+		}
+
+		err := orchestrator.ProcessUserMessage(context.Background(), "tenant-1", "thread-abc", payload, "event-999")
+		assert.NoError(t, err)
+
+		// Assert that the latest message was sliced off from history and passed as Prompt
+		assert.Equal(t, userMessage, capturedReq.Prompt)
+		assert.Len(t, capturedReq.History, 0)
+	})
+
+	t.Run("spoke response: history is split correctly with wrapped observation", func(t *testing.T) {
+		mockLock := &MockThreadLock{}
+		mockStateStore := &MockOrchestrationStateStore{}
+		mockDiscovery := &MockAgentDiscovery{}
+
+		// Populate active state with pending spoke
+		initialState := model.OrchestrationState{
+			ThreadID:    "thread-abc",
+			CommunityID: "comm-1",
+			Status:      "waiting_spoke",
+			PendingSpokes: map[string]string{
+				"enquirer": "please ask questions",
+			},
+			OriginalEventID: "event-999",
+			LoopCount:       1,
+			MaxLoops:        5,
+		}
+		err := mockStateStore.SaveState(context.Background(), "tenant-1", "thread-abc", initialState)
+		require.NoError(t, err)
+
+		spokeResponse := "Hello Riccardo"
+		expectedObservation := "[Observation] Spoke Agent 'enquirer' responded: Hello Riccardo"
+
+		mockMemory := &MockShortTermMemory{
+			GetFunc: func(ctx context.Context, tenantID, agentID, threadID string, limit int) ([]model.MemoryEntry, error) {
+				return []model.MemoryEntry{
+					{
+						Role:    "user",
+						Content: "Hello, my name is Riccardo",
+					},
+					{
+						Role:    "user",
+						Content: expectedObservation,
+					},
+				}, nil
+			},
+		}
+		mockPublisher := &MockEventPublisherOrchestrator{}
+
+		var capturedReq model.BrainRequest
+		calls := 0
+		mockBrain := &MockBrain{
+			GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
+				calls++
+				if calls == 1 {
+					capturedReq = request
+					respJSON := `{"action": "finalize", "response": "done"}`
+					return &model.BrainResponse{Content: respJSON}, nil
+				}
+				return &model.BrainResponse{Content: "polished done"}, nil
+			},
+		}
+
+		orchestrator := service.NewOrchestrator(
+			"hub-123", "hub-agent", "comm-1",
+			mockBrain, mockStateStore, mockLock, mockDiscovery, mockMemory, mockPublisher,
+			"You are the coordinator.",
+		)
+
+		payload := events.AgentResponsePayload{
+			ThreadID:           "thread-abc",
+			CommunityID:        "comm-1",
+			AgentName:          "enquirer",
+			CorrelationEventID: "event-task",
+			Response:           spokeResponse,
+			Finished:           true,
+		}
+
+		err = orchestrator.ProcessSpokeResponse(context.Background(), "tenant-1", "thread-abc", payload)
+		assert.NoError(t, err)
+
+		// Assert that the latest observation was sliced off from history and passed as Prompt
+		assert.Equal(t, expectedObservation, capturedReq.Prompt)
+		require.Len(t, capturedReq.History, 1)
+		assert.Equal(t, "Hello, my name is Riccardo", capturedReq.History[0].Content)
+	})
+}
+

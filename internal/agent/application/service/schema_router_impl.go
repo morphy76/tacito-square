@@ -475,10 +475,10 @@ func (r *SchemaRouterImpl) ensureHumanReadable(ctx context.Context, text string)
 		return text, nil
 	}
 
-	prompt := fmt.Sprintf("Please review the following response. If it is already a clean, human-readable, and polished message, output it exactly as-is. If it contains raw data, observation logs, or is unstructured, rewrite and polish it to be a clear, cohesive, and human-friendly final answer to the user. Maintain all facts and details.\n\nResponse to review:\n%s", text)
+	prompt := fmt.Sprintf("Please review the following response. If it is already a clean, human-readable, and polished message, output it exactly as-is. If it contains raw data, observation logs, or is unstructured, rewrite and polish it to be a clear, cohesive, and human-friendly final answer to the user. Maintain all facts and details. Do not include any explanations, introduction, or conversational filler.\n\nResponse to review:\n%s", text)
 	resp, err := r.brain.Generate(ctx, model.BrainRequest{
 		Prompt:       prompt,
-		SystemPrompt: "You are a polishing assistant. Your task is to ensure that the response is human-readable, polished, and friendly, while preserving all facts.",
+		SystemPrompt: "You are a polishing assistant. Your task is to output ONLY the final, polished response. Do NOT include any introduction, explanations, meta-commentary, or preamble (such as 'Here is the polished version:', 'I have reviewed the response', or 'It looks like you provided a JSON object'). Simply output the polished response message directly.",
 	})
 	if err != nil {
 		return text, err

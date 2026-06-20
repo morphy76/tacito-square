@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 )
 
 type tenantCtxKey struct{}
@@ -57,4 +58,30 @@ type parsedResponse struct {
 type toolCallDetail struct {
 	Name      string         `json:"name"`
 	Arguments map[string]any `json:"arguments"`
+}
+
+// CleanAndExtractJSON attempts to locate the first '{' and the last '}' in the content
+// to extract a clean JSON object string, ignoring any leading/trailing conversational text.
+// It also strips markdown code block wrappers if they exist.
+func CleanAndExtractJSON(content string) string {
+	cleaned := content
+	if strings.Contains(cleaned, "```json") {
+		parts := strings.Split(cleaned, "```json")
+		if len(parts) > 1 {
+			cleaned = strings.Split(parts[1], "```")[0]
+		}
+	} else if strings.Contains(cleaned, "```") {
+		parts := strings.Split(cleaned, "```")
+		if len(parts) > 1 {
+			cleaned = strings.Split(parts[1], "```")[0]
+		}
+	}
+	cleaned = strings.TrimSpace(cleaned)
+
+	start := strings.Index(cleaned, "{")
+	end := strings.LastIndex(cleaned, "}")
+	if start != -1 && end != -1 && end > start {
+		return cleaned[start : end+1]
+	}
+	return cleaned
 }

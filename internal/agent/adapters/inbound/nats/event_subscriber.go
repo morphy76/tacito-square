@@ -131,10 +131,31 @@ func (s *EventSubscriber) Start(ctx context.Context) error {
 }
 
 func (s *EventSubscriber) startPullLoop(ctx context.Context, js natsclient.JetStreamContext, subject, durableName string) error {
-	// Configure durable pull consumer
-	sub, err := js.PullSubscribe(subject, durableName, natsclient.PullMaxWaiting(128))
+	// Create durable consumer explicitly to prevent auto-deletion on Unsubscribe
+	consumerCfg := &natsclient.ConsumerConfig{
+		Durable:       durableName,
+		FilterSubject: subject,
+		AckPolicy:     natsclient.AckExplicitPolicy,
+		MaxWaiting:    128,
+	}
+	_, err := js.AddConsumer("TACITO_EVENTS", consumerCfg)
 	if err != nil {
-		return fmt.Errorf("pull subscribe to %s: %w", subject, err)
+		errStr := err.Error()
+		if strings.Contains(errStr, "consumer name already in use") ||
+			strings.Contains(errStr, "already exists") {
+			// Configuration might be different, let's update it
+			if _, updateErr := js.UpdateConsumer("TACITO_EVENTS", consumerCfg); updateErr != nil {
+				s.logger.Warn().Err(updateErr).Str("consumer", durableName).Msg("failed to update consumer configuration, proceeding with existing consumer")
+			}
+		} else {
+			return fmt.Errorf("failed to create durable consumer %s: %w", durableName, err)
+		}
+	}
+
+	// Bind to the pre-existing durable pull consumer
+	sub, err := js.PullSubscribe(subject, "", natsclient.Bind("TACITO_EVENTS", durableName), natsclient.PullMaxWaiting(128))
+	if err != nil {
+		return fmt.Errorf("pull subscribe binding to durable %s failed: %w", durableName, err)
 	}
 	s.subs = append(s.subs, sub)
 
