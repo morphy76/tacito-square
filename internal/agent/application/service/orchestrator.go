@@ -11,6 +11,7 @@ import (
 
 	"github.com/morphy76/tacito-square/internal/agent/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/agent/domain/model"
+	"github.com/morphy76/tacito-square/pkg/agentcard"
 	"github.com/morphy76/tacito-square/pkg/events"
 	"github.com/rs/zerolog"
 )
@@ -167,14 +168,141 @@ func (o *Orchestrator) ProcessSpokeResponse(ctx context.Context, tenantID, threa
 	}
 
 	// 3. Validate if we were waiting for this Spoke
-	if _, pending := state.PendingSpokes[payload.AgentName]; !pending {
+	originalMsg, pending := state.PendingSpokes[payload.AgentName]
+	if !pending {
 		logger.Warn().Str("spoke", payload.AgentName).Msg("received response from spoke we were not waiting for, ignoring")
 		return nil
 	}
 
-	// 4. Update state: remove from pending list and append response to history
+	// 4. Handoff Detection & Parsing
+	type HandoffSuggestion struct {
+		Action string `json:"action"`
+		Target string `json:"target"`
+		Reason string `json:"reason"`
+	}
+
+	var handoff HandoffSuggestion
+	isHandoff := false
+	cleanedResponse := payload.Response
+	if strings.Contains(cleanedResponse, `"suggest_handoff"`) {
+		if strings.Contains(cleanedResponse, "```json") {
+			parts := strings.Split(cleanedResponse, "```json")
+			if len(parts) > 1 {
+				cleanedResponse = strings.Split(parts[1], "```")[0]
+			}
+		} else if strings.Contains(cleanedResponse, "```") {
+			parts := strings.Split(cleanedResponse, "```")
+			if len(parts) > 1 {
+				cleanedResponse = strings.Split(parts[1], "```")[0]
+			}
+		}
+		cleanedResponse = strings.TrimSpace(cleanedResponse)
+		if err := json.Unmarshal([]byte(cleanedResponse), &handoff); err == nil && handoff.Action == "suggest_handoff" && handoff.Target != "" {
+			isHandoff = true
+		}
+	}
+
+	// 5. Target Validation
+	var targetCard *agentcard.AgentCard
+	if isHandoff {
+		cards, err := o.discovery.GetCards(ctx)
+		if err == nil {
+			for _, card := range cards {
+				if card.Name == handoff.Target {
+					targetCard = card
+					break
+				}
+			}
+		}
+	}
+
+	// Remove delegating spoke from pending list
 	delete(state.PendingSpokes, payload.AgentName)
 
+	if targetCard != nil {
+		// Handoff Execution
+		logger.Info().Str("target_spoke", handoff.Target).Msg("executing coordinated handoff delegation")
+
+		// 1. Hub Memory Logging
+		observation := fmt.Sprintf("[Observation] Spoke Agent '%s' suggested handoff to '%s' because: %s", payload.AgentName, handoff.Target, handoff.Reason)
+		spokeEntry := model.MemoryEntry{
+			Role:      "user",
+			Content:   observation,
+			Timestamp: time.Now().UTC(),
+		}
+		if err := o.memory.Append(ctx, tenantID, o.agentID, threadID, spokeEntry); err != nil {
+			logger.Warn().Err(err).Msg("failed to append handoff suggestion observation to short-term memory")
+		}
+
+		// 2. Concatenate instructions
+		delegationMsg := fmt.Sprintf("[Handoff instruction: %s] Original task: %s", handoff.Reason, originalMsg)
+
+		// 3. Update state in Redis
+		state.PendingSpokes[handoff.Target] = delegationMsg
+		state.Status = "waiting_spoke"
+		if err := o.stateStore.SaveState(ctx, tenantID, threadID, *state); err != nil {
+			return fmt.Errorf("failed to save orchestration state for handoff: %w", err)
+		}
+
+		// 4. Emit progression update
+		progMsg := fmt.Sprintf("Executing handoff from %s to %s...", payload.AgentName, handoff.Target)
+		if err := o.emitProgressionEvent(ctx, tenantID, threadID, state.OriginalEventID, progMsg); err != nil {
+			logger.Warn().Err(err).Msg("failed to publish flow progression event")
+		}
+
+		// 5. Context History extraction
+		history, err := o.memory.Get(ctx, tenantID, o.agentID, threadID, 15)
+		if err != nil {
+			logger.Warn().Err(err).Msg("failed to load short-term memory for context history propagation, using empty history")
+			history = []model.MemoryEntry{}
+		}
+
+		var contextHistory []events.ThreadTurn
+		for _, turn := range history {
+			contextHistory = append(contextHistory, events.ThreadTurn{
+				Role:      turn.Role,
+				Content:   turn.Content,
+				Timestamp: turn.Timestamp.Format(time.RFC3339),
+				Metadata:  turn.Metadata,
+			})
+		}
+
+		// 6. Publish delegation to target spoke
+		taskPayload := events.AgentDelegationPayload{
+			ThreadID:        threadID,
+			CommunityID:     o.communityID,
+			DelegatingAgent: o.agentName,
+			TargetAgent:     handoff.Target,
+			Message:         delegationMsg,
+			ContextHistory:  contextHistory,
+		}
+
+		sourceIdentity := fmt.Sprintf("agent/%s", o.agentID)
+		taskEvent, err := events.NewDomainEvent(
+			events.SchemaConversationalAgentDelegation,
+			sourceIdentity,
+			tenantID,
+			taskPayload,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to construct task event for target spoke %s: %w", handoff.Target, err)
+		}
+
+		eventData, err := json.Marshal(taskEvent)
+		if err != nil {
+			return fmt.Errorf("failed to marshal task event: %w", err)
+		}
+
+		subject := fmt.Sprintf("ts.community.%s.agent.%s", o.communityID, handoff.Target)
+		logger.Info().Str("subject", subject).Str("spoke", handoff.Target).Msg("publishing handoff task to target spoke agent")
+		if err := o.publisher.Publish(ctx, subject, eventData); err != nil {
+			return fmt.Errorf("failed to publish task to target spoke %s: %w", handoff.Target, err)
+		}
+
+		return nil
+	}
+
+	// Normal Flow / Fallback when handoff is target-invalid or not requested
 	spokeEntry := model.MemoryEntry{
 		Role:      "user",
 		Content:   fmt.Sprintf("[Observation] Spoke Agent '%s' responded: %s", payload.AgentName, payload.Response),
@@ -184,13 +312,13 @@ func (o *Orchestrator) ProcessSpokeResponse(ctx context.Context, tenantID, threa
 		logger.Warn().Err(err).Msg("failed to append spoke response to short-term memory")
 	}
 
-	// 5. Emit progression update
+	// Emit progression update
 	progMsg := fmt.Sprintf("Received response from %s.", payload.AgentName)
 	if err := o.emitProgressionEvent(ctx, tenantID, threadID, state.OriginalEventID, progMsg); err != nil {
 		logger.Warn().Err(err).Msg("failed to publish flow progression event")
 	}
 
-	// 6. Fan-in / Join check: Wait if there are other pending spokes
+	// Fan-in / Join check
 	if len(state.PendingSpokes) > 0 {
 		logger.Info().Int("pending_count", len(state.PendingSpokes)).Msg("partial spoke response received, yielding and waiting for other concurrent spokes")
 		if err := o.stateStore.SaveState(ctx, tenantID, threadID, *state); err != nil {
@@ -199,7 +327,7 @@ func (o *Orchestrator) ProcessSpokeResponse(ctx context.Context, tenantID, threa
 		return nil
 	}
 
-	// 7. All concurrent spokes finished, proceed to next orchestration turn
+	// All concurrent spokes finished, proceed to next orchestration turn
 	return o.runOrchestrationTurn(ctx, tenantID, threadID, state, payload.Response)
 }
 

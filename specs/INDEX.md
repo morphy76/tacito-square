@@ -44,7 +44,7 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | SPEC-FR-M6.2 | NATS Inter-Agent Messaging | VERIFIED | agent | [SPEC-FR-M6.2](functional/M6/SPEC-FR-M6.2.md) |
 | SPEC-FR-M6.3 | NATS Subject Namespacing | VERIFIED | agent, keeper | [SPEC-FR-M6.3](functional/M6/SPEC-FR-M6.3.md) |
 | SPEC-FR-M6.5 | A2A Agent Cards | VERIFIED | agent, keeper | [SPEC-FR-M6.5](functional/M6/SPEC-FR-M6.5.md) |
-| SPEC-FR-M6.6 | Conversation Handoff | ACCEPTED | agent | [SPEC-FR-M6.6](functional/M6/SPEC-FR-M6.6.md) |
+| SPEC-FR-M6.6 | Conversation Handoff | VERIFIED | agent | [SPEC-FR-M6.6](functional/M6/SPEC-FR-M6.6.md) |
 | SPEC-FR-M6.7 | Built-in Agent Templates | ACCEPTED | keeper, agent, operator | [SPEC-FR-M6.7](functional/M6/SPEC-FR-M6.7.md) |
 
 ### M6: Bugs

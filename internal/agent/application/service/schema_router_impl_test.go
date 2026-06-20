@@ -562,3 +562,80 @@ func TestSchemaRouter_AddUserMessage_Polishing(t *testing.T) {
 
 	assert.Equal(t, "Polished: Raw Unpolished Answer", respPayload.Response)
 }
+
+func TestSchemaRouter_AgentDelegation_ContextHistory(t *testing.T) {
+	mockProcessor := &MockMessageProcessor{
+		ProcessIncomingMessageFunc: func(ctx context.Context, tenantID, agentID, threadID string, payload string) (string, error) {
+			assert.Equal(t, "[Handoff instruction: please translate] Original task: write story", payload)
+			return "Done", nil
+		},
+	}
+	
+	clearCalled := false
+	var appendedEntries []model.MemoryEntry
+	mockMemory := &MockShortTermMemory{
+		ClearFunc: func(ctx context.Context, tenantID, agentID, threadID string) error {
+			assert.Equal(t, "tenant-1", tenantID)
+			assert.Equal(t, "agent-spoke-1", agentID)
+			assert.Equal(t, "thread-abc", threadID)
+			clearCalled = true
+			return nil
+		},
+		AppendFunc: func(ctx context.Context, tenantID, agentID, threadID string, entry model.MemoryEntry) error {
+			assert.Equal(t, "tenant-1", tenantID)
+			assert.Equal(t, "agent-spoke-1", agentID)
+			assert.Equal(t, "thread-abc", threadID)
+			appendedEntries = append(appendedEntries, entry)
+			return nil
+		},
+	}
+	mockPublisher := &MockEventPublisher{}
+
+	router := service.NewSchemaRouterImpl(
+		"agent-spoke-1",
+		"writer",
+		"spoke",
+		mockProcessor,
+		nil,
+		mockMemory,
+		nil,
+		nil,
+		nil,
+		mockPublisher,
+		nil,
+	)
+
+	payload := events.AgentDelegationPayload{
+		ThreadID:        "thread-abc",
+		CommunityID:     "community-456",
+		DelegatingAgent: "hub-agent",
+		TargetAgent:     "writer",
+		Message:         "[Handoff instruction: please translate] Original task: write story",
+		ContextHistory: []events.ThreadTurn{
+			{Role: "user", Content: "Hello in Spanish", Timestamp: "2026-06-20T09:30:00Z"},
+			{Role: "assistant", Content: "Hola", Timestamp: "2026-06-20T09:30:05Z"},
+		},
+	}
+	payloadBytes, err := json.Marshal(payload)
+	require.NoError(t, err)
+
+	evt := events.DomainEvent{
+		EventID:    "evt-deleg-1",
+		SchemaRef:  events.SchemaConversationalAgentDelegation,
+		Source:     "agent/hub-123",
+		TenantID:   "tenant-1",
+		OccurredAt: time.Now().Format(time.RFC3339Nano),
+		Payload:    payloadBytes,
+	}
+
+	err = router.RouteEvent(context.Background(), evt)
+	assert.NoError(t, err)
+
+	assert.True(t, clearCalled, "Clear should have been called on target spoke STM")
+	// Note: 2 turns from ContextHistory are appended by the router
+	require.Len(t, appendedEntries, 2)
+	assert.Equal(t, "user", appendedEntries[0].Role)
+	assert.Equal(t, "Hello in Spanish", appendedEntries[0].Content)
+	assert.Equal(t, "assistant", appendedEntries[1].Role)
+	assert.Equal(t, "Hola", appendedEntries[1].Content)
+}

@@ -117,4 +117,7 @@ type AgentDelegationPayload struct {
 
 	// Message is the task description for the Spoke agent.
 	Message string `json:"message"`
+
+	// ContextHistory is the explicit history window for the target Spoke.
+	ContextHistory []ThreadTurn `json:"context_history,omitempty"`
 }

@@ -377,6 +377,32 @@ func (r *SchemaRouterImpl) handleAgentDelegation(ctx context.Context, event even
 		Str("target_agent", payload.TargetAgent).
 		Msg("spoke processing incoming agent-delegation event")
 
+	// Synchronize Short-Term Memory with incoming ContextHistory if present
+	if len(payload.ContextHistory) > 0 {
+		logger.Debug().Msg("synchronizing short-term memory with ContextHistory from delegation payload")
+		if err := r.memory.Clear(ctx, event.TenantID, r.agentID, payload.ThreadID); err != nil {
+			logger.Error().Err(err).Msg("failed to clear short-term memory prior to ContextHistory population")
+			return fmt.Errorf("failed to clear short-term memory: %w", err)
+		}
+
+		for _, turn := range payload.ContextHistory {
+			t, err := time.Parse(time.RFC3339, turn.Timestamp)
+			if err != nil {
+				t = time.Now().UTC()
+			}
+			entry := model.MemoryEntry{
+				Role:      turn.Role,
+				Content:   turn.Content,
+				Timestamp: t,
+				Metadata:  turn.Metadata,
+			}
+			if err := r.memory.Append(ctx, event.TenantID, r.agentID, payload.ThreadID, entry); err != nil {
+				logger.Error().Err(err).Msg("failed to append ContextHistory turn to short-term memory")
+				return fmt.Errorf("failed to append history entry: %w", err)
+			}
+		}
+	}
+
 	resp, err := r.processor.ProcessIncomingMessage(ctx, event.TenantID, r.agentID, payload.ThreadID, payload.Message)
 	if err != nil {
 		logger.Warn().Err(err).Msg("failed to process delegated message, triggering STM rollback")

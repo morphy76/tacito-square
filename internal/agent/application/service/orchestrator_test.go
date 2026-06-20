@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/morphy76/tacito-square/internal/agent/application/service"
 	"github.com/morphy76/tacito-square/internal/agent/domain/model"
@@ -374,6 +375,164 @@ func TestOrchestrator_ProcessSpokeResponse(t *testing.T) {
 		assert.True(t, finalPayload.Finished)
 		assert.Equal(t, "Polished final translation", finalPayload.Response)
 		assert.Equal(t, "ts.community.comm-1.agent.hub-123.thread.thread-abc.response", publishes[1].Subject)
+	})
+
+	t.Run("handoff execution: parse handoff suggestion, validate target exists, log observation, update state, publish delegation event with concatenated message and ContextHistory, release lock", func(t *testing.T) {
+		mockLock := &MockThreadLock{}
+		mockStateStore := &MockOrchestrationStateStore{}
+		mockDiscovery := &MockAgentDiscovery{
+			cards: []*agentcard.AgentCard{
+				{Name: "translator"},
+			},
+		}
+		mockMemory := &MockShortTermMemory{
+			GetFunc: func(ctx context.Context, tenantID, agentID, threadID string, limit int) ([]model.MemoryEntry, error) {
+				return []model.MemoryEntry{
+					{Role: "user", Content: "Translate hello", Timestamp: time.Now().UTC()},
+				}, nil
+			},
+		}
+		mockPublisher := &MockEventPublisherOrchestrator{}
+
+		initialState := model.OrchestrationState{
+			ThreadID:    "thread-abc",
+			CommunityID: "comm-1",
+			Status:      "waiting_spoke",
+			PendingSpokes: map[string]string{
+				"writer": "please write a story",
+			},
+			OriginalEventID: "event-999",
+			LoopCount:       1,
+			MaxLoops:        5,
+		}
+		err := mockStateStore.SaveState(context.Background(), "tenant-1", "thread-abc", initialState)
+		require.NoError(t, err)
+
+		mockBrain := &MockBrain{
+			GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
+				t.Fatal("Brain should not be invoked during direct handoff delegation execution")
+				return nil, nil
+			},
+		}
+
+		orchestrator := service.NewOrchestrator(
+			"hub-123", "hub-agent", "comm-1",
+			mockBrain, mockStateStore, mockLock, mockDiscovery, mockMemory, mockPublisher,
+			"You are the coordinator.",
+		)
+
+		spokeResponse := events.AgentResponsePayload{
+			ThreadID:           "thread-abc",
+			CommunityID:        "comm-1",
+			AgentName:          "writer",
+			CorrelationEventID: "event-writer-task",
+			Response:           `{"action": "suggest_handoff", "target": "translator", "reason": "The text is not in English."}`,
+			Finished:           true,
+		}
+
+		err = orchestrator.ProcessSpokeResponse(context.Background(), "tenant-1", "thread-abc", spokeResponse)
+		assert.NoError(t, err)
+
+		// Assert updated state in Redis: state updated to wait for translator
+		state, err := mockStateStore.GetState(context.Background(), "tenant-1", "thread-abc")
+		require.NoError(t, err)
+		require.NotNil(t, state)
+		assert.Equal(t, "waiting_spoke", state.Status)
+		assert.Len(t, state.PendingSpokes, 1)
+		assert.Contains(t, state.PendingSpokes, "translator")
+		assert.Equal(t, "[Handoff instruction: The text is not in English.] Original task: please write a story", state.PendingSpokes["translator"])
+
+		// Check memory append call was triggered with the [Observation] handoff format
+		require.Len(t, mockMemory.AppendCalls, 1)
+		assert.Equal(t, "user", mockMemory.AppendCalls[0].Role)
+		assert.Contains(t, mockMemory.AppendCalls[0].Content, "[Observation] Spoke Agent 'writer' suggested handoff to 'translator' because: The text is not in English.")
+
+		// Verify NATS delegation event publishes:
+		// Expecting 2 publishes: 1 flow progression update, 1 delegation task to translator
+		publishes := mockPublisher.GetPublishes()
+		require.Len(t, publishes, 2)
+
+		var progressEvt events.DomainEvent
+		err = json.Unmarshal(publishes[0].Data, &progressEvt)
+		require.NoError(t, err)
+		assert.Equal(t, events.SchemaConversationalAgentReasoning, progressEvt.SchemaRef)
+
+		var taskEvt events.DomainEvent
+		err = json.Unmarshal(publishes[1].Data, &taskEvt)
+		require.NoError(t, err)
+		assert.Equal(t, events.SchemaConversationalAgentDelegation, taskEvt.SchemaRef)
+		assert.Equal(t, "ts.community.comm-1.agent.translator", publishes[1].Subject)
+
+		var taskPayload events.AgentDelegationPayload
+		err = json.Unmarshal(taskEvt.Payload, &taskPayload)
+		require.NoError(t, err)
+		assert.Equal(t, "translator", taskPayload.TargetAgent)
+		assert.Equal(t, "hub-agent", taskPayload.DelegatingAgent)
+		assert.Equal(t, "[Handoff instruction: The text is not in English.] Original task: please write a story", taskPayload.Message)
+		require.Len(t, taskPayload.ContextHistory, 1)
+		assert.Equal(t, "Translate hello", taskPayload.ContextHistory[0].Content)
+	})
+
+	t.Run("handoff execution: fallback to normal loop if target validation fails", func(t *testing.T) {
+		mockLock := &MockThreadLock{}
+		mockStateStore := &MockOrchestrationStateStore{}
+		mockDiscovery := &MockAgentDiscovery{
+			cards: []*agentcard.AgentCard{
+				{Name: "some-other-spoke"},
+			},
+		}
+		mockMemory := &MockShortTermMemory{}
+		mockPublisher := &MockEventPublisherOrchestrator{}
+
+		initialState := model.OrchestrationState{
+			ThreadID:    "thread-abc",
+			CommunityID: "comm-1",
+			Status:      "waiting_spoke",
+			PendingSpokes: map[string]string{
+				"writer": "please write a story",
+			},
+			OriginalEventID: "event-999",
+			LoopCount:       1,
+			MaxLoops:        5,
+		}
+		err := mockStateStore.SaveState(context.Background(), "tenant-1", "thread-abc", initialState)
+		require.NoError(t, err)
+
+		brainCalls := 0
+		mockBrain := &MockBrain{
+			GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
+				brainCalls++
+				if brainCalls == 1 {
+					respJSON := `{
+						"action": "finalize",
+						"response": "Fallback finalize decision"
+					}`
+					return &model.BrainResponse{Content: respJSON}, nil
+				}
+				return &model.BrainResponse{Content: "Polished response"}, nil
+			},
+		}
+
+		orchestrator := service.NewOrchestrator(
+			"hub-123", "hub-agent", "comm-1",
+			mockBrain, mockStateStore, mockLock, mockDiscovery, mockMemory, mockPublisher,
+			"You are the coordinator.",
+		)
+
+		spokeResponse := events.AgentResponsePayload{
+			ThreadID:           "thread-abc",
+			CommunityID:        "comm-1",
+			AgentName:          "writer",
+			CorrelationEventID: "event-writer-task",
+			Response:           `{"action": "suggest_handoff", "target": "missing-agent", "reason": "Missing target."}`,
+			Finished:           true,
+		}
+
+		err = orchestrator.ProcessSpokeResponse(context.Background(), "tenant-1", "thread-abc", spokeResponse)
+		assert.NoError(t, err)
+
+		// Assert that brain was invoked (fallback triggered)
+		assert.Equal(t, 2, brainCalls) // 1 generate routing decision + 1 polishing call
 	})
 }
 
