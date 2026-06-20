@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M6.6                                |
-| Status        | DRAFT                                       |
+| Status        | ACCEPTED                                    |
 | Milestone     | M6                                          |
 | Component     | agent                                       |
 | Depends On    | SPEC-FR-M6.1, SPEC-FR-M5.3, SPEC-FR-M6.0    |
