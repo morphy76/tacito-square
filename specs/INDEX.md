@@ -56,7 +56,7 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | BUG-M6.4 | Redundant Assignment or Unassignment Fails to Reconcile Deployment Status | CLOSED | MEDIUM | [BUG-M6.4](tasks/M6.BUG4/BUG-M6.4.md) |
 | BUG-M6.5 | Hub Agent Deployed with Role 'spoke' in Hub-Spoke Community | CLOSED | HIGH | [BUG-M6.5](tasks/M6.BUG5/BUG-M6.5.md) |
 | BUG-M6.6 | Orchestrator Loop Limit Terminating Threads Instead of Returning Latest Spoke Response | CLOSED | HIGH | [BUG-M6.6](tasks/M6.BUG6/BUG-M6.6.md) |
-| BUG-M6.7 | Agent Messages Pollution and Lack of Classification in Server-Sent Events (SSE) Stream | VERIFIED | HIGH | [BUG-M6.7](tasks/M6.BUG7/BUG-M6.7.md) |
+| BUG-M6.7 | Agent Messages Pollution and Lack of Classification in Server-Sent Events (SSE) Stream | CLOSED | HIGH | [BUG-M6.7](tasks/M6.BUG7/BUG-M6.7.md) |
 | BUG-M6.8 | Hardcoded Hub System Prompt and Lack of Template Parameterization | CLOSED | HIGH | [BUG-M6.8](tasks/M6.BUG8/BUG-M6.8.md) |
 | BUG-M6.9 | Agent Brain Embeds LLM Binding Instead of Referring LLM Binding Model | CLOSED | HIGH | [BUG-M6.9](tasks/M6.BUG9/BUG-M6.9.md) |
 | BUG-M6.10 | Hub-Spoke Orchestration Observation Role Confusion and Loop | CLOSED | HIGH | [BUG-M6.10](tasks/M6.BUG10/BUG-M6.10.md) |
