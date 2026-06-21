@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	keepernats "github.com/morphy76/tacito-square/internal/keeper/adapters/inbound/nats"
+	outboundNats "github.com/morphy76/tacito-square/internal/keeper/adapters/outbound/nats"
 	"github.com/morphy76/tacito-square/internal/keeper/adapters/outbound/postgres"
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
 	"github.com/morphy76/tacito-square/internal/shared/adapters/outbound/cache"
@@ -138,10 +139,17 @@ func TestRegistry_Ingestion(t *testing.T) {
 	sharedCache := cache.NewCacheAdapter(redisMock, "keeper")
 
 	// Instantiate the subscriber
-	sub := keepernats.NewRegistrySubscriber(nc, agentRepo, sharedCache, logger)
+	eventPublisher := outboundNats.NewNATSEventPublisher(nc)
+	sub := keepernats.NewRegistrySubscriber(nc, agentRepo, sharedCache, eventPublisher, logger)
 	err = sub.Start(context.Background())
 	require.NoError(t, err)
 	defer sub.Stop()
+
+	// Subscribe to status updates in the test to verify online status propagation
+	statusChan := make(chan *nats.Msg, 10)
+	statusSub, err := nc.ChanSubscribe(fmt.Sprintf("ts.community.%s.agent.%s.status", comm.ID, ag.ID), statusChan)
+	require.NoError(t, err)
+	defer statusSub.Unsubscribe()
 
 	// Compile agent card payload
 	card := &agentcard.AgentCard{
@@ -197,5 +205,26 @@ func TestRegistry_Ingestion(t *testing.T) {
 	err = sharedCache.Get(ctx, cacheKey, &cachedCard)
 	require.NoError(t, err)
 	assert.Equal(t, card.Name, cachedCard.Name)
+
+	// 4. Verify online status event was published
+	select {
+	case statusMsg := <-statusChan:
+		var statusEvt events.DomainEvent
+		err = json.Unmarshal(statusMsg.Data, &statusEvt)
+		require.NoError(t, err)
+		assert.Equal(t, "urn:tacito:schema:conversational:agent-status:v1", statusEvt.SchemaRef)
+		assert.Equal(t, "keeper", statusEvt.Source)
+		assert.Equal(t, ten.FullName(), statusEvt.TenantID)
+
+		type statusPayload struct {
+			Status string `json:"status"`
+		}
+		var payload statusPayload
+		err = json.Unmarshal(statusEvt.Payload, &payload)
+		require.NoError(t, err)
+		assert.Equal(t, "online", payload.Status)
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for online status event")
+	}
 }
 

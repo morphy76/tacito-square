@@ -46,6 +46,14 @@ The system MUST support the following built-in agent templates:
 * **Role**: A lightweight diagnostic agent template.
 * **Functionality**: Simplifies integration testing, latency profiling, and network diagnostics. It immediately echoes back incoming message payloads along with execution metadata (agent name, community, timestamp) without calling an LLM.
 
+#### F. STM Summarizer (`stm-summarizer`)
+* **Role**: A built-in utility agent template for memory optimization.
+* **Functionality**: Reduces the token footprint of an agent's private per-agent Short-Term Memory (STM) for a given thread to optimize future interactions. It is triggered prior to or during agent execution.
+* **Logic**:
+  * **Evaluation**: The summarizer first evaluates the current thread history size (message count or cumulative token usage) against configured thresholds.
+  * **Smart No-op Decision**: If the footprint is below the threshold, or if no significant compression can be achieved without losing critical recent context, the summarizer completes as a `noop` (no-operation) without modifying the memory.
+  * **Summarization**: If thresholds are exceeded, it reads the older turns in the per-agent STM, generates a consolidated summary utilizing a lightweight LLM brain (preserving key decisions, user intent, and state), and replaces the summarized turns in the Redis keyspace with a single summary message block. Subsequent reasoning cycles for this agent on this thread will use this consolidated state to minimize prompt tokens.
+
 ---
 
 ### 2. Provisioning & Lifecycle (Template Cloning & Decoupled Assignment)
@@ -92,6 +100,7 @@ The system MUST support the following built-in agent templates:
 6. The Kubernetes Operator correctly reconciles and deploys the cloned agent instances (and the community gateway) when they are assigned to a community.
 7. The `community-gateway` successfully routes messages based on the community's topology.
 8. The `echo-diagnostic` agent responds to messages by returning a structured echo payload without contacting external LLM APIs.
+9. The `stm-summarizer` agent successfully reads the per-agent STM for a thread, evaluates token/message thresholds to decide if a noop is appropriate, and, if not, compresses the memory footprint by replacing older turns with a consolidated summary block in Redis.
 
 ## Test Plan
 
@@ -102,12 +111,16 @@ The system MUST support the following built-in agent templates:
   * Verify that the cloned agent has `community_id = nil` and a unique ID.
   * Verify that cloning a brain-enabled template dynamically resolves and assigns the tenant's default LLM binding ID.
   * Verify `community-gateway` routing logic correctly selects subjects based on standalone vs. hub-spoke topology configurations.
+  * Verify that `stm-summarizer` correctly compresses a list of messages into a single summary block plus the remaining active context window when thresholds are exceeded.
+  * Verify that `stm-summarizer` executes a noop when memory footprint is below configured thresholds.
 * **Integration Tests**:
   * Verify end-to-end messaging where a message sent to `community-gateway` routes to a standalone agent and back.
   * Verify `echo-diagnostic` returns expected message and timestamp metadata.
+  * Verify that invoking `stm-summarizer` on a per-agent thread STM key reduces the stored message count when thresholds are exceeded, while maintaining thread continuity in subsequent cognitive turns.
 
 ## Files Affected
 
 * `internal/keeper/adapters/outbound/postgres/migrations/...`
 * `internal/keeper/domain/model/agent.go`
 * `internal/operator/application/service/reconcile_service.go`
+* `internal/agent/domain/service/summarizer_service.go`

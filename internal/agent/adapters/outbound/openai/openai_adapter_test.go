@@ -3,6 +3,7 @@ package openai_test
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -413,5 +414,75 @@ func TestOpenAIAdapter_Embeddings(t *testing.T) {
 		_, err := adapter.CreateEmbedding(context.Background(), "test text")
 		assert.Error(t, err)
 		assert.Equal(t, 1, callCount, "should only call the server once (no retries)")
+	})
+
+	t.Run("should serialize system role in history correctly", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			bodyBytes, _ := io.ReadAll(r.Body)
+			var body struct {
+				Messages []struct {
+					Role    string `json:"role"`
+					Content string `json:"content"`
+				} `json:"messages"`
+			}
+			_ = json.Unmarshal(bodyBytes, &body)
+			
+			// Verify that the system message in history was mapped to role "system"
+			hasSystemMsgInHistory := false
+			for _, m := range body.Messages {
+				if m.Role == "system" && m.Content == "System observation" {
+					hasSystemMsgInHistory = true
+					break
+				}
+			}
+			if hasSystemMsgInHistory {
+				resp := map[string]any{
+					"id":      "chatcmpl-123",
+					"object":  "chat.completion",
+					"created": 1677652288,
+					"model":   "gpt-4o",
+					"choices": []map[string]any{
+						{
+							"index": 0,
+							"message": map[string]any{
+								"role":    "assistant",
+								"content": "OK",
+							},
+							"finish_reason": "stop",
+						},
+					},
+					"usage": map[string]any{
+						"prompt_tokens":     10,
+						"completion_tokens": 10,
+						"total_tokens":      20,
+					},
+				}
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				_ = json.NewEncoder(w).Encode(resp)
+			} else {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte(`{"error": {"message": "system message not found"}}`))
+			}
+		}))
+		defer server.Close()
+
+		adapter := openai.NewAdapter(openai.Config{
+			Endpoint: server.URL,
+			APIKey:   "mock-key",
+			Model:    "gpt-4o",
+			Timeout:  2 * time.Second,
+		})
+
+		req := model.BrainRequest{
+			Prompt: "Query",
+			History: []model.MemoryEntry{
+				{Role: "system", Content: "System observation"},
+			},
+		}
+
+		res, err := adapter.Generate(context.Background(), req)
+		assert.NoError(t, err)
+		assert.Equal(t, "OK", res.Content)
 	})
 }

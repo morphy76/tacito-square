@@ -472,20 +472,20 @@ func (r *AgentRepository) UnassignFromCommunity(ctx context.Context, agentID uui
 }
 
 // UpdateStatus updates an agent's status in the database.
-func (r *AgentRepository) UpdateStatus(ctx context.Context, agentID uuid.UUID, status model.AgentStatus) error {
+func (r *AgentRepository) UpdateStatus(ctx context.Context, agentID uuid.UUID, status model.AgentStatus) (bool, error) {
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
-		return errors.New("tenant resolution failed")
+		return false, errors.New("tenant resolution failed")
 	}
 
-	query := `UPDATE agents SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4`
+	query := `UPDATE agents SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 AND status != $1`
 
 	exec := GetExecutor(ctx, r.pool)
-	_, err := exec.Exec(ctx, query, string(status), time.Now().UTC(), agentID, ten.FullName())
+	cmdTag, err := exec.Exec(ctx, query, string(status), time.Now().UTC(), agentID, ten.FullName())
 	if err != nil {
-		return fmt.Errorf("update agent status: %w", err)
+		return false, fmt.Errorf("update agent status: %w", err)
 	}
-	return nil
+	return cmdTag.RowsAffected() > 0, nil
 }
 
 // UpsertRegistration registers an agent's active card.

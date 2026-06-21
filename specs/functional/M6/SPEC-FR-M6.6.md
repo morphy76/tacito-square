@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M6.6                                |
-| Status        | ACCEPTED                                    |
+| Status        | VERIFIED                                    |
 | Milestone     | M6                                          |
 | Component     | agent                                       |
 | Depends On    | SPEC-FR-M6.1, SPEC-FR-M5.3, SPEC-FR-M6.0    |
@@ -41,7 +41,11 @@ When the Hub orchestrator processes a Spoke's response:
 1. **Handoff Detection**: The Hub attempts to parse the response as a handoff suggestion JSON. If detected:
    * The Hub validates if the target Spoke (e.g. `translator`) exists in the community registry (via Agent Cards discovery).
    * If the target is invalid/missing, the Hub falls back to its normal reasoning loop to handle the failure.
-2. **Context Extension**: Since STM is agent-isolated, the target Spoke has no visibility into the thread's prior history. To solve this, the `AgentDelegationPayload` is extended to include the context history:
+2. **Hub Memory Logging**: If the target exists and the handoff is accepted, the Hub appends a human-readable observation to its own Short-Term Memory (STM):
+   ```text
+   [Observation] Spoke Agent '<spoke_name>' suggested handoff to '<target_name>' because: <reason>
+   ```
+3. **Context Extension**: Since STM is agent-isolated, the target Spoke has no visibility into the thread's prior history. To solve this, the `AgentDelegationPayload` is extended to include the context history:
    ```go
    type AgentDelegationPayload struct {
        ThreadID        string       `json:"thread_id"`
@@ -52,7 +56,17 @@ When the Hub orchestrator processes a Spoke's response:
        ContextHistory  []ThreadTurn `json:"context_history,omitempty"` // Explicit history window for the Spoke
    }
    ```
-3. **Handoff Execution**: The Hub updates its state machine in Redis, populates `ContextHistory` with the thread's recent turns, and publishes the new delegation task to the target Spoke.
+4. **Handoff Execution**: 
+   * The Hub retrieves the original message assigned to the recommending spoke from `state.PendingSpokes[payload.AgentName]`.
+   * The Hub constructs the delegation `Message` as: `[Handoff instruction: <reason>] Original task: <original_message>`.
+   * The Hub updates its state machine in Redis: removes the recommending spoke from `PendingSpokes`, adds the target spoke `handoff.Target` to `PendingSpokes` mapped to the new concatenated message, keeps status as `waiting_spoke`, and publishes the delegation task to the target Spoke.
+
+### 3. Spoke-Side Memory Sync and Reasoning
+
+Upon receiving an `AgentDelegationPayload` with a non-empty `ContextHistory`:
+1. The target Spoke MUST clear its private local Short-Term Memory (STM) for the given thread.
+2. The target Spoke MUST loop through the incoming `ContextHistory` turns, parse their timestamps, and append them in order into its private STM.
+3. The target Spoke then proceeds to process the delegation message, appending the new user message turn and executing its reasoning loop.
 
 ---
 
@@ -73,17 +87,19 @@ To support future extensibility and allow alternative community configurations, 
 1. The Spoke agent can output `suggest_handoff` JSON when it lacks the capability to complete a task.
 2. The Hub orchestrator correctly parses `suggest_handoff` from Spoke responses.
 3. The Hub validates the handoff target against active Agent Cards.
-4. The Hub propagates recent thread history turns in `ContextHistory` when delegating to the target Spoke.
-5. The target Spoke successfully starts its reasoning using the provided `ContextHistory`.
+4. The Hub logs the handoff suggestion as a human-readable observation in its STM.
+5. The Hub propagates recent thread history turns in `ContextHistory` and sets the target's delegation `Message` in the format `[Handoff instruction: <reason>] Original task: <original_message>`.
+6. The target Spoke successfully clears its private local STM, populates it from `ContextHistory`, and runs reasoning with the new delegation message.
 
 ## Test Plan
 
 * **Unit Tests**:
   * Verify parsing of `suggest_handoff` payloads on the Hub.
   * Verify validation logic against missing/invalid target agents.
-  * Verify that the Hub correctly populates `ContextHistory` in `AgentDelegationPayload`.
+  * Verify that the Hub correctly populates `ContextHistory` in `AgentDelegationPayload` and correctly formats the concatenated delegation message.
+  * Verify that the Spoke successfully overwrites/repopulates its private STM with `ContextHistory` turns upon receiving a delegation.
 * **Integration Tests**:
   * Set up a Hub and two Spokes (`writer`, `translator`).
   * Send a message requiring translation to `writer`.
   * Verify `writer` suggests handoff to `translator`.
-  * Verify `translator` receives the delegation with `ContextHistory` and successfully responds.
+  * Verify `translator` receives the delegation with `ContextHistory` and the concatenated task message, clears its private memory, populates it, and successfully responds.

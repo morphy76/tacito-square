@@ -6,6 +6,7 @@ import (
 
 	"github.com/morphy76/tacito-square/pkg/events"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestConstantsExist(t *testing.T) {
@@ -112,9 +113,14 @@ func TestAgentDelegationPayload_JSON(t *testing.T) {
 		DelegatingAgent: "hub-agent",
 		TargetAgent:     "writer",
 		Message:         "write about a dragon",
+		ContextHistory: []events.ThreadTurn{
+			{Role: "user", Content: "hello", Timestamp: "2026-06-20T09:30:00Z"},
+			{Role: "assistant", Content: "hi", Timestamp: "2026-06-20T09:30:05Z"},
+		},
 	}
 	data, err := json.Marshal(p)
 	assert.NoError(t, err)
+	assert.Contains(t, string(data), `"context_history"`)
 
 	var pDecoded events.AgentDelegationPayload
 	err = json.Unmarshal(data, &pDecoded)
@@ -124,4 +130,8 @@ func TestAgentDelegationPayload_JSON(t *testing.T) {
 	assert.Equal(t, p.DelegatingAgent, pDecoded.DelegatingAgent)
 	assert.Equal(t, p.TargetAgent, pDecoded.TargetAgent)
 	assert.Equal(t, p.Message, pDecoded.Message)
+	require.Len(t, pDecoded.ContextHistory, 2)
+	assert.Equal(t, p.ContextHistory[0].Role, pDecoded.ContextHistory[0].Role)
+	assert.Equal(t, p.ContextHistory[0].Content, pDecoded.ContextHistory[0].Content)
+	assert.Equal(t, p.ContextHistory[0].Timestamp, pDecoded.ContextHistory[0].Timestamp)
 }

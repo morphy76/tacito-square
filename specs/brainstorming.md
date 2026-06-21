@@ -81,4 +81,4 @@ Each direction is labeled with one of the following categories:
 - community topology, sequential
 - decouple the polishing assistant (built-in assistant) from the hub. It should be a skill that agents can use, not a separate agent
 - kubernetes labels and annotations
-- 
+- track brain tokens per agent/thread

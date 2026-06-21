@@ -11,6 +11,7 @@ import (
 
 	"github.com/morphy76/tacito-square/internal/agent/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/agent/domain/model"
+	"github.com/morphy76/tacito-square/pkg/agentcard"
 	"github.com/morphy76/tacito-square/pkg/events"
 	"github.com/rs/zerolog"
 )
@@ -167,30 +168,157 @@ func (o *Orchestrator) ProcessSpokeResponse(ctx context.Context, tenantID, threa
 	}
 
 	// 3. Validate if we were waiting for this Spoke
-	if _, pending := state.PendingSpokes[payload.AgentName]; !pending {
+	var matchedSpokeKey string
+	var originalMsg string
+	var pending bool
+	for k, v := range state.PendingSpokes {
+		if strings.EqualFold(k, payload.AgentName) {
+			matchedSpokeKey = k
+			originalMsg = v
+			pending = true
+			break
+		}
+	}
+	if !pending {
 		logger.Warn().Str("spoke", payload.AgentName).Msg("received response from spoke we were not waiting for, ignoring")
 		return nil
 	}
 
-	// 4. Update state: remove from pending list and append response to history
-	delete(state.PendingSpokes, payload.AgentName)
+	// 4. Handoff Detection & Parsing
+	type HandoffSuggestion struct {
+		Action string `json:"action"`
+		Target string `json:"target"`
+		Reason string `json:"reason"`
+	}
 
+	var handoff HandoffSuggestion
+	isHandoff := false
+	cleanedResponse := payload.Response
+	if strings.Contains(cleanedResponse, `"suggest_handoff"`) {
+		cleanedResponse = CleanAndExtractJSON(cleanedResponse)
+		if err := json.Unmarshal([]byte(cleanedResponse), &handoff); err == nil && handoff.Action == "suggest_handoff" && handoff.Target != "" {
+			isHandoff = true
+		}
+	}
+
+	// 5. Target Validation
+	var targetCard *agentcard.AgentCard
+	if isHandoff {
+		cards, err := o.discovery.GetCards(ctx)
+		if err == nil {
+			for _, card := range cards {
+				if strings.EqualFold(card.Name, handoff.Target) {
+					targetCard = card
+					handoff.Target = card.Name // Normalize target to official name
+					break
+				}
+			}
+		}
+	}
+
+	// Remove delegating spoke from pending list
+	delete(state.PendingSpokes, matchedSpokeKey)
+
+	if targetCard != nil {
+		// Handoff Execution
+		logger.Info().Str("target_spoke", handoff.Target).Msg("executing coordinated handoff delegation")
+
+		// 1. Hub Memory Logging
+		observation := fmt.Sprintf("[Observation] Spoke Agent '%s' suggested handoff to '%s' because: %s", matchedSpokeKey, handoff.Target, handoff.Reason)
+		spokeEntry := model.MemoryEntry{
+			Role:      "system",
+			Content:   observation,
+			Timestamp: time.Now().UTC(),
+		}
+		if err := o.memory.Append(ctx, tenantID, o.agentID, threadID, spokeEntry); err != nil {
+			logger.Warn().Err(err).Msg("failed to append handoff suggestion observation to short-term memory")
+		}
+
+		// 2. Concatenate instructions
+		delegationMsg := fmt.Sprintf("[Handoff instruction: %s] Original task: %s", handoff.Reason, originalMsg)
+
+		// 3. Update state in Redis
+		state.PendingSpokes[handoff.Target] = delegationMsg
+		state.Status = "waiting_spoke"
+		if err := o.stateStore.SaveState(ctx, tenantID, threadID, *state); err != nil {
+			return fmt.Errorf("failed to save orchestration state for handoff: %w", err)
+		}
+
+		// 4. Emit progression update
+		progMsg := fmt.Sprintf("Executing handoff from %s to %s...", matchedSpokeKey, handoff.Target)
+		if err := o.emitProgressionEvent(ctx, tenantID, threadID, state.OriginalEventID, progMsg); err != nil {
+			logger.Warn().Err(err).Msg("failed to publish flow progression event")
+		}
+
+		// 5. Context History extraction
+		history, err := o.memory.Get(ctx, tenantID, o.agentID, threadID, 15)
+		if err != nil {
+			logger.Warn().Err(err).Msg("failed to load short-term memory for context history propagation, using empty history")
+			history = []model.MemoryEntry{}
+		}
+
+		var contextHistory []events.ThreadTurn
+		for _, turn := range history {
+			contextHistory = append(contextHistory, events.ThreadTurn{
+				Role:      turn.Role,
+				Content:   turn.Content,
+				Timestamp: turn.Timestamp.Format(time.RFC3339),
+				Metadata:  turn.Metadata,
+			})
+		}
+
+		// 6. Publish delegation to target spoke
+		taskPayload := events.AgentDelegationPayload{
+			ThreadID:        threadID,
+			CommunityID:     o.communityID,
+			DelegatingAgent: o.agentName,
+			TargetAgent:     handoff.Target,
+			Message:         delegationMsg,
+			ContextHistory:  contextHistory,
+		}
+
+		sourceIdentity := fmt.Sprintf("agent/%s", o.agentID)
+		taskEvent, err := events.NewDomainEvent(
+			events.SchemaConversationalAgentDelegation,
+			sourceIdentity,
+			tenantID,
+			taskPayload,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to construct task event for target spoke %s: %w", handoff.Target, err)
+		}
+
+		eventData, err := json.Marshal(taskEvent)
+		if err != nil {
+			return fmt.Errorf("failed to marshal task event: %w", err)
+		}
+
+		subject := fmt.Sprintf("ts.community.%s.agent.%s", o.communityID, handoff.Target)
+		logger.Info().Str("subject", subject).Str("spoke", handoff.Target).Msg("publishing handoff task to target spoke agent")
+		if err := o.publisher.Publish(ctx, subject, eventData); err != nil {
+			return fmt.Errorf("failed to publish task to target spoke %s: %w", handoff.Target, err)
+		}
+
+		return nil
+	}
+
+	// Normal Flow / Fallback when handoff is target-invalid or not requested
 	spokeEntry := model.MemoryEntry{
-		Role:      "user",
-		Content:   fmt.Sprintf("[Observation] Spoke Agent '%s' responded: %s", payload.AgentName, payload.Response),
+		Role:      "system",
+		Content:   fmt.Sprintf("[Observation] Spoke Agent '%s' responded: %s", matchedSpokeKey, payload.Response),
 		Timestamp: time.Now().UTC(),
 	}
 	if err := o.memory.Append(ctx, tenantID, o.agentID, threadID, spokeEntry); err != nil {
 		logger.Warn().Err(err).Msg("failed to append spoke response to short-term memory")
 	}
 
-	// 5. Emit progression update
-	progMsg := fmt.Sprintf("Received response from %s.", payload.AgentName)
+	// Emit progression update
+	progMsg := fmt.Sprintf("Received response from %s.", matchedSpokeKey)
 	if err := o.emitProgressionEvent(ctx, tenantID, threadID, state.OriginalEventID, progMsg); err != nil {
 		logger.Warn().Err(err).Msg("failed to publish flow progression event")
 	}
 
-	// 6. Fan-in / Join check: Wait if there are other pending spokes
+	// Fan-in / Join check
 	if len(state.PendingSpokes) > 0 {
 		logger.Info().Int("pending_count", len(state.PendingSpokes)).Msg("partial spoke response received, yielding and waiting for other concurrent spokes")
 		if err := o.stateStore.SaveState(ctx, tenantID, threadID, *state); err != nil {
@@ -199,7 +327,7 @@ func (o *Orchestrator) ProcessSpokeResponse(ctx context.Context, tenantID, threa
 		return nil
 	}
 
-	// 7. All concurrent spokes finished, proceed to next orchestration turn
+	// All concurrent spokes finished, proceed to next orchestration turn
 	return o.runOrchestrationTurn(ctx, tenantID, threadID, state, payload.Response)
 }
 
@@ -272,6 +400,13 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 		history = []model.MemoryEntry{}
 	}
 
+	// Since the LLM adapter automatically appends the BrainRequest.Prompt as a user message,
+	// and the full conversational history (including all observations) is stored in history,
+	// we pass the entire history as History, and use a static coordination instruction as the Prompt.
+	// This prevents observations from being formatted as user messages.
+	promptForBrain := "Coordinate the next step based on the conversation history and observations. Output a valid JSON response with the action 'delegate' or 'finalize'."
+	historyForBrain := history
+
 	// 3. Compile prompt detailing available specialized Spoke agents
 	systemPrompt, err := o.compileSystemPrompt(ctx)
 	if err != nil {
@@ -280,9 +415,9 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 
 	// 4. Invoke Brain (LLM) for routing turn
 	brainReq := model.BrainRequest{
-		Prompt:       latestInput,
+		Prompt:       promptForBrain,
 		SystemPrompt: systemPrompt,
-		History:      history,
+		History:      historyForBrain,
 	}
 
 	resp, err := o.brain.Generate(ctx, brainReq)
@@ -292,19 +427,7 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 
 	// 5. Parse action decision
 	var action OrchestrationAction
-	cleanedContent := resp.Content
-	if strings.Contains(cleanedContent, "```json") {
-		parts := strings.Split(cleanedContent, "```json")
-		if len(parts) > 1 {
-			cleanedContent = strings.Split(parts[1], "```")[0]
-		}
-	} else if strings.Contains(cleanedContent, "```") {
-		parts := strings.Split(cleanedContent, "```")
-		if len(parts) > 1 {
-			cleanedContent = strings.Split(parts[1], "```")[0]
-		}
-	}
-	cleanedContent = strings.TrimSpace(cleanedContent)
+	cleanedContent := CleanAndExtractJSON(resp.Content)
 
 	if err := json.Unmarshal([]byte(cleanedContent), &action); err != nil {
 		// Fallback: treat text as a final answer
@@ -321,13 +444,34 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 			return fmt.Errorf("brain decided to delegate but list of spokes is empty")
 		}
 
+		// Discover card names from registry to normalize casing of spokes
+		cards, err := o.discovery.GetCards(ctx)
+		if err != nil {
+			logger.Warn().Err(err).Msg("failed to load agent cards for normalization, using raw brain output names")
+		}
+
 		// Save state with map of pending spokes
 		state.Status = "waiting_spoke"
 		state.PendingSpokes = make(map[string]string)
 		var spokeNames []string
+		var normalizedSpokes []SpokeTask
+
 		for _, task := range action.Spokes {
-			state.PendingSpokes[task.Spoke] = task.Message
-			spokeNames = append(spokeNames, task.Spoke)
+			officialName := task.Spoke
+			if err == nil {
+				for _, card := range cards {
+					if strings.EqualFold(card.Name, task.Spoke) {
+						officialName = card.Name
+						break
+					}
+				}
+			}
+			state.PendingSpokes[officialName] = task.Message
+			spokeNames = append(spokeNames, officialName)
+			normalizedSpokes = append(normalizedSpokes, SpokeTask{
+				Spoke:   officialName,
+				Message: task.Message,
+			})
 		}
 
 		if err := o.stateStore.SaveState(ctx, tenantID, threadID, *state); err != nil {
@@ -340,15 +484,33 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 			logger.Warn().Err(err).Msg("failed to publish flow progression event")
 		}
 
+		// Fetch Context History from Hub's STM
+		history, err := o.memory.Get(ctx, tenantID, o.agentID, threadID, 15)
+		if err != nil {
+			logger.Warn().Err(err).Msg("failed to load short-term memory for context history propagation, using empty history")
+			history = []model.MemoryEntry{}
+		}
+
+		var contextHistory []events.ThreadTurn
+		for _, turn := range history {
+			contextHistory = append(contextHistory, events.ThreadTurn{
+				Role:      turn.Role,
+				Content:   turn.Content,
+				Timestamp: turn.Timestamp.Format(time.RFC3339),
+				Metadata:  turn.Metadata,
+			})
+		}
+
 		// Publish task events to all targeted Spokes
 		sourceIdentity := fmt.Sprintf("agent/%s", o.agentID)
-		for _, task := range action.Spokes {
+		for _, task := range normalizedSpokes {
 			taskPayload := events.AgentDelegationPayload{
 				ThreadID:        threadID,
 				CommunityID:     o.communityID,
 				DelegatingAgent: o.agentName,
 				TargetAgent:     task.Spoke,
 				Message:         task.Message,
+				ContextHistory:  contextHistory,
 			}
 
 			taskEvent, err := events.NewDomainEvent(
@@ -561,10 +723,10 @@ func (o *Orchestrator) ensureHumanReadable(ctx context.Context, text string) (st
 		return text, nil
 	}
 
-	prompt := fmt.Sprintf("Please review the following response. If it is already a clean, human-readable, and polished message, output it exactly as-is. If it contains raw data, observation logs, or is unstructured, rewrite and polish it to be a clear, cohesive, and human-friendly final answer to the user. Maintain all facts and details.\n\nResponse to review:\n%s", text)
+	prompt := fmt.Sprintf("Please review the following response. If it is already a clean, human-readable, and polished message, output it exactly as-is. If it contains raw data, observation logs, or is unstructured, rewrite and polish it to be a clear, cohesive, and human-friendly final answer to the user. Maintain all facts and details. Do not include any explanations, introduction, or conversational filler.\n\nResponse to review:\n%s", text)
 	resp, err := o.brain.Generate(ctx, model.BrainRequest{
 		Prompt:       prompt,
-		SystemPrompt: "You are a polishing assistant. Your task is to ensure that the response is human-readable, polished, and friendly, while preserving all facts.",
+		SystemPrompt: "You are a polishing assistant. Your task is to output ONLY the final, polished response. Do NOT include any introduction, explanations, meta-commentary, or preamble (such as 'Here is the polished version:', 'I have reviewed the response', or 'It looks like you provided a JSON object'). Simply output the polished response message directly.",
 	})
 	if err != nil {
 		return text, err

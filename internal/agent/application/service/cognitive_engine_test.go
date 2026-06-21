@@ -557,3 +557,55 @@ func TestCognitiveEngine_WriteLargePayload(t *testing.T) {
 		assert.Equal(t, 2, stepCount)
 	})
 }
+
+func TestCleanAndExtractJSON(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "clean JSON",
+			input:    `{"action": "finalize", "response": "hello"}`,
+			expected: `{"action": "finalize", "response": "hello"}`,
+		},
+		{
+			name:     "markdown code block json",
+			input:    "```json\n{\"action\": \"finalize\", \"response\": \"hello\"}\n```",
+			expected: `{"action": "finalize", "response": "hello"}`,
+		},
+		{
+			name:     "markdown code block generic",
+			input:    "```\n{\"action\": \"finalize\"}\n```",
+			expected: `{"action": "finalize"}`,
+		},
+		{
+			name:     "conversational prefix and suffix",
+			input:    `Sure, here is the result: {"action": "finalize", "response": "done"} hope that helps!`,
+			expected: `{"action": "finalize", "response": "done"}`,
+		},
+		{
+			name:     "conversational prefix with code block",
+			input:    "Preamble text\n```json\n{\"action\": \"delegate\"}\n```\nPostamble text",
+			expected: `{"action": "delegate"}`,
+		},
+		{
+			name:     "no JSON at all",
+			input:    `Plain text response without curly braces`,
+			expected: `Plain text response without curly braces`,
+		},
+		{
+			name:     "unmatched braces",
+			input:    `Some text with a { character`,
+			expected: `Some text with a { character`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res := service.CleanAndExtractJSON(tt.input)
+			assert.Equal(t, tt.expected, res)
+		})
+	}
+}
+

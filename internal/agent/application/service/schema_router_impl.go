@@ -377,6 +377,32 @@ func (r *SchemaRouterImpl) handleAgentDelegation(ctx context.Context, event even
 		Str("target_agent", payload.TargetAgent).
 		Msg("spoke processing incoming agent-delegation event")
 
+	// Synchronize Short-Term Memory with incoming ContextHistory if present
+	if len(payload.ContextHistory) > 0 {
+		logger.Debug().Msg("synchronizing short-term memory with ContextHistory from delegation payload")
+		if err := r.memory.Clear(ctx, event.TenantID, r.agentID, payload.ThreadID); err != nil {
+			logger.Error().Err(err).Msg("failed to clear short-term memory prior to ContextHistory population")
+			return fmt.Errorf("failed to clear short-term memory: %w", err)
+		}
+
+		for _, turn := range payload.ContextHistory {
+			t, err := time.Parse(time.RFC3339, turn.Timestamp)
+			if err != nil {
+				t = time.Now().UTC()
+			}
+			entry := model.MemoryEntry{
+				Role:      turn.Role,
+				Content:   turn.Content,
+				Timestamp: t,
+				Metadata:  turn.Metadata,
+			}
+			if err := r.memory.Append(ctx, event.TenantID, r.agentID, payload.ThreadID, entry); err != nil {
+				logger.Error().Err(err).Msg("failed to append ContextHistory turn to short-term memory")
+				return fmt.Errorf("failed to append history entry: %w", err)
+			}
+		}
+	}
+
 	resp, err := r.processor.ProcessIncomingMessage(ctx, event.TenantID, r.agentID, payload.ThreadID, payload.Message)
 	if err != nil {
 		logger.Warn().Err(err).Msg("failed to process delegated message, triggering STM rollback")
@@ -384,6 +410,12 @@ func (r *SchemaRouterImpl) handleAgentDelegation(ctx context.Context, event even
 			logger.Error().Err(rollbackErr).Msg("failed to rollback last memory entry after LLM failure")
 		}
 		return fmt.Errorf("failed to process delegated message: %w", err)
+	}
+
+	// Polish the response using the brain before emitting the final agent-response event
+	polishedResp, err := r.ensureHumanReadable(ctx, resp)
+	if err == nil {
+		resp = polishedResp
 	}
 
 	// Construct agent response event for Spoke response
@@ -449,10 +481,10 @@ func (r *SchemaRouterImpl) ensureHumanReadable(ctx context.Context, text string)
 		return text, nil
 	}
 
-	prompt := fmt.Sprintf("Please review the following response. If it is already a clean, human-readable, and polished message, output it exactly as-is. If it contains raw data, observation logs, or is unstructured, rewrite and polish it to be a clear, cohesive, and human-friendly final answer to the user. Maintain all facts and details.\n\nResponse to review:\n%s", text)
+	prompt := fmt.Sprintf("Please review the following response. If it is already a clean, human-readable, and polished message, output it exactly as-is. If it contains raw data, observation logs, or is unstructured, rewrite and polish it to be a clear, cohesive, and human-friendly final answer to the user. Maintain all facts and details. Do not include any explanations, introduction, or conversational filler.\n\nResponse to review:\n%s", text)
 	resp, err := r.brain.Generate(ctx, model.BrainRequest{
 		Prompt:       prompt,
-		SystemPrompt: "You are a polishing assistant. Your task is to ensure that the response is human-readable, polished, and friendly, while preserving all facts.",
+		SystemPrompt: "You are a polishing assistant. Your task is to output ONLY the final, polished response. Do NOT include any introduction, explanations, meta-commentary, or preamble (such as 'Here is the polished version:', 'I have reviewed the response', or 'It looks like you provided a JSON object'). Simply output the polished response message directly.",
 	})
 	if err != nil {
 		return text, err
