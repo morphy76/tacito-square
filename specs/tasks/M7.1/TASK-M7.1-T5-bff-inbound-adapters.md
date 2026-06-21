@@ -5,7 +5,7 @@
 | Task ID     | TASK-M7.1-T5                                          |
 | Spec        | SPEC-FR-M7.1                                          |
 | Boundary    | BFF Inbound Adapters — `internal/bff/adapters/inbound/http/` |
-| Status      | TODO                                                  |
+| Status      | IMPLEMENTED                                            |
 | Depends On  | TASK-M7.1-T3                                          |
 
 ## Objective

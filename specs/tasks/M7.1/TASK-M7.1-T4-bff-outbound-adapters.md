@@ -5,7 +5,7 @@
 | Task ID     | TASK-M7.1-T4                                           |
 | Spec        | SPEC-FR-M7.1                                           |
 | Boundary    | BFF Outbound Adapters — `internal/bff/adapters/outbound/` |
-| Status      | IMPLEMENTED                                            |
+| Status      | VERIFIED                                               |
 | Depends On  | TASK-M7.1-T2                                           |
 
 ## Objective
