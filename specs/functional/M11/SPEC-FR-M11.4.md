@@ -1,10 +1,10 @@
-# SPEC-FR-M6.7: Built-in Agent Templates
+# SPEC-FR-M11.4: Built-in Agent Templates
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
-| ID            | SPEC-FR-M6.7                                |
+| ID            | SPEC-FR-M11.4                               |
 | Status        | ACCEPTED                                    |
-| Milestone     | M6                                          |
+| Milestone     | M11                                         |
 | Component     | keeper, agent, operator                     |
 | Depends On    | SPEC-FR-M6.0, SPEC-FR-M6.1                  |
 | Supersedes    | none                                        |

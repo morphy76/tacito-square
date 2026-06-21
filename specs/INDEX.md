@@ -45,7 +45,6 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | SPEC-FR-M6.3 | NATS Subject Namespacing | VERIFIED | agent, keeper | [SPEC-FR-M6.3](functional/M6/SPEC-FR-M6.3.md) |
 | SPEC-FR-M6.5 | A2A Agent Cards | VERIFIED | agent, keeper | [SPEC-FR-M6.5](functional/M6/SPEC-FR-M6.5.md) |
 | SPEC-FR-M6.6 | Conversation Handoff | VERIFIED | agent | [SPEC-FR-M6.6](functional/M6/SPEC-FR-M6.6.md) |
-| SPEC-FR-M6.7 | Built-in Agent Templates | ACCEPTED | keeper, agent, operator | [SPEC-FR-M6.7](functional/M6/SPEC-FR-M6.7.md) |
 
 ### M6: Bugs
 
@@ -133,6 +132,7 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | SPEC-FR-M11.1 | Decentralized P2P Topology & Handoff | DRAFT | agent, keeper, operator | [SPEC-FR-M11.1](functional/M11/SPEC-FR-M11.1.md) |
 | SPEC-FR-M11.2 | Shared Hive Short-Term Memory (Community STM) | DRAFT | agent | [SPEC-FR-M11.2](functional/M11/SPEC-FR-M11.2.md) |
 | SPEC-FR-M11.3 | Specialist Agent Spawn | DRAFT | keeper, agent | [SPEC-FR-M11.3](functional/M11/SPEC-FR-M11.3.md) |
+| SPEC-FR-M11.4 | Built-in Agent Templates | ACCEPTED | keeper, agent, operator | [SPEC-FR-M11.4](functional/M11/SPEC-FR-M11.4.md) |
 
 ## Milestones
 
@@ -143,10 +143,10 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | M3 | Keeper Core | ✔️ IMPLEMENTED | 8 | [M1-M2-M3 Summary](milestones/M1-M2-M3-summary.md) |
 | M4 | Operator Core | ✔️ IMPLEMENTED | 5 | [M4 Summary](milestones/M4-summary.md) |
 | M5 | Agent Core | ✔️ IMPLEMENTED | 9 | [M5 Summary](milestones/M5-summary.md) |
-| M6 | Communities & Messaging | ⏳ IN_PROGRESS | 7 | [M6](milestones/M6-communities.md) |
+| M6 | Communities & Messaging | ⏳ IN_PROGRESS | 6 | [M6](milestones/M6-communities.md) |
 | M7 | BFF & UIs | ⬜ PLANNED | 4 | [M7](milestones/M7-bff-uis.md) |
 | M8 | Governance | ⬜ PLANNED | 10 | [M8](milestones/M8-governance.md) |
 | M9 | Hardening | ⬜ PLANNED | 7 | [M9](milestones/M9-hardening.md) |
 | M10 | Federation | ⬜ PLANNED | 4 | [M10](milestones/M10-federation.md) |
-| M11 | Extensions & Advanced Topologies | ⬜ PLANNED | 3 | [M11](milestones/M11-extensions.md) |
+| M11 | Extensions & Advanced Topologies | ⬜ PLANNED | 4 | [M11](milestones/M11-extensions.md) |
 

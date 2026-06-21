@@ -18,3 +18,6 @@ Decentralized peer-to-peer (P2P) agent communities with direct agent-to-agent ha
 |---------|-------|-----------|------------|
 | SPEC-FR-M11.1 | Decentralized P2P Topology & Handoff | agent, keeper, operator | SPEC-FR-M6.1, SPEC-FR-M6.6 |
 | SPEC-FR-M11.2 | Shared Hive Short-Term Memory (Community STM) | agent | SPEC-FR-M11.1 |
+| SPEC-FR-M11.3 | Specialist Agent Spawn | keeper, agent | SPEC-FR-M6.1, SPEC-FR-M3.10 |
+| SPEC-FR-M11.4 | Built-in Agent Templates | keeper, agent, operator | SPEC-FR-M6.0, SPEC-FR-M6.1 |
+
