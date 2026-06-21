@@ -93,11 +93,11 @@ qdrant:
 
 # ── Keycloak (OIDC provider) ────────────────────────────
 keycloak:
-  enabled: false
+  enabled: true
   command:
     - "/opt/keycloak/bin/kc.sh"
   args:
-    - "start"
+    - "start-dev"
     - "--import-realm"
     - "--hostname-strict=false"
     # - "--https-certificate-file=/tls/tls.crt"

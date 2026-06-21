@@ -28,12 +28,24 @@ spec:
               value: {{ .Values.bff.config.logLevel | quote }}
             - name: TS_BFF_PORT
               value: {{ .Values.bff.config.port | toString | quote }}
-            - name: TS_BFF_KEEPER_URL
-              value: {{ .Values.bff.config.keeperUrl | quote }}
+            - name: TS_BFF_KEEPER_BASE_URL
+              value: "http://{{ include "tacito-square.fullname" . }}-keeper:{{ .Values.keeper.service.port }}"
+            - name: TS_BFF_BACKEND_BASE_URL
+              value: "http://{{ include "tacito-square.fullname" . }}-keeper:{{ .Values.keeper.service.port }}"
             - name: TS_BFF_OIDC_ISSUER
               value: {{ .Values.bff.config.oidc.issuer | quote }}
             - name: TS_BFF_OIDC_CLIENT_ID
               value: {{ .Values.bff.config.oidc.clientId | quote }}
+            - name: TS_BFF_OIDC_CLIENT_SECRET
+              value: {{ .Values.bff.config.oidc.clientSecret | quote }}
+            - name: TS_BFF_OIDC_REDIRECT_URI
+              value: {{ .Values.bff.config.oidc.redirectUri | quote }}
+            - name: TS_BFF_REDIS_URL
+              value: {{ .Values.bff.config.redis.url | quote }}
+            - name: TS_BFF_REDIS_PREFIX
+              value: {{ .Values.bff.config.redis.prefix | quote }}
+            - name: TS_BFF_OTEL_ENDPOINT
+              value: {{ .Values.bff.config.otel.endpoint | quote }}
             - name: TS_BFF_TLS_CA_CERT_PATH
               value: {{ .Values.bff.config.tls.caCertPath | quote }}
           livenessProbe:

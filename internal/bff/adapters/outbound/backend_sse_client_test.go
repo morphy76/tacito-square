@@ -17,6 +17,9 @@ func TestBackendSSEClient_StreamEvents_Success(t *testing.T) {
 	events := []string{"event-1", "event-2", "event-3"}
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/api/v1/events/stream", r.URL.Path)
+		assert.Equal(t, "tenant-a", r.Header.Get("X-Tenant-ID"))
+
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache")
 		flusher, ok := w.(http.Flusher)

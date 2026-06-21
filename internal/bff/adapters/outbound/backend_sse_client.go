@@ -45,7 +45,7 @@ func NewBackendSSEClient(cfg BackendSSEClientConfig) *BackendSSEClient {
 // emitting raw event byte payloads. The channel is closed when the context is cancelled
 // or the backend closes the connection.
 func (s *BackendSSEClient) StreamEvents(ctx context.Context, tenantID string) (<-chan []byte, error) {
-	endpoint := fmt.Sprintf("%s/api/v1/events?tenant=%s", s.cfg.BaseURL, tenantID)
+	endpoint := fmt.Sprintf("%s/api/v1/events/stream", s.cfg.BaseURL)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
@@ -53,6 +53,7 @@ func (s *BackendSSEClient) StreamEvents(ctx context.Context, tenantID string) (<
 	}
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("Cache-Control", "no-cache")
+	req.Header.Set("X-Tenant-ID", tenantID)
 
 	resp, err := s.client.Do(req)
 	if err != nil {

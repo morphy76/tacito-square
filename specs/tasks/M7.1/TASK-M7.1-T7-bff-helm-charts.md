@@ -5,7 +5,7 @@
 | Task ID     | TASK-M7.1-T7                                               |
 | Spec        | SPEC-FR-M7.1                                               |
 | Boundary    | Deploy — `deploy/helm/tacito-square/templates/bff/`        |
-| Status      | TODO                                                       |
+| Status      | VERIFIED                                                   |
 | Depends On  | TASK-M7.1-T6                                               |
 
 ## Objective

@@ -5,7 +5,7 @@
 | Task ID     | TASK-M7.1-T6                                       |
 | Spec        | SPEC-FR-M7.1                                       |
 | Boundary    | BFF Wire-up — `cmd/bff/`, `internal/bff/`, observability |
-| Status      | IMPLEMENTED                                        |
+| Status      | VERIFIED                                           |
 | Depends On  | TASK-M7.1-T4, TASK-M7.1-T5                         |
 
 ## Objective
