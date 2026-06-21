@@ -1,18 +1,27 @@
 package service_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/morphy76/tacito-square/internal/agent/application/service"
 	"github.com/morphy76/tacito-square/internal/agent/domain/model"
+	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/morphy76/tacito-square/pkg/agentcard"
 	"github.com/morphy76/tacito-square/pkg/events"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
 // Mock implementations for Orchestrator tests
@@ -494,6 +503,16 @@ func TestOrchestrator_ProcessSpokeResponse(t *testing.T) {
 	})
 
 	t.Run("handoff execution: fallback to normal loop if target validation fails", func(t *testing.T) {
+		// Setup Prometheus metrics provider first
+		shutdown, err := observability.InitTracer(context.Background(), "test-agent", "1.0.0", "")
+		require.NoError(t, err)
+		defer shutdown(context.Background())
+
+		// Set up standard OTel in-memory span exporter after InitTracer
+		exporter := tracetest.NewInMemoryExporter()
+		tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
+		otel.SetTracerProvider(tp)
+
 		mockLock := &MockThreadLock{}
 		mockStateStore := &MockOrchestrationStateStore{}
 		mockDiscovery := &MockAgentDiscovery{
@@ -505,9 +524,9 @@ func TestOrchestrator_ProcessSpokeResponse(t *testing.T) {
 		mockPublisher := &MockEventPublisherOrchestrator{}
 
 		initialState := model.OrchestrationState{
-			ThreadID:    "thread-abc",
-			CommunityID: "comm-1",
-			Status:      model.StatusWaitingSpoke,
+			ThreadID:        "thread-abc",
+			CommunityID:     "comm-1",
+			Status:          model.StatusWaitingSpoke,
 			PendingSpokes: map[string]string{
 				"writer": "please write a story",
 			},
@@ -515,7 +534,7 @@ func TestOrchestrator_ProcessSpokeResponse(t *testing.T) {
 			LoopCount:       1,
 			MaxLoops:        5,
 		}
-		err := mockStateStore.SaveState(context.Background(), "tenant-1", "thread-abc", initialState)
+		err = mockStateStore.SaveState(context.Background(), "tenant-1", "thread-abc", initialState)
 		require.NoError(t, err)
 
 		brainCalls := 0
@@ -548,8 +567,66 @@ func TestOrchestrator_ProcessSpokeResponse(t *testing.T) {
 			Finished:           true,
 		}
 
-		err = orchestrator.ProcessSpokeResponse(context.Background(), "tenant-1", "thread-abc", spokeResponse)
+		// Inject custom logger hook to verify log messages
+		var logBuf bytes.Buffer
+		logger := zerolog.New(&logBuf)
+		ctx, span := otel.Tracer("test-tracer").Start(context.Background(), "parent-span")
+		ctx = logger.WithContext(ctx)
+
+		err = orchestrator.ProcessSpokeResponse(ctx, "tenant-1", "thread-abc", spokeResponse)
 		assert.NoError(t, err)
+		span.End()
+
+		// 1. Verify warning logging was emitted
+		assert.Contains(t, logBuf.String(), "handoff suggested but target spoke not found in community cards")
+		assert.Contains(t, logBuf.String(), `"suggesting_spoke":"writer"`)
+		assert.Contains(t, logBuf.String(), `"target_spoke":"missing-agent"`)
+
+		// 2. Verify span attributes & exceptions were set
+		spans := exporter.GetSpans()
+		require.NotEmpty(t, spans)
+		var handoffSpan tracetest.SpanStub
+		for _, s := range spans {
+			if s.Name == "parent-span" {
+				handoffSpan = s
+				break
+			}
+		}
+		require.NotNil(t, handoffSpan)
+
+		var targetFound, suggestingFound, errorFound bool
+		for _, attr := range handoffSpan.Attributes {
+			if attr.Key == "handoff.error" && attr.Value.AsString() == "target_not_found" {
+				errorFound = true
+			}
+			if attr.Key == "handoff.suggesting_spoke" && attr.Value.AsString() == "writer" {
+				suggestingFound = true
+			}
+			if attr.Key == "handoff.target_spoke" && attr.Value.AsString() == "missing-agent" {
+				targetFound = true
+			}
+		}
+		assert.True(t, errorFound, "handoff.error attribute missing or invalid on span")
+		assert.True(t, suggestingFound, "handoff.suggesting_spoke attribute missing or on span")
+		assert.True(t, targetFound, "handoff.target_spoke attribute missing or invalid on span")
+
+		var exceptionRecorded bool
+		for _, event := range handoffSpan.Events {
+			if event.Name == "exception" {
+				exceptionRecorded = true
+				break
+			}
+		}
+		assert.True(t, exceptionRecorded, "span exception event not found")
+
+		// 3. Verify Prometheus metric counter was incremented
+		reqMetrics := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+		wMetrics := httptest.NewRecorder()
+		promhttp.Handler().ServeHTTP(wMetrics, reqMetrics)
+		metricsOutput := wMetrics.Body.String()
+		assert.Contains(t, metricsOutput, "handoff_validation_failures_total")
+		assert.Contains(t, metricsOutput, `suggesting_spoke="writer"`)
+		assert.Contains(t, metricsOutput, `target_spoke="missing-agent"`)
 
 		// Assert that brain was invoked (fallback triggered)
 		assert.Equal(t, 2, brainCalls) // 1 generate routing decision + 1 polishing call

@@ -134,6 +134,12 @@ var (
 		"ts_agent_mcp_request_duration_seconds",
 		otelmetric.WithDescription("Duration of MCP tool executions in seconds."),
 	)
+
+	// HandoffValidationFailuresTotal collects total invalid handoff attempts.
+	HandoffValidationFailuresTotal, _ = meter.Int64Counter(
+		"handoff_validation_failures_total",
+		otelmetric.WithDescription("Total number of handoff attempts that failed target validation."),
+	)
 )
 
 // initInstruments initializes all OpenTelemetry metrics instruments.
@@ -235,6 +241,11 @@ func initInstruments() {
 	AgentMCPRequestDuration, _ = meter.Float64Histogram(
 		"ts_agent_mcp_request_duration_seconds",
 		otelmetric.WithDescription("Duration of MCP tool executions in seconds."),
+	)
+
+	HandoffValidationFailuresTotal, _ = meter.Int64Counter(
+		"handoff_validation_failures_total",
+		otelmetric.WithDescription("Total number of handoff attempts that failed target validation."),
 	)
 }
 

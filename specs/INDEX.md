@@ -63,7 +63,7 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | BUG-M6.11 | Spoke Response CoT Leakage due to Missing Polishing on Delegated turns | CLOSED | MEDIUM | [BUG-M6.11](tasks/M6.BUG11/BUG-M6.11.md) |
 | BUG-M6.12 | Unsafe Distributed Lock Implementation | OPEN | HIGH | [BUG-M6.12](tasks/M6.BUG12/BUG-M6.12.md) |
 | BUG-M6.13 | Missing Self-Delegation Runtime Guard | OPEN | MEDIUM | [BUG-M6.13](tasks/M6.BUG13/BUG-M6.13.md) |
-| BUG-M6.14 | Handoff Target Not Found Missing Observability | OPEN | LOW | [BUG-M6.14](tasks/M6.BUG14/BUG-M6.14.md) |
+| BUG-M6.14 | Handoff Target Not Found Missing Observability | CLOSED | LOW | [BUG-M6.14](tasks/M6.BUG14/BUG-M6.14.md) |
 | BUG-M6.15 | OrchestrationState Status Uses Raw Strings | CLOSED | LOW | [BUG-M6.15](tasks/M6.BUG15/BUG-M6.15.md) |
 
 

@@ -11,9 +11,14 @@ import (
 
 	"github.com/morphy76/tacito-square/internal/agent/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/agent/domain/model"
+	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/morphy76/tacito-square/pkg/agentcard"
 	"github.com/morphy76/tacito-square/pkg/events"
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	otelmetric "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // OrchestrationAction defines the structured response schema returned by the Hub's routing brain.
@@ -213,6 +218,31 @@ func (o *Orchestrator) ProcessSpokeResponse(ctx context.Context, tenantID, threa
 					break
 				}
 			}
+		}
+
+		if targetCard == nil {
+			logger.Warn().
+				Str("suggesting_spoke", matchedSpokeKey).
+				Str("target_spoke", handoff.Target).
+				Msg("handoff suggested but target spoke not found in community cards")
+
+			// OTEL Trace instrumentation
+			span := trace.SpanFromContext(ctx)
+			if span.IsRecording() {
+				span.SetAttributes(
+					attribute.String("handoff.error", "target_not_found"),
+					attribute.String("handoff.suggesting_spoke", matchedSpokeKey),
+					attribute.String("handoff.target_spoke", handoff.Target),
+				)
+				span.RecordError(fmt.Errorf("handoff target '%s' suggested by spoke '%s' not found in community", handoff.Target, matchedSpokeKey))
+				span.SetStatus(codes.Error, "handoff target not found")
+			}
+
+			// Prometheus Metrics
+			observability.HandoffValidationFailuresTotal.Add(ctx, 1, otelmetric.WithAttributes(
+				attribute.String("suggesting_spoke", matchedSpokeKey),
+				attribute.String("target_spoke", handoff.Target),
+			))
 		}
 	}
 

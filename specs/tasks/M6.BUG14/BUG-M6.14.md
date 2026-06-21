@@ -3,7 +3,7 @@
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
 | ID            | BUG-M6.14                                                          |
-| Status        | OPEN                                                               |
+| Status        | CLOSED                                                             |
 | Severity      | LOW                                                                |
 | Milestone     | M6 — Communities & Messaging                                       |
 | Affects       | [orchestrator.go](file:///Users/R.Pasquini/Projects/side/tacito-square/internal/agent/application/service/orchestrator.go) |
