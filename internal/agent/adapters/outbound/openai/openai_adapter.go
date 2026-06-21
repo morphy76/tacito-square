@@ -106,6 +106,8 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 		}
 		for _, entry := range req.History {
 			switch entry.Role {
+			case "system":
+				messages = append(messages, openai.SystemMessage(entry.Content))
 			case "assistant":
 				if tCallsJSON, exists := entry.Metadata["tool_calls"]; exists && tCallsJSON != "" {
 					var toolCalls []model.ToolCall

@@ -297,9 +297,9 @@ func TestOrchestrator_ProcessSpokeResponse(t *testing.T) {
 		assert.Contains(t, state.PendingSpokes, "translator")
 		assert.NotContains(t, state.PendingSpokes, "writer")
 
-		// Check memory append call was triggered with "user" role and [Observation] prefix
+		// Check memory append call was triggered with "system" role and [Observation] prefix
 		assert.Len(t, mockMemory.AppendCalls, 1)
-		assert.Equal(t, "user", mockMemory.AppendCalls[0].Role)
+		assert.Equal(t, "system", mockMemory.AppendCalls[0].Role)
 		assert.Contains(t, mockMemory.AppendCalls[0].Content, "[Observation]")
 		assert.Contains(t, mockMemory.AppendCalls[0].Content, "writer")
 
@@ -464,7 +464,7 @@ func TestOrchestrator_ProcessSpokeResponse(t *testing.T) {
 
 		// Check memory append call was triggered with the [Observation] handoff format
 		require.Len(t, mockMemory.AppendCalls, 1)
-		assert.Equal(t, "user", mockMemory.AppendCalls[0].Role)
+		assert.Equal(t, "system", mockMemory.AppendCalls[0].Role)
 		assert.Contains(t, mockMemory.AppendCalls[0].Content, "[Observation] Spoke Agent 'writer' suggested handoff to 'translator' because: The text is not in English.")
 
 		// Verify NATS delegation event publishes:
@@ -861,9 +861,10 @@ func TestOrchestrator_HistorySplitting(t *testing.T) {
 		err := orchestrator.ProcessUserMessage(context.Background(), "tenant-1", "thread-abc", payload, "event-999")
 		assert.NoError(t, err)
 
-		// Assert that the latest message was sliced off from history and passed as Prompt
-		assert.Equal(t, userMessage, capturedReq.Prompt)
-		assert.Len(t, capturedReq.History, 0)
+		// Assert that the latest message is preserved in history and static prompt is passed to Brain
+		assert.Equal(t, "Coordinate the next step based on the conversation history and observations. Output a valid JSON response with the action 'delegate' or 'finalize'.", capturedReq.Prompt)
+		require.Len(t, capturedReq.History, 1)
+		assert.Equal(t, userMessage, capturedReq.History[0].Content)
 	})
 
 	t.Run("spoke response: history is split correctly with wrapped observation", func(t *testing.T) {
@@ -897,7 +898,7 @@ func TestOrchestrator_HistorySplitting(t *testing.T) {
 						Content: "Hello, my name is Riccardo",
 					},
 					{
-						Role:    "user",
+						Role:    "system",
 						Content: expectedObservation,
 					},
 				}, nil
@@ -937,10 +938,12 @@ func TestOrchestrator_HistorySplitting(t *testing.T) {
 		err = orchestrator.ProcessSpokeResponse(context.Background(), "tenant-1", "thread-abc", payload)
 		assert.NoError(t, err)
 
-		// Assert that the latest observation was sliced off from history and passed as Prompt
-		assert.Equal(t, expectedObservation, capturedReq.Prompt)
-		require.Len(t, capturedReq.History, 1)
+		// Assert that the full history is passed and the static coordination prompt is used
+		assert.Equal(t, "Coordinate the next step based on the conversation history and observations. Output a valid JSON response with the action 'delegate' or 'finalize'.", capturedReq.Prompt)
+		require.Len(t, capturedReq.History, 2)
 		assert.Equal(t, "Hello, my name is Riccardo", capturedReq.History[0].Content)
+		assert.Equal(t, expectedObservation, capturedReq.History[1].Content)
+		assert.Equal(t, "system", capturedReq.History[1].Role)
 	})
 }
 

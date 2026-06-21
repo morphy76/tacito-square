@@ -412,6 +412,12 @@ func (r *SchemaRouterImpl) handleAgentDelegation(ctx context.Context, event even
 		return fmt.Errorf("failed to process delegated message: %w", err)
 	}
 
+	// Polish the response using the brain before emitting the final agent-response event
+	polishedResp, err := r.ensureHumanReadable(ctx, resp)
+	if err == nil {
+		resp = polishedResp
+	}
+
 	// Construct agent response event for Spoke response
 	respPayload := events.AgentResponsePayload{
 		ThreadID:           payload.ThreadID,

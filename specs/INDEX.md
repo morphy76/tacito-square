@@ -60,6 +60,12 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | BUG-M6.7 | Agent Messages Pollution and Lack of Classification in Server-Sent Events (SSE) Stream | VERIFIED | HIGH | [BUG-M6.7](tasks/M6.BUG7/BUG-M6.7.md) |
 | BUG-M6.8 | Hardcoded Hub System Prompt and Lack of Template Parameterization | CLOSED | HIGH | [BUG-M6.8](tasks/M6.BUG8/BUG-M6.8.md) |
 | BUG-M6.9 | Agent Brain Embeds LLM Binding Instead of Referring LLM Binding Model | CLOSED | HIGH | [BUG-M6.9](tasks/M6.BUG9/BUG-M6.9.md) |
+| BUG-M6.10 | Hub-Spoke Orchestration Observation Role Confusion and Loop | CLOSED | HIGH | [BUG-M6.10](tasks/M6.BUG10/BUG-M6.10.md) |
+| BUG-M6.11 | Spoke Response CoT Leakage due to Missing Polishing on Delegated turns | CLOSED | MEDIUM | [BUG-M6.11](tasks/M6.BUG11/BUG-M6.11.md) |
+| BUG-M6.12 | Unsafe Distributed Lock Implementation | OPEN | HIGH | [BUG-M6.12](tasks/M6.BUG12/BUG-M6.12.md) |
+| BUG-M6.13 | Missing Self-Delegation Runtime Guard | OPEN | MEDIUM | [BUG-M6.13](tasks/M6.BUG13/BUG-M6.13.md) |
+| BUG-M6.14 | Handoff Target Not Found Missing Observability | OPEN | LOW | [BUG-M6.14](tasks/M6.BUG14/BUG-M6.14.md) |
+| BUG-M6.15 | OrchestrationState Status Uses Raw Strings | OPEN | LOW | [BUG-M6.15](tasks/M6.BUG15/BUG-M6.15.md) |
 
 
 

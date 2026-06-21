@@ -226,7 +226,7 @@ func (o *Orchestrator) ProcessSpokeResponse(ctx context.Context, tenantID, threa
 		// 1. Hub Memory Logging
 		observation := fmt.Sprintf("[Observation] Spoke Agent '%s' suggested handoff to '%s' because: %s", matchedSpokeKey, handoff.Target, handoff.Reason)
 		spokeEntry := model.MemoryEntry{
-			Role:      "user",
+			Role:      "system",
 			Content:   observation,
 			Timestamp: time.Now().UTC(),
 		}
@@ -304,7 +304,7 @@ func (o *Orchestrator) ProcessSpokeResponse(ctx context.Context, tenantID, threa
 
 	// Normal Flow / Fallback when handoff is target-invalid or not requested
 	spokeEntry := model.MemoryEntry{
-		Role:      "user",
+		Role:      "system",
 		Content:   fmt.Sprintf("[Observation] Spoke Agent '%s' responded: %s", matchedSpokeKey, payload.Response),
 		Timestamp: time.Now().UTC(),
 	}
@@ -400,21 +400,12 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 		history = []model.MemoryEntry{}
 	}
 
-	// To avoid duplicating the latest message (since the LLM adapter automatically
-	// appends the BrainRequest.Prompt as a user message, but the caller of
-	// runOrchestrationTurn has already appended the latest message to STM),
-	// we extract the latest message from history to use as the Prompt, and pass
-	// the preceding history entries as the History.
-	var promptForBrain string
-	var historyForBrain []model.MemoryEntry
-
-	if len(history) > 0 {
-		promptForBrain = history[len(history)-1].Content
-		historyForBrain = history[:len(history)-1]
-	} else {
-		promptForBrain = latestInput
-		historyForBrain = history
-	}
+	// Since the LLM adapter automatically appends the BrainRequest.Prompt as a user message,
+	// and the full conversational history (including all observations) is stored in history,
+	// we pass the entire history as History, and use a static coordination instruction as the Prompt.
+	// This prevents observations from being formatted as user messages.
+	promptForBrain := "Coordinate the next step based on the conversation history and observations. Output a valid JSON response with the action 'delegate' or 'finalize'."
+	historyForBrain := history
 
 	// 3. Compile prompt detailing available specialized Spoke agents
 	systemPrompt, err := o.compileSystemPrompt(ctx)

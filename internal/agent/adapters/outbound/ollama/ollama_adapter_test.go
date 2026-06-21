@@ -346,4 +346,59 @@ func TestOllamaAdapter_Embeddings(t *testing.T) {
 		assert.Error(t, err)
 		assert.Equal(t, 1, callCount, "should only call the server once (no retries)")
 	})
+
+	t.Run("should serialize system role in history correctly", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var body struct {
+				Messages []struct {
+					Role    string `json:"role"`
+					Content string `json:"content"`
+				} `json:"messages"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			
+			// Verify that the system message in history was mapped to role "system"
+			hasSystemMsgInHistory := false
+			for _, m := range body.Messages {
+				if m.Role == "system" && m.Content == "System observation" {
+					hasSystemMsgInHistory = true
+					break
+				}
+			}
+			if hasSystemMsgInHistory {
+				w.WriteHeader(http.StatusOK)
+				resp := map[string]any{
+					"model": "llama3",
+					"message": map[string]string{
+						"role":    "assistant",
+						"content": "OK",
+					},
+					"done": true,
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(resp)
+			} else {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte(`{"error": "system message not found"}`))
+			}
+		}))
+		defer server.Close()
+
+		adapter := ollama.NewAdapter(ollama.Config{
+			Endpoint: server.URL,
+			Model:    "llama3",
+			Timeout:  2 * time.Second,
+		})
+
+		req := model.BrainRequest{
+			Prompt: "Query",
+			History: []model.MemoryEntry{
+				{Role: "system", Content: "System observation"},
+			},
+		}
+
+		res, err := adapter.Generate(context.Background(), req)
+		assert.NoError(t, err)
+		assert.Equal(t, "OK", res.Content)
+	})
 }
