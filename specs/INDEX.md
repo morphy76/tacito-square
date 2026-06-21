@@ -72,7 +72,7 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 
 | ID | Title | Status | Component | File |
 |----|-------|--------|-----------|------|
-| SPEC-FR-M7.1 | BFF API Bridge Layer | ACCEPTED | bff | [SPEC-FR-M7.1](functional/M7/SPEC-FR-M7.1.md) |
+| SPEC-FR-M7.1 | BFF API Bridge Layer | IN_PROGRESS | bff | [SPEC-FR-M7.1](functional/M7/SPEC-FR-M7.1.md) |
 | SPEC-FR-M7.2 | Configurator UI | ACCEPTED | ui | [SPEC-FR-M7.2](functional/M7/SPEC-FR-M7.2.md) |
 | SPEC-FR-M7.3 | Auditor UI | ACCEPTED | ui | [SPEC-FR-M7.3](functional/M7/SPEC-FR-M7.3.md) |
 | SPEC-FR-M7.4 | OIDC Login Flow (Keycloak) | ACCEPTED | bff | [SPEC-FR-M7.4](functional/M7/SPEC-FR-M7.4.md) |

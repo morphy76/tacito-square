@@ -81,3 +81,8 @@ Each direction is labeled with one of the following categories:
 | 50 | **Optimize component startup times and container initialization**<br>Profile and streamline system initialization processes to allow faster scaling and cold starts. | ⚙️ Infra & Quality | **Already Addressed**<br>(Refines `SPEC-FR-M2.7`) | **M11: Hardening** | 3 | 2 | **0** |
 | 51 | **Save conversation history for recovery and Long-Term Memory**<br>Persist structured conversation history to support crash recovery and feed the Qdrant Long-Term Memory (LTM) pipeline. | 🧠 Cognitive & Agents | **Already Addressed**<br>(Incorp. in draft `SPEC-FR-M12.4`) | **M12: Federation** | 3 | 4 | **0** |
 | 52 | **Enforce community resource attributes and usage quotas**<br>Impose and validate community quotas including rate limits, maximum agent counts, and knowledge base memory bounds. | 🌐 Platform & UX | **Already Addressed**<br>(Incorp. in draft `SPEC-FR-M10.3`/`SPEC-FR-M10.4`) | **M10: Governance** | 3 | 4 | **0** |
+
+## Free
+
+- intra community nats channels no jetstream for improved speed
+- 

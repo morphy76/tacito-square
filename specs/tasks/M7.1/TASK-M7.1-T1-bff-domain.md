@@ -5,7 +5,7 @@
 | Task ID     | TASK-M7.1-T1                             |
 | Spec        | SPEC-FR-M7.1                             |
 | Boundary    | BFF Domain — `internal/bff/domain/`      |
-| Status      | TODO                                     |
+| Status      | IMPLEMENTED                              |
 | Depends On  | —                                        |
 
 ## Objective

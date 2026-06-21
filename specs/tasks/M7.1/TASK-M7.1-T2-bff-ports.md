@@ -5,7 +5,7 @@
 | Task ID     | TASK-M7.1-T2                                     |
 | Spec        | SPEC-FR-M7.1                                     |
 | Boundary    | BFF Application Ports — `internal/bff/application/ports/` |
-| Status      | TODO                                             |
+| Status      | IMPLEMENTED                                      |
 | Depends On  | TASK-M7.1-T1                                     |
 
 ## Objective

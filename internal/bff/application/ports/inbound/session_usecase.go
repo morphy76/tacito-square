@@ -1,0 +1,28 @@
+package inbound
+
+import (
+	"context"
+
+	"github.com/morphy76/tacito-square/internal/bff/domain/model"
+)
+
+// SessionUseCase defines the inbound port (driving interface) for session lifecycle orchestrations.
+type SessionUseCase interface {
+	// InitiateLogin generates the OIDC authorization URL and state token.
+	InitiateLogin(ctx context.Context) (authURL string, state string, err error)
+
+	// HandleCallback handles the OIDC redirect callback, exchanging the code and creating a session.
+	HandleCallback(ctx context.Context, code, state string) (*model.Session, error)
+
+	// RefreshSession transparently refreshes tokens for an active session.
+	RefreshSession(ctx context.Context, sessionID string) (*model.Session, error)
+
+	// Logout invalidates a session locally.
+	Logout(ctx context.Context, sessionID string) error
+
+	// BackchannelLogout processes an incoming backchannel logout request from the OIDC Provider.
+	BackchannelLogout(ctx context.Context, rawLogoutToken string) error
+
+	// GetSession retrieves the session state if active.
+	GetSession(ctx context.Context, sessionID string) (*model.Session, error)
+}
