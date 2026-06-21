@@ -5,7 +5,7 @@
 | Task ID     | TASK-M7.1-T3                                       |
 | Spec        | SPEC-FR-M7.1                                       |
 | Boundary    | BFF Application Services — `internal/bff/application/service/` |
-| Status      | TODO                                               |
+| Status      | IMPLEMENTED                                        |
 | Depends On  | TASK-M7.1-T2                                       |
 
 ## Objective
