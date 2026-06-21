@@ -19,9 +19,11 @@ import (
 
 // RedisMemoryAdapter implements the outbound ShortTermMemory interface using Redis.
 type RedisMemoryAdapter struct {
-	client *redis.Client
-	ttl    time.Duration
-	tracer trace.Tracer
+	client      *redis.Client
+	ttl         time.Duration
+	tracer      trace.Tracer
+	lockTTL     time.Duration
+	lockTimeout time.Duration
 }
 
 // NewRedisMemoryAdapter creates a new RedisMemoryAdapter instance.
@@ -42,9 +44,11 @@ func NewRedisMemoryAdapter(redisURL string, ttl time.Duration) (*RedisMemoryAdap
 	}
 
 	return &RedisMemoryAdapter{
-		client: client,
-		ttl:    ttl,
-		tracer: otel.Tracer("redis"),
+		client:      client,
+		ttl:         ttl,
+		tracer:      otel.Tracer("redis"),
+		lockTTL:     30 * time.Second,
+		lockTimeout: 5 * time.Second,
 	}, nil
 }
 
@@ -386,4 +390,10 @@ func (a *RedisMemoryAdapter) RollbackLast(ctx context.Context, tenantID, agentID
 		return fmt.Errorf("redis rpop failed: %w", err)
 	}
 	return nil
+}
+
+// SetLockConfig configures the TTL and timeout duration for thread locking.
+func (a *RedisMemoryAdapter) SetLockConfig(lockTTL, lockTimeout time.Duration) {
+	a.lockTTL = lockTTL
+	a.lockTimeout = lockTimeout
 }

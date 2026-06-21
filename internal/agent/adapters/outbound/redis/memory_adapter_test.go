@@ -5,6 +5,7 @@ package redis
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -122,5 +123,105 @@ func TestRedisMemoryAdapter(t *testing.T) {
 		historyCleared, err := adapter.Get(ctx, tenantA, agentID, threadID, 10)
 		assert.NoError(t, err)
 		assert.Empty(t, historyCleared)
+	})
+
+	t.Run("Lock and Unlock - ownership token verification", func(t *testing.T) {
+		tenantA := "tenant-a"
+		threadID := "thread-lock-1"
+
+		// Acquire lock
+		tokenA, locked, err := adapter.Lock(ctx, tenantA, threadID)
+		assert.NoError(t, err)
+		assert.True(t, locked)
+		assert.NotEmpty(t, tokenA)
+
+		// Try to acquire again (should fail/timeout since locked)
+		// We set configuration to quick timeout for testing
+		adapter.SetLockConfig(5*time.Second, 50*time.Millisecond)
+		_, locked2, err2 := adapter.Lock(ctx, tenantA, threadID)
+		assert.Error(t, err2)
+		assert.False(t, locked2)
+
+		// Try to unlock with a different/empty token (should fail)
+		err = adapter.Unlock(ctx, tenantA, threadID, "wrong-token")
+		assert.Error(t, err)
+
+		// Unlock with correct token (should succeed)
+		err = adapter.Unlock(ctx, tenantA, threadID, tokenA)
+		assert.NoError(t, err)
+
+		// Lock again after unlock (should succeed)
+		tokenC, lockedC, errC := adapter.Lock(ctx, tenantA, threadID)
+		assert.NoError(t, errC)
+		assert.True(t, lockedC)
+		_ = adapter.Unlock(ctx, tenantA, threadID, tokenC)
+	})
+
+	t.Run("Lock and Unlock - high-load concurrency mutual exclusion", func(t *testing.T) {
+		tenantA := "tenant-a"
+		threadID := "thread-lock-concurrency"
+		adapter.SetLockConfig(5*time.Second, 5*time.Second)
+
+		workers := 20
+		acquiredCount := 0
+		var mu sync.Mutex
+
+		errChan := make(chan error, workers)
+		var wg sync.WaitGroup
+
+		for i := 0; i < workers; i++ {
+			wg.Add(1)
+			go func(workerID int) {
+				defer wg.Done()
+
+				// Small random jitter before trying to lock
+				time.Sleep(time.Duration(workerID) * 5 * time.Millisecond)
+
+				// Attempt lock
+				token, locked, err := adapter.Lock(ctx, tenantA, threadID)
+				if err != nil {
+					errChan <- err
+					return
+				}
+				if !locked {
+					errChan <- fmt.Errorf("worker %d failed to acquire lock", workerID)
+					return
+				}
+
+				// Mutual Exclusion verification: increment count
+				mu.Lock()
+				acquiredCount++
+				current := acquiredCount
+				mu.Unlock()
+
+				// If mutual exclusion is violated, count would be > 1 concurrently
+				if current != 1 {
+					_ = adapter.Unlock(ctx, tenantA, threadID, token)
+					errChan <- fmt.Errorf("concurrency violation: worker %d acquired lock while others held it", workerID)
+					return
+				}
+
+				// Simulate brief task duration
+				time.Sleep(10 * time.Millisecond)
+
+				// Decrement count
+				mu.Lock()
+				acquiredCount--
+				mu.Unlock()
+
+				// Unlock
+				err = adapter.Unlock(ctx, tenantA, threadID, token)
+				if err != nil {
+					errChan <- err
+				}
+			}(i)
+		}
+
+		wg.Wait()
+		close(errChan)
+
+		for err := range errChan {
+			assert.NoError(t, err)
+		}
 	})
 }

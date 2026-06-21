@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -28,32 +29,37 @@ import (
 
 type MockThreadLock struct {
 	mu          sync.Mutex
-	locks       map[string]bool
+	locks       map[string]string // map of key to token
 	lockCalls   int
 	unlockCalls int
 }
 
-func (m *MockThreadLock) Lock(ctx context.Context, tenantID, threadID string) (bool, error) {
+func (m *MockThreadLock) Lock(ctx context.Context, tenantID, threadID string) (string, bool, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.lockCalls++
 	key := tenantID + ":" + threadID
 	if m.locks == nil {
-		m.locks = make(map[string]bool)
+		m.locks = make(map[string]string)
 	}
-	m.locks[key] = true
-	return true, nil
+	token := "mock-token"
+	m.locks[key] = token
+	return token, true, nil
 }
 
-func (m *MockThreadLock) Unlock(ctx context.Context, tenantID, threadID string) error {
+func (m *MockThreadLock) Unlock(ctx context.Context, tenantID, threadID, token string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.unlockCalls++
 	key := tenantID + ":" + threadID
 	if m.locks != nil {
-		delete(m.locks, key)
+		if m.locks[key] == token {
+			delete(m.locks, key)
+			return nil
+		}
+		return fmt.Errorf("lock release failed: lock not held or owned by this token")
 	}
-	return nil
+	return fmt.Errorf("lock release failed: no locks map initialized")
 }
 
 type MockOrchestrationStateStore struct {

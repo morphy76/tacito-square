@@ -83,7 +83,7 @@ func (o *Orchestrator) ProcessUserMessage(ctx context.Context, tenantID, threadI
 	ctx = logger.WithContext(ctx)
 
 	// 1. Acquire thread lock
-	locked, err := o.lock.Lock(ctx, tenantID, threadID)
+	lockToken, locked, err := o.lock.Lock(ctx, tenantID, threadID)
 	if err != nil {
 		return fmt.Errorf("failed to acquire thread lock: %w", err)
 	}
@@ -91,7 +91,7 @@ func (o *Orchestrator) ProcessUserMessage(ctx context.Context, tenantID, threadI
 		return fmt.Errorf("could not acquire lock for thread %s", threadID)
 	}
 	defer func() {
-		if err := o.lock.Unlock(ctx, tenantID, threadID); err != nil {
+		if err := o.lock.Unlock(ctx, tenantID, threadID, lockToken); err != nil {
 			logger.Error().Err(err).Msg("failed to release thread lock")
 		}
 	}()
@@ -149,7 +149,7 @@ func (o *Orchestrator) ProcessSpokeResponse(ctx context.Context, tenantID, threa
 	}
 
 	// 1. Acquire thread lock
-	locked, err := o.lock.Lock(ctx, tenantID, threadID)
+	lockToken, locked, err := o.lock.Lock(ctx, tenantID, threadID)
 	if err != nil {
 		return fmt.Errorf("failed to acquire thread lock: %w", err)
 	}
@@ -157,7 +157,7 @@ func (o *Orchestrator) ProcessSpokeResponse(ctx context.Context, tenantID, threa
 		return fmt.Errorf("could not acquire lock for thread %s", threadID)
 	}
 	defer func() {
-		if err := o.lock.Unlock(ctx, tenantID, threadID); err != nil {
+		if err := o.lock.Unlock(ctx, tenantID, threadID, lockToken); err != nil {
 			logger.Error().Err(err).Msg("failed to release thread lock")
 		}
 	}()
