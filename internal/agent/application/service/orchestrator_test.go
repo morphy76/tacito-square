@@ -180,7 +180,7 @@ func TestOrchestrator_ProcessUserMessage(t *testing.T) {
 		state, err := mockStateStore.GetState(context.Background(), "tenant-1", "thread-abc")
 		require.NoError(t, err)
 		require.NotNil(t, state)
-		assert.Equal(t, "waiting_spoke", state.Status)
+		assert.Equal(t, model.StatusWaitingSpoke, state.Status)
 		assert.Len(t, state.PendingSpokes, 2)
 		assert.Equal(t, "write about a dragon", state.PendingSpokes["writer"])
 		assert.Equal(t, "translate 'hello'", state.PendingSpokes["translator"])
@@ -247,7 +247,7 @@ func TestOrchestrator_ProcessSpokeResponse(t *testing.T) {
 		initialState := model.OrchestrationState{
 			ThreadID:    "thread-abc",
 			CommunityID: "comm-1",
-			Status:      "waiting_spoke",
+			Status:      model.StatusWaitingSpoke,
 			PendingSpokes: map[string]string{
 				"writer":     "task detail",
 				"translator": "task detail",
@@ -292,7 +292,7 @@ func TestOrchestrator_ProcessSpokeResponse(t *testing.T) {
 		state, err := mockStateStore.GetState(context.Background(), "tenant-1", "thread-abc")
 		require.NoError(t, err)
 		require.NotNil(t, state)
-		assert.Equal(t, "waiting_spoke", state.Status)
+		assert.Equal(t, model.StatusWaitingSpoke, state.Status)
 		assert.Len(t, state.PendingSpokes, 1)
 		assert.Contains(t, state.PendingSpokes, "translator")
 		assert.NotContains(t, state.PendingSpokes, "writer")
@@ -328,7 +328,7 @@ func TestOrchestrator_ProcessSpokeResponse(t *testing.T) {
 		initialState := model.OrchestrationState{
 			ThreadID:    "thread-abc",
 			CommunityID: "comm-1",
-			Status:      "waiting_spoke",
+			Status:      model.StatusWaitingSpoke,
 			PendingSpokes: map[string]string{
 				"translator": "task detail",
 			},
@@ -417,7 +417,7 @@ func TestOrchestrator_ProcessSpokeResponse(t *testing.T) {
 		initialState := model.OrchestrationState{
 			ThreadID:    "thread-abc",
 			CommunityID: "comm-1",
-			Status:      "waiting_spoke",
+			Status:      model.StatusWaitingSpoke,
 			PendingSpokes: map[string]string{
 				"writer": "please write a story",
 			},
@@ -457,7 +457,7 @@ func TestOrchestrator_ProcessSpokeResponse(t *testing.T) {
 		state, err := mockStateStore.GetState(context.Background(), "tenant-1", "thread-abc")
 		require.NoError(t, err)
 		require.NotNil(t, state)
-		assert.Equal(t, "waiting_spoke", state.Status)
+		assert.Equal(t, model.StatusWaitingSpoke, state.Status)
 		assert.Len(t, state.PendingSpokes, 1)
 		assert.Contains(t, state.PendingSpokes, "translator")
 		assert.Equal(t, "[Handoff instruction: The text is not in English.] Original task: please write a story", state.PendingSpokes["translator"])
@@ -507,7 +507,7 @@ func TestOrchestrator_ProcessSpokeResponse(t *testing.T) {
 		initialState := model.OrchestrationState{
 			ThreadID:    "thread-abc",
 			CommunityID: "comm-1",
-			Status:      "waiting_spoke",
+			Status:      model.StatusWaitingSpoke,
 			PendingSpokes: map[string]string{
 				"writer": "please write a story",
 			},
@@ -568,7 +568,7 @@ func TestOrchestrator_LoopDetection(t *testing.T) {
 		initialState := model.OrchestrationState{
 			ThreadID:        "thread-abc",
 			CommunityID:     "comm-1",
-			Status:          "waiting_spoke",
+			Status:          model.StatusWaitingSpoke,
 			PendingSpokes:   map[string]string{"translator": "task"},
 			OriginalEventID: "event-999",
 			LoopCount:       4,
@@ -760,7 +760,7 @@ func TestOrchestrator_CaseInsensitiveRouting(t *testing.T) {
 		initialState := model.OrchestrationState{
 			ThreadID:    "thread-abc",
 			CommunityID: "comm-1",
-			Status:      "waiting_spoke",
+			Status:      model.StatusWaitingSpoke,
 			PendingSpokes: map[string]string{
 				"Translator": "task detail",
 			},
@@ -876,7 +876,7 @@ func TestOrchestrator_HistorySplitting(t *testing.T) {
 		initialState := model.OrchestrationState{
 			ThreadID:    "thread-abc",
 			CommunityID: "comm-1",
-			Status:      "waiting_spoke",
+			Status:      model.StatusWaitingSpoke,
 			PendingSpokes: map[string]string{
 				"enquirer": "please ask questions",
 			},

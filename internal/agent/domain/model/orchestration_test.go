@@ -12,7 +12,7 @@ func TestOrchestrationState_Validate(t *testing.T) {
 		state := model.OrchestrationState{
 			ThreadID:    "thread-123",
 			CommunityID: "comm-abc",
-			Status:      "waiting_spoke",
+			Status:      model.StatusWaitingSpoke,
 		}
 		err := state.Validate()
 		assert.NoError(t, err)
@@ -21,7 +21,7 @@ func TestOrchestrationState_Validate(t *testing.T) {
 	t.Run("missing thread ID", func(t *testing.T) {
 		state := model.OrchestrationState{
 			CommunityID: "comm-abc",
-			Status:      "waiting_spoke",
+			Status:      model.StatusWaitingSpoke,
 		}
 		err := state.Validate()
 		assert.Error(t, err)
@@ -31,7 +31,7 @@ func TestOrchestrationState_Validate(t *testing.T) {
 	t.Run("missing community ID", func(t *testing.T) {
 		state := model.OrchestrationState{
 			ThreadID: "thread-123",
-			Status:   "waiting_spoke",
+			Status:   model.StatusWaitingSpoke,
 		}
 		err := state.Validate()
 		assert.Error(t, err)

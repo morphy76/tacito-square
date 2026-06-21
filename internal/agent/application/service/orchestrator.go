@@ -115,7 +115,7 @@ func (o *Orchestrator) ProcessUserMessage(ctx context.Context, tenantID, threadI
 	state := model.OrchestrationState{
 		ThreadID:        threadID,
 		CommunityID:     o.communityID,
-		Status:          "idle",
+		Status:          model.StatusIdle,
 		OriginalEventID: correlationEventID,
 		LoopCount:       0,
 		MaxLoops:        maxLoops,
@@ -162,7 +162,7 @@ func (o *Orchestrator) ProcessSpokeResponse(ctx context.Context, tenantID, threa
 	if err != nil {
 		return fmt.Errorf("failed to retrieve state: %w", err)
 	}
-	if state == nil || state.Status != "waiting_spoke" {
+	if state == nil || state.Status != model.StatusWaitingSpoke {
 		logger.Warn().Msg("received spoke response but no active waiting orchestration state found, ignoring")
 		return nil
 	}
@@ -239,7 +239,7 @@ func (o *Orchestrator) ProcessSpokeResponse(ctx context.Context, tenantID, threa
 
 		// 3. Update state in Redis
 		state.PendingSpokes[handoff.Target] = delegationMsg
-		state.Status = "waiting_spoke"
+		state.Status = model.StatusWaitingSpoke
 		if err := o.stateStore.SaveState(ctx, tenantID, threadID, *state); err != nil {
 			return fmt.Errorf("failed to save orchestration state for handoff: %w", err)
 		}
@@ -451,7 +451,7 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 		}
 
 		// Save state with map of pending spokes
-		state.Status = "waiting_spoke"
+		state.Status = model.StatusWaitingSpoke
 		state.PendingSpokes = make(map[string]string)
 		var spokeNames []string
 		var normalizedSpokes []SpokeTask

@@ -3,7 +3,7 @@
 | Field         | Value                                                              |
 |---------------|--------------------------------------------------------------------|
 | ID            | BUG-M6.15                                                          |
-| Status        | OPEN                                                               |
+| Status        | CLOSED                                                             |
 | Severity      | LOW                                                                |
 | Milestone     | M6 — Communities & Messaging                                       |
 | Affects       | [orchestration.go](file:///Users/R.Pasquini/Projects/side/tacito-square/internal/agent/domain/model/orchestration.go) |
