@@ -36,4 +36,20 @@ agent:
       url: "ts-infra-qdrant:6334"
 
 bff:
-  enabled: false
+  image:
+    pullPolicy: Never
+  config:
+    redis:
+      url: "redis://:tacito-redis-dev@ts-infra-redis-headless:6379"
+    oidc:
+      issuer: "http://localhost:8080/realms/tacito"
+      clientId: tacito
+      clientSecret: "BodOiaMLOJwKIfAwbiK0xuAw6EwwKD8f"
+      redirectUri: "http://localhost:8083/api/bff/v1/auth/callback"
+      timeout: "5s"
+      circuitBreakerMaxFail: 5
+    session:
+      ttl: "24h"
+    otel:
+      endpoint: "ts-infra-otel-collector:4317"
+

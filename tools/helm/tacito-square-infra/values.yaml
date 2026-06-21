@@ -97,7 +97,7 @@ keycloak:
   command:
     - "/opt/keycloak/bin/kc.sh"
   args:
-    - "start-dev"
+    - "start"
     - "--import-realm"
     - "--hostname-strict=false"
     # - "--https-certificate-file=/tls/tls.crt"
