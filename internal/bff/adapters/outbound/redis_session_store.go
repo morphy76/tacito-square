@@ -167,6 +167,11 @@ func (s *RedisSessionStore) DeleteByOIDCSessionID(ctx context.Context, issuer, o
 	return nil
 }
 
+// Ping checks the connectivity to the Redis database.
+func (s *RedisSessionStore) Ping(ctx context.Context) error {
+	return s.client.Ping(ctx).Err()
+}
+
 // sessionDTO is a serialization-safe representation of a Session that preserves token fields.
 type sessionDTO struct {
 	ID                   string               `json:"id"`

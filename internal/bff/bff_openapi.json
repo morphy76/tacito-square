@@ -1,0 +1,150 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "BFF API",
+    "version": "0.1.0"
+  },
+  "tags": [
+    {
+      "name": "auth/session",
+      "description": "Browser session management and OIDC frontend flows"
+    },
+    {
+      "name": "auth/backchannel",
+      "description": "Provider-to-service backchannel operations"
+    },
+    {
+      "name": "events/stream",
+      "description": "Event streaming gateways"
+    }
+  ],
+  "paths": {
+    "/api/bff/v1/auth/login": {
+      "get": {
+        "tags": ["auth/session"],
+        "summary": "Initiates OIDC login flow",
+        "responses": {
+          "302": {
+            "description": "Redirects to OIDC identity provider"
+          }
+        }
+      }
+    },
+    "/api/bff/v1/auth/callback": {
+      "get": {
+        "tags": ["auth/session"],
+        "summary": "OIDC callback redirect target",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirects to UI root on success with bff_session_id cookie set"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/api/bff/v1/auth/logout": {
+      "post": {
+        "tags": ["auth/session"],
+        "summary": "Logs out and clears session",
+        "security": [
+          {
+            "CookieAuth": []
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirects to OIDC end-session endpoint"
+          },
+          "401": {
+            "description": "Unauthorized if session cookie missing/invalid"
+          }
+        }
+      }
+    },
+    "/api/bff/v1/auth/backchannel-logout": {
+      "post": {
+        "tags": ["auth/backchannel"],
+        "summary": "Handles backchannel logout from OIDC Provider",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "logout_token": {
+                    "type": "string"
+                  }
+                },
+                "required": ["logout_token"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logout processed successfully"
+          },
+          "400": {
+            "description": "Invalid logout token"
+          }
+        }
+      }
+    },
+    "/api/bff/v1/events/stream": {
+      "get": {
+        "tags": ["events/stream"],
+        "summary": "Establishes SSE gateway event stream",
+        "security": [
+          {
+            "CookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Server-Sent Events stream",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized if session cookie missing/invalid"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "CookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "bff_session_id"
+      }
+    }
+  }
+}
