@@ -1024,3 +1024,155 @@ func TestOrchestrator_HistorySplitting(t *testing.T) {
 	})
 }
 
+func TestOrchestrator_SelfDelegationAndCasing(t *testing.T) {
+	t.Run("self-delegation: filtered out from spokes list, returns error if list becomes empty", func(t *testing.T) {
+		mockLock := &MockThreadLock{}
+		mockStateStore := &MockOrchestrationStateStore{}
+		mockDiscovery := &MockAgentDiscovery{}
+		mockMemory := &MockShortTermMemory{}
+		mockPublisher := &MockEventPublisherOrchestrator{}
+
+		initialState := model.OrchestrationState{
+			ThreadID:    "thread-abc",
+			CommunityID: "comm-1",
+			Status:      model.StatusWaitingSpoke,
+			PendingSpokes: map[string]string{
+				"writer": "please write a story",
+			},
+			OriginalEventID: "event-999",
+			LoopCount:       1,
+			MaxLoops:        5,
+		}
+		err := mockStateStore.SaveState(context.Background(), "tenant-1", "thread-abc", initialState)
+		require.NoError(t, err)
+
+		mockBrain := &MockBrain{
+			GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
+				// LLM decides to delegate back to the hub agent itself (case-insensitive check)
+				respJSON := `{
+					"action": "delegate",
+					"spokes": [
+						{"spoke": "hub-agent", "message": "hub task"},
+						{"spoke": "HUB-AGENT", "message": "hub task 2"}
+					]
+				}`
+				return &model.BrainResponse{Content: respJSON}, nil
+			},
+		}
+
+		orchestrator := service.NewOrchestrator(
+			"hub-123", "hub-agent", "comm-1",
+			mockBrain, mockStateStore, mockLock, mockDiscovery, mockMemory, mockPublisher,
+			"You are the coordinator.",
+		)
+
+		spokeResponse := events.AgentResponsePayload{
+			ThreadID:           "thread-abc",
+			CommunityID:        "comm-1",
+			AgentName:          "writer",
+			CorrelationEventID: "event-writer-task",
+			Response:           `spoke finished task`,
+			Finished:           true,
+		}
+
+		err = orchestrator.ProcessSpokeResponse(context.Background(), "tenant-1", "thread-abc", spokeResponse)
+		// Since all spokes were self-delegation attempts and filtered out, it should return an error
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "all spokes were invalid or filtered")
+	})
+
+	t.Run("self-delegation: filtered out but other valid spokes are kept", func(t *testing.T) {
+		mockLock := &MockThreadLock{}
+		mockStateStore := &MockOrchestrationStateStore{}
+		mockDiscovery := &MockAgentDiscovery{
+			cards: []*agentcard.AgentCard{
+				{Name: "translator"},
+			},
+		}
+		mockMemory := &MockShortTermMemory{}
+		mockPublisher := &MockEventPublisherOrchestrator{}
+
+		initialState := model.OrchestrationState{
+			ThreadID:    "thread-abc",
+			CommunityID: "comm-1",
+			Status:      model.StatusWaitingSpoke,
+			PendingSpokes: map[string]string{
+				"writer": "please write a story",
+			},
+			OriginalEventID: "event-999",
+			LoopCount:       1,
+			MaxLoops:        5,
+		}
+		err := mockStateStore.SaveState(context.Background(), "tenant-1", "thread-abc", initialState)
+		require.NoError(t, err)
+
+		mockBrain := &MockBrain{
+			GenerateFunc: func(ctx context.Context, request model.BrainRequest) (*model.BrainResponse, error) {
+				respJSON := `{
+					"action": "delegate",
+					"spokes": [
+						{"spoke": "hub-agent", "message": "self task"},
+						{"spoke": "translator", "message": "translate task"}
+					]
+				}`
+				return &model.BrainResponse{Content: respJSON}, nil
+			},
+		}
+
+		orchestrator := service.NewOrchestrator(
+			"hub-123", "hub-agent", "comm-1",
+			mockBrain, mockStateStore, mockLock, mockDiscovery, mockMemory, mockPublisher,
+			"You are the coordinator.",
+		)
+
+		spokeResponse := events.AgentResponsePayload{
+			ThreadID:           "thread-abc",
+			CommunityID:        "comm-1",
+			AgentName:          "writer",
+			CorrelationEventID: "event-writer-task",
+			Response:           `spoke finished task`,
+			Finished:           true,
+		}
+
+		err = orchestrator.ProcessSpokeResponse(context.Background(), "tenant-1", "thread-abc", spokeResponse)
+		assert.NoError(t, err)
+
+		// Assert updated state in Redis: only 'translator' remains pending, 'hub-agent' was filtered out
+		state, err := mockStateStore.GetState(context.Background(), "tenant-1", "thread-abc")
+		require.NoError(t, err)
+		require.NotNil(t, state)
+		assert.Len(t, state.PendingSpokes, 1)
+		assert.Contains(t, state.PendingSpokes, "translator")
+		assert.NotContains(t, state.PendingSpokes, "hub-agent")
+	})
+
+	t.Run("final response guard: case-insensitive match on o.agentName", func(t *testing.T) {
+		mockLock := &MockThreadLock{}
+		mockStateStore := &MockOrchestrationStateStore{}
+		mockDiscovery := &MockAgentDiscovery{}
+		mockMemory := &MockShortTermMemory{}
+		mockPublisher := &MockEventPublisherOrchestrator{}
+
+		orchestrator := service.NewOrchestrator(
+			"hub-123", "hub-agent", "comm-1",
+			nil, mockStateStore, mockLock, mockDiscovery, mockMemory, mockPublisher,
+			"You are the coordinator.",
+		)
+
+		// Spoke agent name has different casing than o.agentName ("hub-agent")
+		spokeResponse := events.AgentResponsePayload{
+			ThreadID:           "thread-abc",
+			CommunityID:        "comm-1",
+			AgentName:          "HUB-AGENT",
+			CorrelationEventID: "event-task",
+			Response:           "final result",
+			Finished:           true,
+		}
+
+		err := orchestrator.ProcessSpokeResponse(context.Background(), "tenant-1", "thread-abc", spokeResponse)
+		// Should be ignored immediately and return nil without trying to lock or load state
+		assert.NoError(t, err)
+		assert.Equal(t, 0, mockLock.lockCalls)
+	})
+}
+

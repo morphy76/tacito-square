@@ -143,7 +143,7 @@ func (o *Orchestrator) ProcessSpokeResponse(ctx context.Context, tenantID, threa
 	ctx = logger.WithContext(ctx)
 
 	// Guard: Ignore if this is the Hub's own final response
-	if payload.AgentName == o.agentName {
+	if strings.EqualFold(payload.AgentName, o.agentName) {
 		logger.Debug().Msg("received our own final response event, ignoring")
 		return nil
 	}
@@ -487,6 +487,10 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 		var normalizedSpokes []SpokeTask
 
 		for _, task := range action.Spokes {
+			if strings.EqualFold(task.Spoke, o.agentName) {
+				logger.Warn().Str("self_target", task.Spoke).Msg("filtering out self-delegation attempt")
+				continue
+			}
 			officialName := task.Spoke
 			if err == nil {
 				for _, card := range cards {
@@ -502,6 +506,10 @@ func (o *Orchestrator) runOrchestrationTurn(ctx context.Context, tenantID, threa
 				Spoke:   officialName,
 				Message: task.Message,
 			})
+		}
+
+		if len(normalizedSpokes) == 0 {
+			return fmt.Errorf("brain decided to delegate but all spokes were invalid or filtered (e.g. self-delegation)")
 		}
 
 		if err := o.stateStore.SaveState(ctx, tenantID, threadID, *state); err != nil {
@@ -639,7 +647,7 @@ func (o *Orchestrator) compileSystemPrompt(ctx context.Context) (string, error) 
 
 	var spokesSb strings.Builder
 	for _, card := range cards {
-		if card.Name == o.agentName {
+		if strings.EqualFold(card.Name, o.agentName) {
 			continue
 		}
 		spokesSb.WriteString(fmt.Sprintf("- Name: %s\n", card.Name))
