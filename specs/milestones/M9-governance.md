@@ -1,0 +1,28 @@
+# Milestone M9: Governance
+
+| Field      | Value |
+|------------|-------|
+| Status     | ⬜ PLANNED |
+
+## Goal
+
+RBAC enforcement, usage quotas, human-in-the-loop (HITL) flows, audit trail, and management of prompts and skills.
+
+## Deliverable
+
+OIDC/JWT Authentication → role-based access → quota-enforced agent spawning → Zero-Scaling Support → HITL yield/callback → audit trail queries → managed prompts and skills resolved at agent spawn.
+
+## Specs Required
+
+| Spec ID | Title | Component | Depends On |
+|---------|-------|-----------|------------|
+| SPEC-FR-M9.1 | OIDC/JWT Authentication | keeper, shared | SPEC-FR-M2.2 |
+| SPEC-FR-M9.2 | RBAC Role Model & Route Protection | keeper, shared | SPEC-FR-M3.9, SPEC-FR-M9.1 |
+| SPEC-FR-M9.3 | Usage Quotas (community + agent) | keeper | SPEC-FR-M3.6 |
+| SPEC-FR-M9.4 | Quota Enforcement (Redis counters) | keeper | SPEC-FR-M9.3, SPEC-NFR-CACHE |
+| SPEC-FR-M9.5 | HITL Yield & Callback Flows | agent, keeper | SPEC-FR-M5.2, SPEC-FR-M11.4 |
+| SPEC-FR-M9.6 | Audit Trail (events + queries) | keeper | SPEC-FR-M3.8 |
+| SPEC-FR-M9.7 | Prompt Management (CRUD + versioning) | keeper | SPEC-FR-M3.8, SPEC-FR-M3.4 |
+| SPEC-FR-M9.8 | Skills Management (CRUD + MCP attach) | keeper | SPEC-FR-M3.8, SPEC-FR-M3.3 |
+| SPEC-FR-M9.9 | Zero-Scaling Support | operator | SPEC-FR-M4.3 |
+| SPEC-FR-M9.10 | Continuous Integration (GitHub Actions) | build | SPEC-FR-M2.7 |

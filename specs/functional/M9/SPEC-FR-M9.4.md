@@ -1,26 +1,26 @@
-# SPEC-FR-M9.4: Production Helm & Hardening
+# SPEC-FR-M9.4: Quota Enforcement (Redis counters)
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M9.4                                |
 | Status        | DRAFT                                       |
 | Milestone     | M9                                          |
-| Component     | deploy                                      |
-| Depends On    | SPEC-FR-M2.1                                |
+| Component     | keeper                                      |
+| Depends On    | SPEC-FR-M9.3, SPEC-NFR-CACHE               |
 | Supersedes    | none                                        |
 
 ## Context
 
-Production deployments require TLS, secrets management, HA, and security hardening.
+Quotas are enforced in real-time using Redis atomic counters for low-latency checks.
 
 ## Specification
 
-1. Production Helm values MUST configure TLS termination.
-2. Secrets MUST be managed via K8s Secrets or external secrets operator.
-3. All components MUST run with read-only root filesystem and non-root user.
-4. Pod security standards MUST be enforced (restricted profile).
-5. Resource limits MUST be tuned with documented baselines.
-6. A production runbook MUST cover deployment, rollback, and incident response.
+1. The system MUST use Redis atomic counters for real-time quota tracking.
+2. Counter keys MUST follow `ts:keeper:quota:{type}:{id}:{period}`.
+3. Message quota checks MUST be performed before agent message delivery.
+4. LLM token quota checks MUST be performed before LLM API calls.
+5. Quota exceeded responses MUST return HTTP 429 with retry-after header.
+6. Counters MUST reset automatically using Redis TTL.
 
 ## Acceptance Criteria
 

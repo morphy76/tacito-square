@@ -1,24 +1,25 @@
-# SPEC-FR-M9.2: OpenAPI Contract Validation
+# SPEC-FR-M9.2: RBAC Role Model & Route Protection
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M9.2                                |
 | Status        | DRAFT                                       |
 | Milestone     | M9                                          |
-| Component     | all                                         |
-| Depends On    | SPEC-NFR-OPENAPI                            |
+| Component     | keeper, shared                              |
+| Depends On    | SPEC-FR-M3.9, SPEC-FR-M9.1                  |
 | Supersedes    | none                                        |
 
 ## Context
 
-API contracts must be validated to ensure the running system matches committed OpenAPI specifications.
+Keeper API endpoints must enforce role-based access control using Keycloak roles from JWT tokens.
 
 ## Specification
 
-1. Each component MUST serve its OpenAPI spec at `GET /openapi.json`.
-2. Contract tests MUST compare live spec against committed spec in `api/openapi/`.
-3. Contract test failures MUST block CI.
-4. The system SHOULD provide Swagger UI at `/swagger/` in dev mode.
+1. The system MUST define role-to-permission mappings: `keeper-admin` (full CRUD), `keeper-viewer` (read-only), `agent-spawner` (create agents + assign), `user` (interact via threads).
+2. The system MUST implement a Gin authorization middleware checking required roles per route.
+3. Route protection MUST be declarative (configuration-based, not hardcoded).
+4. Unauthorized requests MUST return 403 with standard error response.
+5. Principal identity (subject + roles) MUST be logged with every request.
 
 ## Acceptance Criteria
 

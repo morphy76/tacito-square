@@ -14,7 +14,7 @@
 During a conversational reasoning loop, a Spoke agent may determine that another agent within the community is better suited to answer the user's request. Handoff facilitates transferring the conversational task to the target agent.
 
 To keep the architecture simple, clean, and secure:
-1. **Coordinated Hub-Spoke Only**: Decentralized P2P handoffs are postponed to Milestone 11. The Hub orchestrator remains the sole controller of the community execution loop.
+1. **Coordinated Hub-Spoke Only**: Decentralized P2P handoffs are postponed to Milestone 12. The Hub orchestrator remains the sole controller of the community execution loop.
 2. **Isolated Keyspaces**: Short-Term Memory (STM) keyspaces remain strictly agent-isolated to avoid data clutter and race conditions from concurrent spoke execution. The Hub explicitly propagates necessary context.
 3. **Structured Suggestions**: Spokes propose handoffs by returning a structured JSON response to the Hub.
 

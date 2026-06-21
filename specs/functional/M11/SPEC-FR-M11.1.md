@@ -1,48 +1,34 @@
-# SPEC-FR-M11.1: Decentralized P2P Topology & Handoff
+# SPEC-FR-M11.1: A2A HTTP Gateway
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M11.1                               |
 | Status        | DRAFT                                       |
 | Milestone     | M11                                         |
-| Component     | agent, keeper, operator                     |
-| Depends On    | SPEC-FR-M6.1, SPEC-FR-M6.6                  |
+| Component     | keeper                                      |
+| Depends On    | SPEC-FR-M6.5                                |
 | Supersedes    | none                                        |
 
 ## Context
 
-To extend the baseline topology options, communities must support a decentralized model where agents coordinate directly with each other without a central Hub. Direct peer-to-peer (P2P) handoffs allow the active conversation thread ownership to shift dynamically between agents.
+External agents communicate with internal Tacito Square agents via an A2A HTTP gateway exposed by keeper.
 
 ## Specification
 
-### 1. Decentralized Topology Support
-
-1. **Keeper Database & API**:
-   * Allow `decentralized` as a valid enum value in the community `topology` column.
-   * In a decentralized topology, any number of agents can be assigned to the community without role constraints (roles like `hub` or `spoke` are ignored or treated as equal peers).
-2. **Kubernetes API & Operator**:
-   * Update the Operator to support deploying communities in decentralized mode, mounting matching configuration variables (`TS_AGENT_TOPOLOGY=decentralized`).
-
-### 2. Direct Peer-to-Peer Handoff Flow
-
-In a decentralized community, agents communicate directly to route threads:
-
-1. **Direct Handoff Event**:
-   * When an agent decides to hand off a conversation, it publishes a `handoff` event (`urn:tacito:schema:conversational:handoff:v1`) directly to NATS.
-   * NATS subject format: `ts.community.{community_id}.agent.{target_agent_id}`
-2. **Thread Locking**:
-   * Since there is no central hub coordination, peer agents must acquire a thread lock before processing the handoff to prevent race conditions or simultaneous execution on the same thread.
-3. **Execution Routing**:
-   * The target agent processes the handoff event, appends a system metadata notification to its short-term memory, and starts its reasoning loop to respond directly back to the user or BFF gateway.
+1. Keeper MUST expose A2A protocol HTTP endpoints at `/a2a/v1/`.
+2. External agents MUST present valid Agent Cards for registration.
+3. Inbound A2A messages MUST be relayed to the appropriate internal agent via NATS.
+4. Outbound responses MUST be streamed back to the external agent.
+5. The gateway MUST enforce rate limiting on external requests (per SPEC-NFR-CLOUD).
 
 ## Acceptance Criteria
 
-To be defined during Milestone 11 review.
+To be defined during spec review.
 
 ## Test Plan
 
-To be defined during Milestone 11 review.
+To be defined during spec review.
 
 ## Files Affected
 
-To be defined during Milestone 11 review.
+To be defined during spec review.

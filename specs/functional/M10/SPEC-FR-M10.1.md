@@ -1,25 +1,25 @@
-# SPEC-FR-M10.1: A2A HTTP Gateway
+# SPEC-FR-M10.1: Prometheus Metrics Integration
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
-| ID            | SPEC-FR-M10.1                               |
+| ID            | SPEC-FR-M10.1                                |
 | Status        | DRAFT                                       |
-| Milestone     | M10                                         |
-| Component     | keeper                                      |
-| Depends On    | SPEC-FR-M6.5                                |
+| Milestone     | M10                                          |
+| Component     | all                                         |
+| Depends On    | SPEC-NFR-OBSERVABILITY                      |
 | Supersedes    | none                                        |
 
 ## Context
 
-External agents communicate with internal Tacito Square agents via an A2A HTTP gateway exposed by keeper.
+All components expose Prometheus metrics for operational monitoring beyond HTTP auto-instrumentation.
 
 ## Specification
 
-1. Keeper MUST expose A2A protocol HTTP endpoints at `/a2a/v1/`.
-2. External agents MUST present valid Agent Cards for registration.
-3. Inbound A2A messages MUST be relayed to the appropriate internal agent via NATS.
-4. Outbound responses MUST be streamed back to the external agent.
-5. The gateway MUST enforce rate limiting on external requests (per SPEC-NFR-CLOUD).
+1. Keeper: `tacito_agents_total` (gauge), `tacito_communities_total` (gauge), `tacito_hitl_pending` (gauge).
+2. Agent: `tacito_agent_messages_total` (counter), `tacito_agent_llm_tokens_total` (counter), `tacito_agent_reasoning_duration_seconds` (histogram).
+3. Operator: `tacito_reconciliations_total` (counter), `tacito_agent_pods_total` (gauge).
+4. All metrics MUST be registered via Prometheus Go client.
+5. Helm charts MUST include ServiceMonitor CRDs.
 
 ## Acceptance Criteria
 

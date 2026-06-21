@@ -1,25 +1,25 @@
-# SPEC-FR-M9.3: E2E & Benchmark Tests
+# SPEC-FR-M9.3: Usage Quotas (community + agent)
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M9.3                                |
 | Status        | DRAFT                                       |
 | Milestone     | M9                                          |
-| Component     | test                                        |
-| Depends On    | all M1-M8                                   |
+| Component     | keeper                                      |
+| Depends On    | SPEC-FR-M3.6                                |
 | Supersedes    | none                                        |
 
 ## Context
 
-End-to-end and benchmark tests validate the full system on a Kind cluster.
+Communities and agents have configurable usage limits to prevent resource exhaustion.
 
 ## Specification
 
-1. E2E tests MUST run on a Kind cluster with all components deployed.
-2. E2E scenarios MUST cover: community creation, agent spawn, message exchange, handoff, HITL.
-3. Benchmark tests MUST establish baselines for: spawn latency, message throughput, LLM latency.
-4. Concurrency tests MUST verify race-free operation under parallel workloads.
-5. All test suites MUST be integrated into CI via Makefile targets.
+1. The system MUST define a `Quota` value object: maxAgents (per community), maxMessages (per agent/hour), maxLLMTokens (per agent/day).
+2. Quotas MUST be configurable per community and per agent definition.
+3. The system MUST expose quota CRUD via `GET/PUT /api/v1/communities/{id}/quotas` and `GET/PUT /api/v1/agents/{id}/quotas`.
+4. Default quotas MUST be applied when none are explicitly configured.
+5. Quota configuration MUST be persisted in PostgreSQL.
 
 ## Acceptance Criteria
 

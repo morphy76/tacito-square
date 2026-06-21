@@ -1,25 +1,27 @@
-# SPEC-FR-M9.5: K8s NetworkPolicies
+# SPEC-FR-M9.5: HITL Yield & Callback Flows
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M9.5                                |
 | Status        | DRAFT                                       |
 | Milestone     | M9                                          |
-| Component     | operator                                    |
-| Depends On    | SPEC-FR-M4.3, SPEC-FR-M6.3                 |
+| Component     | agent, keeper                               |
+| Depends On    | SPEC-FR-M5.2, SPEC-FR-M11.4                 |
 | Supersedes    | none                                        |
 
 ## Context
 
-Network isolation between communities prevents unauthorized cross-community traffic.
+Agents can yield to a human during reasoning for input, approval, or clarification. HITL pauses reasoning, notifies the human, and resumes on response.
 
 ## Specification
 
-1. The operator MUST create NetworkPolicy resources for each TacitoCommunity.
-2. NetworkPolicies MUST allow only intra-community pod-to-pod traffic.
-3. NetworkPolicies MUST allow traffic from keeper and operator pods (control plane).
-4. NetworkPolicies MUST allow egress to infrastructure services.
-5. NetworkPolicies MUST deny all other ingress and egress by default.
+1. An agent MUST yield to a human by emitting a HITL yield event via NATS.
+2. Keeper MUST persist the HITL callback in PostgreSQL.
+3. The callback MUST be exposed via `GET /api/v1/threads/{id}/hitl` and `POST /api/v1/threads/{id}/hitl/{callback_id}/respond`.
+4. Keeper MUST relay the human response to the agent via NATS.
+5. The agent MUST resume reasoning with the human response as additional context.
+6. Unanswered callbacks MUST escalate after configurable TTL (default: 1 hour).
+7. The Agent Card MUST indicate HITL capability via a `humanInTheLoop` flag.
 
 ## Acceptance Criteria
 

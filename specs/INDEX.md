@@ -76,63 +76,78 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | SPEC-FR-M7.2 | Configurator UI | ACCEPTED | ui | [SPEC-FR-M7.2](functional/M7/SPEC-FR-M7.2.md) |
 | SPEC-FR-M7.3 | Auditor UI | ACCEPTED | ui | [SPEC-FR-M7.3](functional/M7/SPEC-FR-M7.3.md) |
 | SPEC-FR-M7.4 | OIDC Login Flow (Keycloak) | ACCEPTED | bff | [SPEC-FR-M7.4](functional/M7/SPEC-FR-M7.4.md) |
+| SPEC-FR-M7.5 | Standardize query parameters for GET APIs | DRAFT | keeper, bff | [SPEC-FR-M7.5](functional/M7/SPEC-FR-M7.5.md) |
+| SPEC-FR-M7.6 | BFF primary API surface to use GraphQL | DRAFT | bff, ui | [SPEC-FR-M7.6](functional/M7/SPEC-FR-M7.6.md) |
 
-### M8: Governance
-
-| ID | Title | Status | Component | File |
-|----|-------|--------|-----------|------|
-| SPEC-FR-M8.1 | OIDC/JWT Authentication | DRAFT | keeper, shared | [SPEC-FR-M8.1](functional/M8/SPEC-FR-M8.1.md) |
-| SPEC-FR-M8.2 | RBAC Role Model & Route Protection | DRAFT | keeper, shared | [SPEC-FR-M8.2](functional/M8/SPEC-FR-M8.2.md) |
-| SPEC-FR-M8.3 | Usage Quotas (community + agent) | DRAFT | keeper | [SPEC-FR-M8.3](functional/M8/SPEC-FR-M8.3.md) |
-| SPEC-FR-M8.4 | Quota Enforcement (Redis counters) | DRAFT | keeper | [SPEC-FR-M8.4](functional/M8/SPEC-FR-M8.4.md) |
-| SPEC-FR-M8.5 | HITL Yield & Callback Flows | DRAFT | agent, keeper | [SPEC-FR-M8.5](functional/M8/SPEC-FR-M8.5.md) |
-| SPEC-FR-M8.6 | Audit Trail (events + queries) | DRAFT | keeper | [SPEC-FR-M8.6](functional/M8/SPEC-FR-M8.6.md) |
-| SPEC-FR-M8.7 | Prompt Management (CRUD + versioning) | DRAFT | keeper | [SPEC-FR-M8.7](functional/M8/SPEC-FR-M8.7.md) |
-| SPEC-FR-M8.8 | Skills Management (CRUD + MCP attach) | DRAFT | keeper | [SPEC-FR-M8.8](functional/M8/SPEC-FR-M8.8.md) |
-| SPEC-FR-M8.9 | Zero-Scaling Support | ACCEPTED | operator | [SPEC-FR-M8.9](functional/M8/SPEC-FR-M8.9.md) |
-| SPEC-FR-M8.10 | Continuous Integration (GitHub Actions) | ACCEPTED | build | [SPEC-FR-M8.10](functional/M8/SPEC-FR-M8.10.md) |
-
-### M8: Bugs
-
-| ID | Title | Status | Severity | File |
-|----|-------|--------|----------|------|
-| BUG-M8.1 | Missing Horizontal Pod Autoscaler in Standalone Agent Chart | OPEN | MEDIUM | [BUG-M8.1](tasks/M8.BUG1/BUG-M8.1.md) |
-
-### M9: Hardening
+### M8: RAG & LTM
 
 | ID | Title | Status | Component | File |
 |----|-------|--------|-----------|------|
-| SPEC-FR-M9.1 | Prometheus Metrics Integration | DRAFT | all | [SPEC-FR-M9.1](functional/M9/SPEC-FR-M9.1.md) |
-| SPEC-FR-M9.2 | OpenAPI Contract Validation | DRAFT | all | [SPEC-FR-M9.2](functional/M9/SPEC-FR-M9.2.md) |
-| SPEC-FR-M9.3 | E2E & Benchmark Tests | DRAFT | test | [SPEC-FR-M9.3](functional/M9/SPEC-FR-M9.3.md) |
-| SPEC-FR-M9.4 | Production Helm & Hardening | DRAFT | deploy | [SPEC-FR-M9.4](functional/M9/SPEC-FR-M9.4.md) |
-| SPEC-FR-M9.5 | K8s NetworkPolicies | DRAFT | operator | [SPEC-FR-M9.5](functional/M9/SPEC-FR-M9.5.md) |
-| SPEC-FR-M9.6 | Comprehensive System Documentation | DRAFT | docs | [SPEC-FR-M9.6](functional/M9/SPEC-FR-M9.6.md) |
-| SPEC-FR-M9.7 | Benchmark Suite & Integration Coverage Verification | ACCEPTED | test | [SPEC-FR-M9.7](functional/M9/SPEC-FR-M9.7.md) |
+| SPEC-FR-M8.1 | Design architectural integration patterns for RAG and web search | DRAFT | agent, shared | [SPEC-FR-M8.1](functional/M8/SPEC-FR-M8.1.md) |
+
+### M9: Governance
+
+| ID | Title | Status | Component | File |
+|----|-------|--------|-----------|------|
+| SPEC-FR-M9.1 | OIDC/JWT Authentication | DRAFT | keeper, shared | [SPEC-FR-M9.1](functional/M9/SPEC-FR-M9.1.md) |
+| SPEC-FR-M9.2 | RBAC Role Model & Route Protection | DRAFT | keeper, shared | [SPEC-FR-M9.2](functional/M9/SPEC-FR-M9.2.md) |
+| SPEC-FR-M9.3 | Usage Quotas (community + agent) | DRAFT | keeper | [SPEC-FR-M9.3](functional/M9/SPEC-FR-M9.3.md) |
+| SPEC-FR-M9.4 | Quota Enforcement (Redis counters) | DRAFT | keeper | [SPEC-FR-M9.4](functional/M9/SPEC-FR-M9.4.md) |
+| SPEC-FR-M9.5 | HITL Yield & Callback Flows | DRAFT | agent, keeper | [SPEC-FR-M9.5](functional/M9/SPEC-FR-M9.5.md) |
+| SPEC-FR-M9.6 | Audit Trail (events + queries) | DRAFT | keeper | [SPEC-FR-M9.6](functional/M9/SPEC-FR-M9.6.md) |
+| SPEC-FR-M9.7 | Prompt Management (CRUD + versioning) | DRAFT | keeper | [SPEC-FR-M9.7](functional/M9/SPEC-FR-M9.7.md) |
+| SPEC-FR-M9.8 | Skills Management (CRUD + MCP attach) | DRAFT | keeper | [SPEC-FR-M9.8](functional/M9/SPEC-FR-M9.8.md) |
+| SPEC-FR-M9.9 | Zero-Scaling Support | ACCEPTED | operator | [SPEC-FR-M9.9](functional/M9/SPEC-FR-M9.9.md) |
+| SPEC-FR-M9.10 | Continuous Integration (GitHub Actions) | ACCEPTED | build | [SPEC-FR-M9.10](functional/M9/SPEC-FR-M9.10.md) |
+| SPEC-FR-M9.11 | Encrypt agent brain credential secrets at rest | DRAFT | keeper | [SPEC-FR-M9.11](functional/M9/SPEC-FR-M9.11.md) |
+| SPEC-FR-M9.12 | Integrate Unleash feature flag management | DRAFT | shared, keeper, bff, agent | [SPEC-FR-M9.12](functional/M9/SPEC-FR-M9.12.md) |
+| SPEC-FR-M9.13 | Track brain token usage per agent and thread | DRAFT | agent, keeper | [SPEC-FR-M9.13](functional/M9/SPEC-FR-M9.13.md) |
+| SPEC-FR-M9.14 | Provide APIs to manage tenant secrets for LLM bindings | DRAFT | keeper, bff | [SPEC-FR-M9.14](functional/M9/SPEC-FR-M9.14.md) |
+| SPEC-FR-M9.15 | Create a Skillset abstraction to group multiple skills | DRAFT | keeper, shared, agent | [SPEC-FR-M9.15](functional/M9/SPEC-FR-M9.15.md) |
+| SPEC-FR-M9.16 | Provide configuration flags to opt-out of specific built-in tools | DRAFT | keeper, agent | [SPEC-FR-M9.16](functional/M9/SPEC-FR-M9.16.md) |
+| SPEC-FR-M9.17 | Introduce template engines for brain prompts | DRAFT | agent, shared | [SPEC-FR-M9.17](functional/M9/SPEC-FR-M9.17.md) |
 
 ### M9: Bugs
 
 | ID | Title | Status | Severity | File |
 |----|-------|--------|----------|------|
-| BUG-M9.1 | Infrastructure Services Do Not Enforce SSL/TLS or Authenticated Connections | OPEN | HIGH | [BUG-M9.1](tasks/M9.BUG1/BUG-M9.1.md) |
+| BUG-M9.1 | Missing Horizontal Pod Autoscaler in Standalone Agent Chart | OPEN | MEDIUM | [BUG-M9.1](tasks/M9.BUG1/BUG-M9.1.md) |
 
-### M10: Federation
-
-| ID | Title | Status | Component | File |
-|----|-------|--------|-----------|------|
-| SPEC-FR-M10.1 | A2A HTTP Gateway | DRAFT | keeper | [SPEC-FR-M10.1](functional/M10/SPEC-FR-M10.1.md) |
-| SPEC-FR-M10.2 | External Agent Registry | DRAFT | keeper | [SPEC-FR-M10.2](functional/M10/SPEC-FR-M10.2.md) |
-| SPEC-FR-M10.3 | Spawning MCP Servers using CRD from Keeper | DRAFT | keeper, operator | [SPEC-FR-M10.3](functional/M10/SPEC-FR-M10.3.md) |
-| SPEC-FR-M10.4 | Thread Management | DRAFT | conversation-hub | [SPEC-FR-M10.4](functional/M10/SPEC-FR-M10.4.md) |
-
-### M11: Extensions & Advanced Topologies
+### M10: Hardening
 
 | ID | Title | Status | Component | File |
 |----|-------|--------|-----------|------|
-| SPEC-FR-M11.1 | Decentralized P2P Topology & Handoff | DRAFT | agent, keeper, operator | [SPEC-FR-M11.1](functional/M11/SPEC-FR-M11.1.md) |
-| SPEC-FR-M11.2 | Shared Hive Short-Term Memory (Community STM) | DRAFT | agent | [SPEC-FR-M11.2](functional/M11/SPEC-FR-M11.2.md) |
-| SPEC-FR-M11.3 | Specialist Agent Spawn | DRAFT | keeper, agent | [SPEC-FR-M11.3](functional/M11/SPEC-FR-M11.3.md) |
-| SPEC-FR-M11.4 | Built-in Agent Templates | ACCEPTED | keeper, agent, operator | [SPEC-FR-M11.4](functional/M11/SPEC-FR-M11.4.md) |
+| SPEC-FR-M10.1 | Prometheus Metrics Integration | DRAFT | all | [SPEC-FR-M10.1](functional/M10/SPEC-FR-M10.1.md) |
+| SPEC-FR-M10.2 | OpenAPI Contract Validation | DRAFT | all | [SPEC-FR-M10.2](functional/M10/SPEC-FR-M10.2.md) |
+| SPEC-FR-M10.3 | E2E & Benchmark Tests | DRAFT | test | [SPEC-FR-M10.3](functional/M10/SPEC-FR-M10.3.md) |
+| SPEC-FR-M10.4 | Production Helm & Hardening | DRAFT | deploy | [SPEC-FR-M10.4](functional/M10/SPEC-FR-M10.4.md) |
+| SPEC-FR-M10.5 | K8s NetworkPolicies | DRAFT | operator | [SPEC-FR-M10.5](functional/M10/SPEC-FR-M10.5.md) |
+| SPEC-FR-M10.6 | Comprehensive System Documentation | DRAFT | docs | [SPEC-FR-M10.6](functional/M10/SPEC-FR-M10.6.md) |
+| SPEC-FR-M10.7 | Benchmark Suite & Integration Coverage Verification | ACCEPTED | test | [SPEC-FR-M10.7](functional/M10/SPEC-FR-M10.7.md) |
+
+### M10: Bugs
+
+| ID | Title | Status | Severity | File |
+|----|-------|--------|----------|------|
+| BUG-M10.1 | Infrastructure Services Do Not Enforce SSL/TLS or Authenticated Connections | OPEN | HIGH | [BUG-M10.1](tasks/M10.BUG1/BUG-M10.1.md) |
+
+### M11: Federation
+
+| ID | Title | Status | Component | File |
+|----|-------|--------|-----------|------|
+| SPEC-FR-M11.1 | A2A HTTP Gateway | DRAFT | keeper | [SPEC-FR-M11.1](functional/M11/SPEC-FR-M11.1.md) |
+| SPEC-FR-M11.2 | External Agent Registry | DRAFT | keeper | [SPEC-FR-M11.2](functional/M11/SPEC-FR-M11.2.md) |
+| SPEC-FR-M11.3 | Spawning MCP Servers using CRD from Keeper | DRAFT | keeper, operator | [SPEC-FR-M11.3](functional/M11/SPEC-FR-M11.3.md) |
+| SPEC-FR-M11.4 | Thread Management | DRAFT | conversation-hub | [SPEC-FR-M11.4](functional/M11/SPEC-FR-M11.4.md) |
+
+### M12: Extensions & Advanced Topologies
+
+| ID | Title | Status | Component | File |
+|----|-------|--------|-----------|------|
+| SPEC-FR-M12.1 | Decentralized P2P Topology & Handoff | DRAFT | agent, keeper, operator | [SPEC-FR-M12.1](functional/M12/SPEC-FR-M12.1.md) |
+| SPEC-FR-M12.2 | Shared Hive Short-Term Memory (Community STM) | DRAFT | agent | [SPEC-FR-M12.2](functional/M12/SPEC-FR-M12.2.md) |
+| SPEC-FR-M12.3 | Specialist Agent Spawn | DRAFT | keeper, agent | [SPEC-FR-M12.3](functional/M12/SPEC-FR-M12.3.md) |
+| SPEC-FR-M12.4 | Built-in Agent Templates | ACCEPTED | keeper, agent, operator | [SPEC-FR-M12.4](functional/M12/SPEC-FR-M12.4.md) |
 
 ## Milestones
 
@@ -144,9 +159,10 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | M4 | Operator Core | ✔️ IMPLEMENTED | 5 | [M4 Summary](milestones/M4-summary.md) |
 | M5 | Agent Core | ✔️ IMPLEMENTED | 9 | [M5 Summary](milestones/M5-summary.md) |
 | M6 | Communities & Messaging | ⏳ IN_PROGRESS | 6 | [M6](milestones/M6-communities.md) |
-| M7 | BFF & UIs | ⬜ PLANNED | 4 | [M7](milestones/M7-bff-uis.md) |
-| M8 | Governance | ⬜ PLANNED | 10 | [M8](milestones/M8-governance.md) |
-| M9 | Hardening | ⬜ PLANNED | 7 | [M9](milestones/M9-hardening.md) |
-| M10 | Federation | ⬜ PLANNED | 4 | [M10](milestones/M10-federation.md) |
-| M11 | Extensions & Advanced Topologies | ⬜ PLANNED | 4 | [M11](milestones/M11-extensions.md) |
+| M7 | BFF & UIs | ⬜ PLANNED | 6 | [M7](milestones/M7-bff-uis.md) |
+| M8 | RAG & LTM | ⬜ PLANNED | 1 | [M8](milestones/M8-rag-ltm.md) |
+| M9 | Governance | ⬜ PLANNED | 17 | [M9](milestones/M9-governance.md) |
+| M10 | Hardening | ⬜ PLANNED | 8 | [M10](milestones/M10-hardening.md) |
+| M11 | Federation | ⬜ PLANNED | 4 | [M11](milestones/M11-federation.md) |
+| M12 | Extensions & Advanced Topologies | ⬜ PLANNED | 4 | [M12](milestones/M12-extensions.md) |
 

@@ -1,25 +1,23 @@
-# SPEC-FR-M8.1: OIDC/JWT Authentication
+# SPEC-FR-M9.1: Design architectural integration patterns for RAG and web search
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
-| ID            | SPEC-FR-M8.1                                |
+| ID            | SPEC-FR-M9.1                                |
 | Status        | DRAFT                                       |
-| Milestone     | M8                                          |
-| Component     | keeper, shared                              |
-| Depends On    | SPEC-FR-M2.2                                |
+| Milestone     | M9                                          |
+| Component     | agent, shared                               |
+| Depends On    | none                                        |
 | Supersedes    | none                                        |
 
 ## Context
 
-All keeper API endpoints must be protected by OIDC/JWT tokens issued by Keycloak. The authentication middleware lives in the shared library and is reusable across components.
+Define clean ports and adapters interfaces for Retrieval-Augmented Generation (RAG) and web search within the agent's reasoning flow.
 
 ## Specification
 
-1. The system MUST implement a Gin middleware for JWT validation using the Zitadel OIDC library (per SPEC-NFR-STACK).
-2. The middleware MUST discover JWKS endpoints automatically from the OIDC issuer URL.
-3. The middleware MUST extract roles from JWT claims and make them available to downstream handlers.
-4. The Keycloak `tacito` realm MUST be pre-configured with roles: `keeper-admin`, `keeper-viewer`, `user`, `agent-spawner`.
-5. JWT claims (subject, roles) MUST be logged with every request (per SPEC-NFR-LOG).
+1. Define outbound ports for vector search (e.g. Qdrant) and web search (e.g. Google Search API / Tavily).
+2. Implement repository/service layer adapters for standard chunking, indexing, and embedding.
+3. Integrate RAG search results into the agent's prompts dynamically to augment generation context.
 
 ## Acceptance Criteria
 

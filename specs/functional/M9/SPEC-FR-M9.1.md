@@ -1,25 +1,25 @@
-# SPEC-FR-M9.1: Prometheus Metrics Integration
+# SPEC-FR-M9.1: OIDC/JWT Authentication
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M9.1                                |
 | Status        | DRAFT                                       |
 | Milestone     | M9                                          |
-| Component     | all                                         |
-| Depends On    | SPEC-NFR-OBSERVABILITY                      |
+| Component     | keeper, shared                              |
+| Depends On    | SPEC-FR-M2.2                                |
 | Supersedes    | none                                        |
 
 ## Context
 
-All components expose Prometheus metrics for operational monitoring beyond HTTP auto-instrumentation.
+All keeper API endpoints must be protected by OIDC/JWT tokens issued by Keycloak. The authentication middleware lives in the shared library and is reusable across components.
 
 ## Specification
 
-1. Keeper: `tacito_agents_total` (gauge), `tacito_communities_total` (gauge), `tacito_hitl_pending` (gauge).
-2. Agent: `tacito_agent_messages_total` (counter), `tacito_agent_llm_tokens_total` (counter), `tacito_agent_reasoning_duration_seconds` (histogram).
-3. Operator: `tacito_reconciliations_total` (counter), `tacito_agent_pods_total` (gauge).
-4. All metrics MUST be registered via Prometheus Go client.
-5. Helm charts MUST include ServiceMonitor CRDs.
+1. The system MUST implement a Gin middleware for JWT validation using the Zitadel OIDC library (per SPEC-NFR-STACK).
+2. The middleware MUST discover JWKS endpoints automatically from the OIDC issuer URL.
+3. The middleware MUST extract roles from JWT claims and make them available to downstream handlers.
+4. The Keycloak `tacito` realm MUST be pre-configured with roles: `keeper-admin`, `keeper-viewer`, `user`, `agent-spawner`.
+5. JWT claims (subject, roles) MUST be logged with every request (per SPEC-NFR-LOG).
 
 ## Acceptance Criteria
 
