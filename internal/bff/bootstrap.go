@@ -111,6 +111,14 @@ func NewServer(
 	uiGroup := r.Group(cfg.UIPath)
 	{
 		uiGroup.GET("", func(c *gin.Context) {
+			if !strings.HasSuffix(c.Request.URL.Path, "/") {
+				target := c.Request.URL.Path + "/"
+				if c.Request.URL.RawQuery != "" {
+					target += "?" + c.Request.URL.RawQuery
+				}
+				c.Redirect(http.StatusMovedPermanently, target)
+				return
+			}
 			c.Data(http.StatusOK, "text/html; charset=utf-8", welcomeHTML)
 		})
 		uiGroup.GET("/", func(c *gin.Context) {

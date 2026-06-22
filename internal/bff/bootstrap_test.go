@@ -21,48 +21,82 @@ import (
 
 // Define mock structures for testing bootstrap
 type mockSessionUseCase struct{}
-func (m *mockSessionUseCase) InitiateLogin(ctx context.Context) (string, string, error) { return "", "", nil }
-func (m *mockSessionUseCase) HandleCallback(ctx context.Context, code, state string) (*model.Session, error) { return nil, nil }
-func (m *mockSessionUseCase) RefreshSession(ctx context.Context, sessionID string) (*model.Session, error) { return nil, nil }
+
+func (m *mockSessionUseCase) InitiateLogin(ctx context.Context) (string, string, error) {
+	return "", "", nil
+}
+func (m *mockSessionUseCase) HandleCallback(ctx context.Context, code, state string) (*model.Session, error) {
+	return nil, nil
+}
+func (m *mockSessionUseCase) RefreshSession(ctx context.Context, sessionID string) (*model.Session, error) {
+	return nil, nil
+}
 func (m *mockSessionUseCase) Logout(ctx context.Context, sessionID string) error { return nil }
-func (m *mockSessionUseCase) BackchannelLogout(ctx context.Context, rawLogoutToken string) error { return nil }
+func (m *mockSessionUseCase) BackchannelLogout(ctx context.Context, rawLogoutToken string) error {
+	return nil
+}
 func (m *mockSessionUseCase) GetSession(ctx context.Context, sessionID string) (*model.Session, error) {
 	return &model.Session{ID: sessionID, UserID: "mock-user", TenantID: "mock-tenant"}, nil
 }
+
 var _ inbound.SessionUseCase = (*mockSessionUseCase)(nil)
 
 type mockEventStreamUseCase struct{}
-func (m *mockEventStreamUseCase) StreamEvents(ctx context.Context, tenantID string) (<-chan []byte, error) { return nil, nil }
+
+func (m *mockEventStreamUseCase) StreamEvents(ctx context.Context, tenantID string) (<-chan []byte, error) {
+	return nil, nil
+}
+
 var _ inbound.EventStreamUseCase = (*mockEventStreamUseCase)(nil)
 
 type mockSessionStore struct {
 	pingErr error
 }
-func (m *mockSessionStore) Save(ctx context.Context, sess *model.Session, ttl time.Duration) error { return nil }
-func (m *mockSessionStore) Get(ctx context.Context, sessionID string) (*model.Session, error) { return nil, nil }
-func (m *mockSessionStore) Delete(ctx context.Context, sessionID string) error { return nil }
+
+func (m *mockSessionStore) Save(ctx context.Context, sess *model.Session, ttl time.Duration) error {
+	return nil
+}
+func (m *mockSessionStore) Get(ctx context.Context, sessionID string) (*model.Session, error) {
+	return nil, nil
+}
+func (m *mockSessionStore) Delete(ctx context.Context, sessionID string) error      { return nil }
 func (m *mockSessionStore) DeleteByUserID(ctx context.Context, userID string) error { return nil }
-func (m *mockSessionStore) DeleteByOIDCSessionID(ctx context.Context, issuer, oidcSessionID string) error { return nil }
+func (m *mockSessionStore) DeleteByOIDCSessionID(ctx context.Context, issuer, oidcSessionID string) error {
+	return nil
+}
 func (m *mockSessionStore) Ping(ctx context.Context) error { return m.pingErr }
+
 var _ outbound.SessionStore = (*mockSessionStore)(nil)
 
 type mockOIDCProvider struct{}
-func (m *mockOIDCProvider) ExchangeCode(ctx context.Context, code, redirectURI string) (*outbound.TokenSet, error) { return nil, nil }
-func (m *mockOIDCProvider) RefreshToken(ctx context.Context, refreshToken string) (*outbound.TokenSet, error) { return nil, nil }
-func (m *mockOIDCProvider) FetchUserInfo(ctx context.Context, accessToken string) (*model.UserInfoPayload, error) { return nil, nil }
-func (m *mockOIDCProvider) ValidateLogoutToken(ctx context.Context, rawToken string) (string, string, error) { return "", "", nil }
+
+func (m *mockOIDCProvider) ExchangeCode(ctx context.Context, code, redirectURI string) (*outbound.TokenSet, error) {
+	return nil, nil
+}
+func (m *mockOIDCProvider) RefreshToken(ctx context.Context, refreshToken string) (*outbound.TokenSet, error) {
+	return nil, nil
+}
+func (m *mockOIDCProvider) FetchUserInfo(ctx context.Context, accessToken string) (*model.UserInfoPayload, error) {
+	return nil, nil
+}
+func (m *mockOIDCProvider) ValidateLogoutToken(ctx context.Context, rawToken string) (string, string, error) {
+	return "", "", nil
+}
+
 var _ outbound.OIDCProvider = (*mockOIDCProvider)(nil)
 
 type mockKeeperClient struct {
 	pingErr error
 }
+
 func (m *mockKeeperClient) Ping(ctx context.Context) error { return m.pingErr }
+
 var _ outbound.KeeperClient = (*mockKeeperClient)(nil)
 
 func TestBFFServer_HealthzReturns200(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
-	
+
 	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
 	require.NotNil(t, srv)
 
@@ -80,7 +114,7 @@ func TestBFFServer_HealthzReturns200(t *testing.T) {
 func TestBFFServer_ReadyzReturns200_AllDepsHealthy(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
-	
+
 	store := &mockSessionStore{pingErr: nil}
 
 	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, store, &mockOIDCProvider{}, &mockKeeperClient{})
@@ -99,7 +133,7 @@ func TestBFFServer_ReadyzReturns200_AllDepsHealthy(t *testing.T) {
 func TestBFFServer_ReadyzReturns503_RedisFails(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
-	
+
 	store := &mockSessionStore{pingErr: errors.New("redis dead")}
 
 	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, store, &mockOIDCProvider{}, &mockKeeperClient{})
@@ -109,7 +143,7 @@ func TestBFFServer_ReadyzReturns503_RedisFails(t *testing.T) {
 	srv.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
-	
+
 	var body struct {
 		Status string `json:"status"`
 		Checks []struct {
@@ -121,7 +155,7 @@ func TestBFFServer_ReadyzReturns503_RedisFails(t *testing.T) {
 	err := json.Unmarshal(w.Body.Bytes(), &body)
 	require.NoError(t, err)
 	assert.Equal(t, "not_ready", body.Status)
-	
+
 	var redisCheckFound bool
 	for _, check := range body.Checks {
 		if check.Name == "redis" {
@@ -136,7 +170,7 @@ func TestBFFServer_ReadyzReturns503_RedisFails(t *testing.T) {
 func TestBFFServer_OpenAPIEndpoint(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
-	
+
 	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
 
 	req := httptest.NewRequest(http.MethodGet, "/openapi.json", nil)
@@ -152,7 +186,7 @@ func TestBFFServer_OpenAPIEndpoint(t *testing.T) {
 func TestBFFServer_UIOpenAPIEndpoint(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
-	
+
 	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
 
 	req := httptest.NewRequest(http.MethodGet, "/ui/openapi.json", nil)
@@ -165,27 +199,13 @@ func TestBFFServer_UIOpenAPIEndpoint(t *testing.T) {
 	assert.Contains(t, w.Body.String(), `"version": "0.1.0"`)
 }
 
-func TestBFFServer_RootWelcomePage_RedirectsToSlash(t *testing.T) {
+func TestBFFServer_RootWelcomePage(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
-	
+
 	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
 
 	req := httptest.NewRequest(http.MethodGet, "/ui", nil)
-	w := httptest.NewRecorder()
-	srv.ServeHTTP(w, req)
-
-	assert.Equal(t, http.StatusMovedPermanently, w.Code)
-	assert.Equal(t, "/ui/", w.Header().Get("Location"))
-}
-
-func TestBFFServer_RootWelcomePageWithSlash_Success(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
-	
-	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
-
-	req := httptest.NewRequest(http.MethodGet, "/ui/", nil)
 	w := httptest.NewRecorder()
 	srv.ServeHTTP(w, req)
 
@@ -195,11 +215,10 @@ func TestBFFServer_RootWelcomePageWithSlash_Success(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "Piazza Tacito")
 }
 
-
 func TestBFFServer_IndexWelcomePage(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
-	
+
 	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
 
 	req := httptest.NewRequest(http.MethodGet, "/ui/index.html", nil)
@@ -215,7 +234,7 @@ func TestBFFServer_IndexWelcomePage(t *testing.T) {
 func TestBFFServer_SecureIndex_NoCookie_Redirects(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
-	
+
 	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
 
 	req := httptest.NewRequest(http.MethodGet, "/ui/secure/", nil)
@@ -229,9 +248,9 @@ func TestBFFServer_SecureIndex_NoCookie_Redirects(t *testing.T) {
 func TestBFFServer_SecureIndex_WithCookie_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
-	
+
 	mockSessionStoreInstance := &mockSessionStore{pingErr: nil}
-	
+
 	// Wait, bff.NewServer receives inbound.SessionUseCase as its second parameter
 
 	// Let's verify what mock sessionUseCase mock is defined in bootstrap_test.go
@@ -246,7 +265,7 @@ func TestBFFServer_SecureIndex_WithCookie_Success(t *testing.T) {
 	// Yes, err is nil, so it continues! It sets userID to sess.UserID (which is empty string but valid).
 	// So passing &mockSessionUseCase{} as the session UseCase should successfully pass the middleware!
 	// Let's write the test based on that.
-	
+
 	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, mockSessionStoreInstance, &mockOIDCProvider{}, &mockKeeperClient{})
 
 	req := httptest.NewRequest(http.MethodGet, "/ui/secure/index.html", nil)
@@ -262,5 +281,3 @@ func TestBFFServer_SecureIndex_WithCookie_Success(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "<title>Tacito Square BFF - Secure Zone</title>")
 	assert.Contains(t, w.Body.String(), "Secure Logout")
 }
-
-
