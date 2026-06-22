@@ -146,3 +146,36 @@ func TestBFFServer_OpenAPIEndpoint(t *testing.T) {
 	assert.Contains(t, w.Body.String(), `"openapi": "3.1.0"`)
 	assert.Contains(t, w.Body.String(), `"version": "0.1.0"`)
 }
+
+func TestBFFServer_RootWelcomePage(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test"}
+	
+	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "text/html; charset=utf-8", w.Header().Get("Content-Type"))
+	assert.Contains(t, w.Body.String(), "<title>Tacito Square BFF</title>")
+	assert.Contains(t, w.Body.String(), "Piazza Tacito")
+}
+
+func TestBFFServer_IndexWelcomePage(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test"}
+	
+	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
+
+	req := httptest.NewRequest(http.MethodGet, "/index.html", nil)
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "text/html; charset=utf-8", w.Header().Get("Content-Type"))
+	assert.Contains(t, w.Body.String(), "<title>Tacito Square BFF</title>")
+	assert.Contains(t, w.Body.String(), "Piazza Tacito")
+}
+

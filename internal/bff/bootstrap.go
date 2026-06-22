@@ -23,6 +23,9 @@ import (
 //go:embed bff_openapi.json
 var openapiJSON []byte
 
+//go:embed index.html
+var welcomeHTML []byte
+
 // Config holds configuration parameters for the BFF server bootstrap.
 type Config struct {
 	Version      string
@@ -92,6 +95,14 @@ func NewServer(
 	r.GET("/readyz", gin.WrapF(probe.ReadyzHandler))
 	r.GET("/metrics", observability.MetricsHandler())
 
+	// Serve Welcome Homepage
+	r.GET("/", func(c *gin.Context) {
+		c.Data(http.StatusOK, "text/html; charset=utf-8", welcomeHTML)
+	})
+	r.GET("/index.html", func(c *gin.Context) {
+		c.Data(http.StatusOK, "text/html; charset=utf-8", welcomeHTML)
+	})
+
 	// Serve OIDC / OpenAPI spec
 	var finalOpenAPI []byte
 	if cfg.Version != "" {
@@ -104,46 +115,9 @@ func NewServer(
 		c.Data(http.StatusOK, "application/json; charset=utf-8", finalOpenAPI)
 	})
 
-	// Swagger UI in non-release mode
-	if cfg.GinMode != gin.ReleaseMode {
-		r.GET("/swagger/*any", func(c *gin.Context) {
-			c.Header("Content-Type", "text/html; charset=utf-8")
-			c.String(http.StatusOK, swaggerHTML)
-		})
-	}
 
 	// Register application specific routes
 	httpAdapter.RegisterRoutes(r, sessionUC, eventUC)
 
 	return r
 }
-
-const swaggerHTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <title>Swagger UI</title>
-  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
-  <link rel="icon" type="image/png" href="https://unpkg.com/swagger-ui-dist@5/favicon-32x32.png" sizes="32x32" />
-  <link rel="icon" type="image/png" href="https://unpkg.com/swagger-ui-dist@5/favicon-16x16.png" sizes="16x16" />
-</head>
-<body>
-  <div id="swagger-ui"></div>
-  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
-  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
-  <script>
-    window.onload = () => {
-      window.ui = SwaggerUIBundle({
-        url: '/openapi.json',
-        dom_id: '#swagger-ui',
-        deepLinking: true,
-        presets: [
-          SwaggerUIBundle.presets.apis,
-          SwaggerUIStandalonePreset
-        ],
-        layout: "StandaloneLayout"
-      });
-    };
-  </script>
-</body>
-</html>`

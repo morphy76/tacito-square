@@ -78,6 +78,7 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | SPEC-FR-M7.4 | OIDC Login Flow (Keycloak) | ACCEPTED | bff | [SPEC-FR-M7.4](functional/M7/SPEC-FR-M7.4.md) |
 | SPEC-FR-M7.5 | Standardize query parameters for GET APIs | DRAFT | keeper, bff | [SPEC-FR-M7.5](functional/M7/SPEC-FR-M7.5.md) |
 | SPEC-FR-M7.6 | BFF primary API surface to use GraphQL | DRAFT | bff, ui | [SPEC-FR-M7.6](functional/M7/SPEC-FR-M7.6.md) |
+| SPEC-FR-M7.7 | Serve Welcome index.html in BFF | ACCEPTED | bff | [SPEC-FR-M7.7](functional/M7/SPEC-FR-M7.7.md) |
 
 ### M8: RAG & LTM
 
