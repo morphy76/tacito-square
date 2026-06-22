@@ -149,7 +149,23 @@ func TestBFFServer_OpenAPIEndpoint(t *testing.T) {
 	assert.Contains(t, w.Body.String(), `"version": "0.1.0"`)
 }
 
-func TestBFFServer_RootWelcomePage(t *testing.T) {
+func TestBFFServer_UIOpenAPIEndpoint(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
+	
+	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
+
+	req := httptest.NewRequest(http.MethodGet, "/ui/openapi.json", nil)
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "application/json; charset=utf-8", w.Header().Get("Content-Type"))
+	assert.Contains(t, w.Body.String(), `"openapi": "3.1.0"`)
+	assert.Contains(t, w.Body.String(), `"version": "0.1.0"`)
+}
+
+func TestBFFServer_RootWelcomePage_RedirectsToSlash(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
 	
@@ -159,11 +175,26 @@ func TestBFFServer_RootWelcomePage(t *testing.T) {
 	w := httptest.NewRecorder()
 	srv.ServeHTTP(w, req)
 
+	assert.Equal(t, http.StatusMovedPermanently, w.Code)
+	assert.Equal(t, "/ui/", w.Header().Get("Location"))
+}
+
+func TestBFFServer_RootWelcomePageWithSlash_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
+	
+	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
+
+	req := httptest.NewRequest(http.MethodGet, "/ui/", nil)
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "text/html; charset=utf-8", w.Header().Get("Content-Type"))
 	assert.Contains(t, w.Body.String(), "<title>Tacito Square BFF</title>")
 	assert.Contains(t, w.Body.String(), "Piazza Tacito")
 }
+
 
 func TestBFFServer_IndexWelcomePage(t *testing.T) {
 	gin.SetMode(gin.TestMode)

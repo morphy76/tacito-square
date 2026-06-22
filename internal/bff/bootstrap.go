@@ -99,6 +99,14 @@ func NewServer(
 	r.GET("/readyz", gin.WrapF(probe.ReadyzHandler))
 	r.GET("/metrics", observability.MetricsHandler())
 
+	// Serve OIDC / OpenAPI spec
+	var finalOpenAPI []byte
+	if cfg.Version != "" {
+		finalOpenAPI = []byte(strings.ReplaceAll(string(openapiJSON), `"version": "0.1.0"`, fmt.Sprintf(`"version": "%s"`, cfg.Version)))
+	} else {
+		finalOpenAPI = openapiJSON
+	}
+
 	// UI Static and Welcome Homepage Route Group
 	uiGroup := r.Group(cfg.UIPath)
 	{
@@ -110,6 +118,9 @@ func NewServer(
 		})
 		uiGroup.GET("/index.html", func(c *gin.Context) {
 			c.Data(http.StatusOK, "text/html; charset=utf-8", welcomeHTML)
+		})
+		uiGroup.GET("/openapi.json", func(c *gin.Context) {
+			c.Data(http.StatusOK, "application/json; charset=utf-8", finalOpenAPI)
 		})
 
 		// Secure Welcome Homepage with OIDC redirect auth under UI path
@@ -126,14 +137,6 @@ func NewServer(
 				c.Data(http.StatusOK, "text/html; charset=utf-8", secureIndexHTML)
 			})
 		}
-	}
-
-	// Serve OIDC / OpenAPI spec
-	var finalOpenAPI []byte
-	if cfg.Version != "" {
-		finalOpenAPI = []byte(strings.ReplaceAll(string(openapiJSON), `"version": "0.1.0"`, fmt.Sprintf(`"version": "%s"`, cfg.Version)))
-	} else {
-		finalOpenAPI = openapiJSON
 	}
 
 	r.GET("/openapi.json", func(c *gin.Context) {
