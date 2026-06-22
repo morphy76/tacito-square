@@ -29,7 +29,7 @@ func TestSessionMiddleware_ValidCookie_PopulatesContext(t *testing.T) {
 		},
 	}
 
-	r.Use(bffhttp.SessionMiddleware(mockUC))
+	r.Use(bffhttp.SessionMiddleware(mockUC, "/ui"))
 	r.GET("/test", func(c *gin.Context) {
 		tenantID, _ := c.Get("tenantID")
 		userID, _ := c.Get("userID")
@@ -55,7 +55,7 @@ func TestSessionMiddleware_MissingCookie_Returns401(t *testing.T) {
 
 	mockUC := &mockSessionUseCase{}
 
-	r.Use(bffhttp.SessionMiddleware(mockUC))
+	r.Use(bffhttp.SessionMiddleware(mockUC, "/ui"))
 	r.GET("/test", func(c *gin.Context) {
 		c.Status(http.StatusOK)
 	})
@@ -90,7 +90,7 @@ func TestSessionMiddleware_ExpiredSession_AttemptRefresh(t *testing.T) {
 		},
 	}
 
-	r.Use(bffhttp.SessionMiddleware(mockUC))
+	r.Use(bffhttp.SessionMiddleware(mockUC, "/ui"))
 	r.GET("/test", func(c *gin.Context) {
 		tenantID, _ := c.Get("tenantID")
 		assert.Equal(t, "tenant-789", tenantID)
@@ -119,6 +119,7 @@ func TestSessionMiddleware_ExpiredSession_AttemptRefresh(t *testing.T) {
 	}
 	assert.NotNil(t, newCookie)
 	assert.Equal(t, "new-session-456", newCookie.Value)
+	assert.Equal(t, "/ui", newCookie.Path)
 }
 
 func TestSessionMiddleware_RefreshFails_Returns401(t *testing.T) {
@@ -134,7 +135,7 @@ func TestSessionMiddleware_RefreshFails_Returns401(t *testing.T) {
 		},
 	}
 
-	r.Use(bffhttp.SessionMiddleware(mockUC))
+	r.Use(bffhttp.SessionMiddleware(mockUC, "/ui"))
 	r.GET("/test", func(c *gin.Context) {
 		c.Status(http.StatusOK)
 	})
@@ -159,4 +160,86 @@ func TestSessionMiddleware_RefreshFails_Returns401(t *testing.T) {
 	}
 	assert.NotNil(t, clearedCookie)
 	assert.True(t, clearedCookie.Expires.Before(time.Now()))
+	assert.Equal(t, "/ui", clearedCookie.Path)
 }
+
+func TestAuthRedirectMiddleware_ValidCookie_Continues(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+
+	mockUC := &mockSessionUseCase{
+		GetSessionFunc: func(ctx context.Context, sessionID string) (*model.Session, error) {
+			assert.Equal(t, "session-123", sessionID)
+			return &model.Session{
+				ID:       "session-123",
+				UserID:   "user-456",
+				TenantID: "tenant-789",
+			}, nil
+		},
+	}
+
+	r.Use(bffhttp.AuthRedirectMiddleware(mockUC, "/ui"))
+	r.GET("/test-secure", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/test-secure", nil)
+	req.AddCookie(&http.Cookie{
+		Name:  "bff_session_id",
+		Value: "session-123",
+	})
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestAuthRedirectMiddleware_MissingCookie_Redirects(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+
+	mockUC := &mockSessionUseCase{}
+
+	r.Use(bffhttp.AuthRedirectMiddleware(mockUC, "/ui"))
+	r.GET("/test-secure", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/test-secure", nil)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusFound, w.Code)
+	assert.Equal(t, "/api/v1/auth/login", w.Header().Get("Location"))
+}
+
+func TestAuthRedirectMiddleware_ExpiredSession_Redirects(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+
+	mockUC := &mockSessionUseCase{
+		GetSessionFunc: func(ctx context.Context, sessionID string) (*model.Session, error) {
+			return nil, model.ErrSessionExpired
+		},
+		RefreshSessionFunc: func(ctx context.Context, sessionID string) (*model.Session, error) {
+			return nil, model.ErrSessionNotFound
+		},
+	}
+
+	r.Use(bffhttp.AuthRedirectMiddleware(mockUC, "/ui"))
+	r.GET("/test-secure", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/test-secure", nil)
+	req.AddCookie(&http.Cookie{
+		Name:  "bff_session_id",
+		Value: "session-123",
+	})
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusFound, w.Code)
+	assert.Equal(t, "/api/v1/auth/login", w.Header().Get("Location"))
+}
+

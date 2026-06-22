@@ -124,41 +124,41 @@ func TestBFF_RouterOpenAPI_Parity(t *testing.T) {
 	require.NoError(t, err, "failed to parse BFF bff_openapi.json")
 
 	// 2. Bootstrap Gin router (dummy config and nil dependencies)
-	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test"}
+	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
 	router := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
 	require.NotNil(t, router)
-
-	// Extract registered BFF Gin routes under /api/bff/v1
+ 
+	// Extract registered BFF Gin routes under /api/v1
 	ginRoutes := make(map[string]bool)
 	for _, route := range router.Routes() {
-		if strings.HasPrefix(route.Path, "/api/bff/v1") {
+		if strings.HasPrefix(route.Path, "/api/v1") {
 			key := fmt.Sprintf("%s %s", route.Method, normalizeRoutePath(route.Path))
 			ginRoutes[key] = true
 		}
 	}
-
+ 
 	// 3. Extract BFF OpenAPI routes
 	openapiRoutes := make(map[string]bool)
 	for path, pathObj := range spec.Paths {
 		fullPath := path
-		if !strings.HasPrefix(fullPath, "/api/bff/v1") {
-			fullPath = "/api/bff/v1" + fullPath
+		if !strings.HasPrefix(fullPath, "/api/v1") {
+			fullPath = "/api/v1" + fullPath
 		}
 		fullPath = normalizeRoutePath(fullPath)
-
+ 
 		for method := range pathObj {
 			upperMethod := strings.ToUpper(method)
 			key := fmt.Sprintf("%s %s", upperMethod, fullPath)
 			openapiRoutes[key] = true
 		}
 	}
-
+ 
 	t.Run("BFF OpenAPI routes exist in BFF Gin router (No Less)", func(t *testing.T) {
 		for routeKey := range openapiRoutes {
 			assert.True(t, ginRoutes[routeKey], "Route defined in BFF OpenAPI does not exist in BFF Gin router: %s", routeKey)
 		}
 	})
-
+ 
 	t.Run("BFF Gin routes exist in BFF OpenAPI (No More)", func(t *testing.T) {
 		for routeKey := range ginRoutes {
 			assert.True(t, openapiRoutes[routeKey], "Route registered in BFF Gin router does not exist in BFF OpenAPI: %s", routeKey)

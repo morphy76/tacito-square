@@ -5,11 +5,11 @@ import (
 	"github.com/morphy76/tacito-square/internal/bff/application/ports/inbound"
 )
 
-func RegisterRoutes(r *gin.Engine, sessionUC inbound.SessionUseCase, eventUC inbound.EventStreamUseCase) {
-	auth := NewAuthHandler(sessionUC)
+func RegisterRoutes(r *gin.Engine, sessionUC inbound.SessionUseCase, eventUC inbound.EventStreamUseCase, uiPath string) {
+	auth := NewAuthHandler(sessionUC, uiPath)
 	sse := NewSSEHandler(eventUC)
 
-	v1 := r.Group("/api/bff/v1")
+	v1 := r.Group("/api/v1")
 	{
 		// Public auth endpoints
 		v1.GET("/auth/login", auth.Login)
@@ -18,7 +18,7 @@ func RegisterRoutes(r *gin.Engine, sessionUC inbound.SessionUseCase, eventUC inb
 
 		// Protected group
 		protected := v1.Group("")
-		protected.Use(SessionMiddleware(sessionUC))
+		protected.Use(SessionMiddleware(sessionUC, uiPath))
 		{
 			protected.POST("/auth/logout", auth.Logout)
 			protected.GET("/events/stream", sse.StreamEvents)
@@ -26,13 +26,13 @@ func RegisterRoutes(r *gin.Engine, sessionUC inbound.SessionUseCase, eventUC inb
 
 		// Placeholder groups for future specs
 		configurator := v1.Group("/configurator")
-		configurator.Use(SessionMiddleware(sessionUC))
+		configurator.Use(SessionMiddleware(sessionUC, uiPath))
 		{
 			// Future configurator routes
 		}
 
 		auditor := v1.Group("/auditor")
-		auditor.Use(SessionMiddleware(sessionUC))
+		auditor.Use(SessionMiddleware(sessionUC, uiPath))
 		{
 			// Future auditor routes
 		}

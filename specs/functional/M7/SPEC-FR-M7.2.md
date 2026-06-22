@@ -17,15 +17,15 @@ Web interface for administrators to manage agents, communities, prompts, and ski
 
 1. The Configurator UI MUST be built with React 19 (per SPEC-NFR-STACK).
 2. The UI MUST be a separate deployment (not bundled with the Auditor UI).
-3. The UI MUST support session-based authentication brokered by the BFF. It MUST invoke `GET /api/bff/v1/auth/me` on startup to verify authentication and fetch user capabilities (roles: `keeper-admin`, `agent-spawner`).
-4. The UI MUST provide CRUD interfaces for: agents, communities, and agent-community assignments, calling the BFF route namespace `/api/bff/v1/configurator/`. Creation and modification workflows MUST be guided by a step-by-step **Wizard-driven interface** for common configurations, but also provide an **Advanced Settings panel** that exposes low-level raw schema/JSON editing.
+3. The UI MUST support session-based authentication brokered by the BFF. It MUST invoke `GET /api/v1/auth/me` on startup to verify authentication and fetch user capabilities (roles: `keeper-admin`, `agent-spawner`).
+4. The UI MUST provide CRUD interfaces for: agents, communities, and agent-community assignments, calling the BFF route namespace `/api/v1/configurator/`. Creation and modification workflows MUST be guided by a step-by-step **Wizard-driven interface** for common configurations, but also provide an **Advanced Settings panel** that exposes low-level raw schema/JSON editing.
 5. The UI MUST provide a community topology visualization component supporting multiple layouts: **standalone** units, **hub-spoke** networks, and extensible formats representing **serialized** future topologies.
 
 ## Acceptance Criteria
 
 1. **Static Isolation**: Served as a separate single-page application.
 2. **Access Control**: Users without the `keeper-admin` or `agent-spawner` roles (as returned by the `/me` endpoint) are blocked from accessing editing views.
-3. **BFF Routing**: All API calls from the UI target the BFF namespace `/api/bff/v1/configurator/` with the browser automatically attaching the secure session cookie.
+3. **BFF Routing**: All API calls from the UI target the BFF namespace `/api/v1/configurator/` with the browser automatically attaching the secure session cookie.
 
 ## Test Plan
 

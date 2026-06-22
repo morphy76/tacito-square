@@ -1,0 +1,51 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    field.cattle.io/description: Tacito keycloack
+  creationTimestamp: '2026-06-21T22:26:17Z'
+  generation: 2
+  managedFields:
+    - apiVersion: networking.k8s.io/v1
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:status:
+          f:loadBalancer:
+            f:ingress: {}
+      manager: traefik
+      operation: Update
+      subresource: status
+      time: '2026-06-21T22:26:17Z'
+    - apiVersion: networking.k8s.io/v1
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:metadata:
+          f:annotations:
+            .: {}
+            f:field.cattle.io/description: {}
+        f:spec:
+          f:rules: {}
+      manager: steve
+      operation: Update
+      time: '2026-06-21T22:29:39Z'
+  name: kc
+  namespace: tacito
+  resourceVersion: '614576'
+  uid: c9f80201-508f-441c-97d4-39c159932ea7
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: localhost
+      http:
+        paths:
+          - backend:
+              service:
+                name: ts-infra-keycloak-http
+                port:
+                  number: 80
+            path: /auth
+            pathType: Prefix
+status:
+  loadBalancer:
+    ingress:
+      - ip: 192.168.205.2

@@ -171,6 +171,25 @@ bff:
     name: tacito-square/bff
     tag: "0.1.0"
     pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: http
+    initialDelaySeconds: 1
+    periodSeconds: 1
+  readinessProbe:
+    httpGet:
+      path: /readyz
+      port: http
+    initialDelaySeconds: 1
+    periodSeconds: 1
   config:
     logLevel: info
     port: 8083
@@ -181,7 +200,7 @@ bff:
       issuer: "https://tacito-infra-keycloak-http:8443/realms/tacito"
       clientId: tacito-ui
       clientSecret: ""
-      redirectUri: "http://localhost:8083/api/bff/v1/auth/callback"
+      redirectUri: "http://localhost:8083/api/v1/auth/callback"
       timeout: "5s"
       circuitBreakerMaxFail: 5
     session:

@@ -12,10 +12,14 @@ import (
 
 type AuthHandler struct {
 	sessionUC inbound.SessionUseCase
+	uiPath    string
 }
 
-func NewAuthHandler(sessionUC inbound.SessionUseCase) *AuthHandler {
-	return &AuthHandler{sessionUC: sessionUC}
+func NewAuthHandler(sessionUC inbound.SessionUseCase, uiPath string) *AuthHandler {
+	return &AuthHandler{
+		sessionUC: sessionUC,
+		uiPath:    uiPath,
+	}
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {
@@ -28,7 +32,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	stateCookie := &http.Cookie{
 		Name:     "bff_oidc_state",
 		Value:    state,
-		Path:     "/",
+		Path:     h.uiPath,
 		Domain:   "",
 		Expires:  time.Now().Add(5 * time.Minute),
 		MaxAge:   300,
@@ -55,7 +59,7 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 	clearedStateCookie := &http.Cookie{
 		Name:     "bff_oidc_state",
 		Value:    "",
-		Path:     "/",
+		Path:     h.uiPath,
 		Domain:   "",
 		Expires:  time.Unix(0, 0),
 		MaxAge:   -1,
@@ -75,7 +79,7 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 	sessionCookie := &http.Cookie{
 		Name:     "bff_session_id",
 		Value:    sess.ID,
-		Path:     "/",
+		Path:     h.uiPath,
 		Domain:   "",
 		Expires:  time.Now().Add(365 * 24 * time.Hour), // long-lived, server manages lifecycle
 		MaxAge:   0,                                   // session-scoped
@@ -85,7 +89,7 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 	}
 	http.SetCookie(c.Writer, sessionCookie)
 
-	c.Redirect(http.StatusFound, "/")
+	c.Redirect(http.StatusFound, h.uiPath)
 }
 
 func (h *AuthHandler) Logout(c *gin.Context) {
@@ -110,7 +114,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	clearedCookie := &http.Cookie{
 		Name:     "bff_session_id",
 		Value:    "",
-		Path:     "/",
+		Path:     h.uiPath,
 		Domain:   "",
 		Expires:  time.Unix(0, 0),
 		MaxAge:   -1,
@@ -121,7 +125,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	http.SetCookie(c.Writer, clearedCookie)
 
 	// Redirect to OIDC end-session endpoint
-	redirectURL := "/"
+	redirectURL := h.uiPath
 	if issuer != "" {
 		u, err := url.Parse(issuer)
 		if err == nil {

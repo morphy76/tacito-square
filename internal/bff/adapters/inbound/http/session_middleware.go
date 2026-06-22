@@ -15,7 +15,7 @@ import (
 )
 
 // SessionMiddleware authenticates incoming requests using a session cookie.
-func SessionMiddleware(sessionUC inbound.SessionUseCase) gin.HandlerFunc {
+func SessionMiddleware(sessionUC inbound.SessionUseCase, uiPath string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		sessionCookie, err := c.Request.Cookie("bff_session_id")
 		if err != nil || sessionCookie.Value == "" {
@@ -28,23 +28,24 @@ func SessionMiddleware(sessionUC inbound.SessionUseCase) gin.HandlerFunc {
 		ctx := c.Request.Context()
 
 		sess, err := sessionUC.GetSession(ctx, sessionID)
-		if err != nil {
-			if errors.Is(err, model.ErrSessionExpired) {
+		if err != nil || sess == nil {
+			if err != nil && errors.Is(err, model.ErrSessionExpired) {
 				// Attempt to refresh the session
 				newSess, rerr := sessionUC.RefreshSession(ctx, sessionID)
 				if rerr != nil {
 					// Refresh failed: clear cookie and abort
-					clearSessionCookie(c)
+					clearSessionCookie(c, uiPath)
 					c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 					c.Abort()
 					return
 				}
 
 				// Success: set new session cookie
-				setSessionCookie(c, newSess.ID)
+				setSessionCookie(c, newSess.ID, uiPath)
 				sess = newSess
 			} else {
-				// Other error (e.g. SessionNotFound, SessionInvalidated)
+				// Other error (e.g. SessionNotFound, SessionInvalidated or sess == nil)
+				clearSessionCookie(c, uiPath)
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 				c.Abort()
 				return
@@ -72,11 +73,11 @@ func SessionMiddleware(sessionUC inbound.SessionUseCase) gin.HandlerFunc {
 	}
 }
 
-func setSessionCookie(c *gin.Context, sessionID string) {
+func setSessionCookie(c *gin.Context, sessionID string, uiPath string) {
 	cookie := &http.Cookie{
 		Name:     "bff_session_id",
 		Value:    sessionID,
-		Path:     "/",
+		Path:     uiPath,
 		Domain:   "",
 		Expires:  time.Now().Add(365 * 24 * time.Hour), // long lived, but actual session validation is server-side/redis
 		MaxAge:   0,                                   // session-scoped
@@ -87,11 +88,11 @@ func setSessionCookie(c *gin.Context, sessionID string) {
 	http.SetCookie(c.Writer, cookie)
 }
 
-func clearSessionCookie(c *gin.Context) {
+func clearSessionCookie(c *gin.Context, uiPath string) {
 	cookie := &http.Cookie{
 		Name:     "bff_session_id",
 		Value:    "",
-		Path:     "/",
+		Path:     uiPath,
 		Domain:   "",
 		Expires:  time.Unix(0, 0),
 		MaxAge:   -1,
@@ -101,3 +102,59 @@ func clearSessionCookie(c *gin.Context) {
 	}
 	http.SetCookie(c.Writer, cookie)
 }
+
+// AuthRedirectMiddleware redirects unauthenticated users to /api/v1/auth/login.
+func AuthRedirectMiddleware(sessionUC inbound.SessionUseCase, uiPath string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		sessionCookie, err := c.Request.Cookie("bff_session_id")
+		if err != nil || sessionCookie.Value == "" {
+			c.Redirect(http.StatusFound, "/api/v1/auth/login")
+			c.Abort()
+			return
+		}
+
+		sessionID := sessionCookie.Value
+		ctx := c.Request.Context()
+
+		sess, err := sessionUC.GetSession(ctx, sessionID)
+		if err != nil || sess == nil {
+			if err != nil && errors.Is(err, model.ErrSessionExpired) {
+				// Attempt to refresh the session
+				newSess, rerr := sessionUC.RefreshSession(ctx, sessionID)
+				if rerr != nil {
+					clearSessionCookie(c, uiPath)
+					c.Redirect(http.StatusFound, "/api/v1/auth/login")
+					c.Abort()
+					return
+				}
+				setSessionCookie(c, newSess.ID, uiPath)
+				sess = newSess
+			} else {
+				clearSessionCookie(c, uiPath)
+				c.Redirect(http.StatusFound, "/api/v1/auth/login")
+				c.Abort()
+				return
+			}
+		}
+
+		// Enrich Gin context
+		c.Set("tenantID", sess.TenantID)
+		c.Set("userID", sess.UserID)
+
+		// Enrich OTel span attributes
+		span := trace.SpanFromContext(ctx)
+		if span.SpanContext().IsValid() {
+			span.SetAttributes(
+				attribute.String("tenant_id", sess.TenantID),
+				attribute.String("user_id", sess.UserID),
+			)
+		}
+
+		// Inject tenantID into zerolog logger context
+		logger := zerolog.Ctx(ctx).With().Str("tenant_id", sess.TenantID).Logger()
+		c.Request = c.Request.WithContext(logger.WithContext(ctx))
+
+		c.Next()
+	}
+}
+

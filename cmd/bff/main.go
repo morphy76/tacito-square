@@ -36,10 +36,11 @@ func main() {
 	v.SetDefault("redis.prefix", "bff")
 	v.SetDefault("oidc.client_id", "tacito-bff")
 	v.SetDefault("oidc.client_secret", "")
-	v.SetDefault("oidc.redirect_uri", "http://localhost:8083/api/bff/v1/auth/callback")
+	v.SetDefault("oidc.redirect_uri", "http://localhost:8083/api/v1/auth/callback")
 	v.SetDefault("oidc.issuer", "http://localhost:8080/realms/tacito")
 	v.SetDefault("oidc.timeout", "5s")
 	v.SetDefault("oidc.circuit_breaker_max_fail", uint32(5))
+	v.SetDefault("bff.ui_path", "/ui")
 	v.SetDefault("bff.session.ttl", "24h")
 	v.SetDefault("keeper.base_url", "http://localhost:8080")
 	v.SetDefault("keeper.timeout", "5s")
@@ -143,6 +144,7 @@ func main() {
 		OtelEndpoint: otelEndpoint,
 		LogLevel:     logLevel,
 		GinMode:      v.GetString("gin.mode"),
+		UIPath:       v.GetString("bff.ui_path"),
 	}
 	router := bff.NewServer(cfg, sessionUC, eventUC, store, oidcProvider, keeperClient)
 

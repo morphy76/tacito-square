@@ -10,34 +10,34 @@
 
 ## Objective
 
-Implement all Gin HTTP handler groups under the `/api/bff/v1/` namespace: the OIDC authentication flow handlers (login initiation, callback, logout), the OIDC backchannel logout handler, and the SSE gateway handler. Include the session middleware that authenticates every protected route.
+Implement all Gin HTTP handler groups under the `/api/v1/` namespace: the OIDC authentication flow handlers (login initiation, callback, logout), the OIDC backchannel logout handler, and the SSE gateway handler. Include the session middleware that authenticates every protected route.
 
 ## Files
 
 | File | Action |
 |------|--------|
-| `internal/bff/adapters/inbound/http/auth_handlers.go` | NEW |
-| `internal/bff/adapters/inbound/http/auth_handlers_test.go` | NEW |
-| `internal/bff/adapters/inbound/http/sse_handler.go` | NEW |
-| `internal/bff/adapters/inbound/http/sse_handler_test.go` | NEW |
-| `internal/bff/adapters/inbound/http/session_middleware.go` | NEW |
-| `internal/bff/adapters/inbound/http/session_middleware_test.go` | NEW |
-| `internal/bff/adapters/inbound/http/routes.go` | NEW |
+| `internal/bff/adapters/inbound/http/auth_handlers.go` | MODIFY |
+| `internal/bff/adapters/inbound/http/auth_handlers_test.go` | MODIFY |
+| `internal/bff/adapters/inbound/http/sse_handler.go` | MODIFY |
+| `internal/bff/adapters/inbound/http/sse_handler_test.go` | MODIFY |
+| `internal/bff/adapters/inbound/http/session_middleware.go` | MODIFY |
+| `internal/bff/adapters/inbound/http/session_middleware_test.go` | MODIFY |
+| `internal/bff/adapters/inbound/http/routes.go` | MODIFY |
 
 ## RED Phase
 
 Write Gin test-mode handler tests using `httptest.NewRecorder()` and mock `inbound.SessionUseCase` / `inbound.EventStreamUseCase`:
 
 **`auth_handlers_test.go`**:
-- `TestAuthHandler_Login_RedirectsToOIDC`: Call `GET /api/bff/v1/auth/login`; assert the response is `302 Found` with a `Location` header pointing to the OIDC provider.
-- `TestAuthHandler_Callback_Success_SetsCookie`: Mock `SessionUseCase.HandleCallback` returning a valid session; call `GET /api/bff/v1/auth/callback?code=abc&state=xyz`; assert response is a redirect and a `Set-Cookie` header is present with `HttpOnly`, `Secure`, and `SameSite=Strict` attributes.
+- `TestAuthHandler_Login_RedirectsToOIDC`: Call `GET /api/v1/auth/login`; assert the response is `302 Found` with a `Location` header pointing to the OIDC provider.
+- `TestAuthHandler_Callback_Success_SetsCookie`: Mock `SessionUseCase.HandleCallback` returning a valid session; call `GET /api/v1/auth/callback?code=abc&state=xyz`; assert response is a redirect and a `Set-Cookie` header is present with `HttpOnly`, `Secure`, and `SameSite=Strict` attributes.
 - `TestAuthHandler_Callback_ExchangeFailure`: Mock `HandleCallback` returning an error; assert `500 Internal Server Error` JSON error response.
-- `TestAuthHandler_Logout_ClearsCookie`: Call `POST /api/bff/v1/auth/logout` with a valid session cookie; mock `SessionUseCase.Logout`; assert session cookie is cleared (expired) in the response.
-- `TestAuthHandler_BackchannelLogout_Success`: POST a mock raw logout token to `/api/bff/v1/auth/backchannel-logout`; mock `SessionUseCase.BackchannelLogout` returning `nil`; assert `200 OK`.
+- `TestAuthHandler_Logout_ClearsCookie`: Call `POST /api/v1/auth/logout` with a valid session cookie; mock `SessionUseCase.Logout`; assert session cookie is cleared (expired) in the response.
+- `TestAuthHandler_BackchannelLogout_Success`: POST a mock raw logout token to `/api/v1/auth/backchannel-logout`; mock `SessionUseCase.BackchannelLogout` returning `nil`; assert `200 OK`.
 - `TestAuthHandler_BackchannelLogout_InvalidToken`: Mock `BackchannelLogout` returning an error; assert `400 Bad Request`.
 
 **`sse_handler_test.go`**:
-- `TestSSEHandler_StreamEvents_ForwardsEvents`: Inject a mock `EventStreamUseCase` returning a buffered channel with 3 events; call `GET /api/bff/v1/events/stream`; assert `Content-Type: text/event-stream`, and all 3 event payloads appear in the response body as SSE frames.
+- `TestSSEHandler_StreamEvents_ForwardsEvents`: Inject a mock `EventStreamUseCase` returning a buffered channel with 3 events; call `GET /api/v1/events/stream`; assert `Content-Type: text/event-stream`, and all 3 event payloads appear in the response body as SSE frames.
 - `TestSSEHandler_StreamEvents_RequiresAuth`: Call the SSE endpoint without a session cookie; assert `401 Unauthorized`.
 
 **`session_middleware_test.go`**:
@@ -72,10 +72,10 @@ Run `make test` — must fail (RED).
    - Terminate on context cancellation or channel close.
 
 4. **`routes.go`**:
-   - Implement `RegisterRoutes(r *gin.Engine, sessionUC inbound.SessionUseCase, eventUC inbound.EventStreamUseCase)`.
-   - Register public routes: `GET /api/bff/v1/auth/login`, `GET /api/bff/v1/auth/callback`, `POST /api/bff/v1/auth/backchannel-logout`.
-   - Register session-protected routes under a group using `SessionMiddleware`: `POST /api/bff/v1/auth/logout`, `GET /api/bff/v1/events/stream`.
-   - Register placeholder groups for future specs: `/api/bff/v1/configurator/` and `/api/bff/v1/auditor/`.
+   - Implement `RegisterRoutes(r *gin.Engine, sessionUC inbound.SessionUseCase, eventUC inbound.EventStreamUseCase, uiPath string)`.
+   - Register public routes: `GET /api/v1/auth/login`, `GET /api/v1/auth/callback`, `POST /api/v1/auth/backchannel-logout`.
+   - Register session-protected routes under a group using `SessionMiddleware`: `POST /api/v1/auth/logout`, `GET /api/v1/events/stream`.
+   - Register placeholder groups for future specs: `/api/v1/configurator/` and `/api/v1/auditor/`.
 
 Run `make test` — tests must pass (GREEN).
 

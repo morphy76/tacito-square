@@ -26,12 +26,16 @@ var openapiJSON []byte
 //go:embed index.html
 var welcomeHTML []byte
 
+//go:embed secure/index.html
+var secureIndexHTML []byte
+
 // Config holds configuration parameters for the BFF server bootstrap.
 type Config struct {
 	Version      string
 	OtelEndpoint string
 	LogLevel     string
 	GinMode      string
+	UIPath       string
 }
 
 // Pinger defines a simple ping interface for health checking.
@@ -95,13 +99,34 @@ func NewServer(
 	r.GET("/readyz", gin.WrapF(probe.ReadyzHandler))
 	r.GET("/metrics", observability.MetricsHandler())
 
-	// Serve Welcome Homepage
-	r.GET("/", func(c *gin.Context) {
-		c.Data(http.StatusOK, "text/html; charset=utf-8", welcomeHTML)
-	})
-	r.GET("/index.html", func(c *gin.Context) {
-		c.Data(http.StatusOK, "text/html; charset=utf-8", welcomeHTML)
-	})
+	// UI Static and Welcome Homepage Route Group
+	uiGroup := r.Group(cfg.UIPath)
+	{
+		uiGroup.GET("", func(c *gin.Context) {
+			c.Data(http.StatusOK, "text/html; charset=utf-8", welcomeHTML)
+		})
+		uiGroup.GET("/", func(c *gin.Context) {
+			c.Data(http.StatusOK, "text/html; charset=utf-8", welcomeHTML)
+		})
+		uiGroup.GET("/index.html", func(c *gin.Context) {
+			c.Data(http.StatusOK, "text/html; charset=utf-8", welcomeHTML)
+		})
+
+		// Secure Welcome Homepage with OIDC redirect auth under UI path
+		secureGroup := uiGroup.Group("/secure")
+		secureGroup.Use(httpAdapter.AuthRedirectMiddleware(sessionUC, cfg.UIPath))
+		{
+			secureGroup.GET("", func(c *gin.Context) {
+				c.Data(http.StatusOK, "text/html; charset=utf-8", secureIndexHTML)
+			})
+			secureGroup.GET("/", func(c *gin.Context) {
+				c.Data(http.StatusOK, "text/html; charset=utf-8", secureIndexHTML)
+			})
+			secureGroup.GET("/index.html", func(c *gin.Context) {
+				c.Data(http.StatusOK, "text/html; charset=utf-8", secureIndexHTML)
+			})
+		}
+	}
 
 	// Serve OIDC / OpenAPI spec
 	var finalOpenAPI []byte
@@ -117,7 +142,7 @@ func NewServer(
 
 
 	// Register application specific routes
-	httpAdapter.RegisterRoutes(r, sessionUC, eventUC)
+	httpAdapter.RegisterRoutes(r, sessionUC, eventUC, cfg.UIPath)
 
 	return r
 }

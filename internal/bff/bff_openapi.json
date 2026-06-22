@@ -19,7 +19,7 @@
     }
   ],
   "paths": {
-    "/api/bff/v1/auth/login": {
+    "/api/v1/auth/login": {
       "get": {
         "tags": ["auth/session"],
         "summary": "Initiates OIDC login flow",
@@ -30,7 +30,7 @@
         }
       }
     },
-    "/api/bff/v1/auth/callback": {
+    "/api/v1/auth/callback": {
       "get": {
         "tags": ["auth/session"],
         "summary": "OIDC callback redirect target",
@@ -62,7 +62,7 @@
         }
       }
     },
-    "/api/bff/v1/auth/logout": {
+    "/api/v1/auth/logout": {
       "post": {
         "tags": ["auth/session"],
         "summary": "Logs out and clears session",
@@ -81,7 +81,7 @@
         }
       }
     },
-    "/api/bff/v1/auth/backchannel-logout": {
+    "/api/v1/auth/backchannel-logout": {
       "post": {
         "tags": ["auth/backchannel"],
         "summary": "Handles backchannel logout from OIDC Provider",
@@ -111,7 +111,7 @@
         }
       }
     },
-    "/api/bff/v1/events/stream": {
+    "/api/v1/events/stream": {
       "get": {
         "tags": ["events/stream"],
         "summary": "Establishes SSE gateway event stream",

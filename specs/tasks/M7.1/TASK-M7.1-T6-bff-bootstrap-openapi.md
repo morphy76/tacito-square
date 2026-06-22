@@ -50,11 +50,11 @@ Run `make test` — must fail (RED).
    - `info`: title `"BFF API"`, version from `VERSION.bff` placeholder (e.g., `"0.1.0"`).
    - Top-level `tags`: declare `auth/session`, `auth/backchannel`, `events/stream` with bounded context descriptions.
    - Paths:
-     - `GET /api/bff/v1/auth/login` — tag `auth/session`
-     - `GET /api/bff/v1/auth/callback` — tag `auth/session`
-     - `POST /api/bff/v1/auth/logout` — tag `auth/session` (requires session cookie)
-     - `POST /api/bff/v1/auth/backchannel-logout` — tag `auth/backchannel`
-     - `GET /api/bff/v1/events/stream` — tag `events/stream`, response content-type `text/event-stream`
+     - `GET /api/v1/auth/login` — tag `auth/session`
+     - `GET /api/v1/auth/callback` — tag `auth/session`
+     - `POST /api/v1/auth/logout` — tag `auth/session` (requires session cookie)
+     - `POST /api/v1/auth/backchannel-logout` — tag `auth/backchannel`
+     - `GET /api/v1/events/stream` — tag `events/stream`, response content-type `text/event-stream`
    - Include `components/securitySchemes` for cookie-based auth (`bff_session_id`).
 
 3. **Update `cmd/bff/main.go`**:

@@ -17,17 +17,32 @@ data:
           "clientId": "tacito",
           "name": "Tacito-Square",
           "description": "A silent plaza where agents gather, deliberate, and act without noise.",
-          "rootUrl": "http://localhost:8083",
-          "adminUrl": "http://localhost:8083",
+          "rootUrl": "http://localhost/ui",
           "baseUrl": "",
           "clientAuthenticatorType": "client-secret",
           "secret": "BodOiaMLOJwKIfAwbiK0xuAw6EwwKD8f",
           "redirectUris": [
-            "/api/bff/v1/auth/callback"
+            "/api/v1/auth/callback"
           ],
           "webOrigins": [
-            "/api/bff/v1/auth/backchannel-logout"
-          ]
+            ""
+          ],
+          "attributes": {
+            "logout.confirmation.enabled": "true",
+            "client.secret.creation.time": "1782079499",
+            "standard.token.exchange.enabled": "false",
+            "frontchannel.logout.session.required": "true",
+            "post.logout.redirect.uris": "/*",
+            "oauth2.device.authorization.grant.enabled": "false",
+            "use.jwks.url": "false",
+            "backchannel.logout.revoke.offline.tokens": "true",
+            "realm_client": "false",
+            "oidc.ciba.grant.enabled": "false",
+            "backchannel.logout.session.required": "true",
+            "backchannel.logout.url": "http://localhost/ui/api/v1/auth/backchannel-logout",
+            "display.on.consent.screen": "false",
+            "dpop.bound.access.tokens": "false"
+          }
         }
       ]
     }
