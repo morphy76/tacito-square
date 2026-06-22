@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	jose "github.com/go-jose/go-jose/v4"
@@ -44,6 +45,12 @@ type OIDCHTTPClient struct {
 	cfg     OIDCClientConfig
 	httpCli *http.Client
 	cb      *gobreaker.CircuitBreaker[[]byte]
+
+	mu               sync.Mutex
+	discovered       bool
+	tokenEndpoint    string
+	userinfoEndpoint string
+	jwksURI          string
 }
 
 // NewOIDCHTTPClient constructs an OIDCHTTPClient with a circuit breaker and a configured HTTP client.
@@ -79,10 +86,96 @@ func NewOIDCHTTPClient(cfg OIDCClientConfig) *OIDCHTTPClient {
 	}
 }
 
+func (c *OIDCHTTPClient) discover(ctx context.Context) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.discovered {
+		return nil
+	}
+
+	// 1. If overrides are already fully populated via config, populate cache and skip network call
+	if c.cfg.TokenEndpoint != "" && c.cfg.UserInfoEndpoint != "" {
+		c.tokenEndpoint = c.cfg.TokenEndpoint
+		c.userinfoEndpoint = c.cfg.UserInfoEndpoint
+		c.jwksURI = c.cfg.Issuer + "/.well-known/jwks.json"
+		c.discovered = true
+		return nil
+	}
+
+	// 2. If Issuer is empty (e.g. in some minimalist unit tests), fallback to overrides if they are partially set
+	if c.cfg.Issuer == "" {
+		c.tokenEndpoint = c.cfg.TokenEndpoint
+		c.userinfoEndpoint = c.cfg.UserInfoEndpoint
+		c.jwksURI = c.cfg.Issuer + "/.well-known/jwks.json"
+		c.discovered = true
+		return nil
+	}
+
+	// 3. Perform OIDC discovery
+	issuer := strings.TrimSuffix(c.cfg.Issuer, "/")
+	discoveryURL := issuer + "/.well-known/openid-configuration"
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, discoveryURL, nil)
+	if err != nil {
+		return fmt.Errorf("build discovery request: %w", err)
+	}
+
+	resp, err := c.httpCli.Do(req)
+	if err != nil {
+		return fmt.Errorf("discovery request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("discovery returned status %d: %s", resp.StatusCode, string(b))
+	}
+
+	var config struct {
+		TokenEndpoint    string `json:"token_endpoint"`
+		UserInfoEndpoint string `json:"userinfo_endpoint"`
+		JwksURI          string `json:"jwks_uri"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&config); err != nil {
+		return fmt.Errorf("decode discovery response: %w", err)
+	}
+
+	// Use discovered endpoints, falling back to overrides if they are defined
+	if config.TokenEndpoint != "" {
+		c.tokenEndpoint = config.TokenEndpoint
+	} else {
+		c.tokenEndpoint = c.cfg.TokenEndpoint
+	}
+
+	if config.UserInfoEndpoint != "" {
+		c.userinfoEndpoint = config.UserInfoEndpoint
+	} else {
+		c.userinfoEndpoint = c.cfg.UserInfoEndpoint
+	}
+
+	if config.JwksURI != "" {
+		c.jwksURI = config.JwksURI
+	} else {
+		c.jwksURI = c.cfg.Issuer + "/.well-known/jwks.json"
+	}
+
+	c.discovered = true
+	return nil
+}
+
 // ExchangeCode exchanges an authorization code for a TokenSet using the OIDC token endpoint.
 func (c *OIDCHTTPClient) ExchangeCode(ctx context.Context, code, redirectURI string) (*outbound.TokenSet, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.cfg.Timeout)
 	defer cancel()
+
+	if err := c.discover(ctx); err != nil {
+		return nil, err
+	}
+
+	if c.tokenEndpoint == "" {
+		return nil, fmt.Errorf("oidc: token endpoint is not configured and discovery failed to retrieve it")
+	}
 
 	data, err := c.cb.Execute(func() ([]byte, error) {
 		body := url.Values{}
@@ -92,7 +185,7 @@ func (c *OIDCHTTPClient) ExchangeCode(ctx context.Context, code, redirectURI str
 		body.Set("client_id", c.cfg.ClientID)
 		body.Set("client_secret", c.cfg.ClientSecret)
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.cfg.TokenEndpoint, strings.NewReader(body.Encode()))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.tokenEndpoint, strings.NewReader(body.Encode()))
 		if err != nil {
 			return nil, fmt.Errorf("oidc: build token request: %w", err)
 		}
@@ -140,6 +233,14 @@ func (c *OIDCHTTPClient) RefreshToken(ctx context.Context, refreshToken string) 
 	ctx, cancel := context.WithTimeout(ctx, c.cfg.Timeout)
 	defer cancel()
 
+	if err := c.discover(ctx); err != nil {
+		return nil, err
+	}
+
+	if c.tokenEndpoint == "" {
+		return nil, fmt.Errorf("oidc: token endpoint is not configured and discovery failed to retrieve it")
+	}
+
 	data, err := c.cb.Execute(func() ([]byte, error) {
 		body := url.Values{}
 		body.Set("grant_type", "refresh_token")
@@ -147,7 +248,7 @@ func (c *OIDCHTTPClient) RefreshToken(ctx context.Context, refreshToken string) 
 		body.Set("client_id", c.cfg.ClientID)
 		body.Set("client_secret", c.cfg.ClientSecret)
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.cfg.TokenEndpoint, strings.NewReader(body.Encode()))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.tokenEndpoint, strings.NewReader(body.Encode()))
 		if err != nil {
 			return nil, fmt.Errorf("oidc: build refresh request: %w", err)
 		}
@@ -195,8 +296,16 @@ func (c *OIDCHTTPClient) FetchUserInfo(ctx context.Context, accessToken string) 
 	ctx, cancel := context.WithTimeout(ctx, c.cfg.Timeout)
 	defer cancel()
 
+	if err := c.discover(ctx); err != nil {
+		return nil, err
+	}
+
+	if c.userinfoEndpoint == "" {
+		return nil, fmt.Errorf("oidc: userinfo endpoint is not configured and discovery failed to retrieve it")
+	}
+
 	data, err := c.cb.Execute(func() ([]byte, error) {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.cfg.UserInfoEndpoint, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.userinfoEndpoint, nil)
 		if err != nil {
 			return nil, fmt.Errorf("oidc: build userinfo request: %w", err)
 		}
@@ -237,6 +346,10 @@ func (c *OIDCHTTPClient) ValidateLogoutToken(ctx context.Context, rawToken strin
 	ctx, cancel := context.WithTimeout(ctx, c.cfg.Timeout)
 	defer cancel()
 
+	if err := c.discover(ctx); err != nil {
+		return "", "", err
+	}
+
 	// Step 1: Parse the raw JWT into a JSON Web Signature structure.
 	jws, err := jose.ParseSigned(rawToken, []jose.SignatureAlgorithm{jose.RS256, jose.ES256, jose.RS384, jose.ES384})
 	if err != nil {
@@ -244,7 +357,7 @@ func (c *OIDCHTTPClient) ValidateLogoutToken(ctx context.Context, rawToken strin
 	}
 
 	// Step 2: Verify JWT signature using the OIDC provider's remote JWKS.
-	keySet := rp.NewRemoteKeySet(c.httpCli, c.cfg.Issuer+"/.well-known/jwks.json")
+	keySet := rp.NewRemoteKeySet(c.httpCli, c.jwksURI)
 	payload, err := keySet.VerifySignature(ctx, jws)
 	if err != nil {
 		return "", "", fmt.Errorf("oidc: logout token signature verification failed: %w", err)

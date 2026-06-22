@@ -82,13 +82,14 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 		Path:     h.uiPath,
 		Domain:   "",
 		Expires:  time.Now().Add(365 * 24 * time.Hour), // long-lived, server manages lifecycle
-		MaxAge:   0,                                   // session-scoped
+		MaxAge:   0,                                    // session-scoped
 		Secure:   true,
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
 	}
 	http.SetCookie(c.Writer, sessionCookie)
 
+	// TODO: do a proper redirect to the secured requested URL
 	c.Redirect(http.StatusFound, h.uiPath)
 }
 
