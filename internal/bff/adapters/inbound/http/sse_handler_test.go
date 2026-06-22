@@ -57,7 +57,7 @@ func TestSSEHandler_StreamEvents_ForwardsEvents(t *testing.T) {
 	bffhttp.RegisterRoutes(r, mockSessionUC, mockEventUC, "/ui")
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodGet, "/api/v1/events/stream", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/ui/api/v1/events/stream", nil)
 	req.AddCookie(&http.Cookie{
 		Name:  "bff_session_id",
 		Value: "session-123",
@@ -90,7 +90,7 @@ func TestSSEHandler_StreamEvents_RequiresAuth(t *testing.T) {
 	bffhttp.RegisterRoutes(r, mockSessionUC, mockEventUC, "/ui")
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodGet, "/api/v1/events/stream", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/ui/api/v1/events/stream", nil)
 	// No session cookie
 
 	r.ServeHTTP(w, req)

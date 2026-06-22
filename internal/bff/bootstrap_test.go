@@ -199,13 +199,27 @@ func TestBFFServer_UIOpenAPIEndpoint(t *testing.T) {
 	assert.Contains(t, w.Body.String(), `"version": "0.1.0"`)
 }
 
-func TestBFFServer_RootWelcomePage(t *testing.T) {
+func TestBFFServer_RootWelcomePage_RedirectsToSlash(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
 
 	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
 
 	req := httptest.NewRequest(http.MethodGet, "/ui", nil)
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusMovedPermanently, w.Code)
+	assert.Equal(t, "/ui/", w.Header().Get("Location"))
+}
+
+func TestBFFServer_RootWelcomePageWithSlash_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
+
+	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
+
+	req := httptest.NewRequest(http.MethodGet, "/ui/", nil)
 	w := httptest.NewRecorder()
 	srv.ServeHTTP(w, req)
 
@@ -242,7 +256,7 @@ func TestBFFServer_SecureIndex_NoCookie_Redirects(t *testing.T) {
 	srv.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusFound, w.Code)
-	assert.Equal(t, "/api/v1/auth/login", w.Header().Get("Location"))
+	assert.Equal(t, "/ui/api/v1/auth/login", w.Header().Get("Location"))
 }
 
 func TestBFFServer_SecureIndex_WithCookie_Success(t *testing.T) {

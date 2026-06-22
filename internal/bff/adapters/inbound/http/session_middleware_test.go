@@ -210,7 +210,7 @@ func TestAuthRedirectMiddleware_MissingCookie_Redirects(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusFound, w.Code)
-	assert.Equal(t, "/api/v1/auth/login", w.Header().Get("Location"))
+	assert.Equal(t, "/ui/api/v1/auth/login", w.Header().Get("Location"))
 }
 
 func TestAuthRedirectMiddleware_ExpiredSession_Redirects(t *testing.T) {
@@ -240,6 +240,6 @@ func TestAuthRedirectMiddleware_ExpiredSession_Redirects(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusFound, w.Code)
-	assert.Equal(t, "/api/v1/auth/login", w.Header().Get("Location"))
+	assert.Equal(t, "/ui/api/v1/auth/login", w.Header().Get("Location"))
 }
 

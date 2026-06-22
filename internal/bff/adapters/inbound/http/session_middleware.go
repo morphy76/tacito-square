@@ -3,6 +3,7 @@ package http
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -108,7 +109,7 @@ func AuthRedirectMiddleware(sessionUC inbound.SessionUseCase, uiPath string) gin
 	return func(c *gin.Context) {
 		sessionCookie, err := c.Request.Cookie("bff_session_id")
 		if err != nil || sessionCookie.Value == "" {
-			c.Redirect(http.StatusFound, "/api/v1/auth/login")
+			c.Redirect(http.StatusFound, strings.TrimSuffix(uiPath, "/")+ "/api/v1/auth/login")
 			c.Abort()
 			return
 		}
@@ -123,7 +124,7 @@ func AuthRedirectMiddleware(sessionUC inbound.SessionUseCase, uiPath string) gin
 				newSess, rerr := sessionUC.RefreshSession(ctx, sessionID)
 				if rerr != nil {
 					clearSessionCookie(c, uiPath)
-					c.Redirect(http.StatusFound, "/api/v1/auth/login")
+					c.Redirect(http.StatusFound, strings.TrimSuffix(uiPath, "/")+ "/api/v1/auth/login")
 					c.Abort()
 					return
 				}
@@ -131,7 +132,7 @@ func AuthRedirectMiddleware(sessionUC inbound.SessionUseCase, uiPath string) gin
 				sess = newSess
 			} else {
 				clearSessionCookie(c, uiPath)
-				c.Redirect(http.StatusFound, "/api/v1/auth/login")
+				c.Redirect(http.StatusFound, strings.TrimSuffix(uiPath, "/")+ "/api/v1/auth/login")
 				c.Abort()
 				return
 			}

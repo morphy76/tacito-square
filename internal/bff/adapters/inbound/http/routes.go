@@ -1,6 +1,8 @@
 package http
 
 import (
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"github.com/morphy76/tacito-square/internal/bff/application/ports/inbound"
 )
@@ -9,7 +11,11 @@ func RegisterRoutes(r *gin.Engine, sessionUC inbound.SessionUseCase, eventUC inb
 	auth := NewAuthHandler(sessionUC, uiPath)
 	sse := NewSSEHandler(eventUC)
 
-	v1 := r.Group("/api/v1")
+	apiPrefix := "/api/v1"
+	if uiPath != "" && uiPath != "/" {
+		apiPrefix = strings.TrimSuffix(uiPath, "/") + "/api/v1"
+	}
+	v1 := r.Group(apiPrefix)
 	{
 		// Public auth endpoints
 		v1.GET("/auth/login", auth.Login)

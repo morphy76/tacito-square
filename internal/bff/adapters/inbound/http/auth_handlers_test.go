@@ -85,7 +85,7 @@ func TestAuthHandler_Login_RedirectsToOIDC(t *testing.T) {
 	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodGet, "/api/v1/auth/login", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/ui/api/v1/auth/login", nil)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusFound, w.Code)
@@ -128,7 +128,7 @@ func TestAuthHandler_Callback_Success_SetsCookie(t *testing.T) {
 	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodGet, "/api/v1/auth/callback?code=code-abc&state=state-xyz", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/ui/api/v1/auth/callback?code=code-abc&state=state-xyz", nil)
 	// Set state cookie to match incoming state
 	req.AddCookie(&http.Cookie{
 		Name:  "bff_oidc_state",
@@ -176,7 +176,7 @@ func TestAuthHandler_Callback_ExchangeFailure(t *testing.T) {
 	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodGet, "/api/v1/auth/callback?code=code-abc&state=state-xyz", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/ui/api/v1/auth/callback?code=code-abc&state=state-xyz", nil)
 	req.AddCookie(&http.Cookie{
 		Name:  "bff_oidc_state",
 		Value: "state-xyz",
@@ -212,7 +212,7 @@ func TestAuthHandler_Logout_ClearsCookie(t *testing.T) {
 	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, "/api/v1/auth/logout", nil)
+	req, _ := http.NewRequest(http.MethodPost, "/ui/api/v1/auth/logout", nil)
 	req.AddCookie(&http.Cookie{
 		Name:  "bff_session_id",
 		Value: "session-123",
@@ -253,7 +253,7 @@ func TestAuthHandler_BackchannelLogout_Success(t *testing.T) {
 	w := httptest.NewRecorder()
 	form := url.Values{}
 	form.Set("logout_token", "mock-logout-token-123")
-	req, _ := http.NewRequest(http.MethodPost, "/api/v1/auth/backchannel-logout", strings.NewReader(form.Encode()))
+	req, _ := http.NewRequest(http.MethodPost, "/ui/api/v1/auth/backchannel-logout", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	r.ServeHTTP(w, req)
 
@@ -276,7 +276,7 @@ func TestAuthHandler_BackchannelLogout_InvalidToken(t *testing.T) {
 	w := httptest.NewRecorder()
 	form := url.Values{}
 	form.Set("logout_token", "invalid-token")
-	req, _ := http.NewRequest(http.MethodPost, "/api/v1/auth/backchannel-logout", strings.NewReader(form.Encode()))
+	req, _ := http.NewRequest(http.MethodPost, "/ui/api/v1/auth/backchannel-logout", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	r.ServeHTTP(w, req)
 
