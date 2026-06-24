@@ -152,3 +152,48 @@ func TestOIDCClient_InternalIssuer_RewritesEndpoints(t *testing.T) {
 	assert.Equal(t, "internal-access-token", tokenSet.AccessToken)
 	assert.Equal(t, "internal-refresh-token", tokenSet.RefreshToken)
 }
+
+func TestOIDCClient_FetchUserInfo_ResourceAccessRoles(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"sub":            "user-sub-123",
+			"email":          "user@tacito.local",
+			"tenantid":       "tenant-a",
+			"subscriptionid": "sub-1",
+			"resource_access": map[string]interface{}{
+				"test-client": map[string]interface{}{
+					"roles": []interface{}{"admin", "user"},
+				},
+			},
+		})
+	}))
+	defer srv.Close()
+
+	// Test case 1: Client ID set in config
+	cfg := outbound.OIDCClientConfig{
+		ClientID:         "test-client",
+		UserInfoEndpoint: srv.URL + "/userinfo",
+		Timeout:          5 * time.Second,
+	}
+	client := outbound.NewOIDCHTTPClient(cfg)
+
+	userInfo, err := client.FetchUserInfo(context.Background(), "access-token")
+	require.NoError(t, err)
+	assert.Equal(t, "user-sub-123", userInfo.Sub)
+	assert.Equal(t, []string{"admin", "user"}, userInfo.Roles)
+
+	// Test case 2: Client ID read from environment variable
+	t.Setenv("TS_BFF_OIDC_CLIENT_ID", "test-client")
+	cfgNoClientID := outbound.OIDCClientConfig{
+		UserInfoEndpoint: srv.URL + "/userinfo",
+		Timeout:          5 * time.Second,
+	}
+	clientNoClientID := outbound.NewOIDCHTTPClient(cfgNoClientID)
+
+	userInfoEnv, err := clientNoClientID.FetchUserInfo(context.Background(), "access-token")
+	require.NoError(t, err)
+	assert.Equal(t, "user-sub-123", userInfoEnv.Sub)
+	assert.Equal(t, []string{"admin", "user"}, userInfoEnv.Roles)
+}
+

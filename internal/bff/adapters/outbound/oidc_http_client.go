@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -377,6 +378,38 @@ func (c *OIDCHTTPClient) FetchUserInfo(ctx context.Context, accessToken string) 
 		return nil, fmt.Errorf("oidc: unmarshal userinfo: %w", err)
 	}
 
+	// Extract roles from resource_access.${client_id}.roles
+	clientID := c.cfg.ClientID
+	if clientID == "" {
+		clientID = os.Getenv("TS_BFF_OIDC_CLIENT_ID")
+	}
+	if clientID != "" {
+		var rawClaims map[string]interface{}
+		if err := json.Unmarshal(data, &rawClaims); err == nil {
+			if raVal, ok := rawClaims["resource_access"]; ok {
+				if raMap, ok := raVal.(map[string]interface{}); ok {
+					if clientVal, ok := raMap[clientID]; ok {
+						if clientMap, ok := clientVal.(map[string]interface{}); ok {
+							if rVal, ok := clientMap["roles"]; ok {
+								if rList, ok := rVal.([]interface{}); ok {
+									var roles []string
+									for _, r := range rList {
+										if rStr, ok := r.(string); ok {
+											roles = append(roles, rStr)
+										}
+									}
+									if len(roles) > 0 {
+										payload.Roles = roles
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
 	return &payload, nil
 }
 
@@ -515,6 +548,31 @@ func (c *OIDCHTTPClient) ValidateAccessToken(ctx context.Context, rawToken strin
 						for _, r := range rList {
 							if rStr, ok := r.(string); ok {
 								roles = append(roles, rStr)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	if len(roles) == 0 {
+		clientID := c.cfg.ClientID
+		if clientID == "" {
+			clientID = os.Getenv("TS_BFF_OIDC_CLIENT_ID")
+		}
+		if clientID != "" {
+			if raVal, ok := rawClaims["resource_access"]; ok {
+				if raMap, ok := raVal.(map[string]interface{}); ok {
+					if clientVal, ok := raMap[clientID]; ok {
+						if clientMap, ok := clientVal.(map[string]interface{}); ok {
+							if rVal, ok := clientMap["roles"]; ok {
+								if rList, ok := rVal.([]interface{}); ok {
+									for _, r := range rList {
+										if rStr, ok := r.(string); ok {
+											roles = append(roles, rStr)
+										}
+									}
+								}
 							}
 						}
 					}
