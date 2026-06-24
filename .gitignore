@@ -19,3 +19,7 @@ vendor/
 # Helm
 deploy/helm/tacito-square/charts/
 deploy/helm/tacito-square/Chart.lock
+
+# FE
+
+node_modules/

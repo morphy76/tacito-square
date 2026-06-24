@@ -29,4 +29,7 @@ type OIDCProvider interface {
 	// ValidateLogoutToken parses and validates a backchannel logout token.
 	// Returns the subject (sub) and OIDC session ID (sid) claims if valid.
 	ValidateLogoutToken(ctx context.Context, rawToken string) (sub string, sessionID string, err error)
+
+	// ValidateAccessToken validates an Access Token (JWT) statelessly and returns its claims.
+	ValidateAccessToken(ctx context.Context, token string) (*model.UserInfoPayload, error)
 }

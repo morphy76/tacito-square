@@ -31,4 +31,10 @@ type SessionStore interface {
 	// GetAndDeletePendingState atomically retrieves and removes the redirect-to URL for the given
 	// state nonce. Returns an empty string (no error) when the key is not found.
 	GetAndDeletePendingState(ctx context.Context, state string) (redirectTo string, err error)
+
+	// CacheHTML stores HTML content in Redis.
+	CacheHTML(ctx context.Context, key string, html string, ttl time.Duration) error
+
+	// GetCachedHTML retrieves stored HTML content.
+	GetCachedHTML(ctx context.Context, key string) (string, error)
 }

@@ -27,6 +27,7 @@ func RegisterRoutes(r *gin.Engine, sessionUC inbound.SessionUseCase, eventUC inb
 		protected.Use(SessionMiddleware(sessionUC, uiPath))
 		{
 			protected.POST("/auth/logout", auth.Logout)
+			protected.GET("/auth/me", auth.Me)
 			protected.GET("/events/stream", sse.StreamEvents)
 		}
 

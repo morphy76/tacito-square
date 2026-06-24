@@ -1,0 +1,24 @@
+# Stage 1: Build the React 19 SPA
+FROM node:22-alpine AS ui-builder
+WORKDIR /app
+COPY ui/configurator/package*.json ./ui/configurator/
+RUN cd ui/configurator && npm install
+COPY ui/configurator/ ./ui/configurator/
+COPY ui/shared/ ./ui/shared/
+RUN cd ui/configurator && npm run build
+
+# Stage 2: Compile a lightweight Go static server to comply with the Distroless runtime constraint
+FROM golang:1.26-alpine AS go-builder
+WORKDIR /app
+COPY . .
+RUN CGO_ENABLED=0 go build -mod=vendor -ldflags="-s -w" -o static-server ./cmd/ui-server
+
+# Stage 3: Package into final secure Distroless container
+FROM gcr.io/distroless/base-nossl-debian13:nonroot
+WORKDIR /app
+COPY --from=go-builder /app/static-server /app/static-server
+COPY --from=ui-builder /app/ui/configurator/dist /app/dist
+ENV PORT=8080
+ENV STATIC_DIR=/app/dist
+EXPOSE 8080
+ENTRYPOINT ["/app/static-server"]

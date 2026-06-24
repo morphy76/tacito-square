@@ -34,6 +34,10 @@ func (m *mockSessionUseCase) GetSession(ctx context.Context, sessionID string) (
 	return nil, nil
 }
 
+func (m *mockSessionUseCase) ValidateAccessToken(ctx context.Context, token string) (*model.UserInfoPayload, error) {
+	return nil, nil
+}
+
 // Compile-time assertion
 var _ inbound.SessionUseCase = (*mockSessionUseCase)(nil)
 

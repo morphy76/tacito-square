@@ -26,6 +26,10 @@ func (m *mockOIDCProvider) ValidateLogoutToken(ctx context.Context, rawToken str
 	return "", "", nil
 }
 
+func (m *mockOIDCProvider) ValidateAccessToken(ctx context.Context, token string) (*model.UserInfoPayload, error) {
+	return nil, nil
+}
+
 // Compile-time assertion
 var _ outbound.OIDCProvider = (*mockOIDCProvider)(nil)
 

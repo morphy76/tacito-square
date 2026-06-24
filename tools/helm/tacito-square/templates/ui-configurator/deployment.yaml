@@ -1,0 +1,37 @@
+{{- if .Values.uiConfigurator.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tacito-square.fullname" . }}-ui-configurator
+  labels:
+    {{- include "tacito-square.labels" (dict "component" "ui-configurator" "context" .) | nindent 4 }}
+spec:
+  replicas: {{ .Values.uiConfigurator.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "tacito-square.selectorLabels" (dict "component" "ui-configurator" "context" .) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "tacito-square.selectorLabels" (dict "component" "ui-configurator" "context" .) | nindent 8 }}
+    spec:
+      containers:
+        - name: ui-configurator
+          image: {{ include "tacito-square.image" (dict "registry" .Values.uiConfigurator.image.registry "name" .Values.uiConfigurator.image.name "tag" .Values.uiConfigurator.image.tag "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.uiConfigurator.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "8080"
+            - name: STATIC_DIR
+              value: "/app/dist"
+          livenessProbe:
+            {{- toYaml .Values.uiConfigurator.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.uiConfigurator.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.uiConfigurator.resources | nindent 12 }}
+{{- end }}

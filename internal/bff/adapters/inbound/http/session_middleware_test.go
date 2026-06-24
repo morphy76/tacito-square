@@ -2,6 +2,7 @@ package http_test
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -264,4 +265,66 @@ func TestAuthRedirectMiddleware_AppendsRedirectToQueryParam(t *testing.T) {
 	assert.Contains(t, location, "redirect_to=")
 	assert.Contains(t, location, "%2Fui%2Fsecure%2Fdashboard")
 }
+
+func TestSessionMiddleware_ValidBearerToken_Succeeds(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+
+	getSessionCalled := false
+	mockUC := &mockSessionUseCase{
+		ValidateAccessTokenFunc: func(ctx context.Context, token string) (*model.UserInfoPayload, error) {
+			assert.Equal(t, "valid-token-123", token)
+			return &model.UserInfoPayload{
+				Sub:      "user-jwt",
+				TenantID: "tenant-jwt",
+				Email:    "jwt@test.com",
+			}, nil
+		},
+		GetSessionFunc: func(ctx context.Context, sessionID string) (*model.Session, error) {
+			getSessionCalled = true
+			return nil, nil
+		},
+	}
+
+	r.Use(bffhttp.SessionMiddleware(mockUC, "/ui"))
+	r.GET("/test", func(c *gin.Context) {
+		tenantID, _ := c.Get("tenantID")
+		userID, _ := c.Get("userID")
+		assert.Equal(t, "tenant-jwt", tenantID)
+		assert.Equal(t, "user-jwt", userID)
+		c.Status(http.StatusOK)
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/test", nil)
+	req.Header.Set("Authorization", "Bearer valid-token-123")
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.False(t, getSessionCalled, "Session retrieval should NOT be called when Bearer token is present")
+}
+
+func TestSessionMiddleware_ExpiredBearerToken_Returns401(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+
+	mockUC := &mockSessionUseCase{
+		ValidateAccessTokenFunc: func(ctx context.Context, token string) (*model.UserInfoPayload, error) {
+			return nil, errors.New("token is expired")
+		},
+	}
+
+	r.Use(bffhttp.SessionMiddleware(mockUC, "/ui"))
+	r.GET("/test", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/test", nil)
+	req.Header.Set("Authorization", "Bearer expired-token-123")
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
 

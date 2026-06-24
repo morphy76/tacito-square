@@ -50,6 +50,15 @@ func (m *mockSessionStore) GetAndDeletePendingState(ctx context.Context, state s
 	return args.String(0), args.Error(1)
 }
 
+func (m *mockSessionStore) CacheHTML(ctx context.Context, key string, html string, ttl time.Duration) error {
+	return m.Called(ctx, key, html, ttl).Error(0)
+}
+
+func (m *mockSessionStore) GetCachedHTML(ctx context.Context, key string) (string, error) {
+	args := m.Called(ctx, key)
+	return args.String(0), args.Error(1)
+}
+
 type mockOIDCProvider struct {
 	mock.Mock
 }
@@ -81,6 +90,14 @@ func (m *mockOIDCProvider) FetchUserInfo(ctx context.Context, accessToken string
 func (m *mockOIDCProvider) ValidateLogoutToken(ctx context.Context, rawToken string) (sub string, sessionID string, err error) {
 	args := m.Called(ctx, rawToken)
 	return args.String(0), args.String(1), args.Error(2)
+}
+
+func (m *mockOIDCProvider) ValidateAccessToken(ctx context.Context, token string) (*model.UserInfoPayload, error) {
+	args := m.Called(ctx, token)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.UserInfoPayload), args.Error(1)
 }
 
 func TestSessionService_HandleCallback_Success(t *testing.T) {

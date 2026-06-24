@@ -3,10 +3,12 @@ package model
 // UserInfoPayload holds the OIDC UserInfo claims relevant to the BFF.
 // The JSON field names match the exact claim keys returned by Keycloak/Zitadel.
 type UserInfoPayload struct {
-	Sub            string `json:"sub"`
-	Email          string `json:"email"`
-	TenantID       string `json:"tenantid"`
-	SubscriptionID string `json:"subscriptionid"`
+	Sub            string   `json:"sub"`
+	Email          string   `json:"email"`
+	TenantID       string   `json:"tenantid"`
+	SubscriptionID string   `json:"subscriptionid"`
+	Name           string   `json:"name"`
+	Roles          []string `json:"roles"`
 }
 
 // ConfiguratorViewModel is a placeholder aggregate view-model for the configurator

@@ -16,9 +16,25 @@ import (
 	"github.com/morphy76/tacito-square/internal/bff/domain/model"
 )
 
-// SessionMiddleware authenticates incoming requests using a session cookie.
+// SessionMiddleware authenticates incoming requests using a session cookie or stateless Bearer token.
 func SessionMiddleware(sessionUC inbound.SessionUseCase, uiPath string) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+
+		// 1. Check Bearer Token first
+		if token := getBearerToken(c.Request); token != "" {
+			userInfo, err := sessionUC.ValidateAccessToken(ctx, token)
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+				c.Abort()
+				return
+			}
+			enrichContext(c, userInfo)
+			c.Next()
+			return
+		}
+
+		// 2. Fallback to Cookie
 		sessionCookie, err := c.Request.Cookie("bff_session_id")
 		if err != nil || sessionCookie.Value == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
@@ -27,8 +43,6 @@ func SessionMiddleware(sessionUC inbound.SessionUseCase, uiPath string) gin.Hand
 		}
 
 		sessionID := sessionCookie.Value
-		ctx := c.Request.Context()
-
 		sess, err := sessionUC.GetSession(ctx, sessionID)
 		if err != nil || sess == nil {
 			if err != nil && errors.Is(err, model.ErrSessionExpired) {
@@ -54,23 +68,15 @@ func SessionMiddleware(sessionUC inbound.SessionUseCase, uiPath string) gin.Hand
 			}
 		}
 
-		// Enrich Gin context
-		c.Set("tenantID", sess.TenantID)
-		c.Set("userID", sess.UserID)
-
-		// Enrich OTel span attributes
-		span := trace.SpanFromContext(ctx)
-		if span.SpanContext().IsValid() {
-			span.SetAttributes(
-				attribute.String("tenant_id", sess.TenantID),
-				attribute.String("user_id", sess.UserID),
-			)
+		userInfo := sess.UserInfo
+		if userInfo.Sub == "" {
+			userInfo.Sub = sess.UserID
+		}
+		if userInfo.TenantID == "" {
+			userInfo.TenantID = sess.TenantID
 		}
 
-		// Inject tenantID into zerolog logger context
-		logger := zerolog.Ctx(ctx).With().Str("tenant_id", sess.TenantID).Logger()
-		c.Request = c.Request.WithContext(logger.WithContext(ctx))
-
+		enrichContext(c, &userInfo)
 		c.Next()
 	}
 }
@@ -107,7 +113,7 @@ func clearSessionCookie(c *gin.Context, uiPath string) {
 
 // AuthRedirectMiddleware redirects unauthenticated users to the login endpoint, appending the
 // original request URI as a redirect_to query parameter so the Login handler can restore it
-// after a successful login.
+// after a successful login. It also supports stateless Bearer tokens.
 func AuthRedirectMiddleware(sessionUC inbound.SessionUseCase, uiPath string) gin.HandlerFunc {
 	loginBase := strings.TrimSuffix(uiPath, "/") + "/api/v1/auth/login"
 
@@ -123,6 +129,22 @@ func AuthRedirectMiddleware(sessionUC inbound.SessionUseCase, uiPath string) gin
 	}
 
 	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+
+		// 1. Check Bearer Token first
+		if token := getBearerToken(c.Request); token != "" {
+			userInfo, err := sessionUC.ValidateAccessToken(ctx, token)
+			if err != nil {
+				c.Redirect(http.StatusFound, buildLoginURL(c))
+				c.Abort()
+				return
+			}
+			enrichContext(c, userInfo)
+			c.Next()
+			return
+		}
+
+		// 2. Fallback to Cookie
 		sessionCookie, err := c.Request.Cookie("bff_session_id")
 		if err != nil || sessionCookie.Value == "" {
 			c.Redirect(http.StatusFound, buildLoginURL(c))
@@ -131,8 +153,6 @@ func AuthRedirectMiddleware(sessionUC inbound.SessionUseCase, uiPath string) gin
 		}
 
 		sessionID := sessionCookie.Value
-		ctx := c.Request.Context()
-
 		sess, err := sessionUC.GetSession(ctx, sessionID)
 		if err != nil || sess == nil {
 			if err != nil && errors.Is(err, model.ErrSessionExpired) {
@@ -155,23 +175,45 @@ func AuthRedirectMiddleware(sessionUC inbound.SessionUseCase, uiPath string) gin
 			}
 		}
 
-		// Enrich Gin context
-		c.Set("tenantID", sess.TenantID)
-		c.Set("userID", sess.UserID)
-
-		// Enrich OTel span attributes
-		span := trace.SpanFromContext(ctx)
-		if span.SpanContext().IsValid() {
-			span.SetAttributes(
-				attribute.String("tenant_id", sess.TenantID),
-				attribute.String("user_id", sess.UserID),
-			)
+		userInfo := sess.UserInfo
+		if userInfo.Sub == "" {
+			userInfo.Sub = sess.UserID
+		}
+		if userInfo.TenantID == "" {
+			userInfo.TenantID = sess.TenantID
 		}
 
-		// Inject tenantID into zerolog logger context
-		logger := zerolog.Ctx(ctx).With().Str("tenant_id", sess.TenantID).Logger()
-		c.Request = c.Request.WithContext(logger.WithContext(ctx))
-
+		enrichContext(c, &userInfo)
 		c.Next()
 	}
+}
+
+func getBearerToken(req *http.Request) string {
+	authHeader := req.Header.Get("Authorization")
+	if authHeader == "" {
+		return ""
+	}
+	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+		return ""
+	}
+	return parts[1]
+}
+
+func enrichContext(c *gin.Context, userInfo *model.UserInfoPayload) {
+	c.Set("userInfo", userInfo)
+	c.Set("tenantID", userInfo.TenantID)
+	c.Set("userID", userInfo.Sub)
+
+	ctx := c.Request.Context()
+	span := trace.SpanFromContext(ctx)
+	if span.SpanContext().IsValid() {
+		span.SetAttributes(
+			attribute.String("tenant_id", userInfo.TenantID),
+			attribute.String("user_id", userInfo.Sub),
+		)
+	}
+
+	logger := zerolog.Ctx(ctx).With().Str("tenant_id", userInfo.TenantID).Logger()
+	c.Request = c.Request.WithContext(logger.WithContext(ctx))
 }

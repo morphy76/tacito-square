@@ -443,6 +443,96 @@ func (c *OIDCHTTPClient) ValidateLogoutToken(ctx context.Context, rawToken strin
 	return claims.Subject, claims.SessionID, nil
 }
 
+// ValidateAccessToken verifies the Access Token (JWT) signature against the JWKS keys,
+// asserts issuer/expiration claims, and extracts sub, email, tenant, and roles.
+func (c *OIDCHTTPClient) ValidateAccessToken(ctx context.Context, rawToken string) (*model.UserInfoPayload, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.cfg.Timeout)
+	defer cancel()
+
+	if err := c.discover(ctx); err != nil {
+		return nil, err
+	}
+
+	jws, err := jose.ParseSigned(rawToken, []jose.SignatureAlgorithm{jose.RS256, jose.ES256, jose.RS384, jose.ES384})
+	if err != nil {
+		return nil, fmt.Errorf("oidc: access token parse failed: %w", err)
+	}
+
+	keySet := rp.NewRemoteKeySet(c.httpCli, c.jwksURI)
+	payload, err := keySet.VerifySignature(ctx, jws)
+	if err != nil {
+		return nil, fmt.Errorf("oidc: access token signature verification failed: %w", err)
+	}
+
+	var rawClaims map[string]interface{}
+	if err := json.Unmarshal(payload, &rawClaims); err != nil {
+		return nil, fmt.Errorf("oidc: access token claims unmarshal failed: %w", err)
+	}
+
+	if iss, _ := rawClaims["iss"].(string); iss != c.cfg.Issuer {
+		return nil, fmt.Errorf("oidc: access token issuer mismatch: got %q, want %q", iss, c.cfg.Issuer)
+	}
+
+	var expTime time.Time
+	if expVal, ok := rawClaims["exp"]; ok {
+		switch v := expVal.(type) {
+		case float64:
+			expTime = time.Unix(int64(v), 0)
+		case int64:
+			expTime = time.Unix(v, 0)
+		}
+	}
+	if expTime.IsZero() || time.Now().After(expTime) {
+		return nil, fmt.Errorf("oidc: access token is expired")
+	}
+
+	sub, _ := rawClaims["sub"].(string)
+	email, _ := rawClaims["email"].(string)
+	
+	tenantid, _ := rawClaims["tenantid"].(string)
+	if tenantid == "" {
+		tenantid, _ = rawClaims["tenant_id"].(string)
+	}
+	
+	subscriptionid, _ := rawClaims["subscriptionid"].(string)
+	name, _ := rawClaims["name"].(string)
+
+	var roles []string
+	if rVal, ok := rawClaims["roles"]; ok {
+		if rList, ok := rVal.([]interface{}); ok {
+			for _, r := range rList {
+				if rStr, ok := r.(string); ok {
+					roles = append(roles, rStr)
+				}
+			}
+		}
+	}
+	if len(roles) == 0 {
+		if raVal, ok := rawClaims["realm_access"]; ok {
+			if raMap, ok := raVal.(map[string]interface{}); ok {
+				if rVal, ok := raMap["roles"]; ok {
+					if rList, ok := rVal.([]interface{}); ok {
+						for _, r := range rList {
+							if rStr, ok := r.(string); ok {
+								roles = append(roles, rStr)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return &model.UserInfoPayload{
+		Sub:            sub,
+		Email:          email,
+		TenantID:       tenantid,
+		SubscriptionID: subscriptionid,
+		Name:           name,
+		Roles:          roles,
+	}, nil
+}
+
 type hostRewritingTransport struct {
 	transport  http.RoundTripper
 	targetHost string

@@ -142,11 +142,12 @@ func main() {
 
 	// 8. Create HTTP server using bootstrap NewServer
 	cfg := bff.Config{
-		Version:      Version,
-		OtelEndpoint: otelEndpoint,
-		LogLevel:     logLevel,
-		GinMode:      v.GetString("gin.mode"),
-		UIPath:       v.GetString("bff.ui_path"),
+		Version:           Version,
+		OtelEndpoint:      otelEndpoint,
+		LogLevel:          logLevel,
+		GinMode:           v.GetString("gin.mode"),
+		UIPath:            v.GetString("bff.ui_path"),
+		UIConfiguratorURL: v.GetString("bff.ui_configurator_url"),
 	}
 	router := bff.NewServer(cfg, sessionUC, eventUC, store, oidcProvider, keeperClient)
 

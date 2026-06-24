@@ -54,3 +54,6 @@ bff:
     otel:
       endpoint: "ts-infra-otel-collector:4317"
 
+uiConfigurator:
+  image:
+    pullPolicy: Never

@@ -27,4 +27,7 @@ type SessionUseCase interface {
 
 	// GetSession retrieves the session state if active.
 	GetSession(ctx context.Context, sessionID string) (*model.Session, error)
+
+	// ValidateAccessToken validates an Access Token (JWT) statelessly and returns its claims.
+	ValidateAccessToken(ctx context.Context, token string) (*model.UserInfoPayload, error)
 }

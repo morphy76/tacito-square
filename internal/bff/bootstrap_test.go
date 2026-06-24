@@ -20,7 +20,9 @@ import (
 )
 
 // Define mock structures for testing bootstrap
-type mockSessionUseCase struct{}
+type mockSessionUseCase struct {
+	GetSessionFunc func(ctx context.Context, sessionID string) (*model.Session, error)
+}
 
 func (m *mockSessionUseCase) InitiateLogin(ctx context.Context, redirectTo string) (string, string, error) {
 	return "", "", nil
@@ -36,7 +38,13 @@ func (m *mockSessionUseCase) BackchannelLogout(ctx context.Context, rawLogoutTok
 	return nil
 }
 func (m *mockSessionUseCase) GetSession(ctx context.Context, sessionID string) (*model.Session, error) {
+	if m.GetSessionFunc != nil {
+		return m.GetSessionFunc(ctx, sessionID)
+	}
 	return &model.Session{ID: sessionID, UserID: "mock-user", TenantID: "mock-tenant"}, nil
+}
+func (m *mockSessionUseCase) ValidateAccessToken(ctx context.Context, token string) (*model.UserInfoPayload, error) {
+	return &model.UserInfoPayload{Sub: "mock-user", TenantID: "mock-tenant"}, nil
 }
 
 var _ inbound.SessionUseCase = (*mockSessionUseCase)(nil)
@@ -51,6 +59,7 @@ var _ inbound.EventStreamUseCase = (*mockEventStreamUseCase)(nil)
 
 type mockSessionStore struct {
 	pingErr error
+	cache   map[string]string
 }
 
 func (m *mockSessionStore) Save(ctx context.Context, sess *model.Session, ttl time.Duration) error {
@@ -71,6 +80,23 @@ func (m *mockSessionStore) SavePendingState(ctx context.Context, state, redirect
 func (m *mockSessionStore) GetAndDeletePendingState(ctx context.Context, state string) (string, error) {
 	return "", nil
 }
+func (m *mockSessionStore) CacheHTML(ctx context.Context, key string, html string, ttl time.Duration) error {
+	if m.cache == nil {
+		m.cache = make(map[string]string)
+	}
+	m.cache[key] = html
+	return nil
+}
+func (m *mockSessionStore) GetCachedHTML(ctx context.Context, key string) (string, error) {
+	if m.cache == nil {
+		return "", errors.New("cache miss")
+	}
+	val, ok := m.cache[key]
+	if !ok {
+		return "", errors.New("cache miss")
+	}
+	return val, nil
+}
 
 var _ outbound.SessionStore = (*mockSessionStore)(nil)
 
@@ -87,6 +113,9 @@ func (m *mockOIDCProvider) FetchUserInfo(ctx context.Context, accessToken string
 }
 func (m *mockOIDCProvider) ValidateLogoutToken(ctx context.Context, rawToken string) (string, string, error) {
 	return "", "", nil
+}
+func (m *mockOIDCProvider) ValidateAccessToken(ctx context.Context, token string) (*model.UserInfoPayload, error) {
+	return &model.UserInfoPayload{Sub: "mock-user", TenantID: "mock-tenant"}, nil
 }
 
 var _ outbound.OIDCProvider = (*mockOIDCProvider)(nil)
@@ -247,32 +276,81 @@ func TestBFFServer_RootWelcomePageWithSlash_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
 
-	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
+	store := &mockSessionStore{
+		cache: map[string]string{
+			"index_html": "<html>mock welcome</html>",
+		},
+	}
 
-	req := httptest.NewRequest(http.MethodGet, "/ui/", nil)
-	w := httptest.NewRecorder()
-	srv.ServeHTTP(w, req)
+	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, store, &mockOIDCProvider{}, &mockKeeperClient{})
 
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Equal(t, "text/html; charset=utf-8", w.Header().Get("Content-Type"))
-	assert.Contains(t, w.Body.String(), "<title>Tacito Square BFF</title>")
-	assert.Contains(t, w.Body.String(), "Piazza Tacito")
+	// 1. Unauthenticated redirects to login
+	reqUnauth := httptest.NewRequest(http.MethodGet, "/ui/", nil)
+	wUnauth := httptest.NewRecorder()
+	srv.ServeHTTP(wUnauth, reqUnauth)
+	assert.Equal(t, http.StatusFound, wUnauth.Code)
+	assert.Equal(t, "/ui/api/v1/auth/login?redirect_to=%2Fui%2F", wUnauth.Header().Get("Location"))
+
+	// 2. Authenticated serves cached welcome HTML
+	reqAuth := httptest.NewRequest(http.MethodGet, "/ui/", nil)
+	reqAuth.AddCookie(&http.Cookie{
+		Name:  "bff_session_id",
+		Value: "session-123",
+	})
+	wAuth := httptest.NewRecorder()
+	srv.ServeHTTP(wAuth, reqAuth)
+
+	assert.Equal(t, http.StatusOK, wAuth.Code)
+	assert.Equal(t, "text/html; charset=utf-8", wAuth.Header().Get("Content-Type"))
+	assert.Contains(t, wAuth.Body.String(), "<html>mock welcome</html>")
 }
 
 func TestBFFServer_IndexWelcomePage(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
 
+	store := &mockSessionStore{
+		cache: map[string]string{
+			"index_html": "<html>mock index html</html>",
+		},
+	}
+
+	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, store, &mockOIDCProvider{}, &mockKeeperClient{})
+
+	// 1. Unauthenticated redirects to login
+	reqUnauth := httptest.NewRequest(http.MethodGet, "/ui/index.html", nil)
+	wUnauth := httptest.NewRecorder()
+	srv.ServeHTTP(wUnauth, reqUnauth)
+	assert.Equal(t, http.StatusFound, wUnauth.Code)
+	assert.Equal(t, "/ui/api/v1/auth/login?redirect_to=%2Fui%2Findex.html", wUnauth.Header().Get("Location"))
+
+	// 2. Authenticated serves cached HTML
+	reqAuth := httptest.NewRequest(http.MethodGet, "/ui/index.html", nil)
+	reqAuth.AddCookie(&http.Cookie{
+		Name:  "bff_session_id",
+		Value: "session-123",
+	})
+	wAuth := httptest.NewRecorder()
+	srv.ServeHTTP(wAuth, reqAuth)
+
+	assert.Equal(t, http.StatusOK, wAuth.Code)
+	assert.Equal(t, "text/html; charset=utf-8", wAuth.Header().Get("Content-Type"))
+	assert.Contains(t, wAuth.Body.String(), "<html>mock index html</html>")
+}
+
+func TestBFFServer_ServeBootstrapThemeCSS(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
+
 	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
 
-	req := httptest.NewRequest(http.MethodGet, "/ui/index.html", nil)
+	req := httptest.NewRequest(http.MethodGet, "/ui/assets/bootstrap-theme.css", nil)
 	w := httptest.NewRecorder()
 	srv.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Equal(t, "text/html; charset=utf-8", w.Header().Get("Content-Type"))
-	assert.Contains(t, w.Body.String(), "<title>Tacito Square BFF</title>")
-	assert.Contains(t, w.Body.String(), "Piazza Tacito")
+	assert.Equal(t, "text/css; charset=utf-8", w.Header().Get("Content-Type"))
+	assert.Contains(t, w.Body.String(), "--color-steel")
 }
 
 func TestBFFServer_SecureIndex_NoCookie_Redirects(t *testing.T) {
@@ -345,35 +423,32 @@ func TestBFFServer_StaticCaching_WelcomeHTML(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
 
-	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
+	store := &mockSessionStore{
+		cache: map[string]string{
+			"index_html": "<html>mock welcome</html>",
+		},
+	}
 
-	// Test GET /ui/
+	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, store, &mockOIDCProvider{}, &mockKeeperClient{})
+
+	// 1. Test GET /ui/ unauthenticated (redirects to login)
+	reqUnauth := httptest.NewRequest(http.MethodGet, "/ui/", nil)
+	wUnauth := httptest.NewRecorder()
+	srv.ServeHTTP(wUnauth, reqUnauth)
+	assert.Equal(t, http.StatusFound, wUnauth.Code)
+
+	// 2. Test GET /ui/ authenticated (Cache-Control: no-cache)
 	req := httptest.NewRequest(http.MethodGet, "/ui/", nil)
+	req.AddCookie(&http.Cookie{
+		Name:  "bff_session_id",
+		Value: "session-123",
+	})
 	w := httptest.NewRecorder()
 	srv.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Equal(t, "public, max-age=0, must-revalidate", w.Header().Get("Cache-Control"))
-	etag := w.Header().Get("ETag")
-	assert.NotEmpty(t, etag)
-
-	// Test conditional request GET /ui/
-	req2 := httptest.NewRequest(http.MethodGet, "/ui/", nil)
-	req2.Header.Set("If-None-Match", etag)
-	w2 := httptest.NewRecorder()
-	srv.ServeHTTP(w2, req2)
-
-	assert.Equal(t, http.StatusNotModified, w2.Code)
-	assert.Empty(t, w2.Body.Bytes())
-
-	// Test GET /ui/index.html
-	req3 := httptest.NewRequest(http.MethodGet, "/ui/index.html", nil)
-	w3 := httptest.NewRecorder()
-	srv.ServeHTTP(w3, req3)
-
-	assert.Equal(t, http.StatusOK, w3.Code)
-	assert.Equal(t, "public, max-age=0, must-revalidate", w3.Header().Get("Cache-Control"))
-	assert.Equal(t, etag, w3.Header().Get("ETag"))
+	assert.Equal(t, "no-cache", w.Header().Get("Cache-Control"))
+	assert.Empty(t, w.Header().Get("ETag")) // ETag should be empty as it's not statically cached anymore
 }
 
 func TestBFFServer_StaticCaching_SecureHTML(t *testing.T) {
@@ -434,4 +509,96 @@ func TestBFFServer_StaticCaching_Favicon(t *testing.T) {
 	assert.Equal(t, http.StatusNotModified, w2.Code)
 	assert.Empty(t, w2.Body.Bytes())
 }
+
+func TestBFFServer_UIProxy_Caching(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	// Spin up a mock Nginx server that serves index.html
+	nginxQueries := 0
+	mockNginx := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		nginxQueries++
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("<html>mock react index</html>"))
+	}))
+	defer mockNginx.Close()
+
+	// Configure the BFF with the mock Nginx URL
+	cfg := bff.Config{
+		Version:           "0.1.0",
+		LogLevel:          "info",
+		GinMode:           "test",
+		UIPath:            "/ui",
+		UIConfiguratorURL: mockNginx.URL,
+	}
+
+	sessionStore := &mockSessionStore{
+		cache: make(map[string]string),
+	}
+
+	mockUC := &mockSessionUseCase{
+		GetSessionFunc: func(ctx context.Context, sessionID string) (*model.Session, error) {
+			assert.Equal(t, "session-123", sessionID)
+			return &model.Session{
+				ID:       "session-123",
+				UserID:   "user-123",
+				TenantID: "tenant-123",
+			}, nil
+		},
+	}
+
+	srv := bff.NewServer(cfg, mockUC, &mockEventStreamUseCase{}, sessionStore, &mockOIDCProvider{}, &mockKeeperClient{})
+
+	// 1. Unauthenticated Request: GET /ui/ should redirect to login
+	w1 := httptest.NewRecorder()
+	req1 := httptest.NewRequest(http.MethodGet, "/ui/", nil)
+	srv.ServeHTTP(w1, req1)
+	assert.Equal(t, http.StatusFound, w1.Code)
+	assert.Equal(t, "/ui/api/v1/auth/login?redirect_to=%2Fui%2F", w1.Header().Get("Location"))
+
+	// 2. Authenticated Request: GET /ui/ with valid session cookie. Should query Nginx and cache it.
+	w2 := httptest.NewRecorder()
+	req2 := httptest.NewRequest(http.MethodGet, "/ui/", nil)
+	req2.AddCookie(&http.Cookie{
+		Name:  "bff_session_id",
+		Value: "session-123",
+		Path:  "/ui",
+	})
+	srv.ServeHTTP(w2, req2)
+	assert.Equal(t, http.StatusOK, w2.Code)
+	assert.Equal(t, "<html>mock react index</html>", w2.Body.String())
+	assert.Equal(t, "text/html; charset=utf-8", w2.Header().Get("Content-Type"))
+	assert.Equal(t, 1, nginxQueries)
+
+	// Check that it was saved to the cache
+	cachedVal, err := sessionStore.GetCachedHTML(context.Background(), "index_html")
+	assert.NoError(t, err)
+	assert.Equal(t, "<html>mock react index</html>", cachedVal)
+
+	// 3. Second Authenticated Request: GET /ui/ with valid session. Should serve from cache directly.
+	w3 := httptest.NewRecorder()
+	req3 := httptest.NewRequest(http.MethodGet, "/ui/", nil)
+	req3.AddCookie(&http.Cookie{
+		Name:  "bff_session_id",
+		Value: "session-123",
+		Path:  "/ui",
+	})
+	srv.ServeHTTP(w3, req3)
+	assert.Equal(t, http.StatusOK, w3.Code)
+	assert.Equal(t, "<html>mock react index</html>", w3.Body.String())
+	assert.Equal(t, 1, nginxQueries, "Nginx should not be queried a second time (served from cache)")
+
+	// 4. Fallback SPA route: GET /ui/dashboard. Should also serve index.html from cache.
+	w4 := httptest.NewRecorder()
+	req4 := httptest.NewRequest(http.MethodGet, "/ui/dashboard", nil)
+	req4.AddCookie(&http.Cookie{
+		Name:  "bff_session_id",
+		Value: "session-123",
+		Path:  "/ui",
+	})
+	srv.ServeHTTP(w4, req4)
+	assert.Equal(t, http.StatusOK, w4.Code)
+	assert.Equal(t, "<html>mock react index</html>", w4.Body.String())
+}
+
 

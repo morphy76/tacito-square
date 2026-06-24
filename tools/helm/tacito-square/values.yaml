@@ -213,3 +213,35 @@ bff:
   service:
     type: ClusterIP
     port: 8083
+
+# --- UI Configurator ---
+uiConfigurator:
+  enabled: true
+  replicaCount: 1
+  image:
+    registry: ""
+    name: tacito-square/ui-configurator
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: http
+    initialDelaySeconds: 1
+    periodSeconds: 1
+  readinessProbe:
+    httpGet:
+      path: /readyz
+      port: http
+    initialDelaySeconds: 1
+    periodSeconds: 1
+  service:
+    type: ClusterIP
+    port: 8080
