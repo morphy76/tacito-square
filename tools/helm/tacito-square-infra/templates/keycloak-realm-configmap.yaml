@@ -32,14 +32,14 @@ data:
             "client.secret.creation.time": "1782079499",
             "standard.token.exchange.enabled": "false",
             "frontchannel.logout.session.required": "true",
-            "post.logout.redirect.uris": "/*",
+            "post.logout.redirect.uris": "http://localhost/ui",
             "oauth2.device.authorization.grant.enabled": "false",
             "use.jwks.url": "false",
             "backchannel.logout.revoke.offline.tokens": "true",
             "realm_client": "false",
             "oidc.ciba.grant.enabled": "false",
             "backchannel.logout.session.required": "true",
-            "backchannel.logout.url": "http://localhost/ui/api/v1/auth/backchannel-logout",
+            "backchannel.logout.url": "http://ts-tacito-square-bff:8083/ui/api/v1/auth/backchannel-logout",
             "display.on.consent.screen": "false",
             "dpop.bound.access.tokens": "false"
           }
