@@ -110,6 +110,10 @@ func TestOIDCClient_InternalIssuer_RewritesEndpoints(t *testing.T) {
 	// It handles: GET /.well-known/openid-configuration, POST /token, GET /userinfo.
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+		// Assert that the Host header is rewritten to the public issuer's host.
+		assert.Equal(t, "localhost", r.Host, "Host header must be rewritten to match public issuer")
+		assert.Equal(t, "localhost", r.Header.Get("X-Forwarded-Host"), "X-Forwarded-Host header must be set")
+		
 		switch r.URL.Path {
 		case "/auth/realms/tacito/.well-known/openid-configuration":
 			// Discovery document — endpoints reference the *public* issuer

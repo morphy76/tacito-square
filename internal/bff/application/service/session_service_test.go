@@ -223,12 +223,13 @@ func TestSessionService_RefreshSession_ExpiredToken(t *testing.T) {
 	ctx := context.Background()
 	userInfo := model.UserInfoPayload{Sub: "user-sub", TenantID: "tenant-1"}
 	// Expired session
-	sess, err := model.NewSession("user-sub", "tenant-1", "issuer", "oidc-sid", "old-access", "old-refresh", userInfo, -1*time.Minute)
+	sess, err := model.NewSession("user-sub", "tenant-1", "issuer", "oidc-sid", "old-access", "old-refresh", "old-id-token", userInfo, -1*time.Minute)
 	assert.NoError(t, err)
 
 	tokenSet := &outbound.TokenSet{
 		AccessToken:  "new-access-token",
 		RefreshToken: "new-refresh-token",
+		IDToken:      "new-id-token",
 		ExpiresIn:    1 * time.Hour,
 	}
 
@@ -257,7 +258,7 @@ func TestSessionService_RefreshSession_ValidToken(t *testing.T) {
 	ctx := context.Background()
 	userInfo := model.UserInfoPayload{Sub: "user-sub", TenantID: "tenant-1"}
 	// Valid session (1 hour TTL remaining)
-	sess, err := model.NewSession("user-sub", "tenant-1", "issuer", "oidc-sid", "valid-access", "valid-refresh", userInfo, 1*time.Hour)
+	sess, err := model.NewSession("user-sub", "tenant-1", "issuer", "oidc-sid", "valid-access", "valid-refresh", "valid-id-token", userInfo, 1*time.Hour)
 	assert.NoError(t, err)
 
 	store.On("Get", ctx, sess.ID).Return(sess, nil)

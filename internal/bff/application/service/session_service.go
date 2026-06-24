@@ -126,6 +126,7 @@ func (s *SessionService) HandleCallback(ctx context.Context, code, state string)
 		oidcSessionID,
 		tokens.AccessToken,
 		tokens.RefreshToken,
+		tokens.IDToken,
 		*userInfo,
 		tokens.ExpiresIn,
 	)
@@ -176,6 +177,9 @@ func (s *SessionService) RefreshSession(ctx context.Context, sessionID string) (
 
 		session.AccessToken = tokens.AccessToken
 		session.RefreshToken = tokens.RefreshToken
+		if tokens.IDToken != "" {
+			session.IDToken = tokens.IDToken
+		}
 		session.AccessTokenExpiresAt = time.Now().Add(tokens.ExpiresIn)
 
 		if err := s.store.Save(ctx, session, s.cfg.SessionTTL); err != nil {

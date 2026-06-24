@@ -423,3 +423,52 @@ func TestAuthHandler_BackchannelLogout_InvalidToken(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "invalid token", resp["error"])
 }
+
+func TestAuthHandler_Logout_RedirectToOIDC_WithPostLogoutRedirect(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+
+	var calledSessionID string
+	mockUC := &mockSessionUseCase{
+		GetSessionFunc: func(ctx context.Context, sessionID string) (*model.Session, error) {
+			return &model.Session{
+				ID:       "session-123",
+				TenantID: "tenant-789",
+				Issuer:   "https://keycloak.example.com/realms/tacito",
+				IDToken:  "mock-id-token",
+			}, nil
+		},
+		LogoutFunc: func(ctx context.Context, sessionID string) error {
+			calledSessionID = sessionID
+			return nil
+		},
+	}
+
+	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/ui/api/v1/auth/logout", nil)
+	req.Host = "example.com"
+	req.Header.Set("X-Forwarded-Proto", "https")
+	req.AddCookie(&http.Cookie{
+		Name:  "bff_session_id",
+		Value: "session-123",
+		Path:  "/ui",
+	})
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusFound, w.Code)
+	
+	location := w.Header().Get("Location")
+	u, err := url.Parse(location)
+	assert.NoError(t, err)
+	assert.Equal(t, "https", u.Scheme)
+	assert.Equal(t, "keycloak.example.com", u.Host)
+	assert.Equal(t, "/realms/tacito/protocol/openid-connect/logout", u.Path)
+	
+	q := u.Query()
+	assert.Equal(t, "https://example.com/ui", q.Get("post_logout_redirect_uri"))
+	assert.Equal(t, "mock-id-token", q.Get("id_token_hint"))
+	assert.Equal(t, "session-123", calledSessionID)
+}
+

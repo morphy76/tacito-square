@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -109,11 +110,13 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	}
 	sessionID := sessionCookie.Value
 
-	// Try to get session to extract issuer
+	// Try to get session to extract issuer and ID token
 	var issuer string
+	var idToken string
 	sess, err := h.sessionUC.GetSession(c.Request.Context(), sessionID)
 	if err == nil && sess != nil {
 		issuer = sess.Issuer
+		idToken = sess.IDToken
 	}
 
 	// Call use case to invalidate session
@@ -141,6 +144,31 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 			if !strings.HasSuffix(u.Path, "/protocol/openid-connect/logout") {
 				u.Path = strings.TrimSuffix(u.Path, "/") + "/protocol/openid-connect/logout"
 			}
+			
+			// Determine application context root dynamically (respecting reverse proxies)
+			scheme := "http"
+			if c.Request.TLS != nil || c.GetHeader("X-Forwarded-Proto") == "https" {
+				scheme = "https"
+			}
+			host := c.GetHeader("X-Forwarded-Host")
+			if host == "" {
+				host = c.Request.Host
+			}
+			
+			uiPath := h.uiPath
+			if !strings.HasPrefix(uiPath, "/") {
+				uiPath = "/" + uiPath
+			}
+			
+			postLogoutURI := fmt.Sprintf("%s://%s%s", scheme, host, uiPath)
+			
+			q := u.Query()
+			q.Set("post_logout_redirect_uri", postLogoutURI)
+			if idToken != "" {
+				q.Set("id_token_hint", idToken)
+			}
+			u.RawQuery = q.Encode()
+			
 			redirectURL = u.String()
 		}
 	}

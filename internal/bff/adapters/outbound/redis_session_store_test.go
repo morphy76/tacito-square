@@ -60,7 +60,7 @@ func newTestSession(t *testing.T) *model.Session {
 	}
 	sess, err := model.NewSession(
 		"user-sub-123", "tenant-a", "https://issuer.tacito.local",
-		"oidc-sid-abc", "access-tok", "refresh-tok",
+		"oidc-sid-abc", "access-tok", "refresh-tok", "id-tok-abc",
 		userInfo, 1*time.Hour,
 	)
 	require.NoError(t, err)
@@ -114,9 +114,9 @@ func TestRedisSessionStore_DeleteByUserID(t *testing.T) {
 	store := newTestStore(t)
 
 	userInfo := model.UserInfoPayload{Sub: "shared-user", TenantID: "tenant-a"}
-	sess1, err := model.NewSession("shared-user", "tenant-a", "issuer", "sid-1", "tok1", "ref1", userInfo, 1*time.Hour)
+	sess1, err := model.NewSession("shared-user", "tenant-a", "issuer", "sid-1", "tok1", "ref1", "id-tok-1", userInfo, 1*time.Hour)
 	require.NoError(t, err)
-	sess2, err := model.NewSession("shared-user", "tenant-a", "issuer", "sid-2", "tok2", "ref2", userInfo, 1*time.Hour)
+	sess2, err := model.NewSession("shared-user", "tenant-a", "issuer", "sid-2", "tok2", "ref2", "id-tok-2", userInfo, 1*time.Hour)
 	require.NoError(t, err)
 
 	require.NoError(t, store.Save(ctx, sess1, 5*time.Minute))

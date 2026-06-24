@@ -61,6 +61,7 @@ func (s *RedisSessionStore) Save(ctx context.Context, sess *model.Session, ttl t
 		OIDCSessionID:        sess.OIDCSessionID,
 		AccessToken:          sess.AccessToken,
 		RefreshToken:         sess.RefreshToken,
+		IDToken:              sess.IDToken,
 		UserInfo:             sess.UserInfo,
 		AccessTokenExpiresAt: sess.AccessTokenExpiresAt,
 		CreatedAt:            sess.CreatedAt,
@@ -209,6 +210,7 @@ type sessionDTO struct {
 	OIDCSessionID        string               `json:"oidc_session_id"`
 	AccessToken          string               `json:"access_token"`
 	RefreshToken         string               `json:"refresh_token"`
+	IDToken              string               `json:"id_token"`
 	UserInfo             model.UserInfoPayload `json:"user_info"`
 	AccessTokenExpiresAt time.Time            `json:"access_token_expires_at"`
 	CreatedAt            time.Time            `json:"created_at"`
@@ -224,6 +226,7 @@ func dtoToSession(dto sessionDTO) *model.Session {
 		OIDCSessionID:        dto.OIDCSessionID,
 		AccessToken:          dto.AccessToken,
 		RefreshToken:         dto.RefreshToken,
+		IDToken:              dto.IDToken,
 		UserInfo:             dto.UserInfo,
 		AccessTokenExpiresAt: dto.AccessTokenExpiresAt,
 		CreatedAt:            dto.CreatedAt,

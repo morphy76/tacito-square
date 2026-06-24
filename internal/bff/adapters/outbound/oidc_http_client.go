@@ -68,7 +68,23 @@ func NewOIDCHTTPClient(cfg OIDCClientConfig) *OIDCHTTPClient {
 		maxFail = 5
 	}
 
-	httpCli := &http.Client{Timeout: cfg.Timeout}
+	var transport http.RoundTripper = http.DefaultTransport
+	if cfg.InternalIssuer != "" && cfg.Issuer != "" {
+		publicURL, err := url.Parse(cfg.Issuer)
+		internalURL, err2 := url.Parse(cfg.InternalIssuer)
+		if err == nil && err2 == nil {
+			transport = &hostRewritingTransport{
+				transport:  http.DefaultTransport,
+				targetHost: internalURL.Host,
+				publicHost: publicURL.Host,
+			}
+		}
+	}
+
+	httpCli := &http.Client{
+		Timeout:   cfg.Timeout,
+		Transport: transport,
+	}
 
 	cbSettings := gobreaker.Settings{
 		Name:        "oidc-provider",
@@ -426,3 +442,28 @@ func (c *OIDCHTTPClient) ValidateLogoutToken(ctx context.Context, rawToken strin
 
 	return claims.Subject, claims.SessionID, nil
 }
+
+type hostRewritingTransport struct {
+	transport  http.RoundTripper
+	targetHost string
+	publicHost string
+}
+
+func (t *hostRewritingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.URL != nil && req.URL.Host == t.targetHost {
+		req = req.Clone(req.Context())
+		req.Host = t.publicHost
+		req.Header.Set("X-Forwarded-Host", t.publicHost)
+		if req.URL.Scheme == "https" {
+			req.Header.Set("X-Forwarded-Proto", "https")
+		} else {
+			req.Header.Set("X-Forwarded-Proto", "http")
+		}
+	}
+	tp := t.transport
+	if tp == nil {
+		tp = http.DefaultTransport
+	}
+	return tp.RoundTrip(req)
+}
+

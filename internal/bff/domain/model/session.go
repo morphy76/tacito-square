@@ -43,6 +43,9 @@ type Session struct {
 	// Never serialized to JSON.
 	RefreshToken string `json:"-"`
 
+	// IDToken is the raw OIDC ID Token JWT. Never serialized to JSON.
+	IDToken string `json:"-"`
+
 	// UserInfo is the cached OIDC UserInfo payload associated with this session.
 	UserInfo UserInfoPayload `json:"user_info"`
 
@@ -68,6 +71,7 @@ func NewSession(
 	oidcSessionID string,
 	accessToken string,
 	refreshToken string,
+	idToken string,
 	userInfo UserInfoPayload,
 	accessTokenTTL time.Duration,
 ) (*Session, error) {
@@ -85,6 +89,7 @@ func NewSession(
 		OIDCSessionID:        oidcSessionID,
 		AccessToken:          accessToken,
 		RefreshToken:         refreshToken,
+		IDToken:              idToken,
 		UserInfo:             userInfo,
 		AccessTokenExpiresAt: now.Add(accessTokenTTL),
 		CreatedAt:            now,

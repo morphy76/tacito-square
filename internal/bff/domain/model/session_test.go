@@ -17,6 +17,7 @@ const (
 	testTenantID     = "tenant-abc"
 	testAccessToken  = "access-tok"
 	testRefreshToken = "refresh-tok"
+	testIDToken      = "id-tok"
 )
 
 func newTestSession(t *testing.T, ttl time.Duration) *model.Session {
@@ -27,7 +28,7 @@ func newTestSession(t *testing.T, ttl time.Duration) *model.Session {
 		TenantID:       testTenantID,
 		SubscriptionID: "sub-xyz",
 	}
-	s, err := model.NewSession(testUserID, testTenantID, testIssuer, testOIDCsid, testAccessToken, testRefreshToken, userInfo, ttl)
+	s, err := model.NewSession(testUserID, testTenantID, testIssuer, testOIDCsid, testAccessToken, testRefreshToken, testIDToken, userInfo, ttl)
 	require.NoError(t, err)
 	return s
 }
@@ -62,15 +63,15 @@ func TestSession_NewSession_Success(t *testing.T) {
 func TestSession_NewSession_EmptyOIDCSessionID_Allowed(t *testing.T) {
 	// The OP may not issue a sid claim — this must be supported gracefully.
 	userInfo := model.UserInfoPayload{Sub: testUserID}
-	session, err := model.NewSession(testUserID, testTenantID, testIssuer, "", testAccessToken, testRefreshToken, userInfo, time.Hour)
+	session, err := model.NewSession(testUserID, testTenantID, testIssuer, "", testAccessToken, testRefreshToken, testIDToken, userInfo, time.Hour)
 	require.NoError(t, err)
 	assert.Empty(t, session.OIDCSessionID, "Empty OIDCSessionID must be accepted when OP does not issue sid")
 }
 
 func TestSession_NewSession_UniqueIDs(t *testing.T) {
 	userInfo := model.UserInfoPayload{Sub: "u1"}
-	s1, err1 := model.NewSession("u1", "t1", testIssuer, "sid-1", "tok", "rtok", userInfo, time.Hour)
-	s2, err2 := model.NewSession("u1", "t1", testIssuer, "sid-2", "tok", "rtok", userInfo, time.Hour)
+	s1, err1 := model.NewSession("u1", "t1", testIssuer, "sid-1", "tok", "rtok", "id-tok", userInfo, time.Hour)
+	s2, err2 := model.NewSession("u1", "t1", testIssuer, "sid-2", "tok", "rtok", "id-tok", userInfo, time.Hour)
 
 	require.NoError(t, err1)
 	require.NoError(t, err2)
@@ -113,6 +114,7 @@ func TestSession_TokensNotSerializedToJSON(t *testing.T) {
 	// Tokens must be absent from the JSON representation.
 	assert.NotContains(t, jsonStr, testAccessToken, "AccessToken must not appear in JSON output")
 	assert.NotContains(t, jsonStr, testRefreshToken, "RefreshToken must not appear in JSON output")
+	assert.NotContains(t, jsonStr, testIDToken, "IDToken must not appear in JSON output")
 
 	// Non-sensitive fields must still be present.
 	assert.Contains(t, jsonStr, testIssuer, "Issuer must appear in JSON output")
@@ -121,4 +123,5 @@ func TestSession_TokensNotSerializedToJSON(t *testing.T) {
 	// Direct Go field access must still work.
 	assert.Equal(t, testAccessToken, session.AccessToken)
 	assert.Equal(t, testRefreshToken, session.RefreshToken)
+	assert.Equal(t, testIDToken, session.IDToken)
 }

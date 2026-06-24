@@ -85,4 +85,6 @@ Each direction is labeled with one of the following categories:
 ## Free
 
 - intra community nats channels no jetstream for improved speed
+- bootstrap theme from index.html styles
+- makefile push to registry, one for docker images and one for helm charts
 - 
