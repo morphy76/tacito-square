@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M10.8                                |
-| Status        | ACCEPTED                                    |
+| Status        | IN_PROGRESS                                 |
 | Milestone     | M10                                          |
 | Component     | keeper, shared                              |
 | Depends On    | none                                        |

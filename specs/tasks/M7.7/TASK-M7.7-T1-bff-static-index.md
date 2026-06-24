@@ -5,7 +5,7 @@
 | Task ID     | TASK-M7.7-T1                                       |
 | Spec        | SPEC-FR-M7.7                                       |
 | Boundary    | BFF Welcome Page — `internal/bff/`                 |
-| Status      | IN_PROGRESS                                        |
+| Status      | VERIFIED                                           |
 | Depends On  | none                                               |
 
 ## Objective

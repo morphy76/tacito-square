@@ -84,7 +84,7 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 
 | ID | Title | Status | Severity | File |
 |----|-------|--------|----------|------|
-| BUG-M7.1 | BFF OIDC Discovery Refused Connection due to localhost Issuer URL | ACCEPTED | HIGH | [BUG-M7.1](tasks/M7.BUG1/BUG-M7.1.md) |
+| BUG-M7.1 | BFF OIDC Discovery Refused Connection due to localhost Issuer URL | IMPLEMENTED | HIGH | [BUG-M7.1](tasks/M7.BUG1/BUG-M7.1.md) |
 
 ### M8: RAG & LTM
 
@@ -132,8 +132,8 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | SPEC-FR-M10.6 | Comprehensive System Documentation | DRAFT | docs | [SPEC-FR-M10.6](functional/M10/SPEC-FR-M10.6.md) |
 | SPEC-FR-M10.7 | Benchmark Suite & Integration Coverage Verification | ACCEPTED | test | [SPEC-FR-M10.7](functional/M10/SPEC-FR-M10.7.md) |
 | SPEC-FR-M10.8 | Compact JSON API Responses | IN_PROGRESS | keeper, shared | [SPEC-FR-M10.8](functional/M10/SPEC-FR-M10.8.md) |
-| SPEC-FR-M10.9 | HTTP Cache Headers for OpenAPI Specification Endpoints | IN_PROGRESS | bff, keeper | [SPEC-FR-M10.9](functional/M10/SPEC-FR-M10.9.md) |
-| SPEC-FR-M10.10 | HTTP Cache Headers for BFF Static Resources | ACCEPTED | bff | [SPEC-FR-M10.10](functional/M10/SPEC-FR-M10.10.md) |
+| SPEC-FR-M10.9 | HTTP Cache Headers for OpenAPI Specification Endpoints | IMPLEMENTED | bff, keeper | [SPEC-FR-M10.9](functional/M10/SPEC-FR-M10.9.md) |
+| SPEC-FR-M10.10 | HTTP Cache Headers for BFF Static Resources | VERIFIED | bff | [SPEC-FR-M10.10](functional/M10/SPEC-FR-M10.10.md) |
 
 ### M10: Bugs
 
@@ -168,8 +168,8 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | M3 | Keeper Core | ✔️ IMPLEMENTED | 8 | [M1-M2-M3 Summary](milestones/M1-M2-M3-summary.md) |
 | M4 | Operator Core | ✔️ IMPLEMENTED | 5 | [M4 Summary](milestones/M4-summary.md) |
 | M5 | Agent Core | ✔️ IMPLEMENTED | 9 | [M5 Summary](milestones/M5-summary.md) |
-| M6 | Communities & Messaging | ⏳ IN_PROGRESS | 6 | [M6](milestones/M6-communities.md) |
-| M7 | BFF & UIs | ⬜ PLANNED | 6 | [M7](milestones/M7-bff-uis.md) |
+| M6 | Communities & Messaging | ✔️ IMPLEMENTED | 6 | [M6](milestones/M6-communities.md) |
+| M7 | BFF & UIs | ⏳ IN_PROGRESS | 6 | [M7](milestones/M7-bff-uis.md) |
 | M8 | RAG & LTM | ⬜ PLANNED | 1 | [M8](milestones/M8-rag-ltm.md) |
 | M9 | Governance | ⬜ PLANNED | 17 | [M9](milestones/M9-governance.md) |
 | M10 | Hardening | ⬜ PLANNED | 8 | [M10](milestones/M10-hardening.md) |
