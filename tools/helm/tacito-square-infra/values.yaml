@@ -93,7 +93,7 @@ qdrant:
 
 # ── Keycloak (OIDC provider) ────────────────────────────
 keycloak:
-  enabled: false
+  enabled: true
   command:
     - "/opt/keycloak/bin/kc.sh"
   args:

@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | TASK-M6.BUG6.1                              |
-| Status        | IMPLEMENTED                                 |
+| Status        | VERIFIED                                    |
 | Spec          | BUG-M6.6                                    |
 | Depends On    | none                                        |
 

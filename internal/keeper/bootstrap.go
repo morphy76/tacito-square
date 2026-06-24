@@ -2,8 +2,10 @@ package keeper
 
 import (
 	"context"
+	"crypto/sha256"
 	_ "embed"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -106,9 +108,19 @@ func NewServer(
 
 	probe := health.NewProbe(5*time.Second, checkers...)
 
+	// Precompute ETag for OpenAPI JSON
+	hash := sha256.Sum256(openapiJSON)
+	etag := fmt.Sprintf(`"%x"`, hash)
+
 	r.GET("/healthz", gin.WrapF(probe.LivezHandler))
 	r.GET("/readyz", gin.WrapF(probe.ReadyzHandler))
 	r.GET("/openapi.json", func(c *gin.Context) {
+		c.Header("Cache-Control", "public, max-age=3600, must-revalidate")
+		c.Header("ETag", etag)
+		if c.GetHeader("If-None-Match") == etag {
+			c.Status(http.StatusNotModified)
+			return
+		}
 		c.Data(http.StatusOK, "application/json; charset=utf-8", openapiJSON)
 	})
 	r.GET("/metrics", observability.MetricsHandler())

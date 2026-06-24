@@ -75,6 +75,9 @@ func TestOpenAPI_Returns200AndValidJSON(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "application/json; charset=utf-8", w.Header().Get("Content-Type"))
+	assert.Equal(t, "public, max-age=3600, must-revalidate", w.Header().Get("Cache-Control"))
+	etag := w.Header().Get("ETag")
+	assert.NotEmpty(t, etag)
 
 	var body map[string]interface{}
 	err := json.Unmarshal(w.Body.Bytes(), &body)
@@ -84,6 +87,15 @@ func TestOpenAPI_Returns200AndValidJSON(t *testing.T) {
 	info, ok := body["info"].(map[string]interface{})
 	require.True(t, ok)
 	assert.Equal(t, "Keeper API", info["title"])
+
+	// Test conditional request
+	req2 := httptest.NewRequest(http.MethodGet, "/openapi.json", nil)
+	req2.Header.Set("If-None-Match", etag)
+	w2 := httptest.NewRecorder()
+	srv.ServeHTTP(w2, req2)
+
+	assert.Equal(t, http.StatusNotModified, w2.Code)
+	assert.Empty(t, w2.Body.Bytes())
 }
 
 func TestOpenAPISpec_MatchesCommittedContract(t *testing.T) {

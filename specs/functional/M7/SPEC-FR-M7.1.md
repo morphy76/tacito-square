@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M7.1                                |
-| Status        | ACCEPTED                                    |
+| Status        | VERIFIED                                    |
 | Milestone     | M7                                          |
 | Component     | bff                                         |
 | Depends On    | SPEC-FR-M2.6                                |
@@ -16,14 +16,14 @@ The BFF (Backend For Frontend) serves as the sole entry point and API bridge lay
 ## Specification
 
 ### 1. Route Namespace & View-Model Bridge
-* The BFF MUST serve its UI-facing APIs under the dedicated route namespace `/api/bff/v1/` (e.g., `/api/bff/v1/configurator/*`, `/api/bff/v1/auditor/*`).
+* The BFF MUST serve its UI-facing APIs under the dedicated route namespace `/api/v1/` (e.g., `/api/v1/configurator/*`, `/api/v1/auditor/*`).
 * The BFF MUST NOT act as a dumb pass-through proxy. It MUST aggregate and translate backend data models (optimized for business logic) into structured view-models tailored for UI rendering.
 
 ### 2. Token Handler Pattern & Session Management
 * **Stateless Session Storage**: The BFF MUST use **Redis** to store OIDC access tokens, refresh tokens, and cached UserInfo payloads, keyed by a cryptographically secure random Session ID.
 * **Secure Cookie Binding**: The Session ID MUST be sent to the client browser in an encrypted, `HttpOnly`, `Secure`, `SameSite=Strict` cookie.
 * **Transparent Token Refresh**: If an incoming UI request presents a valid session cookie but the access token cached in Redis is expired, the BFF MUST transparently use the cached refresh token to request a new access token from Keycloak, update the cache in Redis, and complete the request.
-* **SSO Backchannel Logout**: The BFF MUST expose an OIDC-compliant backchannel logout endpoint `/api/bff/v1/auth/backchannel-logout`. Upon receiving a valid Logout Token from the IAM (Keycloak), the BFF MUST invalidate all matching user sessions in Redis.
+* **SSO Backchannel Logout**: The BFF MUST expose an OIDC-compliant backchannel logout endpoint `/api/v1/auth/backchannel-logout`. Upon receiving a valid Logout Token from the IAM (Keycloak), the BFF MUST invalidate all matching user sessions in Redis.
 
 ### 3. Tenant Extraction & Internal Propagation
 * **Opaque Token Resolution**: The BFF MUST fetch user profile details from the OIDC UserInfo endpoint upon authentication and cache the payload in Redis.
@@ -31,7 +31,7 @@ The BFF (Backend For Frontend) serves as the sole entry point and API bridge lay
 * **Downstream Propagation**: Outbound calls to backend microservices (e.g., Keeper REST endpoints) MUST propagate the original `Authorization: Bearer <opaque_token>` header. The backend services will perform their own tenant resolution using the shared code module.
 
 ### 4. Real-time Event Streaming (SSE Gateway)
-* The BFF MUST serve an SSE endpoint (e.g., `/api/bff/v1/events/stream`) that forwards real-time event feeds from backend APIs to the UI.
+* The BFF MUST serve an SSE endpoint (e.g., `/api/v1/events/stream`) that forwards real-time event feeds from backend APIs to the UI.
 * The BFF MUST NOT connect directly to backend message brokers (e.g., NATS). Instead, it MUST establish secure proxy connections to downstream backend HTTP SSE endpoints, forward the stream payloads to the UI, and handle connection lifecycles and authentication.
 
 ### 5. Architectural Standards
@@ -41,7 +41,7 @@ The BFF (Backend For Frontend) serves as the sole entry point and API bridge lay
 
 ## Acceptance Criteria
 
-1. **View-Model Isolation**: No frontend UI communicates directly with Keeper or other backend services; all requests route through the BFF under `/api/bff/v1/`.
+1. **View-Model Isolation**: No frontend UI communicates directly with Keeper or other backend services; all requests route through the BFF under `/api/v1/`.
 2. **Cookie Security**: Zero tokens (Access, Refresh, ID) are exposed to client-side Javascript. All cookies are marked `HttpOnly` and `Secure`.
 3. **Session Invalidation**: Invoking the Backchannel Logout endpoint destroys the active Redis session, and the next UI request returns a `401 Unauthorized` response.
 4. **Tenant Scope**: All internal logs and traces in the BFF contain the resolved `tenant_id` field derived from UserInfo.

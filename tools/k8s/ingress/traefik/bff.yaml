@@ -1,0 +1,53 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    field.cattle.io/description: Tacito BFF
+    # traefik.ingress.kubernetes.io/router.middlewares: tacito-strip-ui-prefix@kubernetescrd
+  creationTimestamp: '2026-06-21T22:31:42Z'
+  generation: 3
+  managedFields:
+    - apiVersion: networking.k8s.io/v1
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:status:
+          f:loadBalancer:
+            f:ingress: {}
+      manager: traefik
+      operation: Update
+      subresource: status
+      time: '2026-06-21T22:31:42Z'
+    - apiVersion: networking.k8s.io/v1
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:metadata:
+          f:annotations:
+            .: {}
+            f:field.cattle.io/description: {}
+            f:traefik.ingress.kubernetes.io/router.middlewares: {}
+        f:spec:
+          f:rules: {}
+      manager: steve
+      operation: Update
+      time: '2026-06-21T22:45:23Z'
+  name: bff
+  namespace: tacito
+  resourceVersion: '614976'
+  uid: 800eaf4c-e9e5-4a82-9991-e6b536507335
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: localhost
+      http:
+        paths:
+          - backend:
+              service:
+                name: ts-tacito-square-bff
+                port:
+                  number: 8083
+            path: /ui
+            pathType: Prefix
+status:
+  loadBalancer:
+    ingress:
+      - ip: 192.168.205.2

@@ -164,20 +164,50 @@ operator:
 
 # --- BFF ---
 bff:
-  enabled: false  # enabled in M7
+  enabled: true
   replicaCount: 1
   image:
     registry: ""
     name: tacito-square/bff
     tag: "0.1.0"
     pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: http
+    initialDelaySeconds: 1
+    periodSeconds: 1
+  readinessProbe:
+    httpGet:
+      path: /readyz
+      port: http
+    initialDelaySeconds: 1
+    periodSeconds: 1
   config:
     logLevel: info
     port: 8083
-    keeperUrl: "http://tacito-square-keeper:8080"
+    redis:
+      url: "redis://tacito-infra-redis:6379"
+      prefix: "bff"
     oidc:
       issuer: "https://tacito-infra-keycloak-http:8443/realms/tacito"
+      internalIssuer: ""
       clientId: tacito-ui
+      clientSecret: ""
+      redirectUri: "http://localhost:8083/api/v1/auth/callback"
+      timeout: "5s"
+      circuitBreakerMaxFail: 5
+    session:
+      ttl: "24h"
+    otel:
+      endpoint: "tacito-infra-otel-collector:4317"
     tls:
       caCertPath: "/etc/ssl/tacito/ca.crt"
   service:

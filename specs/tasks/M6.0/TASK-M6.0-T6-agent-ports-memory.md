@@ -5,7 +5,7 @@
 | Task ID     | TASK-M6.0-T6                                            |
 | Spec        | SPEC-FR-M6.0                                            |
 | Boundary    | Agent Memory Layer — `internal/agent/adapters/outbound/redis` |
-| Status      | IMPLEMENTED                                             |
+| Status      | VERIFIED                                                |
 | Depends On  | TASK-M6.0-T1                                            |
 
 ## Objective

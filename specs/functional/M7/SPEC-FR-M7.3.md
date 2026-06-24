@@ -17,9 +17,9 @@ Web interface for monitoring agent activity, conversation logs, audit trails, an
 
 1. The Auditor UI MUST be built with React 19 (per SPEC-NFR-STACK).
 2. The UI MUST be a separate deployment (not bundled with the Configurator UI).
-3. The UI MUST support session-based authentication brokered by the BFF. It MUST invoke `GET /api/bff/v1/auth/me` on startup to verify credentials and roles (roles: `keeper-admin`, `keeper-viewer`).
-4. The UI MUST display real-time agent status per community, listening to the BFF SSE gateway `/api/bff/v1/events/stream`.
-5. The UI MUST provide a conversation log viewer with thread navigation, querying the BFF namespace `/api/bff/v1/auditor/`.
+3. The UI MUST support session-based authentication brokered by the BFF. It MUST invoke `GET /api/v1/auth/me` on startup to verify credentials and roles (roles: `keeper-admin`, `keeper-viewer`).
+4. The UI MUST display real-time agent status per community, listening to the BFF SSE gateway `/api/v1/events/stream`.
+5. The UI MUST provide a conversation log viewer with thread navigation, querying the BFF namespace `/api/v1/auditor/`.
 6. The UI MUST provide audit trail search and filtering.
 7. The UI SHOULD display community health and quota usage dashboards.
 
@@ -28,7 +28,7 @@ Web interface for monitoring agent activity, conversation logs, audit trails, an
 1. **Static Isolation**: Served as a separate single-page application.
 2. **Access Control**: Block users without `keeper-admin` or `keeper-viewer` roles from reading system audit details.
 3. **SSE Connection Persistence**: Automatically connects to the BFF SSE gateway to update active thread displays and agent status indicators in real time without refreshing.
-4. **BFF Routing**: All API calls from the UI target the BFF namespace `/api/bff/v1/auditor/`.
+4. **BFF Routing**: All API calls from the UI target the BFF namespace `/api/v1/auditor/`.
 
 ## Test Plan
 

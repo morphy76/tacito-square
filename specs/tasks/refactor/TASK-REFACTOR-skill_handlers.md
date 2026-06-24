@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | TASK-REFACTOR-skill_handlers                |
-| Status        | IMPLEMENTED                                 |
+| Status        | VERIFIED                                    |
 | Target File   | [skill_handlers.go](file:///Users/R.Pasquini/Projects/side/tacito-square/internal/keeper/adapters/inbound/http/skill_handlers.go)  |
 | Baseline Tests| All existing tests MUST pass without changes |
 
