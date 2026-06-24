@@ -43,6 +43,7 @@ bff:
       url: "redis://:tacito-redis-dev@ts-infra-redis-headless:6379"
     oidc:
       issuer: "http://localhost/auth/realms/tacito"
+      internalIssuer: "http://ts-infra-keycloak-http/auth/realms/tacito"
       clientId: tacito
       clientSecret: "BodOiaMLOJwKIfAwbiK0xuAw6EwwKD8f"
       redirectUri: "http://localhost/ui/api/v1/auth/callback"

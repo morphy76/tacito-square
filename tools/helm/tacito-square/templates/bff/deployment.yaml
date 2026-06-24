@@ -34,6 +34,8 @@ spec:
               value: "http://{{ include "tacito-square.fullname" . }}-keeper:{{ .Values.keeper.service.port }}"
             - name: TS_BFF_OIDC_ISSUER
               value: {{ .Values.bff.config.oidc.issuer | quote }}
+            - name: TS_BFF_OIDC_INTERNAL_ISSUER
+              value: {{ .Values.bff.config.oidc.internalIssuer | quote }}
             - name: TS_BFF_OIDC_CLIENT_ID
               value: {{ .Values.bff.config.oidc.clientId | quote }}
             - name: TS_BFF_OIDC_CLIENT_SECRET

@@ -38,6 +38,7 @@ func main() {
 	v.SetDefault("oidc.client_secret", "")
 	v.SetDefault("oidc.redirect_uri", "http://localhost:8083/api/v1/auth/callback")
 	v.SetDefault("oidc.issuer", "http://localhost:8080/realms/tacito")
+	v.SetDefault("oidc.internal_issuer", "")
 	v.SetDefault("oidc.timeout", "5s")
 	v.SetDefault("oidc.circuit_breaker_max_fail", uint32(5))
 	v.SetDefault("bff.ui_path", "/ui")
@@ -110,6 +111,7 @@ func main() {
 		ClientSecret:          v.GetString("oidc.client_secret"),
 		RedirectURI:           v.GetString("oidc.redirect_uri"),
 		Issuer:                v.GetString("oidc.issuer"),
+		InternalIssuer:        v.GetString("oidc.internal_issuer"),
 		Timeout:               v.GetDuration("oidc.timeout"),
 		CircuitBreakerMaxFail: v.GetUint32("oidc.circuit_breaker_max_fail"),
 	}

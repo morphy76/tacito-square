@@ -198,6 +198,7 @@ bff:
       prefix: "bff"
     oidc:
       issuer: "https://tacito-infra-keycloak-http:8443/realms/tacito"
+      internalIssuer: ""
       clientId: tacito-ui
       clientSecret: ""
       redirectUri: "http://localhost:8083/api/v1/auth/callback"
