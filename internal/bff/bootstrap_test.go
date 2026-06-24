@@ -22,11 +22,11 @@ import (
 // Define mock structures for testing bootstrap
 type mockSessionUseCase struct{}
 
-func (m *mockSessionUseCase) InitiateLogin(ctx context.Context) (string, string, error) {
+func (m *mockSessionUseCase) InitiateLogin(ctx context.Context, redirectTo string) (string, string, error) {
 	return "", "", nil
 }
-func (m *mockSessionUseCase) HandleCallback(ctx context.Context, code, state string) (*model.Session, error) {
-	return nil, nil
+func (m *mockSessionUseCase) HandleCallback(ctx context.Context, code, state string) (*model.Session, string, error) {
+	return nil, "", nil
 }
 func (m *mockSessionUseCase) RefreshSession(ctx context.Context, sessionID string) (*model.Session, error) {
 	return nil, nil
@@ -65,6 +65,12 @@ func (m *mockSessionStore) DeleteByOIDCSessionID(ctx context.Context, issuer, oi
 	return nil
 }
 func (m *mockSessionStore) Ping(ctx context.Context) error { return m.pingErr }
+func (m *mockSessionStore) SavePendingState(ctx context.Context, state, redirectTo string, ttl time.Duration) error {
+	return nil
+}
+func (m *mockSessionStore) GetAndDeletePendingState(ctx context.Context, state string) (string, error) {
+	return "", nil
+}
 
 var _ outbound.SessionStore = (*mockSessionStore)(nil)
 
@@ -280,7 +286,7 @@ func TestBFFServer_SecureIndex_NoCookie_Redirects(t *testing.T) {
 	srv.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusFound, w.Code)
-	assert.Equal(t, "/ui/api/v1/auth/login", w.Header().Get("Location"))
+	assert.Equal(t, "/ui/api/v1/auth/login?redirect_to=%2Fui%2Fsecure%2F", w.Header().Get("Location"))
 }
 
 func TestBFFServer_SecureIndex_WithCookie_Success(t *testing.T) {
@@ -326,7 +332,7 @@ func TestBFFServer_FaviconEndpoint(t *testing.T) {
 
 	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
 
-	req := httptest.NewRequest(http.MethodGet, "/favicon.ico", nil)
+	req := httptest.NewRequest(http.MethodGet, "/ui/favicon.ico", nil)
 	w := httptest.NewRecorder()
 	srv.ServeHTTP(w, req)
 
@@ -410,7 +416,7 @@ func TestBFFServer_StaticCaching_Favicon(t *testing.T) {
 
 	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
 
-	req := httptest.NewRequest(http.MethodGet, "/favicon.ico", nil)
+	req := httptest.NewRequest(http.MethodGet, "/ui/favicon.ico", nil)
 	w := httptest.NewRecorder()
 	srv.ServeHTTP(w, req)
 
@@ -419,8 +425,8 @@ func TestBFFServer_StaticCaching_Favicon(t *testing.T) {
 	etag := w.Header().Get("ETag")
 	assert.NotEmpty(t, etag)
 
-	// Test conditional request GET /favicon.ico
-	req2 := httptest.NewRequest(http.MethodGet, "/favicon.ico", nil)
+	// Test conditional request GET /ui/favicon.ico
+	req2 := httptest.NewRequest(http.MethodGet, "/ui/favicon.ico", nil)
 	req2.Header.Set("If-None-Match", etag)
 	w2 := httptest.NewRecorder()
 	srv.ServeHTTP(w2, req2)

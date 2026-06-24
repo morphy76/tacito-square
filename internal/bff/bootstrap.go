@@ -112,15 +112,6 @@ func NewServer(
 	r.GET("/healthz", gin.WrapF(probe.LivezHandler))
 	r.GET("/readyz", gin.WrapF(probe.ReadyzHandler))
 	r.GET("/metrics", observability.MetricsHandler())
-	r.GET("/favicon.ico", func(c *gin.Context) {
-		c.Header("Cache-Control", "public, max-age=604800")
-		c.Header("ETag", faviconETag)
-		if c.GetHeader("If-None-Match") == faviconETag {
-			c.Status(http.StatusNotModified)
-			return
-		}
-		c.Data(http.StatusOK, "image/x-icon", faviconICO)
-	})
 
 	// Serve OIDC / OpenAPI spec
 	var finalOpenAPI []byte
@@ -133,6 +124,16 @@ func NewServer(
 	// Precompute ETag for OpenAPI JSON
 	hash := sha256.Sum256(finalOpenAPI)
 	etag := fmt.Sprintf(`"%x"`, hash)
+
+	faviconHandler := func(c *gin.Context) {
+		c.Header("Cache-Control", "public, max-age=604800")
+		c.Header("ETag", faviconETag)
+		if c.GetHeader("If-None-Match") == faviconETag {
+			c.Status(http.StatusNotModified)
+			return
+		}
+		c.Data(http.StatusOK, "image/x-icon", faviconICO)
+	}
 
 	welcomeHandler := func(c *gin.Context) {
 		c.Header("Cache-Control", "public, max-age=0, must-revalidate")
@@ -168,6 +169,7 @@ func NewServer(
 			}
 			welcomeHandler(c)
 		})
+		uiGroup.GET("/favicon.ico", faviconHandler)
 		uiGroup.GET("/", welcomeHandler)
 		uiGroup.GET("/index.html", welcomeHandler)
 		uiGroup.GET("/openapi.json", func(c *gin.Context) {
@@ -199,7 +201,6 @@ func NewServer(
 		}
 		c.Data(http.StatusOK, "application/json; charset=utf-8", finalOpenAPI)
 	})
-
 
 	// Register application specific routes
 	httpAdapter.RegisterRoutes(r, sessionUC, eventUC, cfg.UIPath)

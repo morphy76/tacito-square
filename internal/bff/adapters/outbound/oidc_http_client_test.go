@@ -96,3 +96,55 @@ func TestOIDCClient_CircuitBreaker(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, callsBefore, callCount, "circuit breaker should prevent further calls to server")
 }
+
+// TestOIDCClient_InternalIssuer_RewritesEndpoints verifies that when InternalIssuer
+// is configured, the discovery request and all subsequent endpoint calls (token,
+// userinfo) use the internal cluster URL rather than the public localhost URL.
+// This covers the scenario where the BFF runs inside Kubernetes but Keycloak is
+// only reachable from the browser via localhost through a Traefik ingress.
+func TestOIDCClient_InternalIssuer_RewritesEndpoints(t *testing.T) {
+	// publicIssuer simulates what the browser uses (localhost — unreachable from inside the pod).
+	const publicIssuer = "http://localhost/auth/realms/tacito"
+
+	// The mock server acts as the internal Keycloak service.
+	// It handles: GET /.well-known/openid-configuration, POST /token, GET /userinfo.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/auth/realms/tacito/.well-known/openid-configuration":
+			// Discovery document — endpoints reference the *public* issuer
+			// (as a real Keycloak would), but we expect the client to rewrite them.
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"token_endpoint":    publicIssuer + "/protocol/openid-connect/token",
+				"userinfo_endpoint": publicIssuer + "/protocol/openid-connect/userinfo",
+				"jwks_uri":          publicIssuer + "/protocol/openid-connect/certs",
+			})
+		case "/auth/realms/tacito/protocol/openid-connect/token":
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"access_token":  "internal-access-token",
+				"refresh_token": "internal-refresh-token",
+				"id_token":      "header.e30K.sig",
+				"token_type":    "Bearer",
+				"expires_in":    3600,
+			})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	cfg := outbound.OIDCClientConfig{
+		ClientID:       "tacito",
+		ClientSecret:   "secret",
+		RedirectURI:    "http://localhost/ui/api/v1/auth/callback",
+		Issuer:         publicIssuer,
+		InternalIssuer: srv.URL + "/auth/realms/tacito",
+		Timeout:        5 * time.Second,
+	}
+	client := outbound.NewOIDCHTTPClient(cfg)
+
+	tokenSet, err := client.ExchangeCode(context.Background(), "auth-code", cfg.RedirectURI)
+	require.NoError(t, err, "ExchangeCode must succeed when internal issuer routes to the mock server")
+	assert.Equal(t, "internal-access-token", tokenSet.AccessToken)
+	assert.Equal(t, "internal-refresh-token", tokenSet.RefreshToken)
+}

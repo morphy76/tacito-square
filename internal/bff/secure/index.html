@@ -1,16 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Secure area for Tacito Square BFF - The gateway and orchestration layer for the Tacito Square agent community." />
+  <meta name="description"
+    content="Secure area for Tacito Square BFF - The gateway and orchestration layer for the Tacito Square agent community." />
   <title>Tacito Square BFF - Secure Zone</title>
-  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-  
+  <link rel="icon" type="image/x-icon" href="../favicon.ico" />
+
   <!-- Premium Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;600;800&display=swap"
+    rel="stylesheet" />
 
   <style>
     :root {
@@ -19,7 +23,7 @@
       --color-card-border: rgba(226, 232, 240, 0.08);
       --color-text-primary: #f2f5f9;
       --color-text-secondary: #94a3b8;
-      
+
       /* Piazza Tacito Color Palette */
       --color-steel: #e2e8f0;
       --color-steel-glow: #00f2fe;
@@ -27,10 +31,10 @@
       --color-porphyry-glow: #ff5e62;
       --color-water: #1e3c72;
       --color-water-glow: #2a5298;
-      
+
       --font-heading: 'Outfit', sans-serif;
       --font-body: 'Inter', sans-serif;
-      
+
       --transition-smooth: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
@@ -59,7 +63,7 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: 
+      background:
         radial-gradient(circle at 80% 20%, rgba(200, 44, 60, 0.12) 0%, transparent 40%),
         radial-gradient(circle at 20% 80%, rgba(30, 60, 114, 0.18) 0%, transparent 50%),
         radial-gradient(circle at 50% 50%, rgba(11, 12, 16, 1) 0%, rgba(5, 5, 8, 1) 100%);
@@ -72,13 +76,12 @@
       left: 50%;
       width: 2px;
       height: 100%;
-      background: linear-gradient(to bottom, 
-        transparent 0%, 
-        rgba(0, 242, 254, 0.15) 20%, 
-        rgba(0, 242, 254, 0.35) 50%, 
-        rgba(200, 44, 60, 0.25) 80%, 
-        transparent 100%
-      );
+      background: linear-gradient(to bottom,
+          transparent 0%,
+          rgba(0, 242, 254, 0.15) 20%,
+          rgba(0, 242, 254, 0.35) 50%,
+          rgba(200, 44, 60, 0.25) 80%,
+          transparent 100%);
       transform: translateX(-50%);
       z-index: 2;
       box-shadow: 0 0 20px rgba(0, 242, 254, 0.25);
@@ -95,8 +98,13 @@
     }
 
     @keyframes rotateRing {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
     }
 
     /* Glassmorphism Dashboard Card */
@@ -108,7 +116,7 @@
       border: 1px solid var(--color-card-border);
       border-radius: 24px;
       padding: 40px;
-      box-shadow: 
+      box-shadow:
         0 4px 30px rgba(0, 0, 0, 0.4),
         inset 0 1px 2px rgba(255, 255, 255, 0.05);
       backdrop-filter: blur(16px);
@@ -124,7 +132,7 @@
 
     .glass-card:hover {
       border-color: rgba(200, 44, 60, 0.25);
-      box-shadow: 
+      box-shadow:
         0 20px 50px rgba(0, 0, 0, 0.5),
         0 0 40px rgba(200, 44, 60, 0.05),
         inset 0 1px 2px rgba(255, 255, 255, 0.08);
@@ -172,13 +180,28 @@
     }
 
     @keyframes spinCounter {
-      0% { transform: rotate(360deg); }
-      100% { transform: rotate(0deg); }
+      0% {
+        transform: rotate(360deg);
+      }
+
+      100% {
+        transform: rotate(0deg);
+      }
     }
 
     @keyframes pulseMast {
-      0%, 100% { transform: scaleY(1); opacity: 0.8; }
-      50% { transform: scaleY(1.2); opacity: 1; filter: brightness(1.2); }
+
+      0%,
+      100% {
+        transform: scaleY(1);
+        opacity: 0.8;
+      }
+
+      50% {
+        transform: scaleY(1.2);
+        opacity: 1;
+        filter: brightness(1.2);
+      }
     }
 
     /* Typography */
@@ -331,17 +354,19 @@
     }
   </style>
 </head>
+
 <body>
 
   <!-- Ambient background elements -->
   <div class="ambient-bg"></div>
   <div class="pennone-mast"></div>
-  
+
   <!-- Zodiac constellation background pattern -->
   <svg class="zodiac-container" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
     <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="0.5" />
-    <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="0.25" stroke-dasharray="2 2" />
-    
+    <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="0.25"
+      stroke-dasharray="2 2" />
+
     <!-- Gemini -->
     <g stroke="rgba(255,255,255,0.25)" stroke-width="0.2" fill="rgba(255,255,255,0.8)">
       <line x1="25" y1="35" x2="30" y2="30" />
@@ -371,7 +396,7 @@
 
   <!-- Central Glassmorphism Card -->
   <main class="glass-card">
-    
+
     <!-- Stylized Fountain Monument Icon -->
     <div class="monument-header">
       <div class="fountain-outer-ring"></div>
@@ -382,17 +407,19 @@
 
     <h1>Tacito Square BFF</h1>
     <div class="subtitle">Secure Zone</div>
-    
+
     <div class="secure-badge">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+        stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;">
         <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
         <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
       </svg>
       Authenticated
     </div>
-    
+
     <p class="description">
-      You are currently logged into the protected backend interface of Tacito Square. Your OIDC authentication token is active and secure.
+      You are currently logged into the protected backend interface of Tacito Square. Your OIDC authentication token is
+      active and secure.
     </p>
 
     <!-- Logout control -->
@@ -408,10 +435,12 @@
 
     <!-- Footer -->
     <div class="credits">
-      Inspired by Terni, Italy &bull; <a href="https://github.com/morphy76/tacito-square" target="_blank" rel="noopener">Tacito Square</a>
+      Inspired by Terni, Italy &bull; <a href="https://github.com/morphy76/tacito-square" target="_blank"
+        rel="noopener">Tacito Square</a>
     </div>
 
   </main>
 
 </body>
+
 </html>

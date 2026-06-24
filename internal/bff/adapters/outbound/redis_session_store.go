@@ -22,6 +22,7 @@ var _ outbound.SessionStore = (*RedisSessionStore)(nil)
 //	bff:<prefix>:session:<sessionID>        → JSON-serialized Session
 //	bff:<prefix>:user-sessions:<userID>     → Redis Set of sessionIDs
 //	bff:<prefix>:oidc-sessions:<issuer>:<sid> → sessionID string
+//	bff:<prefix>:pending-state:<state>      → redirect-to URL string (short-lived)
 type RedisSessionStore struct {
 	client *redis.Client
 	prefix string
@@ -43,6 +44,10 @@ func (s *RedisSessionStore) userSessionsKey(userID string) string {
 
 func (s *RedisSessionStore) oidcSessionKey(issuer, oidcSessionID string) string {
 	return fmt.Sprintf("bff:%s:oidc-session:%s:%s", s.prefix, issuer, oidcSessionID)
+}
+
+func (s *RedisSessionStore) pendingStateKey(state string) string {
+	return fmt.Sprintf("bff:%s:pending-state:%s", s.prefix, state)
 }
 
 // Save persists the session. Note: AccessToken and RefreshToken are serialized via
@@ -170,6 +175,29 @@ func (s *RedisSessionStore) DeleteByOIDCSessionID(ctx context.Context, issuer, o
 // Ping checks the connectivity to the Redis database.
 func (s *RedisSessionStore) Ping(ctx context.Context) error {
 	return s.client.Ping(ctx).Err()
+}
+
+// SavePendingState stores the redirect-to URL keyed by the OIDC state nonce.
+func (s *RedisSessionStore) SavePendingState(ctx context.Context, state, redirectTo string, ttl time.Duration) error {
+	if err := s.client.Set(ctx, s.pendingStateKey(state), redirectTo, ttl).Err(); err != nil {
+		return fmt.Errorf("redis session store: save pending state: %w", err)
+	}
+	log.Debug().Str("state", state).Msg("Pending OIDC state redirect_to saved to Redis")
+	return nil
+}
+
+// GetAndDeletePendingState atomically retrieves and removes the redirect-to URL for the given state nonce.
+// Returns an empty string (no error) when the key is not found.
+func (s *RedisSessionStore) GetAndDeletePendingState(ctx context.Context, state string) (string, error) {
+	val, err := s.client.GetDel(ctx, s.pendingStateKey(state)).Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return "", nil // no stored redirect — caller falls back to default
+		}
+		return "", fmt.Errorf("redis session store: get pending state: %w", err)
+	}
+	log.Debug().Str("state", state).Str("redirect_to", val).Msg("Pending OIDC state redirect_to retrieved from Redis")
+	return val, nil
 }
 
 // sessionDTO is a serialization-safe representation of a Session that preserves token fields.

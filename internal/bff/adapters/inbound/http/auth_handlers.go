@@ -23,7 +23,11 @@ func NewAuthHandler(sessionUC inbound.SessionUseCase, uiPath string) *AuthHandle
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {
-	authURL, state, err := h.sessionUC.InitiateLogin(c.Request.Context())
+	// Capture the original URL the user was trying to access so we can redirect
+	// back to it after a successful login.
+	redirectTo := c.Query("redirect_to")
+
+	authURL, state, err := h.sessionUC.InitiateLogin(c.Request.Context(), redirectTo)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -69,7 +73,7 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 	}
 	http.SetCookie(c.Writer, clearedStateCookie)
 
-	sess, err := h.sessionUC.HandleCallback(c.Request.Context(), code, state)
+	sess, redirectTo, err := h.sessionUC.HandleCallback(c.Request.Context(), code, state)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -89,8 +93,12 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 	}
 	http.SetCookie(c.Writer, sessionCookie)
 
-	// TODO: do a proper redirect to the secured requested URL
-	c.Redirect(http.StatusFound, h.uiPath)
+	// Redirect to the originally-requested resource if stored, otherwise fall back to uiPath.
+	target := redirectTo
+	if target == "" {
+		target = h.uiPath
+	}
+	c.Redirect(http.StatusFound, target)
 }
 
 func (h *AuthHandler) Logout(c *gin.Context) {

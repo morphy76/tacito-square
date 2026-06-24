@@ -3,6 +3,7 @@ package http
 import (
 	"errors"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -81,7 +82,7 @@ func setSessionCookie(c *gin.Context, sessionID string, uiPath string) {
 		Path:     uiPath,
 		Domain:   "",
 		Expires:  time.Now().Add(365 * 24 * time.Hour), // long lived, but actual session validation is server-side/redis
-		MaxAge:   0,                                   // session-scoped
+		MaxAge:   0,                                    // session-scoped
 		Secure:   true,
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
@@ -104,12 +105,27 @@ func clearSessionCookie(c *gin.Context, uiPath string) {
 	http.SetCookie(c.Writer, cookie)
 }
 
-// AuthRedirectMiddleware redirects unauthenticated users to /api/v1/auth/login.
+// AuthRedirectMiddleware redirects unauthenticated users to the login endpoint, appending the
+// original request URI as a redirect_to query parameter so the Login handler can restore it
+// after a successful login.
 func AuthRedirectMiddleware(sessionUC inbound.SessionUseCase, uiPath string) gin.HandlerFunc {
+	loginBase := strings.TrimSuffix(uiPath, "/") + "/api/v1/auth/login"
+
+	buildLoginURL := func(c *gin.Context) string {
+		requestURI := c.Request.RequestURI
+		if requestURI == "" {
+			requestURI = c.Request.URL.RequestURI()
+		}
+		if requestURI == "" || requestURI == "/" {
+			return loginBase
+		}
+		return loginBase + "?redirect_to=" + url.QueryEscape(requestURI)
+	}
+
 	return func(c *gin.Context) {
 		sessionCookie, err := c.Request.Cookie("bff_session_id")
 		if err != nil || sessionCookie.Value == "" {
-			c.Redirect(http.StatusFound, strings.TrimSuffix(uiPath, "/")+ "/api/v1/auth/login")
+			c.Redirect(http.StatusFound, buildLoginURL(c))
 			c.Abort()
 			return
 		}
@@ -124,15 +140,16 @@ func AuthRedirectMiddleware(sessionUC inbound.SessionUseCase, uiPath string) gin
 				newSess, rerr := sessionUC.RefreshSession(ctx, sessionID)
 				if rerr != nil {
 					clearSessionCookie(c, uiPath)
-					c.Redirect(http.StatusFound, strings.TrimSuffix(uiPath, "/")+ "/api/v1/auth/login")
+					c.Redirect(http.StatusFound, buildLoginURL(c))
 					c.Abort()
 					return
 				}
 				setSessionCookie(c, newSess.ID, uiPath)
 				sess = newSess
 			} else {
+				// Other error (e.g. SessionNotFound, SessionInvalidated or sess == nil)
 				clearSessionCookie(c, uiPath)
-				c.Redirect(http.StatusFound, strings.TrimSuffix(uiPath, "/")+ "/api/v1/auth/login")
+				c.Redirect(http.StatusFound, buildLoginURL(c))
 				c.Abort()
 				return
 			}
@@ -158,4 +175,3 @@ func AuthRedirectMiddleware(sessionUC inbound.SessionUseCase, uiPath string) gin
 		c.Next()
 	}
 }
-

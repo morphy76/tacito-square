@@ -10,12 +10,12 @@ import (
 
 type mockSessionUseCase struct{}
 
-func (m *mockSessionUseCase) InitiateLogin(ctx context.Context) (authURL string, state string, err error) {
+func (m *mockSessionUseCase) InitiateLogin(ctx context.Context, redirectTo string) (authURL string, state string, err error) {
 	return "", "", nil
 }
 
-func (m *mockSessionUseCase) HandleCallback(ctx context.Context, code, state string) (*model.Session, error) {
-	return nil, nil
+func (m *mockSessionUseCase) HandleCallback(ctx context.Context, code, state string) (*model.Session, string, error) {
+	return nil, "", nil
 }
 
 func (m *mockSessionUseCase) RefreshSession(ctx context.Context, sessionID string) (*model.Session, error) {

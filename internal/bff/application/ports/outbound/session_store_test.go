@@ -31,6 +31,14 @@ func (m *mockSessionStore) DeleteByOIDCSessionID(ctx context.Context, issuer str
 	return nil
 }
 
+func (m *mockSessionStore) SavePendingState(ctx context.Context, state, redirectTo string, ttl time.Duration) error {
+	return nil
+}
+
+func (m *mockSessionStore) GetAndDeletePendingState(ctx context.Context, state string) (string, error) {
+	return "", nil
+}
+
 // Compile-time assertion
 var _ outbound.SessionStore = (*mockSessionStore)(nil)
 

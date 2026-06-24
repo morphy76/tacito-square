@@ -210,7 +210,7 @@ func TestAuthRedirectMiddleware_MissingCookie_Redirects(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusFound, w.Code)
-	assert.Equal(t, "/ui/api/v1/auth/login", w.Header().Get("Location"))
+	assert.Equal(t, "/ui/api/v1/auth/login?redirect_to=%2Ftest-secure", w.Header().Get("Location"))
 }
 
 func TestAuthRedirectMiddleware_ExpiredSession_Redirects(t *testing.T) {
@@ -240,6 +240,28 @@ func TestAuthRedirectMiddleware_ExpiredSession_Redirects(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusFound, w.Code)
-	assert.Equal(t, "/ui/api/v1/auth/login", w.Header().Get("Location"))
+	assert.Equal(t, "/ui/api/v1/auth/login?redirect_to=%2Ftest-secure", w.Header().Get("Location"))
+}
+
+func TestAuthRedirectMiddleware_AppendsRedirectToQueryParam(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+
+	mockUC := &mockSessionUseCase{}
+
+	r.Use(bffhttp.AuthRedirectMiddleware(mockUC, "/ui"))
+	r.GET("/ui/secure/dashboard", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/ui/secure/dashboard", nil)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusFound, w.Code)
+	location := w.Header().Get("Location")
+	assert.Contains(t, location, "/ui/api/v1/auth/login")
+	assert.Contains(t, location, "redirect_to=")
+	assert.Contains(t, location, "%2Fui%2Fsecure%2Fdashboard")
 }
 

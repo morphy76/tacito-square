@@ -23,4 +23,12 @@ type SessionStore interface {
 
 	// DeleteByOIDCSessionID removes a specific session associated with the given issuer and OIDC sid claim.
 	DeleteByOIDCSessionID(ctx context.Context, issuer string, oidcSessionID string) error
+
+	// SavePendingState stores the redirect-to URL keyed by the OIDC state nonce.
+	// The entry should expire after a short TTL (e.g. 5 minutes) matching the state cookie lifetime.
+	SavePendingState(ctx context.Context, state, redirectTo string, ttl time.Duration) error
+
+	// GetAndDeletePendingState atomically retrieves and removes the redirect-to URL for the given
+	// state nonce. Returns an empty string (no error) when the key is not found.
+	GetAndDeletePendingState(ctx context.Context, state string) (redirectTo string, err error)
 }

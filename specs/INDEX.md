@@ -80,6 +80,12 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | SPEC-FR-M7.6 | BFF primary API surface to use GraphQL | DRAFT | bff, ui | [SPEC-FR-M7.6](functional/M7/SPEC-FR-M7.6.md) |
 | SPEC-FR-M7.7 | Serve Welcome index.html in BFF | VERIFIED | bff | [SPEC-FR-M7.7](functional/M7/SPEC-FR-M7.7.md) |
 
+### M7: Bugs
+
+| ID | Title | Status | Severity | File |
+|----|-------|--------|----------|------|
+| BUG-M7.1 | BFF OIDC Discovery Refused Connection due to localhost Issuer URL | ACCEPTED | HIGH | [BUG-M7.1](tasks/M7.BUG1/BUG-M7.1.md) |
+
 ### M8: RAG & LTM
 
 | ID | Title | Status | Component | File |

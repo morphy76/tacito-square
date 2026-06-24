@@ -31,6 +31,14 @@ type OIDCClientConfig struct {
 	RedirectURI  string
 	Issuer       string
 
+	// InternalIssuer is an optional override for the OIDC discovery and endpoint calls.
+	// Set this when the BFF runs inside a Kubernetes cluster and the public Issuer URL
+	// (e.g. http://localhost/auth/realms/tacito exposed via a Traefik ingress) is not
+	// reachable from within the pod. The BFF will perform discovery against InternalIssuer
+	// and rewrite any discovered endpoints that reference the public Issuer to use
+	// InternalIssuer instead. Token validation still checks the public Issuer claim.
+	InternalIssuer string
+
 	// Explicit endpoint overrides (used in tests; in production populated from OIDC discovery).
 	TokenEndpoint    string
 	UserInfoEndpoint string
@@ -112,9 +120,16 @@ func (c *OIDCHTTPClient) discover(ctx context.Context) error {
 		return nil
 	}
 
-	// 3. Perform OIDC discovery
-	issuer := strings.TrimSuffix(c.cfg.Issuer, "/")
-	discoveryURL := issuer + "/.well-known/openid-configuration"
+	// 3. Perform OIDC discovery.
+	// When InternalIssuer is set we query it instead of the public Issuer so that the BFF,
+	// which runs inside the cluster, can reach Keycloak via its cluster-internal Service name
+	// rather than the public hostname that is only reachable from the user's browser.
+	publicIssuer := strings.TrimSuffix(c.cfg.Issuer, "/")
+	discoveryBase := publicIssuer
+	if c.cfg.InternalIssuer != "" {
+		discoveryBase = strings.TrimSuffix(c.cfg.InternalIssuer, "/")
+	}
+	discoveryURL := discoveryBase + "/.well-known/openid-configuration"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, discoveryURL, nil)
 	if err != nil {
@@ -141,23 +156,34 @@ func (c *OIDCHTTPClient) discover(ctx context.Context) error {
 		return fmt.Errorf("decode discovery response: %w", err)
 	}
 
+	// rewriteEndpoint replaces the public issuer prefix with the internal issuer prefix
+	// in any discovered endpoint URL. This is necessary because the discovery document
+	// returned by Keycloak will reference the public hostname, but the BFF must route
+	// all backend-to-Keycloak traffic through the internal cluster service.
+	rewriteEndpoint := func(endpoint string) string {
+		if c.cfg.InternalIssuer != "" && endpoint != "" && strings.HasPrefix(endpoint, publicIssuer) {
+			return strings.TrimSuffix(c.cfg.InternalIssuer, "/") + endpoint[len(publicIssuer):]
+		}
+		return endpoint
+	}
+
 	// Use discovered endpoints, falling back to overrides if they are defined
 	if config.TokenEndpoint != "" {
-		c.tokenEndpoint = config.TokenEndpoint
+		c.tokenEndpoint = rewriteEndpoint(config.TokenEndpoint)
 	} else {
 		c.tokenEndpoint = c.cfg.TokenEndpoint
 	}
 
 	if config.UserInfoEndpoint != "" {
-		c.userinfoEndpoint = config.UserInfoEndpoint
+		c.userinfoEndpoint = rewriteEndpoint(config.UserInfoEndpoint)
 	} else {
 		c.userinfoEndpoint = c.cfg.UserInfoEndpoint
 	}
 
 	if config.JwksURI != "" {
-		c.jwksURI = config.JwksURI
+		c.jwksURI = rewriteEndpoint(config.JwksURI)
 	} else {
-		c.jwksURI = c.cfg.Issuer + "/.well-known/jwks.json"
+		c.jwksURI = rewriteEndpoint(c.cfg.Issuer + "/.well-known/jwks.json")
 	}
 
 	c.discovered = true

@@ -41,6 +41,15 @@ func (m *mockSessionStore) DeleteByOIDCSessionID(ctx context.Context, issuer str
 	return m.Called(ctx, issuer, oidcSessionID).Error(0)
 }
 
+func (m *mockSessionStore) SavePendingState(ctx context.Context, state, redirectTo string, ttl time.Duration) error {
+	return m.Called(ctx, state, redirectTo, ttl).Error(0)
+}
+
+func (m *mockSessionStore) GetAndDeletePendingState(ctx context.Context, state string) (string, error) {
+	args := m.Called(ctx, state)
+	return args.String(0), args.Error(1)
+}
+
 type mockOIDCProvider struct {
 	mock.Mock
 }
@@ -113,12 +122,74 @@ func TestSessionService_HandleCallback_Success(t *testing.T) {
 		assert.Equal(t, "refresh-token", sess.RefreshToken)
 		assert.Equal(t, cfg.Issuer, sess.Issuer)
 	})
+	store.On("GetAndDeletePendingState", ctx, state).Return("", nil)
 
-	session, err := svc.HandleCallback(ctx, code, state)
+	session, _, err := svc.HandleCallback(ctx, code, state)
 	assert.NoError(t, err)
 	assert.NotNil(t, session)
 	assert.Equal(t, "user-sub", session.UserID)
 	assert.Equal(t, "tenant-1", session.TenantID)
+	mock.AssertExpectationsForObjects(t, store, oidc)
+}
+
+func TestSessionService_InitiateLogin_StoresPendingState(t *testing.T) {
+	store := &mockSessionStore{}
+	oidc := &mockOIDCProvider{}
+	cfg := service.SessionConfig{
+		ClientID:    "client-id",
+		RedirectURI: "http://localhost:8080/callback",
+		Issuer:      "https://issuer.tacito.local",
+		SessionTTL:  24 * time.Hour,
+	}
+	svc := service.NewSessionService(store, oidc, cfg)
+	ctx := context.Background()
+
+	// Expect SavePendingState to be called with any state value and the given redirectTo
+	store.On("SavePendingState", ctx, mock.AnythingOfType("string"), "/ui/secure/page", 5*time.Minute).Return(nil)
+
+	_, state, err := svc.InitiateLogin(ctx, "/ui/secure/page")
+	assert.NoError(t, err)
+	assert.NotEmpty(t, state)
+	mock.AssertExpectationsForObjects(t, store, oidc)
+}
+
+func TestSessionService_HandleCallback_ReturnsRedirectTo(t *testing.T) {
+	store := &mockSessionStore{}
+	oidc := &mockOIDCProvider{}
+	cfg := service.SessionConfig{
+		ClientID:     "client-id",
+		ClientSecret: "client-secret",
+		RedirectURI:  "http://localhost:8080/callback",
+		SessionTTL:   24 * time.Hour,
+		Issuer:       "https://issuer.tacito.local",
+	}
+	svc := service.NewSessionService(store, oidc, cfg)
+
+	code := "auth-code"
+	state := "some-state-nonce"
+	ctx := context.Background()
+
+	tokenSet := &outbound.TokenSet{
+		AccessToken:  "access-token",
+		RefreshToken: "refresh-token",
+		ExpiresIn:    1 * time.Hour,
+	}
+	userInfo := &model.UserInfoPayload{
+		Sub:            "user-sub",
+		Email:          "user@tacito.local",
+		TenantID:       "tenant-1",
+		SubscriptionID: "sub-1",
+	}
+
+	oidc.On("ExchangeCode", ctx, code, cfg.RedirectURI).Return(tokenSet, nil)
+	oidc.On("FetchUserInfo", ctx, "access-token").Return(userInfo, nil)
+	store.On("Save", ctx, mock.AnythingOfType("*model.Session"), cfg.SessionTTL).Return(nil)
+	store.On("GetAndDeletePendingState", ctx, state).Return("/ui/secure/page", nil)
+
+	session, redirectTo, err := svc.HandleCallback(ctx, code, state)
+	assert.NoError(t, err)
+	assert.NotNil(t, session)
+	assert.Equal(t, "/ui/secure/page", redirectTo)
 	mock.AssertExpectationsForObjects(t, store, oidc)
 }
 
@@ -134,7 +205,7 @@ func TestSessionService_HandleCallback_ExchangeError(t *testing.T) {
 	ctx := context.Background()
 	oidc.On("ExchangeCode", ctx, "bad-code", cfg.RedirectURI).Return(nil, errors.New("exchange failed"))
 
-	session, err := svc.HandleCallback(ctx, "bad-code", "state")
+	session, _, err := svc.HandleCallback(ctx, "bad-code", "state")
 	assert.Error(t, err)
 	assert.Nil(t, session)
 	assert.Contains(t, err.Error(), "exchange failed")

@@ -73,7 +73,9 @@ func NewSessionService(store outbound.SessionStore, oidc outbound.OIDCProvider, 
 }
 
 // InitiateLogin generates the OIDC authorization URL and state token.
-func (s *SessionService) InitiateLogin(ctx context.Context) (string, string, error) {
+// It stores redirectTo (the URL the user was trying to reach) keyed by the
+// generated state nonce in the session store, so it can be recovered in HandleCallback.
+func (s *SessionService) InitiateLogin(ctx context.Context, redirectTo string) (string, string, error) {
 	state := uuid.New().String()
 
 	u, err := url.Parse(s.cfg.Issuer)
@@ -93,19 +95,26 @@ func (s *SessionService) InitiateLogin(ctx context.Context) (string, string, err
 	q.Set("state", state)
 	u.RawQuery = q.Encode()
 
+	const pendingStateTTL = 5 * time.Minute
+	if err := s.store.SavePendingState(ctx, state, redirectTo, pendingStateTTL); err != nil {
+		// Non-fatal: log a warning but do not block login — the callback will fall back to uiPath.
+		log.Warn().Err(err).Str("state", state).Msg("Failed to save pending OIDC state redirect_to")
+	}
+
 	return u.String(), state, nil
 }
 
-// HandleCallback exchanges an auth code for tokens, retrieves user claims, and creates a session.
-func (s *SessionService) HandleCallback(ctx context.Context, code, state string) (*model.Session, error) {
+// HandleCallback exchanges an auth code for tokens, retrieves user claims, creates a session,
+// and recovers the redirect-to URL that was stored during InitiateLogin.
+func (s *SessionService) HandleCallback(ctx context.Context, code, state string) (*model.Session, string, error) {
 	tokens, err := s.oidc.ExchangeCode(ctx, code, s.cfg.RedirectURI)
 	if err != nil {
-		return nil, fmt.Errorf("failed to exchange authorization code: %w", err)
+		return nil, "", fmt.Errorf("failed to exchange authorization code: %w", err)
 	}
 
 	userInfo, err := s.oidc.FetchUserInfo(ctx, tokens.AccessToken)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch user info: %w", err)
+		return nil, "", fmt.Errorf("failed to fetch user info: %w", err)
 	}
 
 	oidcSessionID := extractSessionID(tokens.IDToken)
@@ -121,11 +130,11 @@ func (s *SessionService) HandleCallback(ctx context.Context, code, state string)
 		tokens.ExpiresIn,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create session aggregate: %w", err)
+		return nil, "", fmt.Errorf("failed to create session aggregate: %w", err)
 	}
 
 	if err := s.store.Save(ctx, session, s.cfg.SessionTTL); err != nil {
-		return nil, fmt.Errorf("failed to persist session: %w", err)
+		return nil, "", fmt.Errorf("failed to persist session: %w", err)
 	}
 
 	log.Info().
@@ -134,7 +143,14 @@ func (s *SessionService) HandleCallback(ctx context.Context, code, state string)
 		Str("tenant_id", session.TenantID).
 		Msg("BFF session created")
 
-	return session, nil
+	// Recover the redirect-to URL stored during InitiateLogin (best-effort).
+	redirectTo, err := s.store.GetAndDeletePendingState(ctx, state)
+	if err != nil {
+		log.Warn().Err(err).Str("state", state).Msg("Failed to retrieve pending OIDC state redirect_to")
+		redirectTo = ""
+	}
+
+	return session, redirectTo, nil
 }
 
 // RefreshSession performs a thundering-herd protected OIDC token refresh if expired.
