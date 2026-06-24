@@ -179,8 +179,20 @@ func TestBFFServer_OpenAPIEndpoint(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "application/json; charset=utf-8", w.Header().Get("Content-Type"))
+	assert.Equal(t, "public, max-age=3600, must-revalidate", w.Header().Get("Cache-Control"))
+	etag := w.Header().Get("ETag")
+	assert.NotEmpty(t, etag)
 	assert.Contains(t, w.Body.String(), `"openapi": "3.1.0"`)
 	assert.Contains(t, w.Body.String(), `"version": "0.1.0"`)
+
+	// Test conditional request
+	req2 := httptest.NewRequest(http.MethodGet, "/openapi.json", nil)
+	req2.Header.Set("If-None-Match", etag)
+	w2 := httptest.NewRecorder()
+	srv.ServeHTTP(w2, req2)
+
+	assert.Equal(t, http.StatusNotModified, w2.Code)
+	assert.Empty(t, w2.Body.Bytes())
 }
 
 func TestBFFServer_UIOpenAPIEndpoint(t *testing.T) {
@@ -195,8 +207,20 @@ func TestBFFServer_UIOpenAPIEndpoint(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "application/json; charset=utf-8", w.Header().Get("Content-Type"))
+	assert.Equal(t, "public, max-age=3600, must-revalidate", w.Header().Get("Cache-Control"))
+	etag := w.Header().Get("ETag")
+	assert.NotEmpty(t, etag)
 	assert.Contains(t, w.Body.String(), `"openapi": "3.1.0"`)
 	assert.Contains(t, w.Body.String(), `"version": "0.1.0"`)
+
+	// Test conditional request
+	req2 := httptest.NewRequest(http.MethodGet, "/ui/openapi.json", nil)
+	req2.Header.Set("If-None-Match", etag)
+	w2 := httptest.NewRecorder()
+	srv.ServeHTTP(w2, req2)
+
+	assert.Equal(t, http.StatusNotModified, w2.Code)
+	assert.Empty(t, w2.Body.Bytes())
 }
 
 func TestBFFServer_RootWelcomePage_RedirectsToSlash(t *testing.T) {
@@ -295,3 +319,113 @@ func TestBFFServer_SecureIndex_WithCookie_Success(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "<title>Tacito Square BFF - Secure Zone</title>")
 	assert.Contains(t, w.Body.String(), "Secure Logout")
 }
+
+func TestBFFServer_FaviconEndpoint(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
+
+	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
+
+	req := httptest.NewRequest(http.MethodGet, "/favicon.ico", nil)
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "image/x-icon", w.Header().Get("Content-Type"))
+	assert.NotEmpty(t, w.Body.Bytes())
+}
+
+func TestBFFServer_StaticCaching_WelcomeHTML(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
+
+	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
+
+	// Test GET /ui/
+	req := httptest.NewRequest(http.MethodGet, "/ui/", nil)
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "public, max-age=0, must-revalidate", w.Header().Get("Cache-Control"))
+	etag := w.Header().Get("ETag")
+	assert.NotEmpty(t, etag)
+
+	// Test conditional request GET /ui/
+	req2 := httptest.NewRequest(http.MethodGet, "/ui/", nil)
+	req2.Header.Set("If-None-Match", etag)
+	w2 := httptest.NewRecorder()
+	srv.ServeHTTP(w2, req2)
+
+	assert.Equal(t, http.StatusNotModified, w2.Code)
+	assert.Empty(t, w2.Body.Bytes())
+
+	// Test GET /ui/index.html
+	req3 := httptest.NewRequest(http.MethodGet, "/ui/index.html", nil)
+	w3 := httptest.NewRecorder()
+	srv.ServeHTTP(w3, req3)
+
+	assert.Equal(t, http.StatusOK, w3.Code)
+	assert.Equal(t, "public, max-age=0, must-revalidate", w3.Header().Get("Cache-Control"))
+	assert.Equal(t, etag, w3.Header().Get("ETag"))
+}
+
+func TestBFFServer_StaticCaching_SecureHTML(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
+
+	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
+
+	// Test GET /ui/secure/ with auth cookie
+	req := httptest.NewRequest(http.MethodGet, "/ui/secure/", nil)
+	req.AddCookie(&http.Cookie{
+		Name:  "bff_session_id",
+		Value: "session-123",
+	})
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "public, max-age=0, must-revalidate", w.Header().Get("Cache-Control"))
+	etag := w.Header().Get("ETag")
+	assert.NotEmpty(t, etag)
+
+	// Test conditional request GET /ui/secure/
+	req2 := httptest.NewRequest(http.MethodGet, "/ui/secure/", nil)
+	req2.AddCookie(&http.Cookie{
+		Name:  "bff_session_id",
+		Value: "session-123",
+	})
+	req2.Header.Set("If-None-Match", etag)
+	w2 := httptest.NewRecorder()
+	srv.ServeHTTP(w2, req2)
+
+	assert.Equal(t, http.StatusNotModified, w2.Code)
+	assert.Empty(t, w2.Body.Bytes())
+}
+
+func TestBFFServer_StaticCaching_Favicon(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
+
+	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
+
+	req := httptest.NewRequest(http.MethodGet, "/favicon.ico", nil)
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "public, max-age=604800", w.Header().Get("Cache-Control"))
+	etag := w.Header().Get("ETag")
+	assert.NotEmpty(t, etag)
+
+	// Test conditional request GET /favicon.ico
+	req2 := httptest.NewRequest(http.MethodGet, "/favicon.ico", nil)
+	req2.Header.Set("If-None-Match", etag)
+	w2 := httptest.NewRecorder()
+	srv.ServeHTTP(w2, req2)
+
+	assert.Equal(t, http.StatusNotModified, w2.Code)
+	assert.Empty(t, w2.Body.Bytes())
+}
+

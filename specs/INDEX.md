@@ -125,6 +125,9 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | SPEC-FR-M10.5 | K8s NetworkPolicies | DRAFT | operator | [SPEC-FR-M10.5](functional/M10/SPEC-FR-M10.5.md) |
 | SPEC-FR-M10.6 | Comprehensive System Documentation | DRAFT | docs | [SPEC-FR-M10.6](functional/M10/SPEC-FR-M10.6.md) |
 | SPEC-FR-M10.7 | Benchmark Suite & Integration Coverage Verification | ACCEPTED | test | [SPEC-FR-M10.7](functional/M10/SPEC-FR-M10.7.md) |
+| SPEC-FR-M10.8 | Compact JSON API Responses | IN_PROGRESS | keeper, shared | [SPEC-FR-M10.8](functional/M10/SPEC-FR-M10.8.md) |
+| SPEC-FR-M10.9 | HTTP Cache Headers for OpenAPI Specification Endpoints | IN_PROGRESS | bff, keeper | [SPEC-FR-M10.9](functional/M10/SPEC-FR-M10.9.md) |
+| SPEC-FR-M10.10 | HTTP Cache Headers for BFF Static Resources | ACCEPTED | bff | [SPEC-FR-M10.10](functional/M10/SPEC-FR-M10.10.md) |
 
 ### M10: Bugs
 

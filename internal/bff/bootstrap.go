@@ -2,6 +2,7 @@ package bff
 
 import (
 	"context"
+	"crypto/sha256"
 	_ "embed"
 	"fmt"
 	"net/http"
@@ -28,6 +29,9 @@ var welcomeHTML []byte
 
 //go:embed secure/index.html
 var secureIndexHTML []byte
+
+//go:embed favicon.ico
+var faviconICO []byte
 
 // Config holds configuration parameters for the BFF server bootstrap.
 type Config struct {
@@ -94,10 +98,29 @@ func NewServer(
 
 	probe := health.NewProbe(5*time.Second, checkers...)
 
+	// Precompute ETags for static resources
+	welcomeHash := sha256.Sum256(welcomeHTML)
+	welcomeETag := fmt.Sprintf(`"%x"`, welcomeHash)
+
+	secureHash := sha256.Sum256(secureIndexHTML)
+	secureETag := fmt.Sprintf(`"%x"`, secureHash)
+
+	faviconHash := sha256.Sum256(faviconICO)
+	faviconETag := fmt.Sprintf(`"%x"`, faviconHash)
+
 	// Public system endpoints (metrics and health check probes)
 	r.GET("/healthz", gin.WrapF(probe.LivezHandler))
 	r.GET("/readyz", gin.WrapF(probe.ReadyzHandler))
 	r.GET("/metrics", observability.MetricsHandler())
+	r.GET("/favicon.ico", func(c *gin.Context) {
+		c.Header("Cache-Control", "public, max-age=604800")
+		c.Header("ETag", faviconETag)
+		if c.GetHeader("If-None-Match") == faviconETag {
+			c.Status(http.StatusNotModified)
+			return
+		}
+		c.Data(http.StatusOK, "image/x-icon", faviconICO)
+	})
 
 	// Serve OIDC / OpenAPI spec
 	var finalOpenAPI []byte
@@ -105,6 +128,30 @@ func NewServer(
 		finalOpenAPI = []byte(strings.ReplaceAll(string(openapiJSON), `"version": "0.1.0"`, fmt.Sprintf(`"version": "%s"`, cfg.Version)))
 	} else {
 		finalOpenAPI = openapiJSON
+	}
+
+	// Precompute ETag for OpenAPI JSON
+	hash := sha256.Sum256(finalOpenAPI)
+	etag := fmt.Sprintf(`"%x"`, hash)
+
+	welcomeHandler := func(c *gin.Context) {
+		c.Header("Cache-Control", "public, max-age=0, must-revalidate")
+		c.Header("ETag", welcomeETag)
+		if c.GetHeader("If-None-Match") == welcomeETag {
+			c.Status(http.StatusNotModified)
+			return
+		}
+		c.Data(http.StatusOK, "text/html; charset=utf-8", welcomeHTML)
+	}
+
+	secureHandler := func(c *gin.Context) {
+		c.Header("Cache-Control", "public, max-age=0, must-revalidate")
+		c.Header("ETag", secureETag)
+		if c.GetHeader("If-None-Match") == secureETag {
+			c.Status(http.StatusNotModified)
+			return
+		}
+		c.Data(http.StatusOK, "text/html; charset=utf-8", secureIndexHTML)
 	}
 
 	// UI Static and Welcome Homepage Route Group
@@ -119,15 +166,17 @@ func NewServer(
 				c.Redirect(http.StatusMovedPermanently, target)
 				return
 			}
-			c.Data(http.StatusOK, "text/html; charset=utf-8", welcomeHTML)
+			welcomeHandler(c)
 		})
-		uiGroup.GET("/", func(c *gin.Context) {
-			c.Data(http.StatusOK, "text/html; charset=utf-8", welcomeHTML)
-		})
-		uiGroup.GET("/index.html", func(c *gin.Context) {
-			c.Data(http.StatusOK, "text/html; charset=utf-8", welcomeHTML)
-		})
+		uiGroup.GET("/", welcomeHandler)
+		uiGroup.GET("/index.html", welcomeHandler)
 		uiGroup.GET("/openapi.json", func(c *gin.Context) {
+			c.Header("Cache-Control", "public, max-age=3600, must-revalidate")
+			c.Header("ETag", etag)
+			if c.GetHeader("If-None-Match") == etag {
+				c.Status(http.StatusNotModified)
+				return
+			}
 			c.Data(http.StatusOK, "application/json; charset=utf-8", finalOpenAPI)
 		})
 
@@ -135,19 +184,19 @@ func NewServer(
 		secureGroup := uiGroup.Group("/secure")
 		secureGroup.Use(httpAdapter.AuthRedirectMiddleware(sessionUC, cfg.UIPath))
 		{
-			secureGroup.GET("", func(c *gin.Context) {
-				c.Data(http.StatusOK, "text/html; charset=utf-8", secureIndexHTML)
-			})
-			secureGroup.GET("/", func(c *gin.Context) {
-				c.Data(http.StatusOK, "text/html; charset=utf-8", secureIndexHTML)
-			})
-			secureGroup.GET("/index.html", func(c *gin.Context) {
-				c.Data(http.StatusOK, "text/html; charset=utf-8", secureIndexHTML)
-			})
+			secureGroup.GET("", secureHandler)
+			secureGroup.GET("/", secureHandler)
+			secureGroup.GET("/index.html", secureHandler)
 		}
 	}
 
 	r.GET("/openapi.json", func(c *gin.Context) {
+		c.Header("Cache-Control", "public, max-age=3600, must-revalidate")
+		c.Header("ETag", etag)
+		if c.GetHeader("If-None-Match") == etag {
+			c.Status(http.StatusNotModified)
+			return
+		}
 		c.Data(http.StatusOK, "application/json; charset=utf-8", finalOpenAPI)
 	})
 

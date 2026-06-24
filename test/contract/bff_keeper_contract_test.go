@@ -128,11 +128,13 @@ func TestBFF_RouterOpenAPI_Parity(t *testing.T) {
 	router := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
 	require.NotNil(t, router)
  
-	// Extract registered BFF Gin routes under /api/v1
+	// Extract registered BFF Gin routes under /api/v1 (optionally prefixed by UIPath)
+	prefix := cfg.UIPath + "/api/v1"
 	ginRoutes := make(map[string]bool)
 	for _, route := range router.Routes() {
-		if strings.HasPrefix(route.Path, "/api/v1") {
-			key := fmt.Sprintf("%s %s", route.Method, normalizeRoutePath(route.Path))
+		if strings.HasPrefix(route.Path, prefix) {
+			cleanPath := strings.TrimPrefix(route.Path, cfg.UIPath)
+			key := fmt.Sprintf("%s %s", route.Method, normalizeRoutePath(cleanPath))
 			ginRoutes[key] = true
 		}
 	}
