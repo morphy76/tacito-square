@@ -6,6 +6,7 @@ const mockOptions = {
   llm_bindings: [{ id: 'binding-1', name: 'gpt-4o' }],
   skills: [{ id: 'skill-1', name: 'Web Search' }],
   prompts: [{ id: 'prompt-1', name: 'Default Agent' }],
+  mcp_servers: [{ id: 'mcp-1', name: 'Weather Service' }],
 };
 
 test('AgentForm validates fields and submits correct payload', () => {

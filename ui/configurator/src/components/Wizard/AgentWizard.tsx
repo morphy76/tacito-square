@@ -43,7 +43,7 @@ export default function AgentWizard({ options, onSave, onCancel, onRefreshOption
   const [ltmDim, setLtmDim] = useState(1536);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [tier, setTier] = useState('cpu');
-  const [mcpClients, setMcpClients] = useState<string[]>([]);
+  const mcpClients: string[] = [];
 
   // Inline Skill creation
   const [showNewSkillForm, setShowNewSkillForm] = useState(false);

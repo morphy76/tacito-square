@@ -57,9 +57,7 @@ export default function AgentForm({ initialData, options, onSave, onRefreshOptio
   const [promptTemplate, setPromptTemplate] = useState(initialData?.prompt_template || '');
   const [selectedSkills, setSelectedSkills] = useState<string[]>(initialData?.skills || []);
   const [tier, setTier] = useState(initialData?.tier || 'cpu');
-  const [mcpClients, setMcpClients] = useState<string[]>(() => {
-    return initialData?.mcp_clients?.map(c => c.client_id) || [];
-  });
+  const mcpClients = initialData?.mcp_clients?.map(c => c.client_id) || [];
 
   // Inline Brain creation
   const [showNewBrainForm, setShowNewBrainForm] = useState(false);

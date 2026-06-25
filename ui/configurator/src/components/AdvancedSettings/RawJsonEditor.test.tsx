@@ -8,6 +8,8 @@ test('RawJsonEditor validates JSON and handles save', () => {
     <RawJsonEditor
       initialValue={{ name: 'Test' }}
       onSave={handleSave}
+      activeSchema="agents"
+      onSchemaChange={vi.fn()}
     />
   );
 
