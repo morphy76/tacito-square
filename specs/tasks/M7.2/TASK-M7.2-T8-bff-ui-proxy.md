@@ -5,7 +5,7 @@
 | Task ID     | TASK-M7.2-T8                                                      |
 | Spec        | SPEC-FR-M7.2                                                       |
 | Boundary    | BFF (`internal/bff/`)                                              |
-| Status      | DRAFT                                                              |
+| Status      | VERIFIED                                                           |
 | Depends On  | SPEC-FR-M7.1, TASK-M7.2-T6, TASK-M7.2-T7                           |
 
 ## Objective
