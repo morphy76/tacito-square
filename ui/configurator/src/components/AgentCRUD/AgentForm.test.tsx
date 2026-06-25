@@ -30,6 +30,11 @@ test('AgentForm validates fields and submits correct payload', () => {
   const tokensInput = screen.getByLabelText(/Max Tokens/i);
   const stmNsInput = screen.getByLabelText(/STM Namespace/i);
   const stmTtlInput = screen.getByLabelText(/STM TTL/i);
+
+  // Enable LTM to render inputs
+  const ltmCheckbox = screen.getByLabelText(/Enable Long-Term Memory/i);
+  fireEvent.click(ltmCheckbox);
+
   const ltmColInput = screen.getByLabelText(/LTM Collection/i);
   const ltmDimInput = screen.getByLabelText(/LTM Dimension/i);
 
@@ -70,5 +75,7 @@ test('AgentForm validates fields and submits correct payload', () => {
     },
     skills: ['skill-1'],
     prompt_template: 'prompt-1',
+    tier: 'cpu',
+    mcp_clients: [],
   });
 });

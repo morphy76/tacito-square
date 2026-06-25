@@ -87,3 +87,5 @@ Each direction is labeled with one of the following categories:
 - intra community nats channels no jetstream for improved speed
 - makefile push to registry, one for docker images and one for helm charts
 - textual resources like skills, prompts and ingestion schemas can be uploaded as md files and then later parsed
+- audit through nats
+- 

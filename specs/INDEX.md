@@ -85,6 +85,7 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | ID | Title | Status | Severity | File |
 |----|-------|--------|----------|------|
 | BUG-M7.1 | BFF OIDC Discovery Refused Connection due to localhost Issuer URL | IMPLEMENTED | HIGH | [BUG-M7.1](tasks/M7.BUG1/BUG-M7.1.md) |
+| BUG-M7.2 | UI Configurator lacks binding and representation for advanced agent wizard, raw sync, and assignment endpoints | CLOSED | HIGH | [BUG-M7.2](tasks/M7.BUG2/BUG-M7.2.md) |
 
 ### M8: RAG & LTM
 

@@ -39,12 +39,36 @@ func (m *mockKeeperClient) Agents() outbound.AgentClient           { return m.ag
 func (m *mockKeeperClient) Communities() outbound.CommunityClient { return m.comm }
 
 type mockLLMClient struct {
-	ListFunc func(ctx context.Context) ([]*outbound.LLMBinding, error)
+	ListFunc   func(ctx context.Context) ([]*outbound.LLMBinding, error)
+	CreateFunc func(ctx context.Context, req *outbound.CreateLLMBindingRequest) (*outbound.LLMBinding, error)
+	GetFunc    func(ctx context.Context, id uuid.UUID) (*outbound.LLMBinding, error)
+	UpdateFunc func(ctx context.Context, id uuid.UUID, req *outbound.UpdateLLMBindingRequest) (*outbound.LLMBinding, error)
+	DeleteFunc func(ctx context.Context, id uuid.UUID) error
 }
-func (m *mockLLMClient) Create(ctx context.Context, req *outbound.CreateLLMBindingRequest) (*outbound.LLMBinding, error) { return nil, nil }
-func (m *mockLLMClient) Get(ctx context.Context, id uuid.UUID) (*outbound.LLMBinding, error) { return nil, nil }
-func (m *mockLLMClient) Update(ctx context.Context, id uuid.UUID, req *outbound.UpdateLLMBindingRequest) (*outbound.LLMBinding, error) { return nil, nil }
-func (m *mockLLMClient) Delete(ctx context.Context, id uuid.UUID) error { return nil }
+func (m *mockLLMClient) Create(ctx context.Context, req *outbound.CreateLLMBindingRequest) (*outbound.LLMBinding, error) {
+	if m.CreateFunc != nil {
+		return m.CreateFunc(ctx, req)
+	}
+	return nil, nil
+}
+func (m *mockLLMClient) Get(ctx context.Context, id uuid.UUID) (*outbound.LLMBinding, error) {
+	if m.GetFunc != nil {
+		return m.GetFunc(ctx, id)
+	}
+	return nil, nil
+}
+func (m *mockLLMClient) Update(ctx context.Context, id uuid.UUID, req *outbound.UpdateLLMBindingRequest) (*outbound.LLMBinding, error) {
+	if m.UpdateFunc != nil {
+		return m.UpdateFunc(ctx, id, req)
+	}
+	return nil, nil
+}
+func (m *mockLLMClient) Delete(ctx context.Context, id uuid.UUID) error {
+	if m.DeleteFunc != nil {
+		return m.DeleteFunc(ctx, id)
+	}
+	return nil
+}
 func (m *mockLLMClient) List(ctx context.Context) ([]*outbound.LLMBinding, error) {
 	if m.ListFunc != nil {
 		return m.ListFunc(ctx)
@@ -53,12 +77,36 @@ func (m *mockLLMClient) List(ctx context.Context) ([]*outbound.LLMBinding, error
 }
 
 type mockMCPClient struct {
-	ListFunc func(ctx context.Context) ([]*outbound.MCPServer, error)
+	ListFunc   func(ctx context.Context) ([]*outbound.MCPServer, error)
+	CreateFunc func(ctx context.Context, req *outbound.CreateMCPServerRequest) (*outbound.MCPServer, error)
+	GetFunc    func(ctx context.Context, id uuid.UUID) (*outbound.MCPServer, error)
+	UpdateFunc func(ctx context.Context, id uuid.UUID, req *outbound.UpdateMCPServerRequest) (*outbound.MCPServer, error)
+	DeleteFunc func(ctx context.Context, id uuid.UUID) error
 }
-func (m *mockMCPClient) Create(ctx context.Context, req *outbound.CreateMCPServerRequest) (*outbound.MCPServer, error) { return nil, nil }
-func (m *mockMCPClient) Get(ctx context.Context, id uuid.UUID) (*outbound.MCPServer, error) { return nil, nil }
-func (m *mockMCPClient) Update(ctx context.Context, id uuid.UUID, req *outbound.UpdateMCPServerRequest) (*outbound.MCPServer, error) { return nil, nil }
-func (m *mockMCPClient) Delete(ctx context.Context, id uuid.UUID) error { return nil }
+func (m *mockMCPClient) Create(ctx context.Context, req *outbound.CreateMCPServerRequest) (*outbound.MCPServer, error) {
+	if m.CreateFunc != nil {
+		return m.CreateFunc(ctx, req)
+	}
+	return nil, nil
+}
+func (m *mockMCPClient) Get(ctx context.Context, id uuid.UUID) (*outbound.MCPServer, error) {
+	if m.GetFunc != nil {
+		return m.GetFunc(ctx, id)
+	}
+	return nil, nil
+}
+func (m *mockMCPClient) Update(ctx context.Context, id uuid.UUID, req *outbound.UpdateMCPServerRequest) (*outbound.MCPServer, error) {
+	if m.UpdateFunc != nil {
+		return m.UpdateFunc(ctx, id, req)
+	}
+	return nil, nil
+}
+func (m *mockMCPClient) Delete(ctx context.Context, id uuid.UUID) error {
+	if m.DeleteFunc != nil {
+		return m.DeleteFunc(ctx, id)
+	}
+	return nil
+}
 func (m *mockMCPClient) List(ctx context.Context) ([]*outbound.MCPServer, error) {
 	if m.ListFunc != nil {
 		return m.ListFunc(ctx)
@@ -67,12 +115,36 @@ func (m *mockMCPClient) List(ctx context.Context) ([]*outbound.MCPServer, error)
 }
 
 type mockSkillClient struct {
-	ListFunc func(ctx context.Context) ([]*outbound.Skill, error)
+	ListFunc   func(ctx context.Context) ([]*outbound.Skill, error)
+	CreateFunc func(ctx context.Context, req *outbound.CreateSkillRequest) (*outbound.Skill, error)
+	GetFunc    func(ctx context.Context, id uuid.UUID) (*outbound.Skill, error)
+	UpdateFunc func(ctx context.Context, id uuid.UUID, req *outbound.UpdateSkillRequest) (*outbound.Skill, error)
+	DeleteFunc func(ctx context.Context, id uuid.UUID) error
 }
-func (m *mockSkillClient) Create(ctx context.Context, req *outbound.CreateSkillRequest) (*outbound.Skill, error) { return nil, nil }
-func (m *mockSkillClient) Get(ctx context.Context, id uuid.UUID) (*outbound.Skill, error) { return nil, nil }
-func (m *mockSkillClient) Update(ctx context.Context, id uuid.UUID, req *outbound.UpdateSkillRequest) (*outbound.Skill, error) { return nil, nil }
-func (m *mockSkillClient) Delete(ctx context.Context, id uuid.UUID) error { return nil }
+func (m *mockSkillClient) Create(ctx context.Context, req *outbound.CreateSkillRequest) (*outbound.Skill, error) {
+	if m.CreateFunc != nil {
+		return m.CreateFunc(ctx, req)
+	}
+	return nil, nil
+}
+func (m *mockSkillClient) Get(ctx context.Context, id uuid.UUID) (*outbound.Skill, error) {
+	if m.GetFunc != nil {
+		return m.GetFunc(ctx, id)
+	}
+	return nil, nil
+}
+func (m *mockSkillClient) Update(ctx context.Context, id uuid.UUID, req *outbound.UpdateSkillRequest) (*outbound.Skill, error) {
+	if m.UpdateFunc != nil {
+		return m.UpdateFunc(ctx, id, req)
+	}
+	return nil, nil
+}
+func (m *mockSkillClient) Delete(ctx context.Context, id uuid.UUID) error {
+	if m.DeleteFunc != nil {
+		return m.DeleteFunc(ctx, id)
+	}
+	return nil
+}
 func (m *mockSkillClient) List(ctx context.Context) ([]*outbound.Skill, error) {
 	if m.ListFunc != nil {
 		return m.ListFunc(ctx)
@@ -81,12 +153,36 @@ func (m *mockSkillClient) List(ctx context.Context) ([]*outbound.Skill, error) {
 }
 
 type mockPromptClient struct {
-	ListFunc func(ctx context.Context) ([]*outbound.PromptTemplate, error)
+	ListFunc   func(ctx context.Context) ([]*outbound.PromptTemplate, error)
+	CreateFunc func(ctx context.Context, req *outbound.CreatePromptTemplateRequest) (*outbound.PromptTemplate, error)
+	GetFunc    func(ctx context.Context, id uuid.UUID) (*outbound.PromptTemplate, error)
+	UpdateFunc func(ctx context.Context, id uuid.UUID, req *outbound.UpdatePromptTemplateRequest) (*outbound.PromptTemplate, error)
+	DeleteFunc func(ctx context.Context, id uuid.UUID) error
 }
-func (m *mockPromptClient) Create(ctx context.Context, req *outbound.CreatePromptTemplateRequest) (*outbound.PromptTemplate, error) { return nil, nil }
-func (m *mockPromptClient) Get(ctx context.Context, id uuid.UUID) (*outbound.PromptTemplate, error) { return nil, nil }
-func (m *mockPromptClient) Update(ctx context.Context, id uuid.UUID, req *outbound.UpdatePromptTemplateRequest) (*outbound.PromptTemplate, error) { return nil, nil }
-func (m *mockPromptClient) Delete(ctx context.Context, id uuid.UUID) error { return nil }
+func (m *mockPromptClient) Create(ctx context.Context, req *outbound.CreatePromptTemplateRequest) (*outbound.PromptTemplate, error) {
+	if m.CreateFunc != nil {
+		return m.CreateFunc(ctx, req)
+	}
+	return nil, nil
+}
+func (m *mockPromptClient) Get(ctx context.Context, id uuid.UUID) (*outbound.PromptTemplate, error) {
+	if m.GetFunc != nil {
+		return m.GetFunc(ctx, id)
+	}
+	return nil, nil
+}
+func (m *mockPromptClient) Update(ctx context.Context, id uuid.UUID, req *outbound.UpdatePromptTemplateRequest) (*outbound.PromptTemplate, error) {
+	if m.UpdateFunc != nil {
+		return m.UpdateFunc(ctx, id, req)
+	}
+	return nil, nil
+}
+func (m *mockPromptClient) Delete(ctx context.Context, id uuid.UUID) error {
+	if m.DeleteFunc != nil {
+		return m.DeleteFunc(ctx, id)
+	}
+	return nil
+}
 func (m *mockPromptClient) List(ctx context.Context) ([]*outbound.PromptTemplate, error) {
 	if m.ListFunc != nil {
 		return m.ListFunc(ctx)
@@ -307,6 +403,11 @@ func TestGetWizardOptions(t *testing.T) {
 				return []*outbound.PromptTemplate{{Name: "prompt-1"}}, nil
 			},
 		},
+		mcp: &mockMCPClient{
+			ListFunc: func(ctx context.Context) ([]*outbound.MCPServer, error) {
+				return []*outbound.MCPServer{{Name: "mcp-1"}}, nil
+			},
+		},
 	}
 
 	handler := bffhttp.NewConfiguratorHandler(mockKeeper)
@@ -325,6 +426,7 @@ func TestGetWizardOptions(t *testing.T) {
 	assert.Contains(t, resp, "llm_bindings")
 	assert.Contains(t, resp, "skills")
 	assert.Contains(t, resp, "prompts")
+	assert.Contains(t, resp, "mcp_servers")
 }
 
 func TestConfiguratorHandler_CRUDAndSync(t *testing.T) {
@@ -333,7 +435,6 @@ func TestConfiguratorHandler_CRUDAndSync(t *testing.T) {
 
 	agentID := uuid.New()
 	commID := uuid.New()
-
 	mockKeeper := &mockKeeperClient{
 		agent: &mockAgentClient{
 			ListFunc: func(ctx context.Context) ([]*outbound.Agent, error) {
@@ -379,6 +480,38 @@ func TestConfiguratorHandler_CRUDAndSync(t *testing.T) {
 				return nil
 			},
 		},
+		llm: &mockLLMClient{
+			ListFunc: func(ctx context.Context) ([]*outbound.LLMBinding, error) {
+				return []*outbound.LLMBinding{{Name: "binding-1"}}, nil
+			},
+			CreateFunc: func(ctx context.Context, req *outbound.CreateLLMBindingRequest) (*outbound.LLMBinding, error) {
+				return &outbound.LLMBinding{Name: req.Name}, nil
+			},
+		},
+		prompt: &mockPromptClient{
+			ListFunc: func(ctx context.Context) ([]*outbound.PromptTemplate, error) {
+				return []*outbound.PromptTemplate{{Name: "prompt-1"}}, nil
+			},
+			CreateFunc: func(ctx context.Context, req *outbound.CreatePromptTemplateRequest) (*outbound.PromptTemplate, error) {
+				return &outbound.PromptTemplate{Name: req.Name}, nil
+			},
+		},
+		skill: &mockSkillClient{
+			ListFunc: func(ctx context.Context) ([]*outbound.Skill, error) {
+				return []*outbound.Skill{{Name: "skill-1"}}, nil
+			},
+			CreateFunc: func(ctx context.Context, req *outbound.CreateSkillRequest) (*outbound.Skill, error) {
+				return &outbound.Skill{Name: req.Name}, nil
+			},
+		},
+		mcp: &mockMCPClient{
+			ListFunc: func(ctx context.Context) ([]*outbound.MCPServer, error) {
+				return []*outbound.MCPServer{{Name: "mcp-1"}}, nil
+			},
+			CreateFunc: func(ctx context.Context, req *outbound.CreateMCPServerRequest) (*outbound.MCPServer, error) {
+				return &outbound.MCPServer{Name: req.Name}, nil
+			},
+		},
 	}
 
 	handler := bffhttp.NewConfiguratorHandler(mockKeeper)
@@ -400,6 +533,15 @@ func TestConfiguratorHandler_CRUDAndSync(t *testing.T) {
 	r.DELETE("/communities/:id/agents/:agent_id", handler.UnassignAgent)
 
 	r.POST("/advanced-sync", handler.AdvancedSync)
+
+	r.GET("/llm-bindings", handler.ListLLMBindings)
+	r.POST("/llm-bindings", handler.CreateLLMBinding)
+	r.GET("/prompts", handler.ListPrompts)
+	r.POST("/prompts", handler.CreatePrompt)
+	r.GET("/skills", handler.ListSkills)
+	r.POST("/skills", handler.CreateSkill)
+	r.GET("/mcp-servers", handler.ListMCPServers)
+	r.POST("/mcp-servers", handler.CreateMCPServer)
 
 	t.Run("Agents CRUD", func(t *testing.T) {
 		// List
@@ -464,6 +606,60 @@ func TestConfiguratorHandler_CRUDAndSync(t *testing.T) {
 		req, _ = http.NewRequest(http.MethodDelete, fmt.Sprintf("/communities/%s/agents/%s", commID, agentID), nil)
 		r.ServeHTTP(w, req)
 		assert.Equal(t, http.StatusNoContent, w.Code)
+	})
+
+	t.Run("Resources CRUD", func(t *testing.T) {
+		// LLM Bindings List & Create
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(http.MethodGet, "/llm-bindings", nil)
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		cLLM := outbound.CreateLLMBindingRequest{Name: "binding-new"}
+		body, _ := json.Marshal(cLLM)
+		w = httptest.NewRecorder()
+		req, _ = http.NewRequest(http.MethodPost, "/llm-bindings", bytes.NewReader(body))
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusCreated, w.Code)
+
+		// Prompts List & Create
+		w = httptest.NewRecorder()
+		req, _ = http.NewRequest(http.MethodGet, "/prompts", nil)
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		cPrompt := outbound.CreatePromptTemplateRequest{Name: "prompt-new"}
+		body, _ = json.Marshal(cPrompt)
+		w = httptest.NewRecorder()
+		req, _ = http.NewRequest(http.MethodPost, "/prompts", bytes.NewReader(body))
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusCreated, w.Code)
+
+		// Skills List & Create
+		w = httptest.NewRecorder()
+		req, _ = http.NewRequest(http.MethodGet, "/skills", nil)
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		cSkill := outbound.CreateSkillRequest{Name: "skill-new"}
+		body, _ = json.Marshal(cSkill)
+		w = httptest.NewRecorder()
+		req, _ = http.NewRequest(http.MethodPost, "/skills", bytes.NewReader(body))
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusCreated, w.Code)
+
+		// MCP Servers List & Create
+		w = httptest.NewRecorder()
+		req, _ = http.NewRequest(http.MethodGet, "/mcp-servers", nil)
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		cMCP := outbound.CreateMCPServerRequest{Name: "mcp-new"}
+		body, _ = json.Marshal(cMCP)
+		w = httptest.NewRecorder()
+		req, _ = http.NewRequest(http.MethodPost, "/mcp-servers", bytes.NewReader(body))
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusCreated, w.Code)
 	})
 
 	t.Run("Advanced Sync Agents", func(t *testing.T) {

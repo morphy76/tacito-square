@@ -46,6 +46,22 @@ func RegisterRoutes(
 		{
 			configurator.GET("/wizard/options", configuratorHandler.GetWizardOptions)
 
+			// LLM Bindings CRUD/Listing
+			configurator.GET("/llm-bindings", configuratorHandler.ListLLMBindings)
+			configurator.POST("/llm-bindings", configuratorHandler.CreateLLMBinding)
+
+			// Prompts CRUD/Listing
+			configurator.GET("/prompts", configuratorHandler.ListPrompts)
+			configurator.POST("/prompts", configuratorHandler.CreatePrompt)
+
+			// Skills CRUD/Listing
+			configurator.GET("/skills", configuratorHandler.ListSkills)
+			configurator.POST("/skills", configuratorHandler.CreateSkill)
+
+			// MCP Servers CRUD/Listing
+			configurator.GET("/mcp-servers", configuratorHandler.ListMCPServers)
+			configurator.POST("/mcp-servers", configuratorHandler.CreateMCPServer)
+
 			// Agents CRUD
 			configurator.GET("/agents", configuratorHandler.ListAgents)
 			configurator.GET("/agents/:id", configuratorHandler.GetAgent)

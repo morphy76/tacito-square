@@ -8,7 +8,7 @@ import AgentForm, { AgentPayload, WizardOptions } from './components/AgentCRUD/A
 import CommunityForm, { CommunityPayload } from './components/CommunityCRUD/CommunityForm';
 import TopologyView from './components/Topology/TopologyView';
 
-const getApiUrl = (path: string) => {
+export const getApiUrl = (path: string) => {
   const base = import.meta.env.BASE_URL;
   const cleanBase = base.endsWith('/') ? base.slice(0, -1) : base;
   return `${cleanBase}${path}`;
@@ -37,10 +37,14 @@ function DashboardContent() {
   const [loadingData, setLoadingData] = useState(true);
 
   // Modal / Editor States
-  const [activeTab, setActiveTab] = useState<'agents' | 'communities' | 'topology'>('agents');
+  const [activeTab, setActiveTab] = useState<'agents' | 'communities' | 'topology' | 'assignments'>('agents');
   const [editorMode, setEditorMode] = useState<'list' | 'wizard-agent' | 'wizard-community' | 'advanced-json'>('list');
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
   const [editingCommunity, setEditingCommunity] = useState<Community | null>(null);
+
+  // Advanced settings schema states
+  const [advancedSchema, setAdvancedSchema] = useState<string>('agents');
+  const [advancedJsonData, setAdvancedJsonData] = useState<unknown>([]);
 
   // Fetch all agents, communities, and options
   const fetchData = useCallback(async () => {
@@ -85,7 +89,9 @@ function DashboardContent() {
             vector_dimension: 1536
           },
           skills: ['skill-1'],
-          prompt_template: 'prompt-1'
+          prompt_template: 'prompt-1',
+          tier: 'cpu',
+          mcp_clients: []
         }
       ]);
       setCommunities([
@@ -101,7 +107,8 @@ function DashboardContent() {
       setOptions({
         llm_bindings: [{ id: 'binding-1', name: 'gpt-4o' }],
         skills: [{ id: 'skill-1', name: 'Web Search' }],
-        prompts: [{ id: 'prompt-1', name: 'Default Agent' }]
+        prompts: [{ id: 'prompt-1', name: 'Default Agent' }],
+        mcp_servers: [{ id: 'mcp-1', name: 'Weather Service' }]
       });
     } finally {
       setLoadingData(false);
@@ -111,6 +118,47 @@ function DashboardContent() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Load selected advanced sync schema
+  useEffect(() => {
+    if (editorMode === 'advanced-json') {
+      const loadAdvancedData = async () => {
+        try {
+          setLoadingData(true);
+          let url = '';
+          if (advancedSchema === 'agents') {
+            url = getApiUrl('/api/v1/configurator/agents');
+          } else if (advancedSchema === 'communities') {
+            url = getApiUrl('/api/v1/configurator/communities');
+          } else if (advancedSchema === 'llm-bindings') {
+            url = getApiUrl('/api/v1/configurator/llm-bindings');
+          } else if (advancedSchema === 'prompts') {
+            url = getApiUrl('/api/v1/configurator/prompts');
+          } else if (advancedSchema === 'skills') {
+            url = getApiUrl('/api/v1/configurator/skills');
+          } else if (advancedSchema === 'mcp-servers') {
+            url = getApiUrl('/api/v1/configurator/mcp-servers');
+          }
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`Failed to load ${advancedSchema}`);
+          const data = await res.json();
+          setAdvancedJsonData(data || []);
+        } catch (err) {
+          console.error(err);
+          // Fallback mock values
+          if (advancedSchema === 'agents') setAdvancedJsonData(agents);
+          else if (advancedSchema === 'communities') setAdvancedJsonData(communities);
+          else if (advancedSchema === 'llm-bindings') setAdvancedJsonData(options?.llm_bindings || []);
+          else if (advancedSchema === 'prompts') setAdvancedJsonData(options?.prompts || []);
+          else if (advancedSchema === 'skills') setAdvancedJsonData(options?.skills || []);
+          else if (advancedSchema === 'mcp-servers') setAdvancedJsonData(options?.mcp_servers || []);
+        } finally {
+          setLoadingData(false);
+        }
+      };
+      loadAdvancedData();
+    }
+  }, [editorMode, advancedSchema, agents, communities, options]);
 
   // CRUD handlers
   const handleSaveAgent = async (payload: AgentPayload) => {
@@ -243,12 +291,6 @@ function DashboardContent() {
       setEditorMode('list');
     } catch (err) {
       alert('Failed to sync schemas: ' + (err instanceof Error ? err.message : 'Network Error'));
-      // Fallback update in state
-      if (activeTab === 'agents') {
-        setAgents(parsedJson as Agent[]);
-      } else {
-        setCommunities(parsedJson as Community[]);
-      }
       setEditorMode('list');
     } finally {
       setLoadingData(false);
@@ -291,6 +333,15 @@ function DashboardContent() {
                 style={{ width: '100%', marginBottom: '12px', borderLeft: activeTab === 'communities' ? '3px solid #66fcf1' : '' }}
               >
                 <span className="btn-label"><span className="btn-title">Communities Pool</span></span>
+              </button>
+              <button 
+                role="tab"
+                aria-selected={activeTab === 'assignments'}
+                className={`nav-btn ${activeTab === 'assignments' ? 'active-btn' : ''}`}
+                onClick={() => setActiveTab('assignments')}
+                style={{ width: '100%', marginBottom: '12px', borderLeft: activeTab === 'assignments' ? '3px solid #66fcf1' : '' }}
+              >
+                <span className="btn-label"><span className="btn-title">Community Assignments</span></span>
               </button>
               <button 
                 role="tab"
@@ -352,26 +403,37 @@ function DashboardContent() {
                 ) : activeTab === 'communities' ? (
                   <div>
                     <h3 style={{ fontFamily: 'Outfit', marginBottom: '16px' }}>Communities Specifications</h3>
+                    {communities.map((community) => (
+                      <div key={community.id} style={{ padding: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '12px', marginBottom: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+                          <div>
+                            <h4 style={{ margin: 0, color: '#ff5e62' }}>{community.name}</h4>
+                            <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Topology: <code>{community.topology}</code></span>
+                            <p style={{ margin: '4px 0', fontSize: '0.9rem', color: '#c5c6c7' }}>{community.description}</p>
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button onClick={() => { setEditingCommunity(community); setEditorMode('wizard-community'); }} className="nav-btn" style={{ padding: '8px 12px' }}>Edit</button>
+                            <button onClick={() => handleDeleteCommunity(community.id)} className="nav-btn probe-btn" style={{ padding: '8px 12px', color: '#ff5e62' }}>Delete</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : activeTab === 'assignments' ? (
+                  <div>
+                    <h3 style={{ fontFamily: 'Outfit', marginBottom: '20px' }}>Community Agent Assignments</h3>
                     {communities.map((community) => {
                       const unassignedAgents = agents.filter(a => !community.agents?.includes(a.id));
                       return (
-                        <div key={community.id} style={{ padding: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '12px', marginBottom: '12px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', flexWrap: 'wrap', gap: '12px' }}>
-                            <div>
-                              <h4 style={{ margin: 0, color: '#ff5e62' }}>{community.name}</h4>
-                              <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Topology: <code>{community.topology}</code></span>
-                              <p style={{ margin: '4px 0', fontSize: '0.9rem', color: '#c5c6c7' }}>{community.description}</p>
-                            </div>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                              <button onClick={() => { setEditingCommunity(community); setEditorMode('wizard-community'); }} className="nav-btn" style={{ padding: '8px 12px' }}>Edit</button>
-                              <button onClick={() => handleDeleteCommunity(community.id)} className="nav-btn probe-btn" style={{ padding: '8px 12px', color: '#ff5e62' }}>Delete</button>
-                            </div>
+                        <div key={community.id} style={{ padding: '20px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '12px', marginBottom: '16px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <h4 style={{ margin: 0, color: '#ff5e62', fontSize: '1.2rem' }}>{community.name}</h4>
+                            <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Topology: <code>{community.topology}</code></span>
                           </div>
 
-                          {/* Decoupled Assignment Workflow UI */}
-                          <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px', marginTop: '12px' }}>
-                            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f2f5f9', marginBottom: '8px' }}>Assigned Agents</div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                          <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f2f5f9', marginBottom: '8px' }}>Assigned Spokes</div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
                               {community.agents?.map(agentId => {
                                 const agent = agents.find(a => a.id === agentId);
                                 return (
@@ -395,14 +457,14 @@ function DashboardContent() {
 
                             {unassignedAgents.length > 0 && (
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <label htmlFor={`assign-agent-${community.id}`} style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Assign new agent:</label>
+                                <label htmlFor={`assign-agent-${community.id}`} style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Assign Spoke Agent:</label>
                                 <select
                                   id={`assign-agent-${community.id}`}
                                   defaultValue=""
                                   onChange={(e) => {
                                     if (e.target.value) {
                                       handleAssignAgent(community.id, e.target.value);
-                                      e.target.value = ""; // Reset value
+                                      e.target.value = "";
                                     }
                                   }}
                                   style={{
@@ -461,9 +523,9 @@ function DashboardContent() {
         <div className="glass-card" style={{ padding: '32px', maxWidth: '600px', margin: '0 auto' }}>
           <h3 style={{ fontFamily: 'Outfit', marginBottom: '20px' }}>{editingAgent ? 'Edit Agent' : 'Create New Agent'}</h3>
           {editingAgent ? (
-            <AgentForm initialData={editingAgent} options={options} onSave={handleSaveAgent} />
+            <AgentForm initialData={editingAgent} options={options} onSave={handleSaveAgent} onRefreshOptions={fetchData} />
           ) : (
-            <AgentWizard options={options} onSave={handleSaveAgent} onCancel={() => setEditorMode('list')} />
+            <AgentWizard options={options} onSave={handleSaveAgent} onCancel={() => setEditorMode('list')} onRefreshOptions={fetchData} />
           )}
         </div>
       )}
@@ -484,8 +546,10 @@ function DashboardContent() {
         <div className="glass-card" style={{ padding: '32px' }}>
           <button onClick={() => setEditorMode('list')} className="nav-btn" style={{ marginBottom: '20px', padding: '8px 16px' }}>Back to Lists</button>
           <RawJsonEditor 
-            initialValue={activeTab === 'agents' ? agents : communities} 
+            initialValue={advancedJsonData} 
             onSave={handleAdvancedSave} 
+            activeSchema={advancedSchema}
+            onSchemaChange={setAdvancedSchema}
           />
         </div>
       )}
