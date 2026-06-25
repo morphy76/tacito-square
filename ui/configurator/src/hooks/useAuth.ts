@@ -8,6 +8,14 @@ export interface User {
   tenant_id: string;
 }
 
+const mockUser: User = {
+  id: '12345',
+  name: 'John Doe',
+  email: 'john.doe@example.com',
+  roles: ['keeper-admin'],
+  tenant_id: 'tenant_123',
+};
+
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -51,7 +59,17 @@ export function useAuth() {
   }, []);
 
   useEffect(() => {
-    fetchUser();
+    if (import.meta.env.DEV) {
+      // In development, use mock user data
+      setUser(mockUser);
+      setAuthenticated(true);
+      setRoles(mockUser.roles);
+      setError(null);
+      setLoading(false);
+    } else {
+      // In production, fetch the user data from the API
+      fetchUser();
+    }
   }, [fetchUser]);
 
   const logout = useCallback(async () => {
