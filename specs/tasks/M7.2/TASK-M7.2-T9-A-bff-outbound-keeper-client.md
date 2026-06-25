@@ -5,7 +5,7 @@
 | Task ID     | TASK-M7.2-T9-A                                                     |
 | Spec        | SPEC-FR-M7.2                                                       |
 | Boundary    | BFF Outbound Client (`internal/bff/application/ports/outbound/`, `internal/bff/adapters/outbound/`), Test (`test/contract/`) |
-| Status      | DRAFT                                                              |
+| Status      | VERIFIED                                                           |
 | Depends On  | SPEC-FR-M7.1, TASK-M7.2-T7, TASK-M7.2-T8                           |
 
 ## Objective

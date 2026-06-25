@@ -81,6 +81,43 @@
         }
       }
     },
+    "/api/v1/auth/me": {
+      "get": {
+        "tags": ["auth/session"],
+        "summary": "Retrieves the currently authenticated user's info and roles",
+        "security": [
+          {
+            "CookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authenticated user information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sub": { "type": "string" },
+                    "email": { "type": "string" },
+                    "name": { "type": "string" },
+                    "tenantid": { "type": "string" },
+                    "subscriptionid": { "type": "string" },
+                    "roles": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized if session cookie missing/invalid"
+          }
+        }
+      }
+    },
     "/api/v1/auth/backchannel-logout": {
       "post": {
         "tags": ["auth/backchannel"],
