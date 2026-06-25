@@ -3,7 +3,7 @@
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
 | ID            | SPEC-FR-M7.2                                |
-| Status        | IN_PROGRESS                                 |
+| Status        | VERIFIED                                    |
 | Milestone     | M7                                          |
 | Component     | ui                                          |
 | Depends On    | SPEC-FR-M7.1, SPEC-FR-M7.4                  |

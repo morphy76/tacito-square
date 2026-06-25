@@ -1,21 +1,32 @@
 :root {
-  --color-bg: #0b0c10;
+  /* Custom overrides for Bootstrap 5 variables */
+  --bs-body-bg: #0b0c10;
+  --bs-body-color: #f2f5f9;
+  --bs-primary: #66fcf1;
+  --bs-secondary: #94a3b8;
+  --bs-info: #00f2fe;
+  --bs-danger: #c82c3c;
+  --bs-dark: #14161e;
+
+  --bs-font-sans-serif: 'Inter', system-ui, -apple-system, sans-serif;
+  --bs-heading-font-family: 'Outfit', sans-serif;
+
+  /* Piazza Tacito Color Palette (mapped/preserved) */
+  --color-bg: var(--bs-body-bg);
   --color-card-bg: rgba(20, 22, 30, 0.65);
   --color-card-border: rgba(226, 232, 240, 0.08);
-  --color-text-primary: #f2f5f9;
-  --color-text-secondary: #94a3b8;
-
-  /* Piazza Tacito Color Palette */
+  --color-text-primary: var(--bs-body-color);
+  --color-text-secondary: var(--bs-secondary);
   --color-steel: #e2e8f0;
-  --color-steel-glow: #00f2fe;
-  --color-steel-light: #66fcf1;
-  --color-porphyry-red: #c82c3c;
+  --color-steel-glow: var(--bs-info);
+  --color-steel-light: var(--bs-primary);
+  --color-porphyry-red: var(--bs-danger);
   --color-porphyry-glow: #ff5e62;
   --color-water: #1e3c72;
   --color-water-glow: #2a5298;
 
-  --font-heading: 'Outfit', sans-serif;
-  --font-body: 'Inter', sans-serif;
+  --font-heading: var(--bs-heading-font-family);
+  --font-body: var(--bs-font-sans-serif);
 
   --transition-smooth: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }

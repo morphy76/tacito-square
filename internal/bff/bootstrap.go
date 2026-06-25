@@ -27,8 +27,6 @@ var openapiJSON []byte
 //go:embed secure/index.html
 var secureIndexHTML []byte
 
-//go:embed bootstrap-theme.css
-var bootstrapThemeCSS []byte
 
 //go:embed favicon.ico
 var faviconICO []byte
@@ -107,8 +105,6 @@ func NewServer(
 	faviconHash := sha256.Sum256(faviconICO)
 	faviconETag := fmt.Sprintf(`"%x"`, faviconHash)
 
-	themeHash := sha256.Sum256(bootstrapThemeCSS)
-	themeETag := fmt.Sprintf(`"%x"`, themeHash)
 
 	// Public system endpoints (metrics and health check probes)
 	r.GET("/healthz", gin.WrapF(probe.LivezHandler))
@@ -161,18 +157,7 @@ func NewServer(
 			c.Redirect(http.StatusMovedPermanently, target)
 		})
 
-		themeHandler := func(c *gin.Context) {
-			c.Header("Cache-Control", "public, max-age=604800, must-revalidate")
-			c.Header("ETag", themeETag)
-			if c.GetHeader("If-None-Match") == themeETag {
-				c.Status(http.StatusNotModified)
-				return
-			}
-			c.Data(http.StatusOK, "text/css; charset=utf-8", bootstrapThemeCSS)
-		}
-
 		uiGroup.GET("/favicon.ico", faviconHandler)
-		uiGroup.GET("/assets/bootstrap-theme.css", themeHandler)
 		uiGroup.GET("/openapi.json", func(c *gin.Context) {
 			c.Header("Cache-Control", "public, max-age=3600, must-revalidate")
 			c.Header("ETag", etag)
@@ -213,6 +198,10 @@ func NewServer(
 	// SPA fallback routing for any non-matched paths under UIPath
 	r.NoRoute(func(c *gin.Context) {
 		if strings.HasPrefix(c.Request.URL.Path, cfg.UIPath) {
+			if strings.Contains(c.Request.URL.Path, "/assets/") {
+				uiProxy.ServeUIIndex(c)
+				return
+			}
 			httpAdapter.AuthRedirectMiddleware(sessionUC, cfg.UIPath)(c)
 			if !c.IsAborted() {
 				uiProxy.ServeUIIndex(c)

@@ -23,3 +23,5 @@ deploy/helm/tacito-square/Chart.lock
 # FE
 
 node_modules/
+/ui/configurator/public/assets/bootstrap-theme.css
+

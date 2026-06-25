@@ -346,7 +346,26 @@ func TestBFFServer_IndexWelcomePage(t *testing.T) {
 
 func TestBFFServer_ServeBootstrapThemeCSS(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	cfg := bff.Config{Version: "0.1.0", OtelEndpoint: "", LogLevel: "info", GinMode: "test", UIPath: "/ui"}
+
+	// Spin up a mock UI server that serves the stylesheet
+	mockUI := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/assets/bootstrap-theme.css" {
+			w.Header().Set("Content-Type", "text/css; charset=utf-8")
+			_, _ = w.Write([]byte(":root { --color-steel: #e2e8f0; }"))
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer mockUI.Close()
+
+	cfg := bff.Config{
+		Version:           "0.1.0",
+		OtelEndpoint:      "",
+		LogLevel:          "info",
+		GinMode:           "test",
+		UIPath:            "/ui",
+		UIConfiguratorURL: mockUI.URL,
+	}
 
 	srv := bff.NewServer(cfg, &mockSessionUseCase{}, &mockEventStreamUseCase{}, &mockSessionStore{}, &mockOIDCProvider{}, &mockKeeperClient{})
 

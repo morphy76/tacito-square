@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { expect, test, vi } from 'vitest';
+import { expect, test, vi, beforeEach } from 'vitest';
 import App from './App';
 
 // Mock the useAuth hook for App tests
@@ -14,8 +14,32 @@ vi.mock('./hooks/useAuth', () => ({
   }),
 }));
 
-test('renders app header', () => {
+beforeEach(() => {
+  global.fetch = vi.fn().mockImplementation((url: string) => {
+    if (url.includes('/api/v1/configurator/wizard/options')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ llm_bindings: [], skills: [], prompts: [] }),
+      });
+    }
+    if (url.includes('/api/v1/configurator/agents')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve([]),
+      });
+    }
+    if (url.includes('/api/v1/configurator/communities')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve([]),
+      });
+    }
+    return Promise.reject(new Error('Unknown url: ' + url));
+  }) as any;
+});
+
+test('renders app header', async () => {
   render(<App />);
-  const headerElement = screen.getByText(/Tacito Square Configurator/i);
+  const headerElement = await screen.findByText(/Tacito Square Configurator/i);
   expect(headerElement).toBeInTheDocument();
 });
