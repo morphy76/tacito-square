@@ -208,7 +208,7 @@ func NewServer(
 	})
 
 	// Register application specific routes
-	httpAdapter.RegisterRoutes(r, sessionUC, eventUC, cfg.UIPath)
+	httpAdapter.RegisterRoutes(r, sessionUC, eventUC, keeperClient, cfg.UIPath)
 
 	// SPA fallback routing for any non-matched paths under UIPath
 	r.NoRoute(func(c *gin.Context) {

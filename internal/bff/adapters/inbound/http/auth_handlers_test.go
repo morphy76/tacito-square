@@ -155,7 +155,7 @@ func TestAuthHandler_Login_RedirectsToOIDC(t *testing.T) {
 		},
 	}
 
-	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
+	bffhttp.RegisterRoutes(r, mockUC, nil, nil, "/ui")
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/ui/api/v1/auth/login", nil)
@@ -198,7 +198,7 @@ func TestAuthHandler_Callback_Success_SetsCookie(t *testing.T) {
 		},
 	}
 
-	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
+	bffhttp.RegisterRoutes(r, mockUC, nil, nil, "/ui")
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/ui/api/v1/auth/callback?code=code-abc&state=state-xyz", nil)
@@ -248,7 +248,7 @@ func TestAuthHandler_Login_WithRedirectTo(t *testing.T) {
 		},
 	}
 
-	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
+	bffhttp.RegisterRoutes(r, mockUC, nil, nil, "/ui")
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/ui/api/v1/auth/login?redirect_to=%2Fui%2Fsecure%2Fpage", nil)
@@ -276,7 +276,7 @@ func TestAuthHandler_Callback_RedirectsToOriginalResource(t *testing.T) {
 		},
 	}
 
-	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
+	bffhttp.RegisterRoutes(r, mockUC, nil, nil, "/ui")
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/ui/api/v1/auth/callback?code=code-1&state=state-1", nil)
@@ -305,7 +305,7 @@ func TestAuthHandler_Callback_FallsBackToUIPathWhenNoRedirectTo(t *testing.T) {
 		},
 	}
 
-	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
+	bffhttp.RegisterRoutes(r, mockUC, nil, nil, "/ui")
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/ui/api/v1/auth/callback?code=code-2&state=state-2", nil)
@@ -326,7 +326,7 @@ func TestAuthHandler_Callback_ExchangeFailure(t *testing.T) {
 		},
 	}
 
-	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
+	bffhttp.RegisterRoutes(r, mockUC, nil, nil, "/ui")
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/ui/api/v1/auth/callback?code=code-abc&state=state-xyz", nil)
@@ -362,7 +362,7 @@ func TestAuthHandler_Logout_ClearsCookie(t *testing.T) {
 		},
 	}
 
-	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
+	bffhttp.RegisterRoutes(r, mockUC, nil, nil, "/ui")
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodPost, "/ui/api/v1/auth/logout", nil)
@@ -401,7 +401,7 @@ func TestAuthHandler_BackchannelLogout_Success(t *testing.T) {
 		},
 	}
 
-	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
+	bffhttp.RegisterRoutes(r, mockUC, nil, nil, "/ui")
 
 	w := httptest.NewRecorder()
 	form := url.Values{}
@@ -424,7 +424,7 @@ func TestAuthHandler_BackchannelLogout_InvalidToken(t *testing.T) {
 		},
 	}
 
-	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
+	bffhttp.RegisterRoutes(r, mockUC, nil, nil, "/ui")
 
 	w := httptest.NewRecorder()
 	form := url.Values{}
@@ -460,7 +460,7 @@ func TestAuthHandler_Logout_RedirectToOIDC_WithPostLogoutRedirect(t *testing.T) 
 		},
 	}
 
-	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
+	bffhttp.RegisterRoutes(r, mockUC, nil, nil, "/ui")
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodPost, "/ui/api/v1/auth/logout", nil)
@@ -509,7 +509,7 @@ func TestAuthHandler_Me_Success(t *testing.T) {
 		},
 	}
 
-	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
+	bffhttp.RegisterRoutes(r, mockUC, nil, nil, "/ui")
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/ui/api/v1/auth/me", nil)
@@ -537,7 +537,7 @@ func TestAuthHandler_Me_Unauthorized(t *testing.T) {
 
 	mockUC := &mockSessionUseCase{}
 
-	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
+	bffhttp.RegisterRoutes(r, mockUC, nil, nil, "/ui")
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/ui/api/v1/auth/me", nil)

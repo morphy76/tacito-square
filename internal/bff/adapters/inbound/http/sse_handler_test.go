@@ -54,7 +54,7 @@ func TestSSEHandler_StreamEvents_ForwardsEvents(t *testing.T) {
 		},
 	}
 
-	bffhttp.RegisterRoutes(r, mockSessionUC, mockEventUC, "/ui")
+	bffhttp.RegisterRoutes(r, mockSessionUC, mockEventUC, nil, "/ui")
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/ui/api/v1/events/stream", nil)
@@ -87,7 +87,7 @@ func TestSSEHandler_StreamEvents_RequiresAuth(t *testing.T) {
 	}
 	mockEventUC := &mockEventStreamUseCase{}
 
-	bffhttp.RegisterRoutes(r, mockSessionUC, mockEventUC, "/ui")
+	bffhttp.RegisterRoutes(r, mockSessionUC, mockEventUC, nil, "/ui")
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/ui/api/v1/events/stream", nil)

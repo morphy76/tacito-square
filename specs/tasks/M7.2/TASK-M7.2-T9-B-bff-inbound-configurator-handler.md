@@ -5,7 +5,7 @@
 | Task ID     | TASK-M7.2-T9-B                                                     |
 | Spec        | SPEC-FR-M7.2                                                       |
 | Boundary    | BFF Inbound (`internal/bff/adapters/inbound/http/`), Bootstrapping (`internal/bff/`) |
-| Status      | DRAFT                                                              |
+| Status      | VERIFIED                                                           |
 | Depends On  | TASK-M7.2-T9-A                                                     |
 
 ## Objective
