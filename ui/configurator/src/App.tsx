@@ -273,27 +273,35 @@ function DashboardContent() {
           {/* Navigation/tabs panel */}
           <div className="glass-card" style={{ flex: '1 1 250px', padding: '24px' }}>
             <h3 style={{ fontFamily: 'Outfit', textAlign: 'left', marginBottom: '16px' }}>Controls</h3>
-            <button 
-              className={`nav-btn ${activeTab === 'agents' ? 'active-btn' : ''}`}
-              onClick={() => setActiveTab('agents')}
-              style={{ width: '100%', marginBottom: '12px', borderLeft: activeTab === 'agents' ? '3px solid #66fcf1' : '' }}
-            >
-              <span className="btn-label"><span className="btn-title">Agents Pool</span></span>
-            </button>
-            <button 
-              className={`nav-btn ${activeTab === 'communities' ? 'active-btn' : ''}`}
-              onClick={() => setActiveTab('communities')}
-              style={{ width: '100%', marginBottom: '12px', borderLeft: activeTab === 'communities' ? '3px solid #66fcf1' : '' }}
-            >
-              <span className="btn-label"><span className="btn-title">Communities Pool</span></span>
-            </button>
-            <button 
-              className={`nav-btn ${activeTab === 'topology' ? 'active-btn' : ''}`}
-              onClick={() => setActiveTab('topology')}
-              style={{ width: '100%', marginBottom: '24px', borderLeft: activeTab === 'topology' ? '3px solid #66fcf1' : '' }}
-            >
-              <span className="btn-label"><span className="btn-title">Topology Map</span></span>
-            </button>
+            <div role="tablist" style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+              <button 
+                role="tab"
+                aria-selected={activeTab === 'agents'}
+                className={`nav-btn ${activeTab === 'agents' ? 'active-btn' : ''}`}
+                onClick={() => setActiveTab('agents')}
+                style={{ width: '100%', marginBottom: '12px', borderLeft: activeTab === 'agents' ? '3px solid #66fcf1' : '' }}
+              >
+                <span className="btn-label"><span className="btn-title">Agents Pool</span></span>
+              </button>
+              <button 
+                role="tab"
+                aria-selected={activeTab === 'communities'}
+                className={`nav-btn ${activeTab === 'communities' ? 'active-btn' : ''}`}
+                onClick={() => setActiveTab('communities')}
+                style={{ width: '100%', marginBottom: '12px', borderLeft: activeTab === 'communities' ? '3px solid #66fcf1' : '' }}
+              >
+                <span className="btn-label"><span className="btn-title">Communities Pool</span></span>
+              </button>
+              <button 
+                role="tab"
+                aria-selected={activeTab === 'topology'}
+                className={`nav-btn ${activeTab === 'topology' ? 'active-btn' : ''}`}
+                onClick={() => setActiveTab('topology')}
+                style={{ width: '100%', marginBottom: '24px', borderLeft: activeTab === 'topology' ? '3px solid #66fcf1' : '' }}
+              >
+                <span className="btn-label"><span className="btn-title">Topology Map</span></span>
+              </button>
+            </div>
 
             <h3 style={{ fontFamily: 'Outfit', textAlign: 'left', marginBottom: '16px' }}>Actions</h3>
             <button 
@@ -328,7 +336,7 @@ function DashboardContent() {
                   <div>
                     <h3 style={{ fontFamily: 'Outfit', marginBottom: '16px' }}>Agents Specifications</h3>
                     {agents.map((agent) => (
-                      <div key={agent.id} style={{ padding: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '12px', marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div key={agent.id} style={{ padding: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '12px', marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                         <div>
                           <h4 style={{ margin: 0, color: '#66fcf1' }}>{agent.name}</h4>
                           <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Model: <code>{agent.brain?.llm_binding_id || 'unknown'}</code></span>
@@ -348,7 +356,7 @@ function DashboardContent() {
                       const unassignedAgents = agents.filter(a => !community.agents?.includes(a.id));
                       return (
                         <div key={community.id} style={{ padding: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '12px', marginBottom: '12px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', flexWrap: 'wrap', gap: '12px' }}>
                             <div>
                               <h4 style={{ margin: 0, color: '#ff5e62' }}>{community.name}</h4>
                               <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Topology: <code>{community.topology}</code></span>
@@ -373,6 +381,7 @@ function DashboardContent() {
                                       onClick={() => handleUnassignAgent(community.id, agentId)} 
                                       style={{ background: 'none', border: 'none', color: '#ff5e62', cursor: 'pointer', marginLeft: '6px', padding: 0, fontSize: '0.85rem', fontWeight: 'bold' }}
                                       title="Unassign Agent"
+                                      aria-label="Unassign Agent"
                                     >
                                       ×
                                     </button>
@@ -386,8 +395,9 @@ function DashboardContent() {
 
                             {unassignedAgents.length > 0 && (
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Assign new agent:</label>
+                                <label htmlFor={`assign-agent-${community.id}`} style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Assign new agent:</label>
                                 <select
+                                  id={`assign-agent-${community.id}`}
                                   defaultValue=""
                                   onChange={(e) => {
                                     if (e.target.value) {

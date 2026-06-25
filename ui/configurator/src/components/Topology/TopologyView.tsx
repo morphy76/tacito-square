@@ -52,6 +52,7 @@ export default function TopologyView({ nodes, links }: TopologyViewProps) {
       {/* Layout Toolbar */}
       <div className="layout-toolbar" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-start' }}>
         <button
+          aria-pressed={layoutType === 'hub-spoke'}
           className={`nav-btn ${layoutType === 'hub-spoke' ? 'active-btn' : ''}`}
           onClick={() => { setLayoutType('hub-spoke'); setSelectedNode(null); }}
           style={{ padding: '8px 16px', borderBottom: layoutType === 'hub-spoke' ? '2px solid #66fcf1' : '' }}
@@ -59,6 +60,7 @@ export default function TopologyView({ nodes, links }: TopologyViewProps) {
           <span className="btn-label"><span className="btn-title">Hub-Spoke</span></span>
         </button>
         <button
+          aria-pressed={layoutType === 'standalone'}
           className={`nav-btn ${layoutType === 'standalone' ? 'active-btn' : ''}`}
           onClick={() => { setLayoutType('standalone'); setSelectedNode(null); }}
           style={{ padding: '8px 16px', borderBottom: layoutType === 'standalone' ? '2px solid #66fcf1' : '' }}
@@ -66,6 +68,7 @@ export default function TopologyView({ nodes, links }: TopologyViewProps) {
           <span className="btn-label"><span className="btn-title">Standalone</span></span>
         </button>
         <button
+          aria-pressed={layoutType === 'serialized'}
           className={`nav-btn ${layoutType === 'serialized' ? 'active-btn' : ''}`}
           onClick={() => { setLayoutType('serialized'); setSelectedNode(null); }}
           style={{ padding: '8px 16px', borderBottom: layoutType === 'serialized' ? '2px solid #66fcf1' : '' }}
@@ -90,7 +93,7 @@ export default function TopologyView({ nodes, links }: TopologyViewProps) {
             width="100%" 
             height="100%" 
             viewBox={`0 0 ${width} ${height}`} 
-            style={{ minHeight: '400px', backgroundColor: '#0d0e12', borderRadius: '12px' }}
+            style={{ aspectRatio: '8/5', backgroundColor: '#0d0e12', borderRadius: '12px' }}
           >
             {/* Draw Links */}
             {activeLinks.map(link => (
@@ -121,6 +124,15 @@ export default function TopologyView({ nodes, links }: TopologyViewProps) {
                   transform={`translate(${node.x}, ${node.y})`}
                   style={{ cursor: 'pointer', transition: 'transform 0.5s ease' }}
                   onClick={() => setSelectedNode(node)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelectedNode(node);
+                    }
+                  }}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`${node.type === 'community' ? 'Community' : 'Agent'} Node: ${node.name}`}
                 >
                   <circle
                     r={isCommunity ? 24 : 16}

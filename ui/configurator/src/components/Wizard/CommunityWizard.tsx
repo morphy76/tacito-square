@@ -52,8 +52,9 @@ export default function CommunityWizard({ onSave, onCancel }: CommunityWizardPro
 
       <div className="wizard-step">
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Community Name</label>
+          <label htmlFor="community-wizard-name" style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Community Name</label>
           <input
+            id="community-wizard-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -70,8 +71,9 @@ export default function CommunityWizard({ onSave, onCancel }: CommunityWizardPro
         </div>
 
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Topology</label>
+          <label htmlFor="community-wizard-topology" style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Topology</label>
           <select
+            id="community-wizard-topology"
             value={topology}
             onChange={(e) => setTopology(e.target.value)}
             style={{
@@ -90,8 +92,9 @@ export default function CommunityWizard({ onSave, onCancel }: CommunityWizardPro
         </div>
 
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Description</label>
+          <label htmlFor="community-wizard-description" style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Description</label>
           <textarea
+            id="community-wizard-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
@@ -108,8 +111,9 @@ export default function CommunityWizard({ onSave, onCancel }: CommunityWizardPro
         </div>
 
         <div style={{ marginBottom: '24px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Configuration (JSON)</label>
+          <label htmlFor="community-wizard-config" style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Configuration (JSON)</label>
           <textarea
+            id="community-wizard-config"
             value={configStr}
             onChange={(e) => setConfigStr(e.target.value)}
             rows={4}

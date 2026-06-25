@@ -103,8 +103,9 @@ export default function AgentWizard({ options, onSave, onCancel }: AgentWizardPr
       {step === 1 && (
         <div className="wizard-step">
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Agent Name</label>
+            <label htmlFor="agent-wizard-name" style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Agent Name</label>
             <input
+              id="agent-wizard-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -120,8 +121,9 @@ export default function AgentWizard({ options, onSave, onCancel }: AgentWizardPr
             />
           </div>
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Description</label>
+            <label htmlFor="agent-wizard-description" style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Description</label>
             <input
+              id="agent-wizard-description"
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -137,8 +139,9 @@ export default function AgentWizard({ options, onSave, onCancel }: AgentWizardPr
             />
           </div>
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Role</label>
+            <label htmlFor="agent-wizard-role" style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Role</label>
             <input
+              id="agent-wizard-role"
               type="text"
               value={role}
               onChange={(e) => setRole(e.target.value)}
@@ -159,8 +162,9 @@ export default function AgentWizard({ options, onSave, onCancel }: AgentWizardPr
       {step === 2 && (
         <div className="wizard-step">
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>LLM Binding</label>
+            <label htmlFor="agent-wizard-binding" style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>LLM Binding</label>
             <select
+              id="agent-wizard-binding"
               value={binding}
               onChange={(e) => setBinding(e.target.value)}
               style={{
@@ -181,8 +185,9 @@ export default function AgentWizard({ options, onSave, onCancel }: AgentWizardPr
 
           <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
             <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Temperature</label>
+              <label htmlFor="agent-wizard-temp" style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Temperature</label>
               <input
+                id="agent-wizard-temp"
                 type="number"
                 step="0.1"
                 min="0"
@@ -200,8 +205,9 @@ export default function AgentWizard({ options, onSave, onCancel }: AgentWizardPr
               />
             </div>
             <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Max Tokens</label>
+              <label htmlFor="agent-wizard-tokens" style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Max Tokens</label>
               <input
+                id="agent-wizard-tokens"
                 type="number"
                 value={tokens}
                 onChange={(e) => setTokens(Number(e.target.value))}
@@ -218,8 +224,9 @@ export default function AgentWizard({ options, onSave, onCancel }: AgentWizardPr
           </div>
 
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Prompt Template</label>
+            <label htmlFor="agent-wizard-prompt" style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Prompt Template</label>
             <select
+              id="agent-wizard-prompt"
               value={promptTemplate}
               onChange={(e) => setPromptTemplate(e.target.value)}
               style={{
@@ -244,8 +251,9 @@ export default function AgentWizard({ options, onSave, onCancel }: AgentWizardPr
         <div className="wizard-step">
           <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
             <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>STM Namespace</label>
+              <label htmlFor="agent-wizard-stm-ns" style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>STM Namespace</label>
               <input
+                id="agent-wizard-stm-ns"
                 type="text"
                 value={stmNs}
                 onChange={(e) => setStmNs(e.target.value)}
@@ -260,8 +268,9 @@ export default function AgentWizard({ options, onSave, onCancel }: AgentWizardPr
               />
             </div>
             <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>STM TTL (seconds)</label>
+              <label htmlFor="agent-wizard-stm-ttl" style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>STM TTL (seconds)</label>
               <input
+                id="agent-wizard-stm-ttl"
                 type="number"
                 value={stmTtl}
                 onChange={(e) => setStmTtl(Number(e.target.value))}
@@ -279,8 +288,9 @@ export default function AgentWizard({ options, onSave, onCancel }: AgentWizardPr
 
           <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
             <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>LTM Collection</label>
+              <label htmlFor="agent-wizard-ltm-col" style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>LTM Collection</label>
               <input
+                id="agent-wizard-ltm-col"
                 type="text"
                 value={ltmCol}
                 onChange={(e) => setLtmCol(e.target.value)}
@@ -295,8 +305,9 @@ export default function AgentWizard({ options, onSave, onCancel }: AgentWizardPr
               />
             </div>
             <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>LTM Dimension</label>
+              <label htmlFor="agent-wizard-ltm-dim" style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>LTM Dimension</label>
               <input
+                id="agent-wizard-ltm-dim"
                 type="number"
                 value={ltmDim}
                 onChange={(e) => setLtmDim(Number(e.target.value))}
