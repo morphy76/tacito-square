@@ -6,6 +6,7 @@ KEEPER_VERSION  := $(shell cat VERSION.keeper 2>/dev/null || echo "0.0.1")
 OPERATOR_VERSION := $(shell cat VERSION.operator 2>/dev/null || echo "0.0.1")
 BFF_VERSION     := $(shell cat VERSION.bff 2>/dev/null || echo "0.0.1")
 UI_CONFIGURATOR_VERSION := $(shell cat VERSION.ui-configurator 2>/dev/null || echo "0.0.1")
+OLLAMA_VERSION  := $(shell cat VERSION.ollama 2>/dev/null || echo "0.0.1")
 
 REGISTRY           ?= 
 HELM_RELEASE       ?= ts
@@ -24,7 +25,7 @@ GOLINT         := $(shell which golangci-lint 2>/dev/null || echo "$(shell go en
 
 .PHONY: all build build-agent build-keeper build-operator build-bff build-ui-server build-ui-configurator test test-integration test-operator test-e2e test-bench test-race test-contract check-test-tags test-ui-configurator lint lint-ui-configurator generate \
         escape-analysis escape-agent escape-keeper escape-operator escape-bff escape-ui-server \
-        docker-build docker-build-agent docker-build-keeper docker-build-operator docker-build-bff docker-push \
+        docker-build docker-build-agent docker-build-keeper docker-build-operator docker-build-bff docker-build-ollama docker-push \
         helm-template helm-install helm-uninstall \
         helm-template-agent helm-install-agent helm-uninstall-agent test-helm-agent \
         helm-infra-deps helm-infra-lint helm-infra-template helm-infra-install helm-infra-uninstall \
@@ -131,7 +132,7 @@ escape-ui-server: ## Run Go escape analysis for the ui-server component
 
 ## —— Docker —————————————————————————————————————————————
 
-docker-build: docker-build-agent docker-build-keeper docker-build-operator docker-build-bff docker-build-ui-configurator ## Build all Docker images
+docker-build: docker-build-agent docker-build-keeper docker-build-operator docker-build-bff docker-build-ui-configurator docker-build-ollama ## Build all Docker images
 
 docker-build-agent: ## Build agent Docker image
 	docker build --no-cache -f tools/docker/Dockerfile.agent -t $(REGISTRY)tacito-square/agent:$(AGENT_VERSION) .
@@ -148,12 +149,16 @@ docker-build-bff: ## Build bff Docker image
 docker-build-ui-configurator: ## Build ui-configurator Docker image
 	docker build --no-cache -f tools/docker/Dockerfile.ui-configurator -t $(REGISTRY)tacito-square/ui-configurator:$(UI_CONFIGURATOR_VERSION) .
 
+docker-build-ollama: ## Build custom Ollama Docker image with pre-baked nomic-embed-text model
+	docker build --no-cache -f tools/docker/Dockerfile.ollama -t $(REGISTRY)tacito-square/ollama:$(OLLAMA_VERSION) .
+
 docker-push: ## Push all Docker images
 	docker push $(REGISTRY)tacito-square/agent:$(AGENT_VERSION)
 	docker push $(REGISTRY)tacito-square/keeper:$(KEEPER_VERSION)
 	docker push $(REGISTRY)tacito-square/operator:$(OPERATOR_VERSION)
 	docker push $(REGISTRY)tacito-square/bff:$(BFF_VERSION)
 	docker push $(REGISTRY)tacito-square/ui-configurator:$(UI_CONFIGURATOR_VERSION)
+	docker push $(REGISTRY)tacito-square/ollama:$(OLLAMA_VERSION)
 
 ## —— Helm (app) —————————————————————————————————————————
 

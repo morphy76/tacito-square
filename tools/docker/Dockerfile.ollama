@@ -1,0 +1,17 @@
+FROM ollama/ollama:0.3.10
+
+# Redirect OLLAMA_MODELS to a non-volume directory so models can be baked in
+ENV OLLAMA_MODELS=/var/lib/ollama/models
+
+# Create model directory and pull the model nomic-embed-text
+RUN mkdir -p /var/lib/ollama/models && \
+    ollama serve & \
+    PID=$! && \
+    sleep 3 && \
+    until ollama list > /dev/null 2>&1; do sleep 1; done && \
+    ollama pull nomic-embed-text && \
+    kill $PID && \
+    wait $PID
+
+# Ensure OLLAMA_MODELS remains set at runtime
+ENV OLLAMA_MODELS=/var/lib/ollama/models

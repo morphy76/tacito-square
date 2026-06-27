@@ -207,3 +207,20 @@ grafana:
   image:
     repository: grafana/grafana
     tag: main-distroless-slim
+
+# ── Ollama (local LLM/embedding runner) ─────────────────
+ollama:
+  enabled: false
+  image:
+    repository: tacito-square/ollama
+    tag: 0.1.0
+  runtimeClassName: ""
+  resources:
+    requests:
+      cpu: "1"
+      memory: "2Gi"
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+      # For Nvidia GPU acceleration on Linux/WSL2, uncomment:
+      # nvidia.com/gpu: "1"

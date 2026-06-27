@@ -250,5 +250,9 @@ func (e *CognitiveEngine) handleEnableSkill(ctx context.Context, args map[string
 		return "Skill unauthorized or not found.", nil
 	}
 
+	if enabledMap, ok := ctx.Value(enabledSkillsKey{}).(map[string]bool); ok {
+		enabledMap[skillName] = true
+	}
+
 	return fmt.Sprintf("Skill %s enabled successfully. Procedural Guidelines:\n%s", skillName, skill.Content), nil
 }
