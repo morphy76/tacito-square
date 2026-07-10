@@ -73,7 +73,7 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | ID | Title | Status | Component | File |
 |----|-------|--------|-----------|------|
 | SPEC-FR-M6.5.1 | Agent Role as Community Assignment Behavior | VERIFIED | keeper, operator | [SPEC-FR-M6.5.1](functional/M6.5/SPEC-FR-M6.5.1.md) |
-| SPEC-FR-M6.5.2 | LLM Binding CRUD APIs | DRAFT | keeper | [SPEC-FR-M6.5.2](functional/M6.5/SPEC-FR-M6.5.2.md) |
+| SPEC-FR-M6.5.2 | LLM Binding CRUD APIs | ACCEPTED | keeper | [SPEC-FR-M6.5.2](functional/M6.5/SPEC-FR-M6.5.2.md) |
 | SPEC-FR-M6.5.3 | Prompt & PromptCollection CRUD APIs + Agent Association | DRAFT | keeper | [SPEC-FR-M6.5.3](functional/M6.5/SPEC-FR-M6.5.3.md) |
 | SPEC-FR-M6.5.4 | Skill & SkillCollection CRUD APIs + Agent Association | DRAFT | keeper | [SPEC-FR-M6.5.4](functional/M6.5/SPEC-FR-M6.5.4.md) |
 | SPEC-FR-M6.5.5 | MCP Client CRUD APIs + Per-Agent Tool Filter | DRAFT | keeper | [SPEC-FR-M6.5.5](functional/M6.5/SPEC-FR-M6.5.5.md) |
@@ -85,6 +85,7 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | SPEC-FR-M6.5.11 | Community Assignment Transaction + Stale Marker | DRAFT | keeper, operator | [SPEC-FR-M6.5.11](functional/M6.5/SPEC-FR-M6.5.11.md) |
 | SPEC-FR-M6.5.12 | STM Key Isolation for Non-Conversational Engagements | DRAFT | agent | [SPEC-FR-M6.5.12](functional/M6.5/SPEC-FR-M6.5.12.md) |
 | SPEC-FR-M6.5.13 | A2A Agent Cards Consolidation for Hub Delegation | DRAFT | agent, keeper | [SPEC-FR-M6.5.13](functional/M6.5/SPEC-FR-M6.5.13.md) |
+| SPEC-FR-M6.5.14 | Agent & Supporting Resource Versioning, Portability API | DRAFT | shared, keeper, operator | [SPEC-FR-M6.5.14](functional/M6.5/SPEC-FR-M6.5.14.md) |
 
 ### M6.6: Non-Conversational Interactions & Long-Term Memory
 
