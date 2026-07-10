@@ -65,7 +65,7 @@ func (r *AgentRepository) Create(ctx context.Context, a *model.Agent) error {
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`
 
 		_, err = tx.Exec(ctx, query,
-			a.ID, a.TenantID, a.Name, a.Description, a.Role, brainJSON, shortTermJSON, longTermJSON, promptTemplate, mcpClientsJSON, a.Status, a.CommunityID, a.Tier, a.CreatedAt, a.UpdatedAt,
+			a.ID, a.TenantID, a.Name, a.Description, "", brainJSON, shortTermJSON, longTermJSON, promptTemplate, mcpClientsJSON, a.Status, a.CommunityID, a.Tier, a.CreatedAt, a.UpdatedAt,
 		)
 		if err != nil {
 			return fmt.Errorf("insert agent: %w", err)
@@ -96,9 +96,10 @@ func (r *AgentRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Age
 	var mcpBytes []byte
 	var promptTemplate *uuid.UUID
 
+	var deprecatedRole string
 	exec := GetExecutor(ctx, r.pool)
 	err := exec.QueryRow(ctx, query, id, ten.FullName()).Scan(
-		&a.ID, &a.TenantID, &a.Name, &a.Description, &a.Role, &brainBytes, &shortBytes, &longBytes, &promptTemplate, &mcpBytes, &a.Status, &a.CommunityID, &a.Tier, &a.CreatedAt, &a.UpdatedAt,
+		&a.ID, &a.TenantID, &a.Name, &a.Description, &deprecatedRole, &brainBytes, &shortBytes, &longBytes, &promptTemplate, &mcpBytes, &a.Status, &a.CommunityID, &a.Tier, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -151,9 +152,10 @@ func (r *AgentRepository) GetByName(ctx context.Context, name string) (*model.Ag
 	var mcpBytes []byte
 	var promptTemplate *uuid.UUID
 
+	var deprecatedRole string
 	exec := GetExecutor(ctx, r.pool)
 	err := exec.QueryRow(ctx, query, name, ten.FullName()).Scan(
-		&a.ID, &a.TenantID, &a.Name, &a.Description, &a.Role, &brainBytes, &shortBytes, &longBytes, &promptTemplate, &mcpBytes, &a.Status, &a.CommunityID, &a.Tier, &a.CreatedAt, &a.UpdatedAt,
+		&a.ID, &a.TenantID, &a.Name, &a.Description, &deprecatedRole, &brainBytes, &shortBytes, &longBytes, &promptTemplate, &mcpBytes, &a.Status, &a.CommunityID, &a.Tier, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -215,8 +217,9 @@ func (r *AgentRepository) List(ctx context.Context) ([]*model.Agent, error) {
 		var mcpBytes []byte
 		var promptTemplate *uuid.UUID
 
+		var deprecatedRole string
 		err := rows.Scan(
-			&a.ID, &a.TenantID, &a.Name, &a.Description, &a.Role, &brainBytes, &shortBytes, &longBytes, &promptTemplate, &mcpBytes, &a.Status, &a.CommunityID, &a.Tier, &a.CreatedAt, &a.UpdatedAt,
+			&a.ID, &a.TenantID, &a.Name, &a.Description, &deprecatedRole, &brainBytes, &shortBytes, &longBytes, &promptTemplate, &mcpBytes, &a.Status, &a.CommunityID, &a.Tier, &a.CreatedAt, &a.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan agent: %w", err)
@@ -285,12 +288,12 @@ func (r *AgentRepository) Update(ctx context.Context, a *model.Agent) error {
 
 	return ExecuteInTxOrPool(ctx, r.pool, func(tx pgx.Tx) error {
 		query := `UPDATE agents SET 
-			name = $1, description = $2, role = $3, brain = $4, short_term_memory = $5, long_term_memory = $6, prompt_template = $7, mcp_clients = $8, status = $9, community_id = $10, tier = $11, updated_at = $12
-		WHERE id = $13 AND tenant_id = $14`
+			name = $1, description = $2, brain = $3, short_term_memory = $4, long_term_memory = $5, prompt_template = $6, mcp_clients = $7, status = $8, community_id = $9, tier = $10, updated_at = $11
+		WHERE id = $12 AND tenant_id = $13`
 
 		a.UpdatedAt = time.Now().UTC()
 		cmdTag, err := tx.Exec(ctx, query,
-			a.Name, a.Description, a.Role, brainJSON, shortTermJSON, longTermJSON, promptTemplate, mcpClientsJSON, a.Status, a.CommunityID, a.Tier, a.UpdatedAt, a.ID, a.TenantID,
+			a.Name, a.Description, brainJSON, shortTermJSON, longTermJSON, promptTemplate, mcpClientsJSON, a.Status, a.CommunityID, a.Tier, a.UpdatedAt, a.ID, a.TenantID,
 		)
 		if err != nil {
 			return fmt.Errorf("update agent: %w", err)

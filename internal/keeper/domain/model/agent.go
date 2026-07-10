@@ -54,7 +54,6 @@ type Agent struct {
 	TenantID        string                `json:"tenant_id,omitempty"`
 	Name            string                `json:"name"`
 	Description     string                `json:"description,omitempty"`
-	Role            string                `json:"role,omitempty"`
 	Brain           BrainConfig           `json:"brain"`
 	ShortTermMemory ShortTermMemoryConfig `json:"short_term_memory"`
 	LongTermMemory  LongTermMemoryConfig  `json:"long_term_memory"`
@@ -79,9 +78,7 @@ func (a Agent) Validate() error {
 	if a.Name == "" {
 		return errors.New("name is required")
 	}
-	if a.Role != "" && a.Role != "hub" && a.Role != "spoke" {
-		return errors.New("invalid agent role")
-	}
+
 	if a.Status != AgentStatusDefined && a.Status != AgentStatusAssigned && a.Status != AgentStatusActive && a.Status != AgentStatusTerminated &&
 		a.Status != AgentStatusStopped && a.Status != AgentStatusPending && a.Status != AgentStatusRunning && a.Status != AgentStatusError {
 		return errors.New("invalid agent status")

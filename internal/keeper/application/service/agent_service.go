@@ -139,23 +139,8 @@ func (s *AgentService) Assign(ctx context.Context, communityID uuid.UUID, agentI
 		if count >= 1 {
 			return fmt.Errorf("community with single-agent topology cannot have more than one agent assigned")
 		}
-	} else if community.Topology == model.CommunityTopologyHubSpoke {
-		if agent.Role == "hub" {
-			agents, err := s.repo.List(ctx)
-			if err != nil {
-				return err
-			}
-			hubCount := 0
-			for _, a := range agents {
-				if a.CommunityID != nil && *a.CommunityID == communityID && a.Role == "hub" {
-					hubCount++
-				}
-			}
-			if hubCount >= 1 {
-				return fmt.Errorf("community with hub-spoke topology cannot have more than one hub agent assigned")
-			}
-		}
 	}
+	// Note: hub-spoke role validation is delegated to the CommunityAssignmentRepository (SPEC-FR-M6.5.1)
 
 	// 4. Persist the assignment changes synchronously in the repository within current transaction context
 	if err := s.repo.AssignToCommunity(ctx, agentID, communityID); err != nil {

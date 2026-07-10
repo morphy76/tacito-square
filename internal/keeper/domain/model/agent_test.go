@@ -51,31 +51,7 @@ func TestAgent_Validation(t *testing.T) {
 			name:  "Valid agent template",
 			agent: validAgent,
 		},
-		{
-			name: "Valid Agent with hub role",
-			agent: func() Agent {
-				a := validAgent
-				a.Role = "hub"
-				return a
-			}(),
-		},
-		{
-			name: "Valid Agent with spoke role",
-			agent: func() Agent {
-				a := validAgent
-				a.Role = "spoke"
-				return a
-			}(),
-		},
-		{
-			name: "Invalid agent role",
-			agent: func() Agent {
-				a := validAgent
-				a.Role = "invalid-role"
-				return a
-			}(),
-			wantErr: "invalid agent role",
-		},
+
 		{
 			name: "Missing ID",
 			agent: func() Agent {
@@ -292,7 +268,6 @@ func TestAgent_JSONSerialization(t *testing.T) {
 	assert.NotContains(t, m, "mcp_clients")
 	assert.NotContains(t, m, "community_id")
 	assert.NotContains(t, m, "description")
-	assert.NotContains(t, m, "role")
 	assert.NotContains(t, m, "tier")
 
 	// Present required/non-empty fields

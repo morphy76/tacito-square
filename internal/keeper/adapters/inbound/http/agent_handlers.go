@@ -147,17 +147,11 @@ func (h *AgentHandler) Create(c *gin.Context) {
 		})
 	}
 
-	role := req.Role
-	if role == "" {
-		role = "spoke"
-	}
-
 	agent := &model.Agent{
 		ID:          uuid.New(),
 		TenantID:    ten.FullName(),
 		Name:        req.Name,
 		Description: req.Description,
-		Role:        role,
 		Brain: model.BrainConfig{
 			LLMBindingID: llmBindingID,
 			Temperature:  req.Brain.Temperature,
@@ -312,7 +306,6 @@ func (h *AgentHandler) Update(c *gin.Context) {
 		TenantID:        existing.TenantID,
 		Name:            existing.Name,
 		Description:     existing.Description,
-		Role:            existing.Role,
 		Brain:           existing.Brain,
 		ShortTermMemory: existing.ShortTermMemory,
 		LongTermMemory:  existing.LongTermMemory,
@@ -370,11 +363,6 @@ func (h *AgentHandler) Update(c *gin.Context) {
 	existing.TenantID = ten.FullName()
 	existing.Name = req.Name
 	existing.Description = req.Description
-	role := req.Role
-	if role == "" {
-		role = "spoke"
-	}
-	existing.Role = role
 	existing.Brain = model.BrainConfig{
 		LLMBindingID: llmBindingID,
 		Temperature:  req.Brain.Temperature,

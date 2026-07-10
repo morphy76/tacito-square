@@ -606,7 +606,7 @@ func TestResolveAndSynthesizeSystemPrompt_Success(t *testing.T) {
 		Skills:         []uuid.UUID{skillID1, skillID2},
 	}
 
-	synthesized, err := coordinator.ResolveAndSynthesizeSystemPrompt(context.Background(), agent)
+	synthesized, err := coordinator.ResolveAndSynthesizeSystemPrompt(context.Background(), agent, "")
 	require.NoError(t, err)
 
 	var config crdadapter.PropagatedAgentConfig
@@ -644,11 +644,10 @@ func TestResolveAndSynthesizeSystemPrompt_HubAgentMerging_Success(t *testing.T) 
 	agent := &model.Agent{
 		ID:             uuid.New(),
 		Description:    "A helpful assistant",
-		Role:           "hub",
 		PromptTemplate: businessPromptID,
 	}
 
-	synthesized, err := coordinator.ResolveAndSynthesizeSystemPrompt(context.Background(), agent)
+	synthesized, err := coordinator.ResolveAndSynthesizeSystemPrompt(context.Background(), agent, "hub")
 	require.NoError(t, err)
 
 	var config crdadapter.PropagatedAgentConfig
@@ -749,7 +748,7 @@ func TestResolveAndSynthesizeSystemPrompt_MissingResources(t *testing.T) {
 		PromptTemplate: promptID,
 	}
 
-	_, err := coordinator.ResolveAndSynthesizeSystemPrompt(context.Background(), agent)
+	_, err := coordinator.ResolveAndSynthesizeSystemPrompt(context.Background(), agent, "")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "prompt template not found")
 
@@ -772,7 +771,7 @@ func TestResolveAndSynthesizeSystemPrompt_MissingResources(t *testing.T) {
 		Skills:         []uuid.UUID{skillID},
 	}
 
-	_, err = coordinator.ResolveAndSynthesizeSystemPrompt(context.Background(), agent)
+	_, err = coordinator.ResolveAndSynthesizeSystemPrompt(context.Background(), agent, "")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "skill not found")
 }
@@ -1008,7 +1007,6 @@ func TestSubmitAgentCRD_HubRolePropagated(t *testing.T) {
 		ID:       agentID,
 		TenantID: "tenant-1",
 		Name:     "hub-agent",
-		Role:     "hub",
 		Brain: model.BrainConfig{
 			LLMBindingID: uuid.New(),
 		},
@@ -1022,7 +1020,8 @@ func TestSubmitAgentCRD_HubRolePropagated(t *testing.T) {
 	err = fakeClient.Get(context.Background(), key, fetched)
 	assert.NoError(t, err)
 
-	assert.Equal(t, "hub", fetched.Spec.Role)
+	// Role is populated from CommunityAssignment at reconciliation time (SPEC-FR-M6.5.1)
+	assert.Equal(t, "", fetched.Spec.Role)
 }
 
 func TestSubmitAgentCRD_SpokeRolePropagated(t *testing.T) {
@@ -1040,7 +1039,6 @@ func TestSubmitAgentCRD_SpokeRolePropagated(t *testing.T) {
 		ID:       agentID,
 		TenantID: "tenant-1",
 		Name:     "spoke-agent",
-		Role:     "spoke",
 		Brain: model.BrainConfig{
 			LLMBindingID: uuid.New(),
 		},
@@ -1054,7 +1052,8 @@ func TestSubmitAgentCRD_SpokeRolePropagated(t *testing.T) {
 	err = fakeClient.Get(context.Background(), key, fetched)
 	assert.NoError(t, err)
 
-	assert.Equal(t, "spoke", fetched.Spec.Role)
+	// Role is populated from CommunityAssignment at reconciliation time (SPEC-FR-M6.5.1)
+	assert.Equal(t, "", fetched.Spec.Role)
 }
 
 func TestSubmitAgentCRD_RoleUpdated(t *testing.T) {
@@ -1082,12 +1081,11 @@ func TestSubmitAgentCRD_RoleUpdated(t *testing.T) {
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(existing).Build()
 	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", newMockLLMBindingRepository(), nil, nil, nil, nil)
 
-	// Update model to "hub"
+	// Update model — role now comes from CommunityAssignment, not agent.Role
 	agent := &model.Agent{
 		ID:       agentID,
 		TenantID: "tenant-1",
 		Name:     "updating-agent",
-		Role:     "hub",
 		Brain: model.BrainConfig{
 			LLMBindingID: uuid.New(),
 		},
@@ -1102,7 +1100,8 @@ func TestSubmitAgentCRD_RoleUpdated(t *testing.T) {
 	err = fakeClient.Get(context.Background(), key, fetched)
 	assert.NoError(t, err)
 
-	assert.Equal(t, "hub", fetched.Spec.Role)
+	// Role is populated from CommunityAssignment at reconciliation time (SPEC-FR-M6.5.1)
+	assert.Equal(t, "", fetched.Spec.Role)
 }
 
 func ptrFloat64(v float64) *float64 { return &v }
