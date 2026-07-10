@@ -20,12 +20,13 @@ import (
 )
 
 type mockSessionUseCase struct {
-	InitiateLoginFunc     func(ctx context.Context) (string, string, error)
-	HandleCallbackFunc    func(ctx context.Context, code, state string) (*model.Session, error)
-	RefreshSessionFunc    func(ctx context.Context, sessionID string) (*model.Session, error)
-	LogoutFunc            func(ctx context.Context, sessionID string) error
-	BackchannelLogoutFunc func(ctx context.Context, rawLogoutToken string) error
-	GetSessionFunc        func(ctx context.Context, sessionID string) (*model.Session, error)
+	InitiateLoginFunc       func(ctx context.Context) (string, string, error)
+	HandleCallbackFunc      func(ctx context.Context, code, state string) (*model.Session, error)
+	RefreshSessionFunc      func(ctx context.Context, sessionID string) (*model.Session, error)
+	LogoutFunc              func(ctx context.Context, sessionID string) error
+	BackchannelLogoutFunc   func(ctx context.Context, rawLogoutToken string) error
+	GetSessionFunc          func(ctx context.Context, sessionID string) (*model.Session, error)
+	ValidateAccessTokenFunc func(ctx context.Context, token string) (*model.UserInfoPayload, error)
 }
 
 func (m *mockSessionUseCase) InitiateLogin(ctx context.Context, redirectTo string) (string, string, error) {
@@ -71,6 +72,13 @@ func (m *mockSessionUseCase) GetSession(ctx context.Context, sessionID string) (
 	return nil, nil
 }
 
+func (m *mockSessionUseCase) ValidateAccessToken(ctx context.Context, token string) (*model.UserInfoPayload, error) {
+	if m.ValidateAccessTokenFunc != nil {
+		return m.ValidateAccessTokenFunc(ctx, token)
+	}
+	return nil, nil
+}
+
 var _ inbound.SessionUseCase = (*mockSessionUseCase)(nil)
 
 // mockSessionUseCase2 provides full-signature functions for testing the redirect-to feature,
@@ -83,6 +91,7 @@ type mockSessionUseCase2 struct {
 	LogoutFunc                        func(ctx context.Context, sessionID string) error
 	BackchannelLogoutFunc             func(ctx context.Context, rawLogoutToken string) error
 	GetSessionFunc                    func(ctx context.Context, sessionID string) (*model.Session, error)
+	ValidateAccessTokenFunc           func(ctx context.Context, token string) (*model.UserInfoPayload, error)
 }
 
 func (m *mockSessionUseCase2) InitiateLogin(ctx context.Context, redirectTo string) (string, string, error) {
@@ -127,6 +136,13 @@ func (m *mockSessionUseCase2) GetSession(ctx context.Context, sessionID string) 
 	return nil, nil
 }
 
+func (m *mockSessionUseCase2) ValidateAccessToken(ctx context.Context, token string) (*model.UserInfoPayload, error) {
+	if m.ValidateAccessTokenFunc != nil {
+		return m.ValidateAccessTokenFunc(ctx, token)
+	}
+	return nil, nil
+}
+
 var _ inbound.SessionUseCase = (*mockSessionUseCase2)(nil)
 
 func TestAuthHandler_Login_RedirectsToOIDC(t *testing.T) {
@@ -139,7 +155,7 @@ func TestAuthHandler_Login_RedirectsToOIDC(t *testing.T) {
 		},
 	}
 
-	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
+	bffhttp.RegisterRoutes(r, mockUC, nil, nil, "/ui")
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/ui/api/v1/auth/login", nil)
@@ -182,7 +198,7 @@ func TestAuthHandler_Callback_Success_SetsCookie(t *testing.T) {
 		},
 	}
 
-	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
+	bffhttp.RegisterRoutes(r, mockUC, nil, nil, "/ui")
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/ui/api/v1/auth/callback?code=code-abc&state=state-xyz", nil)
@@ -232,7 +248,7 @@ func TestAuthHandler_Login_WithRedirectTo(t *testing.T) {
 		},
 	}
 
-	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
+	bffhttp.RegisterRoutes(r, mockUC, nil, nil, "/ui")
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/ui/api/v1/auth/login?redirect_to=%2Fui%2Fsecure%2Fpage", nil)
@@ -260,7 +276,7 @@ func TestAuthHandler_Callback_RedirectsToOriginalResource(t *testing.T) {
 		},
 	}
 
-	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
+	bffhttp.RegisterRoutes(r, mockUC, nil, nil, "/ui")
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/ui/api/v1/auth/callback?code=code-1&state=state-1", nil)
@@ -289,7 +305,7 @@ func TestAuthHandler_Callback_FallsBackToUIPathWhenNoRedirectTo(t *testing.T) {
 		},
 	}
 
-	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
+	bffhttp.RegisterRoutes(r, mockUC, nil, nil, "/ui")
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/ui/api/v1/auth/callback?code=code-2&state=state-2", nil)
@@ -310,7 +326,7 @@ func TestAuthHandler_Callback_ExchangeFailure(t *testing.T) {
 		},
 	}
 
-	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
+	bffhttp.RegisterRoutes(r, mockUC, nil, nil, "/ui")
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/ui/api/v1/auth/callback?code=code-abc&state=state-xyz", nil)
@@ -346,7 +362,7 @@ func TestAuthHandler_Logout_ClearsCookie(t *testing.T) {
 		},
 	}
 
-	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
+	bffhttp.RegisterRoutes(r, mockUC, nil, nil, "/ui")
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodPost, "/ui/api/v1/auth/logout", nil)
@@ -385,7 +401,7 @@ func TestAuthHandler_BackchannelLogout_Success(t *testing.T) {
 		},
 	}
 
-	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
+	bffhttp.RegisterRoutes(r, mockUC, nil, nil, "/ui")
 
 	w := httptest.NewRecorder()
 	form := url.Values{}
@@ -408,7 +424,7 @@ func TestAuthHandler_BackchannelLogout_InvalidToken(t *testing.T) {
 		},
 	}
 
-	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
+	bffhttp.RegisterRoutes(r, mockUC, nil, nil, "/ui")
 
 	w := httptest.NewRecorder()
 	form := url.Values{}
@@ -444,7 +460,7 @@ func TestAuthHandler_Logout_RedirectToOIDC_WithPostLogoutRedirect(t *testing.T) 
 		},
 	}
 
-	bffhttp.RegisterRoutes(r, mockUC, nil, "/ui")
+	bffhttp.RegisterRoutes(r, mockUC, nil, nil, "/ui")
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodPost, "/ui/api/v1/auth/logout", nil)
@@ -471,4 +487,63 @@ func TestAuthHandler_Logout_RedirectToOIDC_WithPostLogoutRedirect(t *testing.T) 
 	assert.Equal(t, "mock-id-token", q.Get("id_token_hint"))
 	assert.Equal(t, "session-123", calledSessionID)
 }
+
+func TestAuthHandler_Me_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+
+	mockUC := &mockSessionUseCase{
+		GetSessionFunc: func(ctx context.Context, sessionID string) (*model.Session, error) {
+			return &model.Session{
+				ID:       "session-123",
+				UserID:   "user-123",
+				TenantID: "tenant-123",
+				UserInfo: model.UserInfoPayload{
+					Sub:      "user-123",
+					Email:    "test@test.com",
+					TenantID: "tenant-123",
+					Name:     "Test User",
+					Roles:    []string{"keeper-admin"},
+				},
+			}, nil
+		},
+	}
+
+	bffhttp.RegisterRoutes(r, mockUC, nil, nil, "/ui")
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/ui/api/v1/auth/me", nil)
+	req.AddCookie(&http.Cookie{
+		Name:  "bff_session_id",
+		Value: "session-123",
+		Path:  "/ui",
+	})
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.NoError(t, err)
+	assert.Equal(t, "user-123", resp["id"])
+	assert.Equal(t, "Test User", resp["name"])
+	assert.Equal(t, "test@test.com", resp["email"])
+	assert.Equal(t, "tenant-123", resp["tenant_id"])
+	assert.Equal(t, []interface{}{"keeper-admin"}, resp["roles"])
+}
+
+func TestAuthHandler_Me_Unauthorized(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+
+	mockUC := &mockSessionUseCase{}
+
+	bffhttp.RegisterRoutes(r, mockUC, nil, nil, "/ui")
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/ui/api/v1/auth/me", nil)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
 

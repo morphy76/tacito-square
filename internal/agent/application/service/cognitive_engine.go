@@ -317,10 +317,29 @@ func (e *CognitiveEngine) ExecuteReasoningLoop(
 	}
 
 	// Inject tenant, agent metadata and thread-scoped active tools/parsed skills into context
+	activeEnabledSkills := make(map[string]bool)
+	for _, entry := range history {
+		if entry.Role == "assistant" && entry.Metadata != nil {
+			if toolCallsStr, exists := entry.Metadata["tool_calls"]; exists {
+				var toolCalls []model.ToolCall
+				if err := json.Unmarshal([]byte(toolCallsStr), &toolCalls); err == nil {
+					for _, tc := range toolCalls {
+						if tc.Name == "enable_skill" {
+							if skillName, ok := tc.Arguments["skill_name"].(string); ok && skillName != "" {
+								activeEnabledSkills[skillName] = true
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
 	ctx = context.WithValue(ctx, tenantCtxKey{}, tenantID)
 	ctx = context.WithValue(ctx, agentCtxKey{}, agentID)
 	ctx = context.WithValue(ctx, threadCtxKey{}, threadID)
 	ctx = context.WithValue(ctx, activeToolsKey{}, activeTools)
+	ctx = context.WithValue(ctx, enabledSkillsKey{}, activeEnabledSkills)
 	if isStructured {
 		ctx = context.WithValue(ctx, parsedSkillsKey{}, skillsMap)
 	}
@@ -396,9 +415,11 @@ func (e *CognitiveEngine) executeStep(
 	logger.Debug().Int("step", step).Msg("starting reasoning step")
 
 	// 1. Generate LLM turn
+	dynamicSystemPrompt := e.compileDynamicSystemPrompt(ctx, systemPrompt)
+
 	req := model.BrainRequest{
 		Prompt:       userQuery,
-		SystemPrompt: systemPrompt,
+		SystemPrompt: dynamicSystemPrompt,
 		History:      *activeHistory,
 		Tools:        toolsToExpose,
 	}
@@ -578,4 +599,38 @@ func (e *CognitiveEngine) emitStepEvent(ctx context.Context, tenantID, agentID, 
 	if err != nil {
 		logger.Warn().Err(err).Str("subject", subject).Msg("failed to publish intermediate reasoning event over NATS publisher port")
 	}
+}
+
+func (e *CognitiveEngine) compileDynamicSystemPrompt(ctx context.Context, baseSystemPrompt string) string {
+	enabledMap, ok := ctx.Value(enabledSkillsKey{}).(map[string]bool)
+	if !ok || len(enabledMap) == 0 {
+		return baseSystemPrompt
+	}
+
+	skills, ok := ctx.Value(parsedSkillsKey{}).(map[string]Skill)
+	if !ok {
+		skills = make(map[string]Skill)
+	}
+
+	var enabledSkillsStrings []string
+	for skillName, enabled := range enabledMap {
+		if enabled {
+			if skill, exists := skills[skillName]; exists {
+				enabledSkillsStrings = append(enabledSkillsStrings, fmt.Sprintf("=== Skill: %s ===\nDescription: %s\nGuidelines:\n%s", skill.Name, skill.Description, skill.Content))
+			} else if skill, exists := e.skills[skillName]; exists {
+				enabledSkillsStrings = append(enabledSkillsStrings, fmt.Sprintf("=== Skill: %s ===\nDescription: %s\nGuidelines:\n%s", skill.Name, skill.Description, skill.Content))
+			}
+		}
+	}
+
+	if len(enabledSkillsStrings) == 0 {
+		return baseSystemPrompt
+	}
+
+	var sb strings.Builder
+	sb.WriteString(baseSystemPrompt)
+	sb.WriteString("\n\n")
+	sb.WriteString("Active Dynamic Skills & Guidelines:\n")
+	sb.WriteString(strings.Join(enabledSkillsStrings, "\n\n"))
+	return sb.String()
 }

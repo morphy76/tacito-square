@@ -9,28 +9,23 @@ data:
   TS_AGENT_NAME: {{ .Values.agent.name | quote }}
   TS_AGENT_TENANT_ID: {{ .Values.agent.tenantId | quote }}
   TS_AGENT_COMMUNITY_REF: {{ .Values.agent.communityRef | quote }}
-  TS_AGENT_LLM_MODEL: {{ .Values.agent.llm.model | quote }}
-  TS_AGENT_LLM_ENDPOINT: {{ tpl .Values.agent.llm.endpoint . | quote }}
-  TS_AGENT_LLM_TEMPERATURE: {{ .Values.agent.llm.temperature | toString | quote }}
-  TS_AGENT_LLM_MAX_TOKENS: {{ .Values.agent.llm.maxTokens | toString | quote }}
+  TS_AGENT_ROLE: "spoke"
+  TS_AGENT_LOG_LEVEL: {{ .Values.logLevel | quote }}
+  TS_AGENT_PORT: {{ .Values.port | toString | quote }}
   TS_AGENT_BRAIN_PROVIDER: {{ .Values.agent.brain.provider | quote }}
   TS_AGENT_BRAIN_MODEL: {{ .Values.agent.brain.model | quote }}
   TS_AGENT_BRAIN_TEMPERATURE: {{ .Values.agent.brain.temperature | toString | quote }}
   TS_AGENT_BRAIN_MAX_TOKENS: {{ .Values.agent.brain.maxTokens | toString | quote }}
+  TS_AGENT_OPENAI_ENDPOINT: {{ .Values.agent.brain.endpoint | quote }}
   TS_AGENT_BRAIN_TIMEOUT_SECONDS: {{ .Values.agent.brain.timeoutSeconds | toString | quote }}
   TS_AGENT_BRAIN_CIRCUIT_FAILURE_THRESHOLD: {{ .Values.agent.brain.circuit.failureThreshold | toString | quote }}
   TS_AGENT_BRAIN_CIRCUIT_RECOVERY_TIMEOUT_SECONDS: {{ .Values.agent.brain.circuit.recoveryTimeoutSeconds | toString | quote }}
-  TS_AGENT_OPENAI_ENDPOINT: {{ tpl .Values.agent.openai.endpoint . | quote }}
-  TS_AGENT_OPENAI_API_KEY: {{ .Values.agent.openai.apiKey | quote }}
-  TS_AGENT_OLLAMA_ENDPOINT: {{ tpl .Values.agent.ollama.endpoint . | quote }}
+  TS_AGENT_BYPASS_LTM: "true"
   TS_AGENT_SYSTEM_PROMPT: {{ .Values.agent.systemPrompt | quote }}
-  TS_AGENT_REDIS_URL: {{ .Values.redis.url | quote }}
-  TS_AGENT_REDIS_KEY_NAMESPACE: {{ .Values.redis.keyNamespace | quote }}
-  TS_AGENT_REDIS_TTL_SECONDS: {{ .Values.redis.ttlSeconds | toString | quote }}
-  TS_AGENT_QDRANT_URL: {{ .Values.qdrant.url | quote }}
-  TS_AGENT_QDRANT_COLLECTION_NAME: {{ .Values.qdrant.collectionName | quote }}
-  TS_AGENT_QDRANT_VECTOR_DIMENSION: {{ .Values.qdrant.vectorDimension | toString | quote }}
   TS_AGENT_NATS_URL: {{ .Values.nats.url | quote }}
+  TS_AGENT_REDIS_URL: {{ .Values.redis.url | quote }}
+  TS_AGENT_QDRANT_URL: {{ .Values.qdrant.url | quote }}
   TS_AGENT_OTEL_ENDPOINT: {{ tpl .Values.otel.endpoint . | quote }}
-  TS_AGENT_S3_URL: {{ .Values.s3.url | quote }}
+  TS_AGENT_S3_ENDPOINT: {{ .Values.s3.url | quote }}
   TS_AGENT_S3_BUCKET: {{ .Values.s3.bucket | quote }}
+  TS_AGENT_S3_REGION: {{ .Values.s3.region | quote }}

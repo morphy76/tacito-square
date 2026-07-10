@@ -1,0 +1,55 @@
+{{- if .Values.ollama.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ts-infra-ollama
+  labels:
+    {{- include "tacito-square-infra.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ts-infra-ollama
+  template:
+    metadata:
+      labels:
+        app: ts-infra-ollama
+    spec:
+      containers:
+        - name: ollama
+          image: "{{ .Values.ollama.image.repository }}:{{ .Values.ollama.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 11434
+              protocol: TCP
+          {{- if .Values.ollama.resources }}
+          resources:
+            {{- toYaml .Values.ollama.resources | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: dshm
+              mountPath: /dev/shm
+      {{- if .Values.ollama.runtimeClassName }}
+      runtimeClassName: {{ .Values.ollama.runtimeClassName | quote }}
+      {{- end }}
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ts-infra-ollama
+  labels:
+    {{- include "tacito-square-infra.labels" . | nindent 4 }}
+spec:
+  ports:
+    - name: http
+      port: 11434
+      targetPort: 11434
+      protocol: TCP
+  selector:
+    app: ts-infra-ollama
+{{- end }}

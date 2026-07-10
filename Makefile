@@ -5,6 +5,8 @@ AGENT_VERSION   := $(shell cat VERSION.agent 2>/dev/null || echo "0.0.1")
 KEEPER_VERSION  := $(shell cat VERSION.keeper 2>/dev/null || echo "0.0.1")
 OPERATOR_VERSION := $(shell cat VERSION.operator 2>/dev/null || echo "0.0.1")
 BFF_VERSION     := $(shell cat VERSION.bff 2>/dev/null || echo "0.0.1")
+UI_CONFIGURATOR_VERSION := $(shell cat VERSION.ui-configurator 2>/dev/null || echo "0.0.1")
+OLLAMA_VERSION  := $(shell cat VERSION.ollama 2>/dev/null || echo "0.0.1")
 
 REGISTRY           ?= 
 HELM_RELEASE       ?= ts
@@ -21,9 +23,9 @@ GOTEST         := $(GO) test
 GOLINT         := $(shell which golangci-lint 2>/dev/null || echo "$(shell go env GOPATH 2>/dev/null)/bin/golangci-lint")
 
 
-.PHONY: all build build-agent build-keeper build-operator build-bff test test-integration test-operator test-e2e test-bench test-race test-contract check-test-tags lint generate \
-        escape-analysis escape-agent escape-keeper escape-operator escape-bff \
-        docker-build docker-build-agent docker-build-keeper docker-build-operator docker-build-bff docker-push \
+.PHONY: all build build-agent build-keeper build-operator build-bff build-ui-server build-ui-configurator test test-integration test-operator test-e2e test-bench test-race test-contract check-test-tags test-ui-configurator lint lint-ui-configurator generate \
+        escape-analysis escape-agent escape-keeper escape-operator escape-bff escape-ui-server \
+        docker-build docker-build-agent docker-build-keeper docker-build-operator docker-build-bff docker-build-ollama docker-push \
         helm-template helm-install helm-uninstall \
         helm-template-agent helm-install-agent helm-uninstall-agent test-helm-agent \
         helm-infra-deps helm-infra-lint helm-infra-template helm-infra-install helm-infra-uninstall \
@@ -33,7 +35,7 @@ GOLINT         := $(shell which golangci-lint 2>/dev/null || echo "$(shell go en
 
 all: lint test build ## Run lint, test, and build
 
-build: ## Build all binaries
+build: build-ui-configurator build-ui-server ## Build all binaries
 	$(GO) build -o bin/agent    ./cmd/agent
 	$(GO) build -o bin/keeper   ./cmd/keeper
 	$(GO) build -o bin/operator ./cmd/operator
@@ -51,10 +53,19 @@ build-operator: ## Build operator binary
 build-bff: ## Build bff binary
 	$(GO) build -o bin/bff ./cmd/bff
 
+build-ui-server: ## Build UI static server binary
+	$(GO) build -o bin/ui-server ./cmd/ui-server
+
+build-ui-configurator: ## Build UI Configurator React application
+	cd ui/configurator && npm install && npm run build
+
 ## —— Test ———————————————————————————————————————————————
 
-test: check-test-tags ## Run unit tests with race detector
+test: check-test-tags test-ui-configurator ## Run unit tests with race detector
 	$(GOTEST) ./internal/... -count=1 -race -v
+
+test-ui-configurator: ## Run UI Configurator unit tests
+	cd ui/configurator && npm install && npm run test
 
 check-test-tags: ## Fail if a test file imports testcontainers/dockertest without //go:build integration
 	@bad=$$(grep -lE '"github.com/(testcontainers/testcontainers-go|ory/dockertest)' \
@@ -86,15 +97,18 @@ test-contract: ## Run contract tests (OpenAPI compatibility)
 
 ## —— Quality ————————————————————————————————————————————
 
-lint: ## Run linter
+lint: lint-ui-configurator ## Run linter
 	$(GOLINT) run ./...
+
+lint-ui-configurator: ## Run UI Configurator linter
+	cd ui/configurator && npm install && npm run lint
 
 generate: ## Run code generation (mocks, CRDs, etc.)
 	$(GO) generate ./...
 
 ## —— Escape Analysis ——————————————————————————————————————
 
-escape-analysis: escape-agent escape-keeper escape-operator escape-bff ## Run escape analysis for all components
+escape-analysis: escape-agent escape-keeper escape-operator escape-bff escape-ui-server ## Run escape analysis for all components
 
 escape-agent: ## Run Go escape analysis for the agent component
 	@echo "=== Escape Analysis: agent ==="
@@ -112,9 +126,13 @@ escape-bff: ## Run Go escape analysis for the bff component
 	@echo "=== Escape Analysis: bff ==="
 	$(GO) build -gcflags="-m" ./cmd/bff/... ./internal/bff/... 2>&1 | grep -E "^(\./)?(cmd|internal|pkg)/" || true
 
+escape-ui-server: ## Run Go escape analysis for the ui-server component
+	@echo "=== Escape Analysis: ui-server ==="
+	$(GO) build -gcflags="-m" ./cmd/ui-server/... 2>&1 | grep -E "^(\./)?(cmd|internal|pkg)/" || true
+
 ## —— Docker —————————————————————————————————————————————
 
-docker-build: docker-build-agent docker-build-keeper docker-build-operator docker-build-bff ## Build all Docker images
+docker-build: docker-build-agent docker-build-keeper docker-build-operator docker-build-bff docker-build-ui-configurator docker-build-ollama ## Build all Docker images
 
 docker-build-agent: ## Build agent Docker image
 	docker build --no-cache -f tools/docker/Dockerfile.agent -t $(REGISTRY)tacito-square/agent:$(AGENT_VERSION) .
@@ -128,11 +146,19 @@ docker-build-operator: ## Build operator Docker image
 docker-build-bff: ## Build bff Docker image
 	docker build --no-cache -f tools/docker/Dockerfile.bff -t $(REGISTRY)tacito-square/bff:$(BFF_VERSION) .
 
+docker-build-ui-configurator: ## Build ui-configurator Docker image
+	docker build --no-cache -f tools/docker/Dockerfile.ui-configurator -t $(REGISTRY)tacito-square/ui-configurator:$(UI_CONFIGURATOR_VERSION) .
+
+docker-build-ollama: ## Build custom Ollama Docker image with pre-baked nomic-embed-text model
+	docker build --no-cache -f tools/docker/Dockerfile.ollama -t $(REGISTRY)tacito-square/ollama:$(OLLAMA_VERSION) .
+
 docker-push: ## Push all Docker images
 	docker push $(REGISTRY)tacito-square/agent:$(AGENT_VERSION)
 	docker push $(REGISTRY)tacito-square/keeper:$(KEEPER_VERSION)
 	docker push $(REGISTRY)tacito-square/operator:$(OPERATOR_VERSION)
 	docker push $(REGISTRY)tacito-square/bff:$(BFF_VERSION)
+	docker push $(REGISTRY)tacito-square/ui-configurator:$(UI_CONFIGURATOR_VERSION)
+	docker push $(REGISTRY)tacito-square/ollama:$(OLLAMA_VERSION)
 
 ## —— Helm (app) —————————————————————————————————————————
 

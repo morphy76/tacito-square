@@ -32,26 +32,14 @@ spec:
             - configMapRef:
                 name: {{ include "tacito-agent.fullname" . }}-config
           env:
-            - name: TS_AGENT_PORT
-              value: {{ .Values.port | toString | quote }}
-            - name: TS_AGENT_LOG_LEVEL
-              value: {{ .Values.logLevel | quote }}
+            - name: TS_AGENT_OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.agent.brain.credentialsSecret.name }}
+                  key: {{ .Values.agent.brain.credentialsSecret.key }}
             {{- if .Values.mcpClients }}
             - name: TS_AGENT_MCP_CLIENTS
               value: {{ .Values.mcpClients | toJson | quote }}
-            {{- end }}
-            {{- $secretName := "" }}
-            {{- if .Values.agent.llm.credentialsSecret }}
-              {{- $secretName = .Values.agent.llm.credentialsSecret }}
-            {{- else if .Values.agent.llm.apiKey }}
-              {{- $secretName = printf "%s-llm" (include "tacito-agent.fullname" .) }}
-            {{- end }}
-            {{- if $secretName }}
-            - name: TS_AGENT_LLM_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ $secretName | quote }}
-                  key: api-key
             {{- end }}
           livenessProbe:
             httpGet:

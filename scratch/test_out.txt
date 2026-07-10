@@ -1,0 +1,471 @@
+{"level":"info","component":"bff","version":"0.1.0","time":1782332476,"message":"starting bff component"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /healthz                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func11 (4 handlers)
+[GIN-debug] GET    /readyz                   --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func12 (4 handlers)
+[GIN-debug] GET    /metrics                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.MetricsHandler.func13 (4 handlers)
+[GIN-debug] GET    /ui                       --> github.com/morphy76/tacito-square/internal/bff.NewServer.func4 (4 handlers)
+[GIN-debug] GET    /ui/favicon.ico           --> github.com/morphy76/tacito-square/internal/bff.NewServer.func2 (4 handlers)
+[GIN-debug] GET    /ui/assets/bootstrap-theme.css --> github.com/morphy76/tacito-square/internal/bff.NewServer.func5 (4 handlers)
+[GIN-debug] GET    /ui/openapi.json          --> github.com/morphy76/tacito-square/internal/bff.NewServer.func6 (4 handlers)
+[GIN-debug] GET    /ui/                      --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/index.html            --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/secure                --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/               --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/index.html     --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /openapi.json             --> github.com/morphy76/tacito-square/internal/bff.NewServer.func7 (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/login     --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Login-fm (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/callback  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Callback-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/backchannel-logout --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).BackchannelLogout-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/logout    --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Logout-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/me        --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Me-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/events/stream  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*SSEHandler).StreamEvents-fm (5 handlers)
+{"level":"info","component":"bff","version":"0.1.0","time":1782332476,"message":"starting bff component"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /healthz                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func11 (4 handlers)
+[GIN-debug] GET    /readyz                   --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func12 (4 handlers)
+[GIN-debug] GET    /metrics                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.MetricsHandler.func13 (4 handlers)
+[GIN-debug] GET    /ui                       --> github.com/morphy76/tacito-square/internal/bff.NewServer.func4 (4 handlers)
+[GIN-debug] GET    /ui/favicon.ico           --> github.com/morphy76/tacito-square/internal/bff.NewServer.func2 (4 handlers)
+[GIN-debug] GET    /ui/assets/bootstrap-theme.css --> github.com/morphy76/tacito-square/internal/bff.NewServer.func5 (4 handlers)
+[GIN-debug] GET    /ui/openapi.json          --> github.com/morphy76/tacito-square/internal/bff.NewServer.func6 (4 handlers)
+[GIN-debug] GET    /ui/                      --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/index.html            --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/secure                --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/               --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/index.html     --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /openapi.json             --> github.com/morphy76/tacito-square/internal/bff.NewServer.func7 (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/login     --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Login-fm (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/callback  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Callback-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/backchannel-logout --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).BackchannelLogout-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/logout    --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Logout-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/me        --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Me-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/events/stream  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*SSEHandler).StreamEvents-fm (5 handlers)
+{"level":"info","component":"bff","version":"0.1.0","time":1782332476,"message":"starting bff component"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /healthz                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func11 (4 handlers)
+[GIN-debug] GET    /readyz                   --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func12 (4 handlers)
+[GIN-debug] GET    /metrics                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.MetricsHandler.func13 (4 handlers)
+[GIN-debug] GET    /ui                       --> github.com/morphy76/tacito-square/internal/bff.NewServer.func4 (4 handlers)
+[GIN-debug] GET    /ui/favicon.ico           --> github.com/morphy76/tacito-square/internal/bff.NewServer.func2 (4 handlers)
+[GIN-debug] GET    /ui/assets/bootstrap-theme.css --> github.com/morphy76/tacito-square/internal/bff.NewServer.func5 (4 handlers)
+[GIN-debug] GET    /ui/openapi.json          --> github.com/morphy76/tacito-square/internal/bff.NewServer.func6 (4 handlers)
+[GIN-debug] GET    /ui/                      --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/index.html            --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/secure                --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/               --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/index.html     --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /openapi.json             --> github.com/morphy76/tacito-square/internal/bff.NewServer.func7 (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/login     --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Login-fm (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/callback  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Callback-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/backchannel-logout --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).BackchannelLogout-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/logout    --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Logout-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/me        --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Me-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/events/stream  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*SSEHandler).StreamEvents-fm (5 handlers)
+{"level":"error","component":"health","dependency":"redis","error":"redis dead","time":1782332476,"message":"Dependency transitioned to UNHEALTHY"}
+{"level":"info","component":"bff","version":"0.1.0","time":1782332476,"message":"starting bff component"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /healthz                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func11 (4 handlers)
+[GIN-debug] GET    /readyz                   --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func12 (4 handlers)
+[GIN-debug] GET    /metrics                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.MetricsHandler.func13 (4 handlers)
+[GIN-debug] GET    /ui                       --> github.com/morphy76/tacito-square/internal/bff.NewServer.func4 (4 handlers)
+[GIN-debug] GET    /ui/favicon.ico           --> github.com/morphy76/tacito-square/internal/bff.NewServer.func2 (4 handlers)
+[GIN-debug] GET    /ui/assets/bootstrap-theme.css --> github.com/morphy76/tacito-square/internal/bff.NewServer.func5 (4 handlers)
+[GIN-debug] GET    /ui/openapi.json          --> github.com/morphy76/tacito-square/internal/bff.NewServer.func6 (4 handlers)
+[GIN-debug] GET    /ui/                      --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/index.html            --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/secure                --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/               --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/index.html     --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /openapi.json             --> github.com/morphy76/tacito-square/internal/bff.NewServer.func7 (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/login     --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Login-fm (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/callback  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Callback-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/backchannel-logout --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).BackchannelLogout-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/logout    --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Logout-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/me        --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Me-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/events/stream  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*SSEHandler).StreamEvents-fm (5 handlers)
+{"level":"info","component":"bff","version":"0.1.0","time":1782332476,"message":"starting bff component"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /healthz                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func11 (4 handlers)
+[GIN-debug] GET    /readyz                   --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func12 (4 handlers)
+[GIN-debug] GET    /metrics                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.MetricsHandler.func13 (4 handlers)
+[GIN-debug] GET    /ui                       --> github.com/morphy76/tacito-square/internal/bff.NewServer.func4 (4 handlers)
+[GIN-debug] GET    /ui/favicon.ico           --> github.com/morphy76/tacito-square/internal/bff.NewServer.func2 (4 handlers)
+[GIN-debug] GET    /ui/assets/bootstrap-theme.css --> github.com/morphy76/tacito-square/internal/bff.NewServer.func5 (4 handlers)
+[GIN-debug] GET    /ui/openapi.json          --> github.com/morphy76/tacito-square/internal/bff.NewServer.func6 (4 handlers)
+[GIN-debug] GET    /ui/                      --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/index.html            --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/secure                --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/               --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/index.html     --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /openapi.json             --> github.com/morphy76/tacito-square/internal/bff.NewServer.func7 (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/login     --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Login-fm (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/callback  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Callback-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/backchannel-logout --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).BackchannelLogout-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/logout    --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Logout-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/me        --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Me-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/events/stream  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*SSEHandler).StreamEvents-fm (5 handlers)
+{"level":"info","component":"bff","version":"0.1.0","time":1782332476,"message":"starting bff component"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /healthz                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func11 (4 handlers)
+[GIN-debug] GET    /readyz                   --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func12 (4 handlers)
+[GIN-debug] GET    /metrics                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.MetricsHandler.func13 (4 handlers)
+[GIN-debug] GET    /ui                       --> github.com/morphy76/tacito-square/internal/bff.NewServer.func4 (4 handlers)
+[GIN-debug] GET    /ui/favicon.ico           --> github.com/morphy76/tacito-square/internal/bff.NewServer.func2 (4 handlers)
+[GIN-debug] GET    /ui/assets/bootstrap-theme.css --> github.com/morphy76/tacito-square/internal/bff.NewServer.func5 (4 handlers)
+[GIN-debug] GET    /ui/openapi.json          --> github.com/morphy76/tacito-square/internal/bff.NewServer.func6 (4 handlers)
+[GIN-debug] GET    /ui/                      --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/index.html            --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/secure                --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/               --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/index.html     --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /openapi.json             --> github.com/morphy76/tacito-square/internal/bff.NewServer.func7 (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/login     --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Login-fm (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/callback  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Callback-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/backchannel-logout --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).BackchannelLogout-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/logout    --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Logout-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/me        --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Me-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/events/stream  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*SSEHandler).StreamEvents-fm (5 handlers)
+{"level":"info","component":"bff","version":"0.1.0","time":1782332476,"message":"starting bff component"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /healthz                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func11 (4 handlers)
+[GIN-debug] GET    /readyz                   --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func12 (4 handlers)
+[GIN-debug] GET    /metrics                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.MetricsHandler.func13 (4 handlers)
+[GIN-debug] GET    /ui                       --> github.com/morphy76/tacito-square/internal/bff.NewServer.func4 (4 handlers)
+[GIN-debug] GET    /ui/favicon.ico           --> github.com/morphy76/tacito-square/internal/bff.NewServer.func2 (4 handlers)
+[GIN-debug] GET    /ui/assets/bootstrap-theme.css --> github.com/morphy76/tacito-square/internal/bff.NewServer.func5 (4 handlers)
+[GIN-debug] GET    /ui/openapi.json          --> github.com/morphy76/tacito-square/internal/bff.NewServer.func6 (4 handlers)
+[GIN-debug] GET    /ui/                      --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/index.html            --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/secure                --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/               --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/index.html     --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /openapi.json             --> github.com/morphy76/tacito-square/internal/bff.NewServer.func7 (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/login     --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Login-fm (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/callback  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Callback-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/backchannel-logout --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).BackchannelLogout-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/logout    --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Logout-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/me        --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Me-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/events/stream  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*SSEHandler).StreamEvents-fm (5 handlers)
+--- FAIL: TestBFFServer_RootWelcomePageWithSlash_Success (0.00s)
+    bootstrap_test.go:285: 
+        	Error Trace:	/Users/R.Pasquini/Projects/side/tacito-square/internal/bff/bootstrap_test.go:285
+        	Error:      	Not equal: 
+        	            	expected: 200
+        	            	actual  : 302
+        	Test:       	TestBFFServer_RootWelcomePageWithSlash_Success
+    bootstrap_test.go:287: 
+        	Error Trace:	/Users/R.Pasquini/Projects/side/tacito-square/internal/bff/bootstrap_test.go:287
+        	Error:      	"<a href=\"/ui/api/v1/auth/login?redirect_to=%2Fui%2F\">Found</a>.\n\n" does not contain "<title>Tacito Square BFF</title>"
+        	Test:       	TestBFFServer_RootWelcomePageWithSlash_Success
+    bootstrap_test.go:288: 
+        	Error Trace:	/Users/R.Pasquini/Projects/side/tacito-square/internal/bff/bootstrap_test.go:288
+        	Error:      	"<a href=\"/ui/api/v1/auth/login?redirect_to=%2Fui%2F\">Found</a>.\n\n" does not contain "Piazza Tacito"
+        	Test:       	TestBFFServer_RootWelcomePageWithSlash_Success
+{"level":"info","component":"bff","version":"0.1.0","time":1782332476,"message":"starting bff component"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /healthz                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func11 (4 handlers)
+[GIN-debug] GET    /readyz                   --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func12 (4 handlers)
+[GIN-debug] GET    /metrics                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.MetricsHandler.func13 (4 handlers)
+[GIN-debug] GET    /ui                       --> github.com/morphy76/tacito-square/internal/bff.NewServer.func4 (4 handlers)
+[GIN-debug] GET    /ui/favicon.ico           --> github.com/morphy76/tacito-square/internal/bff.NewServer.func2 (4 handlers)
+[GIN-debug] GET    /ui/assets/bootstrap-theme.css --> github.com/morphy76/tacito-square/internal/bff.NewServer.func5 (4 handlers)
+[GIN-debug] GET    /ui/openapi.json          --> github.com/morphy76/tacito-square/internal/bff.NewServer.func6 (4 handlers)
+[GIN-debug] GET    /ui/                      --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/index.html            --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/secure                --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/               --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/index.html     --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /openapi.json             --> github.com/morphy76/tacito-square/internal/bff.NewServer.func7 (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/login     --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Login-fm (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/callback  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Callback-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/backchannel-logout --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).BackchannelLogout-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/logout    --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Logout-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/me        --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Me-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/events/stream  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*SSEHandler).StreamEvents-fm (5 handlers)
+--- FAIL: TestBFFServer_IndexWelcomePage (0.00s)
+    bootstrap_test.go:301: 
+        	Error Trace:	/Users/R.Pasquini/Projects/side/tacito-square/internal/bff/bootstrap_test.go:301
+        	Error:      	Not equal: 
+        	            	expected: 200
+        	            	actual  : 302
+        	Test:       	TestBFFServer_IndexWelcomePage
+    bootstrap_test.go:303: 
+        	Error Trace:	/Users/R.Pasquini/Projects/side/tacito-square/internal/bff/bootstrap_test.go:303
+        	Error:      	"<a href=\"/ui/api/v1/auth/login?redirect_to=%2Fui%2Findex.html\">Found</a>.\n\n" does not contain "<title>Tacito Square BFF</title>"
+        	Test:       	TestBFFServer_IndexWelcomePage
+    bootstrap_test.go:304: 
+        	Error Trace:	/Users/R.Pasquini/Projects/side/tacito-square/internal/bff/bootstrap_test.go:304
+        	Error:      	"<a href=\"/ui/api/v1/auth/login?redirect_to=%2Fui%2Findex.html\">Found</a>.\n\n" does not contain "Piazza Tacito"
+        	Test:       	TestBFFServer_IndexWelcomePage
+{"level":"info","component":"bff","version":"0.1.0","time":1782332476,"message":"starting bff component"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /healthz                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func11 (4 handlers)
+[GIN-debug] GET    /readyz                   --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func12 (4 handlers)
+[GIN-debug] GET    /metrics                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.MetricsHandler.func13 (4 handlers)
+[GIN-debug] GET    /ui                       --> github.com/morphy76/tacito-square/internal/bff.NewServer.func4 (4 handlers)
+[GIN-debug] GET    /ui/favicon.ico           --> github.com/morphy76/tacito-square/internal/bff.NewServer.func2 (4 handlers)
+[GIN-debug] GET    /ui/assets/bootstrap-theme.css --> github.com/morphy76/tacito-square/internal/bff.NewServer.func5 (4 handlers)
+[GIN-debug] GET    /ui/openapi.json          --> github.com/morphy76/tacito-square/internal/bff.NewServer.func6 (4 handlers)
+[GIN-debug] GET    /ui/                      --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/index.html            --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/secure                --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/               --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/index.html     --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /openapi.json             --> github.com/morphy76/tacito-square/internal/bff.NewServer.func7 (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/login     --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Login-fm (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/callback  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Callback-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/backchannel-logout --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).BackchannelLogout-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/logout    --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Logout-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/me        --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Me-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/events/stream  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*SSEHandler).StreamEvents-fm (5 handlers)
+{"level":"info","component":"bff","version":"0.1.0","time":1782332476,"message":"starting bff component"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /healthz                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func11 (4 handlers)
+[GIN-debug] GET    /readyz                   --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func12 (4 handlers)
+[GIN-debug] GET    /metrics                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.MetricsHandler.func13 (4 handlers)
+[GIN-debug] GET    /ui                       --> github.com/morphy76/tacito-square/internal/bff.NewServer.func4 (4 handlers)
+[GIN-debug] GET    /ui/favicon.ico           --> github.com/morphy76/tacito-square/internal/bff.NewServer.func2 (4 handlers)
+[GIN-debug] GET    /ui/assets/bootstrap-theme.css --> github.com/morphy76/tacito-square/internal/bff.NewServer.func5 (4 handlers)
+[GIN-debug] GET    /ui/openapi.json          --> github.com/morphy76/tacito-square/internal/bff.NewServer.func6 (4 handlers)
+[GIN-debug] GET    /ui/                      --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/index.html            --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/secure                --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/               --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/index.html     --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /openapi.json             --> github.com/morphy76/tacito-square/internal/bff.NewServer.func7 (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/login     --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Login-fm (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/callback  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Callback-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/backchannel-logout --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).BackchannelLogout-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/logout    --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Logout-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/me        --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Me-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/events/stream  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*SSEHandler).StreamEvents-fm (5 handlers)
+{"level":"info","component":"bff","version":"0.1.0","time":1782332476,"message":"starting bff component"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /healthz                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func11 (4 handlers)
+[GIN-debug] GET    /readyz                   --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func12 (4 handlers)
+[GIN-debug] GET    /metrics                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.MetricsHandler.func13 (4 handlers)
+[GIN-debug] GET    /ui                       --> github.com/morphy76/tacito-square/internal/bff.NewServer.func4 (4 handlers)
+[GIN-debug] GET    /ui/favicon.ico           --> github.com/morphy76/tacito-square/internal/bff.NewServer.func2 (4 handlers)
+[GIN-debug] GET    /ui/assets/bootstrap-theme.css --> github.com/morphy76/tacito-square/internal/bff.NewServer.func5 (4 handlers)
+[GIN-debug] GET    /ui/openapi.json          --> github.com/morphy76/tacito-square/internal/bff.NewServer.func6 (4 handlers)
+[GIN-debug] GET    /ui/                      --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/index.html            --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/secure                --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/               --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/index.html     --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /openapi.json             --> github.com/morphy76/tacito-square/internal/bff.NewServer.func7 (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/login     --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Login-fm (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/callback  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Callback-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/backchannel-logout --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).BackchannelLogout-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/logout    --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Logout-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/me        --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Me-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/events/stream  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*SSEHandler).StreamEvents-fm (5 handlers)
+{"level":"info","component":"bff","version":"0.1.0","time":1782332476,"message":"starting bff component"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /healthz                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func11 (4 handlers)
+[GIN-debug] GET    /readyz                   --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func12 (4 handlers)
+[GIN-debug] GET    /metrics                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.MetricsHandler.func13 (4 handlers)
+[GIN-debug] GET    /ui                       --> github.com/morphy76/tacito-square/internal/bff.NewServer.func4 (4 handlers)
+[GIN-debug] GET    /ui/favicon.ico           --> github.com/morphy76/tacito-square/internal/bff.NewServer.func2 (4 handlers)
+[GIN-debug] GET    /ui/assets/bootstrap-theme.css --> github.com/morphy76/tacito-square/internal/bff.NewServer.func5 (4 handlers)
+[GIN-debug] GET    /ui/openapi.json          --> github.com/morphy76/tacito-square/internal/bff.NewServer.func6 (4 handlers)
+[GIN-debug] GET    /ui/                      --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/index.html            --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/secure                --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/               --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/index.html     --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /openapi.json             --> github.com/morphy76/tacito-square/internal/bff.NewServer.func7 (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/login     --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Login-fm (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/callback  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Callback-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/backchannel-logout --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).BackchannelLogout-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/logout    --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Logout-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/me        --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Me-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/events/stream  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*SSEHandler).StreamEvents-fm (5 handlers)
+{"level":"info","component":"bff","version":"0.1.0","time":1782332476,"message":"starting bff component"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /healthz                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func11 (4 handlers)
+[GIN-debug] GET    /readyz                   --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func12 (4 handlers)
+[GIN-debug] GET    /metrics                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.MetricsHandler.func13 (4 handlers)
+[GIN-debug] GET    /ui                       --> github.com/morphy76/tacito-square/internal/bff.NewServer.func4 (4 handlers)
+[GIN-debug] GET    /ui/favicon.ico           --> github.com/morphy76/tacito-square/internal/bff.NewServer.func2 (4 handlers)
+[GIN-debug] GET    /ui/assets/bootstrap-theme.css --> github.com/morphy76/tacito-square/internal/bff.NewServer.func5 (4 handlers)
+[GIN-debug] GET    /ui/openapi.json          --> github.com/morphy76/tacito-square/internal/bff.NewServer.func6 (4 handlers)
+[GIN-debug] GET    /ui/                      --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/index.html            --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/secure                --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/               --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/index.html     --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /openapi.json             --> github.com/morphy76/tacito-square/internal/bff.NewServer.func7 (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/login     --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Login-fm (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/callback  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Callback-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/backchannel-logout --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).BackchannelLogout-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/logout    --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Logout-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/me        --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Me-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/events/stream  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*SSEHandler).StreamEvents-fm (5 handlers)
+--- FAIL: TestBFFServer_StaticCaching_WelcomeHTML (0.00s)
+    bootstrap_test.go:399: 
+        	Error Trace:	/Users/R.Pasquini/Projects/side/tacito-square/internal/bff/bootstrap_test.go:399
+        	Error:      	Not equal: 
+        	            	expected: 200
+        	            	actual  : 302
+        	Test:       	TestBFFServer_StaticCaching_WelcomeHTML
+    bootstrap_test.go:400: 
+        	Error Trace:	/Users/R.Pasquini/Projects/side/tacito-square/internal/bff/bootstrap_test.go:400
+        	Error:      	Not equal: 
+        	            	expected: "public, max-age=0, must-revalidate"
+        	            	actual  : ""
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-public, max-age=0, must-revalidate
+        	            	+
+        	Test:       	TestBFFServer_StaticCaching_WelcomeHTML
+    bootstrap_test.go:402: 
+        	Error Trace:	/Users/R.Pasquini/Projects/side/tacito-square/internal/bff/bootstrap_test.go:402
+        	Error:      	Should NOT be empty, but was 
+        	Test:       	TestBFFServer_StaticCaching_WelcomeHTML
+    bootstrap_test.go:410: 
+        	Error Trace:	/Users/R.Pasquini/Projects/side/tacito-square/internal/bff/bootstrap_test.go:410
+        	Error:      	Not equal: 
+        	            	expected: 304
+        	            	actual  : 302
+        	Test:       	TestBFFServer_StaticCaching_WelcomeHTML
+    bootstrap_test.go:411: 
+        	Error Trace:	/Users/R.Pasquini/Projects/side/tacito-square/internal/bff/bootstrap_test.go:411
+        	Error:      	Should be empty, but was [60 97 32 104 114 101 102 61 34 47 117 105 47 97 112 105 47 118 49 47 97 117 116 104 47 108 111 103 105 110 63 114 101 100 105 114 101 99 116 95 116 111 61 37 50 70 117 105 37 50 70 34 62 70 111 117 110 100 60 47 97 62 46 10 10]
+        	Test:       	TestBFFServer_StaticCaching_WelcomeHTML
+    bootstrap_test.go:418: 
+        	Error Trace:	/Users/R.Pasquini/Projects/side/tacito-square/internal/bff/bootstrap_test.go:418
+        	Error:      	Not equal: 
+        	            	expected: 200
+        	            	actual  : 302
+        	Test:       	TestBFFServer_StaticCaching_WelcomeHTML
+    bootstrap_test.go:419: 
+        	Error Trace:	/Users/R.Pasquini/Projects/side/tacito-square/internal/bff/bootstrap_test.go:419
+        	Error:      	Not equal: 
+        	            	expected: "public, max-age=0, must-revalidate"
+        	            	actual  : ""
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-public, max-age=0, must-revalidate
+        	            	+
+        	Test:       	TestBFFServer_StaticCaching_WelcomeHTML
+{"level":"info","component":"bff","version":"0.1.0","time":1782332476,"message":"starting bff component"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /healthz                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func11 (4 handlers)
+[GIN-debug] GET    /readyz                   --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func12 (4 handlers)
+[GIN-debug] GET    /metrics                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.MetricsHandler.func13 (4 handlers)
+[GIN-debug] GET    /ui                       --> github.com/morphy76/tacito-square/internal/bff.NewServer.func4 (4 handlers)
+[GIN-debug] GET    /ui/favicon.ico           --> github.com/morphy76/tacito-square/internal/bff.NewServer.func2 (4 handlers)
+[GIN-debug] GET    /ui/assets/bootstrap-theme.css --> github.com/morphy76/tacito-square/internal/bff.NewServer.func5 (4 handlers)
+[GIN-debug] GET    /ui/openapi.json          --> github.com/morphy76/tacito-square/internal/bff.NewServer.func6 (4 handlers)
+[GIN-debug] GET    /ui/                      --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/index.html            --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/secure                --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/               --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/index.html     --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /openapi.json             --> github.com/morphy76/tacito-square/internal/bff.NewServer.func7 (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/login     --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Login-fm (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/callback  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Callback-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/backchannel-logout --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).BackchannelLogout-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/logout    --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Logout-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/me        --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Me-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/events/stream  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*SSEHandler).StreamEvents-fm (5 handlers)
+{"level":"info","component":"bff","version":"0.1.0","time":1782332476,"message":"starting bff component"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /healthz                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func11 (4 handlers)
+[GIN-debug] GET    /readyz                   --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func12 (4 handlers)
+[GIN-debug] GET    /metrics                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.MetricsHandler.func13 (4 handlers)
+[GIN-debug] GET    /ui                       --> github.com/morphy76/tacito-square/internal/bff.NewServer.func4 (4 handlers)
+[GIN-debug] GET    /ui/favicon.ico           --> github.com/morphy76/tacito-square/internal/bff.NewServer.func2 (4 handlers)
+[GIN-debug] GET    /ui/assets/bootstrap-theme.css --> github.com/morphy76/tacito-square/internal/bff.NewServer.func5 (4 handlers)
+[GIN-debug] GET    /ui/openapi.json          --> github.com/morphy76/tacito-square/internal/bff.NewServer.func6 (4 handlers)
+[GIN-debug] GET    /ui/                      --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/index.html            --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/secure                --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/               --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/index.html     --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /openapi.json             --> github.com/morphy76/tacito-square/internal/bff.NewServer.func7 (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/login     --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Login-fm (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/callback  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Callback-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/backchannel-logout --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).BackchannelLogout-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/logout    --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Logout-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/me        --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Me-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/events/stream  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*SSEHandler).StreamEvents-fm (5 handlers)
+{"level":"info","component":"bff","version":"0.1.0","time":1782332476,"message":"starting bff component"}
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /healthz                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func11 (4 handlers)
+[GIN-debug] GET    /readyz                   --> github.com/morphy76/tacito-square/internal/bff.NewServer.WrapF.func12 (4 handlers)
+[GIN-debug] GET    /metrics                  --> github.com/morphy76/tacito-square/internal/bff.NewServer.MetricsHandler.func13 (4 handlers)
+[GIN-debug] GET    /ui                       --> github.com/morphy76/tacito-square/internal/bff.NewServer.func4 (4 handlers)
+[GIN-debug] GET    /ui/favicon.ico           --> github.com/morphy76/tacito-square/internal/bff.NewServer.func2 (4 handlers)
+[GIN-debug] GET    /ui/assets/bootstrap-theme.css --> github.com/morphy76/tacito-square/internal/bff.NewServer.func5 (4 handlers)
+[GIN-debug] GET    /ui/openapi.json          --> github.com/morphy76/tacito-square/internal/bff.NewServer.func6 (4 handlers)
+[GIN-debug] GET    /ui/                      --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/index.html            --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*UIProxyHandler).ServeUIIndex-fm (5 handlers)
+[GIN-debug] GET    /ui/secure                --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/               --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /ui/secure/index.html     --> github.com/morphy76/tacito-square/internal/bff.NewServer.func3 (5 handlers)
+[GIN-debug] GET    /openapi.json             --> github.com/morphy76/tacito-square/internal/bff.NewServer.func7 (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/login     --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Login-fm (4 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/callback  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Callback-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/backchannel-logout --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).BackchannelLogout-fm (4 handlers)
+[GIN-debug] POST   /ui/api/v1/auth/logout    --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Logout-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/auth/me        --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*AuthHandler).Me-fm (5 handlers)
+[GIN-debug] GET    /ui/api/v1/events/stream  --> github.com/morphy76/tacito-square/internal/bff/adapters/inbound/http.(*SSEHandler).StreamEvents-fm (5 handlers)
+FAIL
+FAIL	github.com/morphy76/tacito-square/internal/bff	0.355s
+FAIL

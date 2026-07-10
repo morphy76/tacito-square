@@ -24,22 +24,21 @@ import (
 //go:embed bff_openapi.json
 var openapiJSON []byte
 
-//go:embed index.html
-var welcomeHTML []byte
-
 //go:embed secure/index.html
 var secureIndexHTML []byte
+
 
 //go:embed favicon.ico
 var faviconICO []byte
 
 // Config holds configuration parameters for the BFF server bootstrap.
 type Config struct {
-	Version      string
-	OtelEndpoint string
-	LogLevel     string
-	GinMode      string
-	UIPath       string
+	Version           string
+	OtelEndpoint      string
+	LogLevel          string
+	GinMode           string
+	UIPath            string
+	UIConfiguratorURL string
 }
 
 // Pinger defines a simple ping interface for health checking.
@@ -98,15 +97,14 @@ func NewServer(
 
 	probe := health.NewProbe(5*time.Second, checkers...)
 
-	// Precompute ETags for static resources
-	welcomeHash := sha256.Sum256(welcomeHTML)
-	welcomeETag := fmt.Sprintf(`"%x"`, welcomeHash)
+
 
 	secureHash := sha256.Sum256(secureIndexHTML)
 	secureETag := fmt.Sprintf(`"%x"`, secureHash)
 
 	faviconHash := sha256.Sum256(faviconICO)
 	faviconETag := fmt.Sprintf(`"%x"`, faviconHash)
+
 
 	// Public system endpoints (metrics and health check probes)
 	r.GET("/healthz", gin.WrapF(probe.LivezHandler))
@@ -135,15 +133,6 @@ func NewServer(
 		c.Data(http.StatusOK, "image/x-icon", faviconICO)
 	}
 
-	welcomeHandler := func(c *gin.Context) {
-		c.Header("Cache-Control", "public, max-age=0, must-revalidate")
-		c.Header("ETag", welcomeETag)
-		if c.GetHeader("If-None-Match") == welcomeETag {
-			c.Status(http.StatusNotModified)
-			return
-		}
-		c.Data(http.StatusOK, "text/html; charset=utf-8", welcomeHTML)
-	}
 
 	secureHandler := func(c *gin.Context) {
 		c.Header("Cache-Control", "public, max-age=0, must-revalidate")
@@ -155,23 +144,20 @@ func NewServer(
 		c.Data(http.StatusOK, "text/html; charset=utf-8", secureIndexHTML)
 	}
 
+	uiProxy := httpAdapter.NewUIProxyHandler(store, cfg.UIConfiguratorURL)
+
 	// UI Static and Welcome Homepage Route Group
 	uiGroup := r.Group(cfg.UIPath)
 	{
 		uiGroup.GET("", func(c *gin.Context) {
-			if !strings.HasSuffix(c.Request.URL.Path, "/") {
-				target := c.Request.URL.Path + "/"
-				if c.Request.URL.RawQuery != "" {
-					target += "?" + c.Request.URL.RawQuery
-				}
-				c.Redirect(http.StatusMovedPermanently, target)
-				return
+			target := c.Request.URL.Path + "/"
+			if c.Request.URL.RawQuery != "" {
+				target += "?" + c.Request.URL.RawQuery
 			}
-			welcomeHandler(c)
+			c.Redirect(http.StatusMovedPermanently, target)
 		})
+
 		uiGroup.GET("/favicon.ico", faviconHandler)
-		uiGroup.GET("/", welcomeHandler)
-		uiGroup.GET("/index.html", welcomeHandler)
 		uiGroup.GET("/openapi.json", func(c *gin.Context) {
 			c.Header("Cache-Control", "public, max-age=3600, must-revalidate")
 			c.Header("ETag", etag)
@@ -182,13 +168,17 @@ func NewServer(
 			c.Data(http.StatusOK, "application/json; charset=utf-8", finalOpenAPI)
 		})
 
-		// Secure Welcome Homepage with OIDC redirect auth under UI path
-		secureGroup := uiGroup.Group("/secure")
-		secureGroup.Use(httpAdapter.AuthRedirectMiddleware(sessionUC, cfg.UIPath))
+		// Secure UI SPA routes protected by OIDC AuthRedirectMiddleware
+		uiSecureGroup := uiGroup.Group("")
+		uiSecureGroup.Use(httpAdapter.AuthRedirectMiddleware(sessionUC, cfg.UIPath))
 		{
-			secureGroup.GET("", secureHandler)
-			secureGroup.GET("/", secureHandler)
-			secureGroup.GET("/index.html", secureHandler)
+			uiSecureGroup.GET("/", uiProxy.ServeUIIndex)
+			uiSecureGroup.GET("/index.html", uiProxy.ServeUIIndex)
+
+			// Keep /secure for backward compatibility/verification
+			uiSecureGroup.GET("/secure", secureHandler)
+			uiSecureGroup.GET("/secure/", secureHandler)
+			uiSecureGroup.GET("/secure/index.html", secureHandler)
 		}
 	}
 
@@ -203,7 +193,23 @@ func NewServer(
 	})
 
 	// Register application specific routes
-	httpAdapter.RegisterRoutes(r, sessionUC, eventUC, cfg.UIPath)
+	httpAdapter.RegisterRoutes(r, sessionUC, eventUC, keeperClient, cfg.UIPath)
+
+	// SPA fallback routing for any non-matched paths under UIPath
+	r.NoRoute(func(c *gin.Context) {
+		if strings.HasPrefix(c.Request.URL.Path, cfg.UIPath) {
+			if strings.Contains(c.Request.URL.Path, "/assets/") {
+				uiProxy.ServeUIIndex(c)
+				return
+			}
+			httpAdapter.AuthRedirectMiddleware(sessionUC, cfg.UIPath)(c)
+			if !c.IsAborted() {
+				uiProxy.ServeUIIndex(c)
+			}
+			return
+		}
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+	})
 
 	return r
 }

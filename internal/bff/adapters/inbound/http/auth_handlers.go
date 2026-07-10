@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/morphy76/tacito-square/internal/bff/application/ports/inbound"
+	"github.com/morphy76/tacito-square/internal/bff/domain/model"
 )
 
 type AuthHandler struct {
@@ -190,4 +191,25 @@ func (h *AuthHandler) BackchannelLogout(c *gin.Context) {
 	}
 
 	c.Status(http.StatusOK)
+}
+
+func (h *AuthHandler) Me(c *gin.Context) {
+	uiVal, exists := c.Get("userInfo")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+	userInfo, ok := uiVal.(*model.UserInfoPayload)
+	if !ok || userInfo == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":        userInfo.Sub,
+		"name":      userInfo.Name,
+		"email":     userInfo.Email,
+		"roles":     userInfo.Roles,
+		"tenant_id": userInfo.TenantID,
+	})
 }

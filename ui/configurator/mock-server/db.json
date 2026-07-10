@@ -1,0 +1,26 @@
+{
+  "me": {
+    "id": "usr_12345",
+    "name": "Admin User",
+    "email": "admin@tacito.local",
+    "roles": ["keeper-admin", "agent-spawner"],
+    "tenant_id": "tenant_1"
+  },
+  "agents": [
+    {
+      "id": "agent_1",
+      "name": "Research Agent",
+      "description": "Performs deep codebase research",
+      "model": "gpt-4o",
+      "status": "idle"
+    }
+  ],
+  "communities": [
+    {
+      "id": "community_1",
+      "name": "Tacito Core",
+      "description": "Core administrative agents",
+      "agents": ["agent_1"]
+    }
+  ]
+}

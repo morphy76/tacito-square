@@ -233,3 +233,23 @@ func dtoToSession(dto sessionDTO) *model.Session {
 		Invalidated:          dto.Invalidated,
 	}
 }
+
+func (s *RedisSessionStore) CacheHTML(ctx context.Context, key string, html string, ttl time.Duration) error {
+	if s.client == nil {
+		return errors.New("redis client not initialized")
+	}
+	redisKey := fmt.Sprintf("bff:%s:cache:%s", s.prefix, key)
+	return s.client.Set(ctx, redisKey, html, ttl).Err()
+}
+
+func (s *RedisSessionStore) GetCachedHTML(ctx context.Context, key string) (string, error) {
+	if s.client == nil {
+		return "", errors.New("redis client not initialized")
+	}
+	redisKey := fmt.Sprintf("bff:%s:cache:%s", s.prefix, key)
+	val, err := s.client.Get(ctx, redisKey).Result()
+	if err == redis.Nil {
+		return "", errors.New("cache miss")
+	}
+	return val, err
+}

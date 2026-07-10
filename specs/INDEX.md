@@ -73,7 +73,7 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | ID | Title | Status | Component | File |
 |----|-------|--------|-----------|------|
 | SPEC-FR-M7.1 | BFF API Bridge Layer | VERIFIED | bff | [SPEC-FR-M7.1](functional/M7/SPEC-FR-M7.1.md) |
-| SPEC-FR-M7.2 | Configurator UI | ACCEPTED | ui | [SPEC-FR-M7.2](functional/M7/SPEC-FR-M7.2.md) |
+| SPEC-FR-M7.2 | Configurator UI | VERIFIED | ui | [SPEC-FR-M7.2](functional/M7/SPEC-FR-M7.2.md) |
 | SPEC-FR-M7.3 | Auditor UI | ACCEPTED | ui | [SPEC-FR-M7.3](functional/M7/SPEC-FR-M7.3.md) |
 | SPEC-FR-M7.4 | OIDC Login Flow (Keycloak) | ACCEPTED | bff | [SPEC-FR-M7.4](functional/M7/SPEC-FR-M7.4.md) |
 | SPEC-FR-M7.5 | Standardize query parameters for GET APIs | DRAFT | keeper, bff | [SPEC-FR-M7.5](functional/M7/SPEC-FR-M7.5.md) |
@@ -85,6 +85,7 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | ID | Title | Status | Severity | File |
 |----|-------|--------|----------|------|
 | BUG-M7.1 | BFF OIDC Discovery Refused Connection due to localhost Issuer URL | IMPLEMENTED | HIGH | [BUG-M7.1](tasks/M7.BUG1/BUG-M7.1.md) |
+| BUG-M7.2 | UI Configurator lacks binding and representation for advanced agent wizard, raw sync, and assignment endpoints | CLOSED | HIGH | [BUG-M7.2](tasks/M7.BUG2/BUG-M7.2.md) |
 
 ### M8: RAG & LTM
 

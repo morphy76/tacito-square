@@ -10,6 +10,7 @@ type agentCtxKey struct{}
 type threadCtxKey struct{}
 type activeToolsKey struct{}
 type parsedSkillsKey struct{}
+type enabledSkillsKey struct{}
 
 // GetTenantID retrieves the Tenant ID from the given context, if present.
 func GetTenantID(ctx context.Context) string {

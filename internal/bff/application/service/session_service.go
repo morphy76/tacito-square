@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/morphy76/tacito-square/internal/bff/application/ports/inbound"
 	"github.com/morphy76/tacito-square/internal/bff/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/bff/domain/model"
 	"github.com/rs/zerolog/log"
@@ -71,6 +72,8 @@ func NewSessionService(store outbound.SessionStore, oidc outbound.OIDCProvider, 
 		cfg:   cfg,
 	}
 }
+
+var _ inbound.SessionUseCase = (*SessionService)(nil)
 
 // InitiateLogin generates the OIDC authorization URL and state token.
 // It stores redirectTo (the URL the user was trying to reach) keyed by the
@@ -256,6 +259,11 @@ func (s *SessionService) GetSession(ctx context.Context, sessionID string) (*mod
 		return nil, model.ErrSessionInvalidated
 	}
 	return session, nil
+}
+
+// ValidateAccessToken validates an Access Token (JWT) statelessly and returns its claims.
+func (s *SessionService) ValidateAccessToken(ctx context.Context, token string) (*model.UserInfoPayload, error) {
+	return s.oidc.ValidateAccessToken(ctx, token)
 }
 
 // extractSessionID extracts the OIDC sid claim from an ID token JWT payload without verifying its signature.

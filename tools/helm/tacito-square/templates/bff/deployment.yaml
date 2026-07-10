@@ -28,6 +28,8 @@ spec:
               value: {{ .Values.bff.config.logLevel | quote }}
             - name: TS_BFF_PORT
               value: {{ .Values.bff.config.port | toString | quote }}
+            - name: TS_BFF_BFF_UI_CONFIGURATOR_URL
+              value: "http://{{ include "tacito-square.fullname" . }}-ui-configurator:{{ .Values.uiConfigurator.service.port }}"
             - name: TS_BFF_KEEPER_BASE_URL
               value: "http://{{ include "tacito-square.fullname" . }}-keeper:{{ .Values.keeper.service.port }}"
             - name: TS_BFF_BACKEND_BASE_URL

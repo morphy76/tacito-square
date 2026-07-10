@@ -39,6 +39,14 @@ func (m *mockSessionStore) GetAndDeletePendingState(ctx context.Context, state s
 	return "", nil
 }
 
+func (m *mockSessionStore) CacheHTML(ctx context.Context, key string, html string, ttl time.Duration) error {
+	return nil
+}
+
+func (m *mockSessionStore) GetCachedHTML(ctx context.Context, key string) (string, error) {
+	return "", nil
+}
+
 // Compile-time assertion
 var _ outbound.SessionStore = (*mockSessionStore)(nil)
 
