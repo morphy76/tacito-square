@@ -180,11 +180,47 @@ func TestLLMBindingRepository_Lifecycle(t *testing.T) {
 		_ = repo.Delete(ctxB, bindingB.ID)
 	})
 
-	t.Run("Delete LLM Binding", func(t *testing.T) {
+	t.Run("Delete LLM Binding (Soft Delete)", func(t *testing.T) {
 		err := repo.Delete(ctx, binding.ID)
 		require.NoError(t, err)
 
-		_, err = repo.GetByID(ctx, binding.ID)
-		assert.Error(t, err, "should return an error for deleted binding")
+		// GetByID should still fetch it, but its status must be StatusInactive
+		fetched, err := repo.GetByID(ctx, binding.ID)
+		require.NoError(t, err)
+		assert.Equal(t, model.StatusInactive, fetched.Status)
+
+		// List should not contain the deleted binding
+		list, err := repo.List(ctx)
+		require.NoError(t, err)
+		found := false
+		for _, b := range list {
+			if b.ID == binding.ID {
+				found = true
+				break
+			}
+		}
+		assert.False(t, found, "should not find the soft-deleted binding in the list")
+
+		// We should be able to create a new binding with the same name now
+		binding2 := &model.LLMBinding{
+			ID:                 uuid.New(),
+			Name:               binding.Name, // same name
+			Description:        "Another binding",
+			Provider:           model.ProviderOpenAI,
+			APIBaseURL:         "https://api.openai.com/v1",
+			APIKeySecretRef:    "test-secret-key-2",
+			DefaultModel:       "gpt-4o",
+			DefaultTemperature: 0.7,
+			DefaultMaxTokens:   2048,
+			TimeoutSeconds:     30,
+			Status:             model.StatusActive,
+			CreatedAt:          time.Now().UTC(),
+			UpdatedAt:          time.Now().UTC(),
+		}
+		err = repo.Create(ctx, binding2)
+		assert.NoError(t, err, "should be able to create a binding with same name since previous is soft-deleted")
+
+		// Clean up binding2
+		_ = repo.Delete(ctx, binding2.ID)
 	})
 }

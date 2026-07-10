@@ -3353,7 +3353,6 @@
           "name",
           "provider",
           "api_base_url",
-          "api_key_secret_ref",
           "default_model",
           "default_temperature",
           "default_max_tokens",

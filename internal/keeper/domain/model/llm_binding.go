@@ -35,7 +35,7 @@ type LLMBinding struct {
 	Description        string        `json:"description"`
 	Provider           Provider      `json:"provider"`
 	APIBaseURL         string        `json:"api_base_url"`
-	APIKeySecretRef    string        `json:"api_key_secret_ref"`
+	APIKeySecretRef    string        `json:"api_key_secret_ref,omitempty"`
 	DefaultModel       string        `json:"default_model"`
 	DefaultTemperature float64       `json:"default_temperature"`
 	DefaultMaxTokens   int           `json:"default_max_tokens"`
