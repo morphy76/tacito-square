@@ -30,6 +30,9 @@ This workflow is optimized to minimize LLM token consumption, run with high exec
 >
 > **Constraint 6: Read-Only Codebase & Git Exploration**
 > The agent is encouraged to perform read-only exploration of the codebase (e.g., viewing test suites, mock files, and configuration paths) and Git history (e.g., `git log` or `git diff`) to understand the layout and history of existing tests.
+>
+> **Constraint 7: Subagent Delegation**
+> The agent is encouraged to spawn subagents to execute discrete sub-tasks (e.g., compiling code, parsing specifications, conducting parallel test runs, running specific `curl`/NATS tasks, or monitoring logs). Subagents keep the main agent's context clean and prevent token bloat by returning only high-level summary reports.
 
 ---
 
@@ -38,7 +41,7 @@ This workflow is optimized to minimize LLM token consumption, run with high exec
 ### Step 1: Milestone & Spec Discovery (Token-Optimized)
 1. **Identify the Milestone**: Retrieve the target milestone (e.g., `M6.5`) from user input.
 2. **Scan Milestone Requirements**: View the milestone section in the master [Specs Index](file:///Users/R.Pasquini/Projects/side/tacito-square/specs/INDEX.md). Identify all functional specifications (`SPEC-FR-*`) and unresolved bug tasks.
-3. **Extract Target Sections**: For each specification, read ONLY the `Acceptance Criteria` and `Test Plan` sections. Do not read the Context or Specification details unless clarification is needed on a test failure.
+3. **Extract Target Sections**: For each specification, read ONLY the `Acceptance Criteria` and `Test Plan` sections. Do not read the Context or Specification details unless clarification is needed on a test failure. *Note: You can delegate parsing of different specs to concurrent subagents to speed up discovery.*
 
 ### Step 2: Smart Environment Setup (Execution-Optimized)
 1. **Check Existing Health**: Verify if the target pods (`keeper`, `operator`, `bff`) are already running in the `tacito` namespace. Query their `/readyz` endpoints.
@@ -50,13 +53,12 @@ This workflow is optimized to minimize LLM token consumption, run with high exec
      make docker-build
      make helm-install
      ```
+     *(Note: This build and deployment process can be delegated to a background subagent).*
 3. **Wait for Readiness**: Block until all pods show `Ready` status via `kubectl get pods -n tacito`.
 
 ### Step 3: Test Layout Discovery & Exploration (Knowledge-Consolidated)
 1. **Consult Existing Knowledge**: Check the test knowledge base under `specs/reports/test-knowledge-base/` to see if the testing patterns, mock usages, or command sequences for the components under test have already been documented.
-2. **Read-Only Exploration**: If knowledge is missing or incomplete:
-   - Search the codebase for existing test structures (`*_test.go`, integration scripts, and E2E suites) in the relevant components.
-   - Run read-only `git log` commands to inspect recently committed test cases or fixes.
+2. **Read-Only Exploration**: If knowledge is missing or incomplete, perform codebase/Git exploration. *You may spawn subagents to analyze different directories or components in parallel.*
 3. **Consolidate Test Knowledge**: Document findings in a markdown file at `specs/reports/test-knowledge-base/<component>-testing-notes.md`. Include:
    - Location of unit, integration, and E2E tests for the component.
    - Specific setup conditions, mock helpers, and database migrations involved.
@@ -75,6 +77,8 @@ This workflow is optimized to minimize LLM token consumption, run with high exec
 3. **Monitor Cluster Resources & Logs**: Evaluate overall system effectiveness and runtime health:
    - **Structured Logs Inspection**: Stream and inspect active container logs (`kubectl logs -n tacito -l app=<component> --tail=100`) to confirm that logs are generated in structured JSON format, respect observability guidelines, and trace IDs propagate cleanly between components.
    - **Resource Performance and Stability**: Check pod resource usage (`kubectl top pods -n tacito`), look for restart cycles or crash loop conditions, and inspect container events (`kubectl describe pod -n tacito`) to ensure no resource leakage or silent OOM kills are happening under test load.
+   
+   *(Note: Subagents can be delegated to run the curl requests, publish NATS events, check logs, or monitor resource stats in the background, keeping the main thread free and context light).*
 
 ### Step 5: Compile the Verification Report (Concise)
 Create a markdown report under the reports directory: `specs/reports/M<Milestone>-verification-report.md`. Keep the report token-efficient:
