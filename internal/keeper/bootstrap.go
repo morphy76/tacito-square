@@ -152,7 +152,7 @@ func NewServer(
 	eventService := service.NewEventService(eventPublisher, eventSubscriber, communityRepo)
 
 	agentService := service.NewAgentService(agentRepo, communityRepo, crdCoord, cacheClient, eventPublisher, repo)
-	communityService := service.NewCommunityService(communityRepo)
+	communityService := service.NewCommunityService(communityRepo, nil)
 	lifecycleService := service.NewLifecycleService(agentRepo, communityRepo, crdCoord, nc)
 
 	// Wire NATS registry subscriber, registry pruner, and registry handler
@@ -193,7 +193,7 @@ func NewServer(
 	promptHandler := httpAdapter.NewPromptHandler(promptService)
 	agentHandler := httpAdapter.NewAgentHandler(agentService)
 	communityHandler := httpAdapter.NewCommunityHandler(communityService)
-	assignmentHandler := httpAdapter.NewAssignmentHandler(agentService)
+	assignmentHandler := httpAdapter.NewAssignmentHandler(communityService)
 	lifecycleHandler := httpAdapter.NewLifecycleHandler(lifecycleService)
 	eventHandler := httpAdapter.NewEventHandler(eventService, eventService)
 	cardHandler := httpAdapter.NewCardHandler(agentRepo, communityRepo)

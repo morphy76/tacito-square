@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/inbound"
+	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
 	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/morphy76/tacito-square/internal/shared/tenant"
 )
@@ -56,7 +57,7 @@ func (h *AssignmentHandler) Assign(c *gin.Context) {
 		return
 	}
 
-	err = h.usecase.Assign(ctx, communityID, agentID)
+	err = h.usecase.Assign(ctx, communityID, agentID, model.AgentRoleSpoke)
 	if err != nil {
 		errStr := err.Error()
 		if strings.Contains(errStr, "not found") {

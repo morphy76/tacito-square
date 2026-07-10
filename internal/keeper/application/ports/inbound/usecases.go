@@ -84,8 +84,9 @@ type CommunityUseCase interface {
 
 // AssignmentUseCase defines the driving operations for Agent-Community assignments.
 type AssignmentUseCase interface {
-	Assign(ctx context.Context, communityID uuid.UUID, agentID uuid.UUID) error
+	Assign(ctx context.Context, communityID uuid.UUID, agentID uuid.UUID, role model.AgentRole) error
 	Unassign(ctx context.Context, communityID uuid.UUID, agentID uuid.UUID) error
+	ListByCommunity(ctx context.Context, communityID uuid.UUID) ([]*model.CommunityAssignment, error)
 }
 
 // EventUseCase defines the driving port for publishing domain events.

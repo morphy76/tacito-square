@@ -103,3 +103,13 @@ type CommunityRepository interface {
 	Update(ctx context.Context, community *model.Community) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
+
+// CommunityAssignmentRepository defines the persistent storage operations for Community Assignments.
+type CommunityAssignmentRepository interface {
+	Create(ctx context.Context, assignment *model.CommunityAssignment) error
+	Delete(ctx context.Context, communityID uuid.UUID, agentID uuid.UUID) error
+	ListByCommunity(ctx context.Context, communityID uuid.UUID) ([]*model.CommunityAssignment, error)
+	CountHubs(ctx context.Context, communityID uuid.UUID) (int, error)
+	CountByCommunity(ctx context.Context, communityID uuid.UUID) (int, error)
+}
+

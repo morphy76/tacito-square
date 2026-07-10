@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -18,14 +19,22 @@ type MockAssignmentUseCase struct {
 	mock.Mock
 }
 
-func (m *MockAssignmentUseCase) Assign(ctx context.Context, communityID uuid.UUID, agentID uuid.UUID) error {
-	args := m.Called(ctx, communityID, agentID)
+func (m *MockAssignmentUseCase) Assign(ctx context.Context, communityID uuid.UUID, agentID uuid.UUID, role model.AgentRole) error {
+	args := m.Called(ctx, communityID, agentID, role)
 	return args.Error(0)
 }
 
 func (m *MockAssignmentUseCase) Unassign(ctx context.Context, communityID uuid.UUID, agentID uuid.UUID) error {
 	args := m.Called(ctx, communityID, agentID)
 	return args.Error(0)
+}
+
+func (m *MockAssignmentUseCase) ListByCommunity(ctx context.Context, communityID uuid.UUID) ([]*model.CommunityAssignment, error) {
+	args := m.Called(ctx, communityID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*model.CommunityAssignment), args.Error(1)
 }
 
 func TestAssignmentHandlers_Assign(t *testing.T) {
@@ -43,7 +52,7 @@ func TestAssignmentHandlers_Assign(t *testing.T) {
 		agentID := uuid.New()
 
 		var capturedCtx context.Context
-		usecase.On("Assign", mock.Anything, commID, agentID).Return(nil).Run(func(args mock.Arguments) {
+		usecase.On("Assign", mock.Anything, commID, agentID, model.AgentRoleSpoke).Return(nil).Run(func(args mock.Arguments) {
 			capturedCtx = args.Get(0).(context.Context)
 		})
 
@@ -70,7 +79,7 @@ func TestAssignmentHandlers_Assign(t *testing.T) {
 		commID := uuid.New()
 		agentID := uuid.New()
 
-		usecase.On("Assign", mock.Anything, commID, agentID).Return(errors.New("agent already assigned to community: ..."))
+		usecase.On("Assign", mock.Anything, commID, agentID, model.AgentRoleSpoke).Return(errors.New("agent already assigned to community: ..."))
 
 		req, _ := http.NewRequest(http.MethodPost, "/api/v1/communities/"+commID.String()+"/agents/"+agentID.String(), nil)
 		resp := httptest.NewRecorder()
@@ -92,7 +101,7 @@ func TestAssignmentHandlers_Assign(t *testing.T) {
 		commID := uuid.New()
 		agentID := uuid.New()
 
-		usecase.On("Assign", mock.Anything, commID, agentID).Return(errors.New("community not found"))
+		usecase.On("Assign", mock.Anything, commID, agentID, model.AgentRoleSpoke).Return(errors.New("community not found"))
 
 		req, _ := http.NewRequest(http.MethodPost, "/api/v1/communities/"+commID.String()+"/agents/"+agentID.String(), nil)
 		resp := httptest.NewRecorder()
