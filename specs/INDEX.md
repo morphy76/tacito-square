@@ -68,6 +68,39 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 
 
 
+### M6.5: Agent Consolidation in Communities
+
+| ID | Title | Status | Component | File |
+|----|-------|--------|-----------|------|
+| SPEC-FR-M6.5.1 | Agent Role as Community Assignment Behavior | DRAFT | keeper, operator | [SPEC-FR-M6.5.1](functional/M6.5/SPEC-FR-M6.5.1.md) |
+| SPEC-FR-M6.5.2 | LLM Binding CRUD APIs | DRAFT | keeper | [SPEC-FR-M6.5.2](functional/M6.5/SPEC-FR-M6.5.2.md) |
+| SPEC-FR-M6.5.3 | Prompt & PromptCollection CRUD APIs + Agent Association | DRAFT | keeper | [SPEC-FR-M6.5.3](functional/M6.5/SPEC-FR-M6.5.3.md) |
+| SPEC-FR-M6.5.4 | Skill & SkillCollection CRUD APIs + Agent Association | DRAFT | keeper | [SPEC-FR-M6.5.4](functional/M6.5/SPEC-FR-M6.5.4.md) |
+| SPEC-FR-M6.5.5 | MCP Client CRUD APIs + Per-Agent Tool Filter | DRAFT | keeper | [SPEC-FR-M6.5.5](functional/M6.5/SPEC-FR-M6.5.5.md) |
+| SPEC-FR-M6.5.6 | PropagatedAgentConfig: Shared Schema & Reconciler Delivery Protocol | DRAFT | shared, keeper, operator, agent | [SPEC-FR-M6.5.6](functional/M6.5/SPEC-FR-M6.5.6.md) |
+| SPEC-FR-M6.5.7 | Role-Driven System Prompt Templates (Helm ConfigMaps) | DRAFT | agent, operator, deploy | [SPEC-FR-M6.5.7](functional/M6.5/SPEC-FR-M6.5.7.md) |
+| SPEC-FR-M6.5.8 | Dynamic System Prompt Construction Pipeline | DRAFT | agent | [SPEC-FR-M6.5.8](functional/M6.5/SPEC-FR-M6.5.8.md) |
+| SPEC-FR-M6.5.9 | Agent Environment Setup on Community Assignment | DRAFT | operator, keeper | [SPEC-FR-M6.5.9](functional/M6.5/SPEC-FR-M6.5.9.md) |
+| SPEC-FR-M6.5.10 | Resource Tier Assignment on Community Assignment | DRAFT | keeper, operator | [SPEC-FR-M6.5.10](functional/M6.5/SPEC-FR-M6.5.10.md) |
+| SPEC-FR-M6.5.11 | Community Assignment Transaction + Stale Marker | DRAFT | keeper, operator | [SPEC-FR-M6.5.11](functional/M6.5/SPEC-FR-M6.5.11.md) |
+| SPEC-FR-M6.5.12 | STM Key Isolation for Non-Conversational Engagements | DRAFT | agent | [SPEC-FR-M6.5.12](functional/M6.5/SPEC-FR-M6.5.12.md) |
+| SPEC-FR-M6.5.13 | A2A Agent Cards Consolidation for Hub Delegation | DRAFT | agent, keeper | [SPEC-FR-M6.5.13](functional/M6.5/SPEC-FR-M6.5.13.md) |
+
+### M6.6: Non-Conversational Interactions & Long-Term Memory
+
+> ⚠️ Placeholder — specs pending SDD review.
+
+| ID | Title | Status | Component | File |
+|----|-------|--------|-----------|------|
+| SPEC-FR-M6.6.1 | Non-Conversational Interaction Patterns & NATS Trigger Contract | DRAFT | agent, keeper | — |
+| SPEC-FR-M6.6.2 | Persistent LTM: Qdrant Integration Reactivation & Schema | DRAFT | agent | — |
+| SPEC-FR-M6.6.3 | Ephemeral LTM: TTL-Bounded Semantic Memory | DRAFT | agent | — |
+| SPEC-FR-M6.6.4 | LTM Scope & Isolation (tenant + agent + session) | DRAFT | agent, keeper | — |
+| SPEC-FR-M6.6.5 | RAG Pipeline: Document Ingestion & Embedding | DRAFT | agent, keeper | — |
+| SPEC-FR-M6.6.6 | RAG Pipeline: Retrieval-Augmented Generation in Cognitive Loop | DRAFT | agent | — |
+| SPEC-FR-M6.6.7 | Background Job Lifecycle & Result Delivery | DRAFT | agent, keeper | — |
+| SPEC-FR-M6.6.8 | Scheduled Agent Triggers (cron-driven activation) | DRAFT | operator, keeper | — |
+
 ### M7: BFF & UIs
 
 | ID | Title | Status | Component | File |
@@ -170,7 +203,9 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | M4 | Operator Core | ✔️ IMPLEMENTED | 5 | [M4 Summary](milestones/M4-summary.md) |
 | M5 | Agent Core | ✔️ IMPLEMENTED | 9 | [M5 Summary](milestones/M5-summary.md) |
 | M6 | Communities & Messaging | ✔️ IMPLEMENTED | 6 | [M6](milestones/M6-communities.md) |
-| M7 | BFF & UIs | ⏳ IN_PROGRESS | 6 | [M7](milestones/M7-bff-uis.md) |
+| M6.5 | Agent Consolidation in Communities | ⏳ IN_PROGRESS | 13 | [M6.5](milestones/M6.5-agent-consolidation.md) |
+| M6.6 | Non-Conversational Interactions & LTM | ⬜ PLANNED | 8 | [M6.6](milestones/M6.6-non-conversational-ltm-rag.md) |
+| M7 | BFF & UIs | ⏸️ SUSPENDED | 6 | [M7](milestones/M7-bff-uis.md) |
 | M8 | RAG & LTM | ⬜ PLANNED | 1 | [M8](milestones/M8-rag-ltm.md) |
 | M9 | Governance | ⬜ PLANNED | 17 | [M9](milestones/M9-governance.md) |
 | M10 | Hardening | ⬜ PLANNED | 8 | [M10](milestones/M10-hardening.md) |
