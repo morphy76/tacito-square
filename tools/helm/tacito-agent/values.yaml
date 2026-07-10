@@ -28,71 +28,46 @@ agent:
   communityRef: "standalone-community"
 
   # --- LLM Brain Configuration ---
-  llm:
-    model: "gpt-4o"
-    endpoint: "http://{{ include \"tacito-agent.fullname\" . }}-mocks:1080/v1"
-    temperature: 0.7
-    maxTokens: 2048
-    apiKey: "dummy-key"
-    credentialsSecret: "tacito-agent-llm-secret"
-
-  # --- Outbound Reasoning & Provider Configuration ---
   brain:
-    provider: "openai" # "openai" or "ollama"
-    model: "gpt-4o"
+    provider: "openai"
+    model: "gemini-2.5-flash-lite"
+    endpoint: "https://generativelanguage.googleapis.com/v1beta/openai/"
     temperature: 0.7
-    maxTokens: 1000
+    maxTokens: 512
     timeoutSeconds: 30
     circuit:
-      failureThreshold: 5
-      recoveryTimeoutSeconds: 15
-
-  openai:
-    endpoint: "http://{{ include \"tacito-agent.fullname\" . }}-mocks:1080/v1"
-    apiKey: "dummy-key"
-
-  ollama:
-    endpoint: "http://{{ include \"tacito-agent.fullname\" . }}-mocks:1080"
+      failureThreshold: 3
+      recoveryTimeoutSeconds: 60
+    credentialsSecret:
+      name: gemini-api-key
+      key: api-key
 
   # --- System Prompt (structured JSON string) ---
   systemPrompt: |
-    {
-      "description": "Standalone Agent for local development.",
-      "directives": "You are a helpful and precise coding assistant. You assist the user in their software tasks.",
-      "skills": [
-        {
-          "name": "math",
-          "description": "Dynamic arithmetic calculation tools.",
-          "content": "Math Guidelines: Always verify additions step-by-step and format them clearly."
-        },
-        {
-          "name": "reasoning",
-          "description": "Procedural knowledge about the agent's cognitive reasoning flow.",
-          "content": "Reasoning Guidelines: When explaining brain reasoning, emphasize the stateless multi-turn loop, system prompt parsing, and dynamic context loading via enable_skill."
-        },
-        {
-          "name": "restricted",
-          "description": "Restricted capabilities that require special authorization.",
-          "content": "Warning: Restricted access instructions. Under no circumstances should you perform unauthorized queries."
-        }
-      ]
-    }
+    You are the Inquiry Coach, a specialized cognitive agent whose sole objective is to help the researcher explore, unpack, and understand a complex or unknown subject.
+    Your goal is not to supply answers, but to elevate the researcher's own awareness and uncover their blind spots.
+    
+    ### Core Objective
+    Formulate precise, thought-provoking questions that guide the researcher to articulate their understanding, identify assumptions, and clarify gaps in their knowledge.
 
-# --- Short-Term Memory (Redis) ---
-redis:
-  url: "redis://:tacito-redis-dev@ts-infra-redis-headless:6379"
-  keyNamespace: "tacito:agent"
-  ttlSeconds: 3600
-
-# --- Long-Term Memory (Qdrant) ---
-qdrant:
-  url: "ts-infra-qdrant:6334"
-  collectionName: "tacito-memories"
-  vectorDimension: 1536
+    ### Guidelines for Inquiry
+    1. **Socratic Inquiry:** Ask open-ended, analytical, and probing questions rather than explaining concepts or giving advice.
+    2. **Identify Blind Spots:** Ask about unstated assumptions, counter-arguments, dependencies, and potential points of failure within the researcher's current mental model.
+    3. **Dynamically Adapt:** Active listening is key. Build your questions directly on the researcher's previous responses to guide them in a progressive line of thinking.
+    4. **Explore Alternative Perspectives:** Prompt the researcher to consider the subject from different angles (e.g., structural, historical, systemic, or opposite viewpoints).
+    5. **Simplicity and Focus:** Keep your prompts concise and ask only one or two focused questions at a time to keep the researcher's thinking structured and engaged.
 
 # --- Event Bus (NATS) ---
 nats:
   url: "nats://ts-infra-nats:4222"
+
+# --- Short-Term Memory (Redis) ---
+redis:
+  url: "redis://:tacito-redis-dev@ts-infra-redis-headless:6379"
+
+# --- Long-Term Memory (Qdrant) ---
+qdrant:
+  url: "ts-infra-qdrant:6334"
 
 # --- OpenTelemetry Tracing ---
 otel:
@@ -102,6 +77,7 @@ otel:
 s3:
   url: "https://ts-infra-minio:9000"
   bucket: "tacito"
+  region: ""
 
 # --- Probes ---
 livenessProbe:
@@ -131,22 +107,4 @@ tolerations: []
 affinity: {}
 
 # --- Model Context Protocol Clients ---
-mcpClients:
-  - name: "sqlite-server"
-    transport: "stdio"
-    command: "npx"
-    args:
-      - "-y"
-      - "@modelcontextprotocol/server-sqlite"
-      - "--db"
-      - "/data/mcp.db"
-    allowed_tools:
-      - "query"
-      - "schema"
-  - name: "weather-service"
-    transport: "sse"
-    url: "http://weather-mcp.default.svc.cluster.local:8080/sse"
-    allowed_tools:
-      - "get-forecast"
-      - "get-alerts"
-
+mcpClients: []

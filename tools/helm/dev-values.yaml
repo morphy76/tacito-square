@@ -24,16 +24,6 @@ operator:
       endpoint: "ts-infra-otel-collector:4317"
     nats:
       url: "nats://ts-infra-nats-headless:4222"
-agent:
-  config:
-    otel:
-      endpoint: "ts-infra-otel-collector:4317"
-    nats:
-      url: "nats://ts-infra-nats-headless:4222"
-    redis:
-      url: "redis://:tacito-redis-dev@ts-infra-redis-headless:6379"
-    qdrant:
-      url: "ts-infra-qdrant:6334"
 
 bff:
   image:

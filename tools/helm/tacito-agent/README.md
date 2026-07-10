@@ -97,7 +97,12 @@ To thoroughly verify agent execution, combine interactive request dispatching wi
 
 3. **Publish Request (Inside NATS Box)**: Send a request payload directly to the standalone agent's mailbox:
    ```bash
-   nats request -s "nats://ts-infra-nats:4222" ts.community.standalone-community.agent.standalone-agent '{"message": "Hello Agent", "tenant_id": "default-tenant"}'
+   nats pub -J -s "nats://ts-infra-nats:4222" ts.community.standalone-community.agent.standalone-agent -H X-Tacito-Schema:"urn:tacito:schema:conversational:add-user-message:v1" -H X-Tacito-Tenant:"default-tenant" '{"tenant_id": "default-tenant", "schema_ref": "urn:tacito:schema:conversational:add-user-message:v1", "payload": {"message": "Hello, my name is Riccardo, how are you? I need help.", "thread_id": "test-28", "community_id": "8f559a1d-2de5-496f-bac7-bdc6ebff3daa"}}'
+   ```
+
+4. **Shell 3 (Subscribe to all agent messages)**:
+   ```bash
+   nats sub -s "nats://ts-infra-nats:4222" "ts.community.>"
    ```
 
    **Agent Logs Output (Shell 1)**:
