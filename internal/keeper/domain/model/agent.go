@@ -36,8 +36,8 @@ type ShortTermMemoryConfig struct {
 
 // LongTermMemoryConfig encapsulates Qdrant semantic storage configuration.
 type LongTermMemoryConfig struct {
-	CollectionName  string `json:"collection_name"`
-	VectorDimension int    `json:"vector_dimension"`
+	CollectionName  string `json:"collection_name,omitempty"`
+	VectorDimension int    `json:"vector_dimension,omitempty"`
 }
 
 // MCPClientConfig encapsulates custom configurations for attached MCP clients.
@@ -56,7 +56,7 @@ type Agent struct {
 	Description     string                `json:"description,omitempty"`
 	Brain           BrainConfig           `json:"brain"`
 	ShortTermMemory ShortTermMemoryConfig `json:"short_term_memory"`
-	LongTermMemory  LongTermMemoryConfig  `json:"long_term_memory"`
+	LongTermMemory  LongTermMemoryConfig  `json:"long_term_memory,omitempty"`
 	Skills          []uuid.UUID           `json:"skills,omitempty"`
 	PromptTemplate  uuid.UUID             `json:"prompt_template,omitempty"`
 	MCPClients      []MCPClientConfig     `json:"mcp_clients,omitempty"`
@@ -107,8 +107,8 @@ func (a Agent) Validate() error {
 	}
 
 	// LongTermMemory validations
-	if a.LongTermMemory.VectorDimension <= 0 {
-		return errors.New("long-term memory vector dimension must be positive")
+	if a.LongTermMemory.VectorDimension < 0 {
+		return errors.New("long-term memory vector dimension must be non-negative")
 	}
 
 	// MCPClients validations

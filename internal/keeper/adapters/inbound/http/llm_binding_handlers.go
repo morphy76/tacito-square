@@ -30,7 +30,7 @@ func NewLLMBindingHandler(repo inbound.LLMBindingUseCase) *LLMBindingHandler {
 type CreateLLMBindingRequest struct {
 	Name               string   `json:"name" binding:"required"`
 	Description        string   `json:"description"`
-	Provider           string   `json:"provider" binding:"required,oneof=openai anthropic groq ollama custom"`
+	Provider           string   `json:"provider" binding:"required"`
 	APIBaseURL         string   `json:"api_base_url" binding:"required,url"`
 	APIKeySecretRef    string   `json:"api_key_secret_ref" binding:"required"`
 	DefaultModel       string   `json:"default_model" binding:"required"`
@@ -42,7 +42,7 @@ type CreateLLMBindingRequest struct {
 type UpdateLLMBindingRequest struct {
 	Name               string   `json:"name" binding:"required"`
 	Description        string   `json:"description"`
-	Provider           string   `json:"provider" binding:"required,oneof=openai anthropic groq ollama custom"`
+	Provider           string   `json:"provider" binding:"required"`
 	APIBaseURL         string   `json:"api_base_url" binding:"required,url"`
 	APIKeySecretRef    string   `json:"api_key_secret_ref" binding:"required"`
 	DefaultModel       string   `json:"default_model" binding:"required"`
@@ -106,6 +106,10 @@ func (h *LLMBindingHandler) Create(c *gin.Context) {
 	}
 
 	if err := binding.Validate(); err != nil {
+		if err.Error() == "invalid provider" {
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -158,6 +162,7 @@ func (h *LLMBindingHandler) GetByID(c *gin.Context) {
 		return
 	}
 
+	binding.APIKeySecretRef = ""
 	c.JSON(http.StatusOK, binding)
 }
 
@@ -184,6 +189,9 @@ func (h *LLMBindingHandler) List(c *gin.Context) {
 	}
 	if bindings == nil {
 		bindings = make([]*model.LLMBinding, 0)
+	}
+	for _, b := range bindings {
+		b.APIKeySecretRef = ""
 	}
 	c.JSON(http.StatusOK, bindings)
 }
@@ -255,6 +263,10 @@ func (h *LLMBindingHandler) Update(c *gin.Context) {
 	existing.UpdatedAt = time.Now().UTC()
 
 	if err := existing.Validate(); err != nil {
+		if err.Error() == "invalid provider" {
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -274,6 +286,7 @@ func (h *LLMBindingHandler) Update(c *gin.Context) {
 		Str("llm_binding_id", existing.ID.String()).
 		Msg("LLM provider binding template updated successfully")
 
+	previousValue.APIKeySecretRef = ""
 	c.JSON(http.StatusOK, previousValue)
 }
 

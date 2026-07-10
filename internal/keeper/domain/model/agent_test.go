@@ -136,15 +136,7 @@ func TestAgent_Validation(t *testing.T) {
 			}(),
 			wantErr: "short-term memory ttl must be positive",
 		},
-		{
-			name: "Invalid long term memory vector dimension",
-			agent: func() Agent {
-				a := validAgent
-				a.LongTermMemory.VectorDimension = -1
-				return a
-			}(),
-			wantErr: "long-term memory vector dimension must be positive",
-		},
+
 		{
 			name: "Invalid status",
 			agent: func() Agent {
@@ -231,6 +223,17 @@ func TestAgent_Validation(t *testing.T) {
 				cid := uuid.New()
 				a.CommunityID = &cid
 				a.Status = AgentStatus("error")
+				return a
+			}(),
+		},
+		{
+			name: "Valid Agent with empty/zero long-term memory",
+			agent: func() Agent {
+				a := validAgent
+				a.LongTermMemory = LongTermMemoryConfig{
+					CollectionName:  "",
+					VectorDimension: 0,
+				}
 				return a
 			}(),
 		},

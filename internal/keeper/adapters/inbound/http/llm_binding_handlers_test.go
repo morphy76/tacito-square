@@ -140,6 +140,40 @@ func TestLLMBindingHandlers_Create(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, resp.Code)
 		assert.Contains(t, resp.Body.String(), "error")
 	})
+
+	t.Run("Create LLM Binding Invalid Provider returns 422", func(t *testing.T) {
+		repo := new(MockLLMBindingUseCase)
+		handler := NewLLMBindingHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.POST("/api/v1/llm-bindings", handler.Create)
+
+		payload := map[string]interface{}{
+			"name":                 "openai-gpt4o",
+			"description":          "Production GPT-4o Binding",
+			"provider":             "invalid-provider",
+			"api_base_url":         "https://api.openai.com/v1",
+			"api_key_secret_ref":    "openai-api-key",
+			"default_model":       "gpt-4o",
+			"default_temperature": 0.7,
+			"default_max_tokens":   2048,
+			"timeout_seconds":     30,
+		}
+
+		body, _ := json.Marshal(payload)
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/llm-bindings", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+		var respBody map[string]interface{}
+		err := json.Unmarshal(resp.Body.Bytes(), &respBody)
+		assert.NoError(t, err)
+		assert.Contains(t, respBody["error"], "invalid provider")
+	})
 }
 
 func TestLLMBindingHandlers_GetByID(t *testing.T) {
@@ -155,11 +189,12 @@ func TestLLMBindingHandlers_GetByID(t *testing.T) {
 
 		id := uuid.New()
 		binding := &model.LLMBinding{
-			ID:           id,
-			Name:         "openai-gpt4o",
-			Provider:     model.ProviderOpenAI,
-			APIBaseURL:   "https://api.openai.com/v1",
-			DefaultModel: "gpt-4o",
+			ID:              id,
+			Name:            "openai-gpt4o",
+			Provider:        model.ProviderOpenAI,
+			APIBaseURL:      "https://api.openai.com/v1",
+			APIKeySecretRef: "secret-key-123",
+			DefaultModel:    "gpt-4o",
 		}
 
 		repo.On("GetByID", mock.Anything, id).Return(binding, nil)
@@ -176,6 +211,7 @@ func TestLLMBindingHandlers_GetByID(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, id.String(), respBody["id"])
 		assert.Equal(t, "openai-gpt4o", respBody["name"])
+		assert.NotContains(t, respBody, "api_key_secret_ref")
 	})
 
 	t.Run("Get LLM Binding Not Found", func(t *testing.T) {
@@ -211,11 +247,12 @@ func TestLLMBindingHandlers_List(t *testing.T) {
 
 		bindings := []*model.LLMBinding{
 			{
-				ID:           uuid.New(),
-				Name:         "openai-gpt4o",
-				Provider:     model.ProviderOpenAI,
-				APIBaseURL:   "https://api.openai.com/v1",
-				DefaultModel: "gpt-4o",
+				ID:              uuid.New(),
+				Name:            "openai-gpt4o",
+				Provider:        model.ProviderOpenAI,
+				APIBaseURL:      "https://api.openai.com/v1",
+				APIKeySecretRef: "secret-key-123",
+				DefaultModel:    "gpt-4o",
 			},
 		}
 
@@ -233,6 +270,7 @@ func TestLLMBindingHandlers_List(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, respBody, 1)
 		assert.Equal(t, "openai-gpt4o", respBody[0]["name"])
+		assert.NotContains(t, respBody[0], "api_key_secret_ref")
 	})
 
 	t.Run("List LLM Bindings Returns Empty Array When Nil", func(t *testing.T) {
@@ -309,6 +347,7 @@ func TestLLMBindingHandlers_Update(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "openai-gpt4o", respBody["name"])
 		assert.Equal(t, 0.7, respBody["default_temperature"])
+		assert.NotContains(t, respBody, "api_key_secret_ref")
 	})
 }
 

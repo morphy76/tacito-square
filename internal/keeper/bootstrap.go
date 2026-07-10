@@ -134,7 +134,7 @@ func NewServer(
 	communityRepo := postgres.NewCommunityRepository(pool)
 
 	// Application Services (orchestrators)
-	llmService := service.NewLLMBindingService(repo)
+	llmService := service.NewLLMBindingService(repo, cacheClient)
 	mcpService := service.NewMCPClientService(mcpRepo)
 	skillService := service.NewSkillService(skillRepo)
 	promptService := service.NewPromptService(promptRepo)

@@ -108,7 +108,7 @@ func (r *LLMBindingRepository) List(ctx context.Context) ([]*model.LLMBinding, e
 	query := `SELECT 
 		id, tenant_id, name, description, provider, api_base_url, api_key_secret_ref, 
 		default_model, default_temperature, default_max_tokens, timeout_seconds, status, created_at, updated_at
-	FROM llm_bindings WHERE tenant_id = $1 ORDER BY name ASC`
+	FROM llm_bindings WHERE tenant_id = $1 AND status <> 'inactive' ORDER BY name ASC`
 
 	rows, err := r.pool.Query(ctx, query, ten.FullName())
 	if err != nil {
@@ -159,15 +159,16 @@ func (r *LLMBindingRepository) Update(ctx context.Context, b *model.LLMBinding) 
 	return nil
 }
 
-// Delete removes an LLM provider binding from the database by its ID.
+// Delete soft-deletes an LLM provider binding from the database by its ID.
 func (r *LLMBindingRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
 		return errors.New("tenant resolution failed")
 	}
 
-	query := `DELETE FROM llm_bindings WHERE id = $1 AND tenant_id = $2`
-	cmdTag, err := r.pool.Exec(ctx, query, id, ten.FullName())
+	query := `UPDATE llm_bindings SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4`
+	now := time.Now().UTC()
+	cmdTag, err := r.pool.Exec(ctx, query, model.StatusInactive, now, id, ten.FullName())
 	if err != nil {
 		return fmt.Errorf("delete llm binding: %w", err)
 	}
