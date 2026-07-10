@@ -160,11 +160,13 @@ type PropagatedAgentConfig struct {
 }
 
 // ResolveAndSynthesizeSystemPrompt fetches templates and skills out-of-band and compiles them into a system prompt.
-func (c *K8sCRDCoordinator) ResolveAndSynthesizeSystemPrompt(ctx context.Context, agent *model.Agent) (string, error) {
+// The role parameter carries the agent's community-assignment role (hub, spoke, standalone) and is used
+// to select the appropriate role-specific prompt template. It is no longer read from agent.Role.
+func (c *K8sCRDCoordinator) ResolveAndSynthesizeSystemPrompt(ctx context.Context, agent *model.Agent, role string) (string, error) {
 	var directives string
 	description := agent.Description
 
-	if agent.Role == "hub" {
+	if role == "hub" {
 		if c.promptRepo != nil {
 			// Fetch the role-specific template for hub
 			roleTpl, err := c.promptRepo.GetTemplateByID(ctx, model.HubSystemPromptTemplateID)
@@ -242,7 +244,7 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 	}()
 
 	// Synthesis out-of-band prompt template & skills list
-	systemPrompt, err := c.ResolveAndSynthesizeSystemPrompt(ctx, agent)
+	systemPrompt, err := c.ResolveAndSynthesizeSystemPrompt(ctx, agent, "")
 	if err != nil {
 		return fmt.Errorf("resolving and synthesizing system prompt: %w", err)
 	}
@@ -347,7 +349,7 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 					},
 					MCPClients: mcpClientSpecs,
 					Tier:       agent.Tier,
-					Role:       agent.Role,
+					Role:       "", // populated from CommunityAssignment at reconciliation time (SPEC-FR-M6.5.1)
 				},
 			}
 			err = c.client.Create(deadlineCtx, crdObj)
@@ -377,7 +379,7 @@ func (c *K8sCRDCoordinator) SubmitAgentCRD(ctx context.Context, agent *model.Age
 		latest.Spec.LLMConfig.CredentialsSecret = credsSecret
 		latest.Spec.MCPClients = mcpClientSpecs
 		latest.Spec.Tier = agent.Tier
-		latest.Spec.Role = agent.Role
+		latest.Spec.Role = "" // populated from CommunityAssignment at reconciliation time (SPEC-FR-M6.5.1)
 
 		err = c.client.Update(deadlineCtx, latest)
 		if err != nil {
