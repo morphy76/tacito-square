@@ -20,8 +20,5 @@ vendor/
 deploy/helm/tacito-square/charts/
 deploy/helm/tacito-square/Chart.lock
 
-# FE
-
+# UI
 node_modules/
-/ui/configurator/public/assets/bootstrap-theme.css
-
