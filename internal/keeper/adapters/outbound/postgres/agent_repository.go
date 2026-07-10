@@ -391,8 +391,7 @@ func (r *AgentRepository) AssignToCommunity(ctx context.Context, agentID uuid.UU
 		// 2. Verify agent exists, belongs to tenant, and is not already assigned
 		var currentCommID *uuid.UUID
 		var agentStatus string
-		var agentRole string
-		err = tx.QueryRow(ctx, `SELECT community_id, status, role FROM agents WHERE id = $1 AND tenant_id = $2 FOR UPDATE`, agentID, ten.FullName()).Scan(&currentCommID, &agentStatus, &agentRole)
+		err = tx.QueryRow(ctx, `SELECT community_id, status FROM agents WHERE id = $1 AND tenant_id = $2 FOR UPDATE`, agentID, ten.FullName()).Scan(&currentCommID, &agentStatus)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return fmt.Errorf("agent not found: %s", agentID)
@@ -402,29 +401,6 @@ func (r *AgentRepository) AssignToCommunity(ctx context.Context, agentID uuid.UU
 
 		if currentCommID != nil {
 			return fmt.Errorf("agent already assigned to community: %s", currentCommID)
-		}
-
-		// Verify topology constraints
-		if topology == string(model.CommunityTopologySingleAgent) {
-			var count int
-			err = tx.QueryRow(ctx, `SELECT COUNT(*) FROM agents WHERE community_id = $1`, communityID).Scan(&count)
-			if err != nil {
-				return fmt.Errorf("check community agents count: %w", err)
-			}
-			if count >= 1 {
-				return fmt.Errorf("community with single-agent topology cannot have more than one agent assigned")
-			}
-		} else if topology == string(model.CommunityTopologyHubSpoke) {
-			if agentRole == "hub" {
-				var hubCount int
-				err = tx.QueryRow(ctx, `SELECT COUNT(*) FROM agents WHERE community_id = $1 AND role = 'hub'`, communityID).Scan(&hubCount)
-				if err != nil {
-					return fmt.Errorf("check community hubs count: %w", err)
-				}
-				if hubCount >= 1 {
-					return fmt.Errorf("community with hub-spoke topology cannot have more than one hub agent assigned")
-				}
-			}
 		}
 
 		// 3. Update agent assignment
