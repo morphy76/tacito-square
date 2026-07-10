@@ -139,11 +139,11 @@ spec:
                 minimum: 0
                 type: integer
               role:
-                default: spoke
-                description: Role is the topology role of the agent ("hub" or "spoke").
+                description: Role is the topology role of the agent as assigned by Keeper ("hub", "spoke", or "standalone"). Populated at reconciliation time from the community_assignments record; do not set manually.
                 enum:
                 - hub
                 - spoke
+                - standalone
                 type: string
               systemPrompt:
                 description: SystemPrompt is the fully synthesized system prompt for

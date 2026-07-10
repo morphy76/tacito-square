@@ -150,6 +150,41 @@ func TestTacitoAgentSpec_JSONTags_OptionalFieldsOmitted(t *testing.T) {
 	assert.NotContains(t, llmConfig, "maxTokens")
 }
 
+func TestTacitoAgentSpec_StandaloneRoleRoundTrip(t *testing.T) {
+	original := TacitoAgentSpec{
+		TenantID:     "t1",
+		AgentName:    "a1",
+		CommunityRef: "c1",
+		Role:         "standalone",
+	}
+
+	data, err := json.Marshal(original)
+	require.NoError(t, err)
+
+	var decoded TacitoAgentSpec
+	err = json.Unmarshal(data, &decoded)
+	require.NoError(t, err)
+
+	assert.Equal(t, "standalone", decoded.Role)
+}
+
+func TestTacitoAgentSpec_RoleOmittedWhenEmpty(t *testing.T) {
+	spec := TacitoAgentSpec{
+		TenantID:     "t1",
+		AgentName:    "a1",
+		CommunityRef: "c1",
+	}
+
+	data, err := json.Marshal(spec)
+	require.NoError(t, err)
+
+	var raw map[string]interface{}
+	err = json.Unmarshal(data, &raw)
+	require.NoError(t, err)
+
+	assert.NotContains(t, raw, "role")
+}
+
 func TestTacitoAgentSpec_DefaultNilForOptionalPointers(t *testing.T) {
 	var spec TacitoAgentSpec
 	assert.Nil(t, spec.Replicas)

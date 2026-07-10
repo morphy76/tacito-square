@@ -112,10 +112,10 @@ type TacitoAgentSpec struct {
 	// +optional
 	Tier string `json:"tier,omitempty"`
 
-	// Role is the topology role of the agent ("hub" or "spoke").
+	// Role is the topology role of the agent as assigned by Keeper ("hub", "spoke", or "standalone").
+	// Populated at reconciliation time from the community_assignments record; do not set manually.
 	// +optional
-	// +kubebuilder:validation:Enum=hub;spoke
-	// +kubebuilder:default="spoke"
+	// +kubebuilder:validation:Enum=hub;spoke;standalone
 	Role string `json:"role,omitempty"`
 }
 
