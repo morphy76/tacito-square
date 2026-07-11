@@ -112,14 +112,14 @@ func (h *AgentHandler) Create(c *gin.Context) {
 	}
 
 
-	var promptTemplateUUID uuid.UUID
+	var prompts []uuid.UUID
 	if req.PromptTemplate != "" {
 		ptUUID, err := uuid.Parse(req.PromptTemplate)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid prompt_template uuid"})
 			return
 		}
-		promptTemplateUUID = ptUUID
+		prompts = append(prompts, ptUUID)
 	}
 
 	var skillUUIDs []uuid.UUID
@@ -165,13 +165,14 @@ func (h *AgentHandler) Create(c *gin.Context) {
 			CollectionName:  req.LongTermMemory.CollectionName,
 			VectorDimension: req.LongTermMemory.VectorDimension,
 		},
-		Skills:         skillUUIDs,
-		PromptTemplate: promptTemplateUUID,
-		MCPClients:     mcpClients,
-		Tier:           req.Deployment.Tier,
-		Status:         model.AgentStatusDefined,
-		CreatedAt:      time.Now().UTC(),
-		UpdatedAt:      time.Now().UTC(),
+		Skills:            skillUUIDs,
+		Prompts:           prompts,
+		PromptCollections: []uuid.UUID{},
+		MCPClients:        mcpClients,
+		Tier:              req.Deployment.Tier,
+		Status:            model.AgentStatusDefined,
+		CreatedAt:         time.Now().UTC(),
+		UpdatedAt:         time.Now().UTC(),
 	}
 
 	if err := agent.Validate(); err != nil {
@@ -302,20 +303,21 @@ func (h *AgentHandler) Update(c *gin.Context) {
 
 	// Capture previous state
 	previousValue := model.Agent{
-		ID:              existing.ID,
-		TenantID:        existing.TenantID,
-		Name:            existing.Name,
-		Description:     existing.Description,
-		Brain:           existing.Brain,
-		ShortTermMemory: existing.ShortTermMemory,
-		LongTermMemory:  existing.LongTermMemory,
-		Skills:          append([]uuid.UUID(nil), existing.Skills...),
-		PromptTemplate:  existing.PromptTemplate,
-		MCPClients:      append([]model.MCPClientConfig(nil), existing.MCPClients...),
-		Status:          existing.Status,
-		CommunityID:     existing.CommunityID,
-		CreatedAt:       existing.CreatedAt,
-		UpdatedAt:       existing.UpdatedAt,
+		ID:                existing.ID,
+		TenantID:          existing.TenantID,
+		Name:              existing.Name,
+		Description:       existing.Description,
+		Brain:             existing.Brain,
+		ShortTermMemory:   existing.ShortTermMemory,
+		LongTermMemory:    existing.LongTermMemory,
+		Skills:            append([]uuid.UUID(nil), existing.Skills...),
+		Prompts:           append([]uuid.UUID(nil), existing.Prompts...),
+		PromptCollections: append([]uuid.UUID(nil), existing.PromptCollections...),
+		MCPClients:        append([]model.MCPClientConfig(nil), existing.MCPClients...),
+		Status:            existing.Status,
+		CommunityID:       existing.CommunityID,
+		CreatedAt:         existing.CreatedAt,
+		UpdatedAt:         existing.UpdatedAt,
 	}
 
 	llmBindingID, err := uuid.Parse(req.Brain.LLMBindingID)
@@ -325,14 +327,14 @@ func (h *AgentHandler) Update(c *gin.Context) {
 	}
 
 
-	var promptTemplateUUID uuid.UUID
+	var prompts []uuid.UUID
 	if req.PromptTemplate != "" {
 		ptUUID, err := uuid.Parse(req.PromptTemplate)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid prompt_template uuid"})
 			return
 		}
-		promptTemplateUUID = ptUUID
+		prompts = append(prompts, ptUUID)
 	}
 
 	var skillUUIDs []uuid.UUID
@@ -377,7 +379,7 @@ func (h *AgentHandler) Update(c *gin.Context) {
 		VectorDimension: req.LongTermMemory.VectorDimension,
 	}
 	existing.Skills = skillUUIDs
-	existing.PromptTemplate = promptTemplateUUID
+	existing.Prompts = prompts
 	existing.MCPClients = mcpClients
 	existing.Tier = req.Deployment.Tier
 	existing.UpdatedAt = time.Now().UTC()
@@ -446,4 +448,217 @@ func (h *AgentHandler) Delete(c *gin.Context) {
 		Msg("Agent template deleted successfully")
 
 	c.Status(http.StatusNoContent)
+}
+
+// AttachPromptToAgent handles POST /api/v1/agents/:id/prompts/:prompt_id
+func (h *AgentHandler) AttachPromptToAgent(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.attach_prompt_to_agent", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithContext(logger, ctx)
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	idStr := c.Param("agent_id")
+	if idStr == "" {
+		idStr = c.Param("id")
+	}
+	agentID, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent uuid"})
+		return
+	}
+
+	promptIDStr := c.Param("prompt_id")
+	promptID, err := uuid.Parse(promptIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid prompt uuid"})
+		return
+	}
+
+	if err := h.repo.AttachPromptToAgent(ctx, agentID, promptID); err != nil {
+		reqLogger.Error().Err(err).Msg("failed to attach prompt to agent")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+// DetachPromptFromAgent handles DELETE /api/v1/agents/:id/prompts/:prompt_id
+func (h *AgentHandler) DetachPromptFromAgent(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.detach_prompt_from_agent", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithContext(logger, ctx)
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	idStr := c.Param("agent_id")
+	if idStr == "" {
+		idStr = c.Param("id")
+	}
+	agentID, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent uuid"})
+		return
+	}
+
+	promptIDStr := c.Param("prompt_id")
+	promptID, err := uuid.Parse(promptIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid prompt uuid"})
+		return
+	}
+
+	if err := h.repo.DetachPromptFromAgent(ctx, agentID, promptID); err != nil {
+		reqLogger.Error().Err(err).Msg("failed to detach prompt from agent")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+// AttachCollectionToAgent handles POST /api/v1/agents/:id/prompt-collections/:collection_id
+func (h *AgentHandler) AttachCollectionToAgent(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.attach_collection_to_agent", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithContext(logger, ctx)
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	idStr := c.Param("agent_id")
+	if idStr == "" {
+		idStr = c.Param("id")
+	}
+	agentID, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent uuid"})
+		return
+	}
+
+	colIDStr := c.Param("collection_id")
+	colID, err := uuid.Parse(colIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid collection uuid"})
+		return
+	}
+
+	if err := h.repo.AttachCollectionToAgent(ctx, agentID, colID); err != nil {
+		reqLogger.Error().Err(err).Msg("failed to attach prompt collection to agent")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+// DetachCollectionFromAgent handles DELETE /api/v1/agents/:id/prompt-collections/:collection_id
+func (h *AgentHandler) DetachCollectionFromAgent(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.detach_collection_from_agent", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithContext(logger, ctx)
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	idStr := c.Param("agent_id")
+	if idStr == "" {
+		idStr = c.Param("id")
+	}
+	agentID, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent uuid"})
+		return
+	}
+
+	colIDStr := c.Param("collection_id")
+	colID, err := uuid.Parse(colIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid collection uuid"})
+		return
+	}
+
+	if err := h.repo.DetachCollectionFromAgent(ctx, agentID, colID); err != nil {
+		reqLogger.Error().Err(err).Msg("failed to detach prompt collection from agent")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+// ResolveEffectivePrompts handles GET /api/v1/agents/:id/prompts
+func (h *AgentHandler) ResolveEffectivePrompts(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.resolve_effective_prompts", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithContext(logger, ctx)
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	idStr := c.Param("agent_id")
+	if idStr == "" {
+		idStr = c.Param("id")
+	}
+	agentID, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent uuid"})
+		return
+	}
+
+	_, err = h.repo.GetByID(ctx, agentID)
+	if err != nil {
+		reqLogger.Warn().Err(err).Str("agent_id", agentID.String()).Msg("agent not found")
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	resolved, err := h.repo.ResolveEffectivePrompts(ctx, agentID)
+	if err != nil {
+		reqLogger.Error().Err(err).Msg("failed to resolve effective prompts")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if resolved == nil {
+		resolved = make([]*model.ResolvedAgentPrompt, 0)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"agent_id":         agentID,
+		"resolved_prompts": resolved,
+		"total":            len(resolved),
+	})
 }

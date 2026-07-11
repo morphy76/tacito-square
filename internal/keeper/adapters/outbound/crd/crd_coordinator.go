@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
+	domainsrv "github.com/morphy76/tacito-square/internal/keeper/domain/service"
 	"github.com/morphy76/tacito-square/internal/shared/observability"
 	"github.com/morphy76/tacito-square/pkg/kubernetes/apis/tacito/v1alpha1"
 	"github.com/nats-io/nats.go"
@@ -159,11 +160,23 @@ type PropagatedAgentConfig struct {
 	Skills      []SkillConfig `json:"skills"`
 }
 
+type promptRepoAdapter struct {
+	repo outbound.PromptRepository
+}
+
+func (a promptRepoAdapter) GetTemplateByID(ctx context.Context, id uuid.UUID) (*model.PromptTemplate, error) {
+	return a.repo.GetTemplateByID(ctx, id)
+}
+
+func (a promptRepoAdapter) ResolveCollectionPrompts(ctx context.Context, collectionID uuid.UUID) ([]*model.PromptTemplate, error) {
+	return a.repo.ResolveCollectionPrompts(ctx, collectionID)
+}
+
 // ResolveAndSynthesizeSystemPrompt fetches templates and skills out-of-band and compiles them into a system prompt.
 // The role parameter carries the agent's community-assignment role (hub, spoke, standalone) and is used
 // to select the appropriate role-specific prompt template. It is no longer read from agent.Role.
 func (c *K8sCRDCoordinator) ResolveAndSynthesizeSystemPrompt(ctx context.Context, agent *model.Agent, role string) (string, error) {
-	var directives string
+	var directivesParts []string
 	description := agent.Description
 
 	if role == "hub" {
@@ -173,33 +186,24 @@ func (c *K8sCRDCoordinator) ResolveAndSynthesizeSystemPrompt(ctx context.Context
 			if err != nil {
 				return "", fmt.Errorf("fetching role-specific hub prompt template: %w", err)
 			}
-			directives = roleTpl.Content
-		}
-
-		// If a business-specific prompt template is provided (and is not the hub template itself)
-		if agent.PromptTemplate != uuid.Nil && agent.PromptTemplate != model.HubSystemPromptTemplateID {
-			if c.promptRepo != nil {
-				businessTpl, err := c.promptRepo.GetTemplateByID(ctx, agent.PromptTemplate)
-				if err != nil {
-					return "", fmt.Errorf("fetching business-specific prompt template: %w", err)
-				}
-				if description != "" {
-					description = description + "\n\n" + businessTpl.Content
-				} else {
-					description = businessTpl.Content
-				}
-			}
-		}
-	} else {
-		// Non-hub agent (spoke or general)
-		if agent.PromptTemplate != uuid.Nil && c.promptRepo != nil {
-			tpl, err := c.promptRepo.GetTemplateByID(ctx, agent.PromptTemplate)
-			if err != nil {
-				return "", fmt.Errorf("fetching prompt template: %w", err)
-			}
-			directives = tpl.Content
+			directivesParts = append(directivesParts, roleTpl.Content)
 		}
 	}
+
+	if c.promptRepo != nil {
+		adapter := promptRepoAdapter{repo: c.promptRepo}
+		resolved, err := domainsrv.ResolveEffectivePrompts(ctx, agent, adapter)
+		if err != nil {
+			return "", fmt.Errorf("resolving effective prompts: %w", err)
+		}
+		for _, pt := range resolved {
+			if pt.Content != "" {
+				directivesParts = append(directivesParts, pt.Content)
+			}
+		}
+	}
+
+	directives := strings.Join(directivesParts, "\n\n")
 
 	var skillsList []SkillConfig
 	if c.skillRepo != nil {

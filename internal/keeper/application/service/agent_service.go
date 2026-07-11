@@ -8,10 +8,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
+	domainsrv "github.com/morphy76/tacito-square/internal/keeper/domain/service"
 	sharedports "github.com/morphy76/tacito-square/internal/shared/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/shared/tenant"
 	"github.com/morphy76/tacito-square/pkg/events"
 	"github.com/morphy76/tacito-square/pkg/kubernetes/apis/tacito/v1alpha1"
+	"github.com/spf13/viper"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -23,6 +25,7 @@ type AgentService struct {
 	cache          sharedports.Cache
 	publisher      outbound.EventPublisher
 	llmBindingRepo outbound.LLMBindingRepository
+	promptRepo     outbound.PromptRepository
 }
 
 // NewAgentService creates a new instance of AgentService.
@@ -33,6 +36,7 @@ func NewAgentService(
 	cache sharedports.Cache,
 	publisher outbound.EventPublisher,
 	llmBindingRepo outbound.LLMBindingRepository,
+	promptRepo outbound.PromptRepository,
 ) *AgentService {
 	return &AgentService{
 		repo:           repo,
@@ -41,6 +45,7 @@ func NewAgentService(
 		cache:          cache,
 		publisher:      publisher,
 		llmBindingRepo: llmBindingRepo,
+		promptRepo:     promptRepo,
 	}
 }
 
@@ -63,7 +68,11 @@ func (s *AgentService) Update(ctx context.Context, agent *model.Agent) error {
 	if _, err := s.llmBindingRepo.GetByID(ctx, agent.Brain.LLMBindingID); err != nil {
 		return fmt.Errorf("llm binding does not exist: %w", err)
 	}
-	return s.repo.Update(ctx, agent)
+	if err := s.repo.Update(ctx, agent); err != nil {
+		return err
+	}
+	s.invalidatePromptCache(ctx, agent)
+	return nil
 }
 
 func (s *AgentService) Delete(ctx context.Context, id uuid.UUID) error {
@@ -286,4 +295,135 @@ func (s *AgentService) Unassign(ctx context.Context, communityID uuid.UUID, agen
 	}
 
 	return nil
+}
+
+func (s *AgentService) invalidatePromptCache(ctx context.Context, agent *model.Agent) {
+	if s.cache != nil {
+		cacheKey := fmt.Sprintf("agent-prompts:%s:%s", agent.TenantID, agent.ID.String())
+		_ = s.cache.Invalidate(ctx, cacheKey)
+	}
+}
+
+func (s *AgentService) AttachPromptToAgent(ctx context.Context, agentID uuid.UUID, promptID uuid.UUID) error {
+	agent, err := s.repo.GetByID(ctx, agentID)
+	if err != nil {
+		return err
+	}
+	// Check if already attached
+	for _, id := range agent.Prompts {
+		if id == promptID {
+			return nil
+		}
+	}
+	agent.Prompts = append(agent.Prompts, promptID)
+	if err := s.repo.Update(ctx, agent); err != nil {
+		return err
+	}
+	s.invalidatePromptCache(ctx, agent)
+	return nil
+}
+
+func (s *AgentService) DetachPromptFromAgent(ctx context.Context, agentID uuid.UUID, promptID uuid.UUID) error {
+	agent, err := s.repo.GetByID(ctx, agentID)
+	if err != nil {
+		return err
+	}
+	var newPrompts []uuid.UUID
+	for _, id := range agent.Prompts {
+		if id != promptID {
+			newPrompts = append(newPrompts, id)
+		}
+	}
+	agent.Prompts = newPrompts
+	if err := s.repo.Update(ctx, agent); err != nil {
+		return err
+	}
+	s.invalidatePromptCache(ctx, agent)
+	return nil
+}
+
+func (s *AgentService) AttachCollectionToAgent(ctx context.Context, agentID uuid.UUID, collectionID uuid.UUID) error {
+	agent, err := s.repo.GetByID(ctx, agentID)
+	if err != nil {
+		return err
+	}
+	// Check if already attached
+	for _, id := range agent.PromptCollections {
+		if id == collectionID {
+			return nil
+		}
+	}
+	agent.PromptCollections = append(agent.PromptCollections, collectionID)
+	if err := s.repo.Update(ctx, agent); err != nil {
+		return err
+	}
+	s.invalidatePromptCache(ctx, agent)
+	return nil
+}
+
+func (s *AgentService) DetachCollectionFromAgent(ctx context.Context, agentID uuid.UUID, collectionID uuid.UUID) error {
+	agent, err := s.repo.GetByID(ctx, agentID)
+	if err != nil {
+		return err
+	}
+	var newCollections []uuid.UUID
+	for _, id := range agent.PromptCollections {
+		if id != collectionID {
+			newCollections = append(newCollections, id)
+		}
+	}
+	agent.PromptCollections = newCollections
+	if err := s.repo.Update(ctx, agent); err != nil {
+		return err
+	}
+	s.invalidatePromptCache(ctx, agent)
+	return nil
+}
+
+// promptRepoAdapter wraps the outbound.PromptRepository to satisfy domainsrv.PromptRepository interface.
+type promptRepoAdapter struct {
+	repo outbound.PromptRepository
+}
+
+func (a promptRepoAdapter) GetTemplateByID(ctx context.Context, id uuid.UUID) (*model.PromptTemplate, error) {
+	return a.repo.GetTemplateByID(ctx, id)
+}
+
+func (a promptRepoAdapter) ResolveCollectionPrompts(ctx context.Context, collectionID uuid.UUID) ([]*model.PromptTemplate, error) {
+	return a.repo.ResolveCollectionPrompts(ctx, collectionID)
+}
+
+func (s *AgentService) ResolveEffectivePrompts(ctx context.Context, agentID uuid.UUID) ([]*model.ResolvedAgentPrompt, error) {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return nil, fmt.Errorf("tenant resolution failed")
+	}
+
+	cacheKey := fmt.Sprintf("agent-prompts:%s:%s", ten.FullName(), agentID.String())
+	var cachedPrompts []*model.ResolvedAgentPrompt
+	if s.cache != nil {
+		if err := s.cache.Get(ctx, cacheKey, &cachedPrompts); err == nil {
+			return cachedPrompts, nil
+		}
+	}
+
+	agent, err := s.repo.GetByID(ctx, agentID)
+	if err != nil {
+		return nil, err
+	}
+	adapter := promptRepoAdapter{repo: s.promptRepo}
+	resolved, err := domainsrv.ResolveEffectivePrompts(ctx, agent, adapter)
+	if err != nil {
+		return nil, err
+	}
+
+	if s.cache != nil {
+		ttl := viper.GetDuration("cache.agent_prompts_ttl")
+		if ttl <= 0 {
+			ttl = 5 * time.Minute
+		}
+		_ = s.cache.Set(ctx, cacheKey, resolved, ttl)
+	}
+
+	return resolved, nil
 }

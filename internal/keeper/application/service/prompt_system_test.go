@@ -9,45 +9,69 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type mockPromptRepository struct {
-	updateCalled bool
-	deleteCalled bool
+type mockPromptRepositoryForPromptService struct {
+	updateCalled               bool
+	deleteCalled               bool
+	addPromptCalled            bool
+	removePromptCalled         bool
+	addPromptCollectionID      uuid.UUID
+	addPromptTemplateID        uuid.UUID
+	removePromptCollectionID   uuid.UUID
+	removePromptTemplateID     uuid.UUID
 }
 
-func (m *mockPromptRepository) CreateTemplate(ctx context.Context, template *model.PromptTemplate) error {
+func (m *mockPromptRepositoryForPromptService) CreateTemplate(ctx context.Context, template *model.PromptTemplate) error {
 	return nil
 }
-func (m *mockPromptRepository) GetTemplateByID(ctx context.Context, id uuid.UUID) (*model.PromptTemplate, error) {
+func (m *mockPromptRepositoryForPromptService) GetTemplateByID(ctx context.Context, id uuid.UUID) (*model.PromptTemplate, error) {
 	return nil, nil
 }
-func (m *mockPromptRepository) ListTemplates(ctx context.Context) ([]*model.PromptTemplate, error) {
+func (m *mockPromptRepositoryForPromptService) ListTemplates(ctx context.Context) ([]*model.PromptTemplate, error) {
 	return nil, nil
 }
-func (m *mockPromptRepository) UpdateTemplate(ctx context.Context, template *model.PromptTemplate) error {
+func (m *mockPromptRepositoryForPromptService) UpdateTemplate(ctx context.Context, template *model.PromptTemplate) error {
 	m.updateCalled = true
 	return nil
 }
-func (m *mockPromptRepository) DeleteTemplate(ctx context.Context, id uuid.UUID) error {
+func (m *mockPromptRepositoryForPromptService) DeleteTemplate(ctx context.Context, id uuid.UUID) error {
 	m.deleteCalled = true
 	return nil
 }
-func (m *mockPromptRepository) CreateCollection(ctx context.Context, collection *model.PromptCollection) error {
+func (m *mockPromptRepositoryForPromptService) CreateCollection(ctx context.Context, collection *model.PromptCollection) error {
 	return nil
 }
-func (m *mockPromptRepository) GetCollectionByID(ctx context.Context, id uuid.UUID) (*model.PromptCollection, error) {
+func (m *mockPromptRepositoryForPromptService) GetCollectionByID(ctx context.Context, id uuid.UUID) (*model.PromptCollection, error) {
 	return nil, nil
 }
-func (m *mockPromptRepository) ListCollections(ctx context.Context) ([]*model.PromptCollection, error) {
+func (m *mockPromptRepositoryForPromptService) ListCollections(ctx context.Context) ([]*model.PromptCollection, error) {
 	return nil, nil
 }
-func (m *mockPromptRepository) UpdateCollection(ctx context.Context, collection *model.PromptCollection) error {
+func (m *mockPromptRepositoryForPromptService) UpdateCollection(ctx context.Context, collection *model.PromptCollection) error {
 	return nil
 }
-func (m *mockPromptRepository) DeleteCollection(ctx context.Context, id uuid.UUID) error {
+func (m *mockPromptRepositoryForPromptService) DeleteCollection(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
-func (m *mockPromptRepository) ResolveCollectionPrompts(ctx context.Context, collectionID uuid.UUID) ([]*model.PromptTemplate, error) {
+func (m *mockPromptRepositoryForPromptService) ResolveCollectionPrompts(ctx context.Context, collectionID uuid.UUID) ([]*model.PromptTemplate, error) {
 	return nil, nil
+}
+func (m *mockPromptRepositoryForPromptService) CreateVersion(ctx context.Context, version *model.PromptVersion) error {
+	return nil
+}
+func (m *mockPromptRepositoryForPromptService) GetLatestVersion(ctx context.Context, promptID uuid.UUID) (*model.PromptVersion, error) {
+	return nil, nil
+}
+func (m *mockPromptRepositoryForPromptService) AddPromptToCollection(ctx context.Context, collectionID uuid.UUID, promptID uuid.UUID) error {
+	m.addPromptCalled = true
+	m.addPromptCollectionID = collectionID
+	m.addPromptTemplateID = promptID
+	return nil
+}
+func (m *mockPromptRepositoryForPromptService) RemovePromptFromCollection(ctx context.Context, collectionID uuid.UUID, promptID uuid.UUID) error {
+	m.removePromptCalled = true
+	m.removePromptCollectionID = collectionID
+	m.removePromptTemplateID = promptID
+	return nil
 }
 
 func TestPromptSystemLock_IsSystemLocked(t *testing.T) {
@@ -61,7 +85,7 @@ func TestPromptSystemLock_IsSystemLocked(t *testing.T) {
 }
 
 func TestPromptService_Immutability(t *testing.T) {
-	repo := &mockPromptRepository{}
+	repo := &mockPromptRepositoryForPromptService{}
 	svc := NewPromptService(repo)
 	ctx := context.Background()
 
@@ -101,4 +125,27 @@ func TestPromptService_Immutability(t *testing.T) {
 	err = svc.DeleteTemplate(ctx, normalID)
 	assert.NoError(t, err)
 	assert.True(t, repo.deleteCalled)
+}
+
+func TestPromptService_CollectionMembership(t *testing.T) {
+	repo := &mockPromptRepositoryForPromptService{}
+	svc := NewPromptService(repo)
+	ctx := context.Background()
+
+	colID := uuid.New()
+	ptID := uuid.New()
+
+	// 1. Add prompt to collection
+	err := svc.AddPromptToCollection(ctx, colID, ptID)
+	assert.NoError(t, err)
+	assert.True(t, repo.addPromptCalled)
+	assert.Equal(t, colID, repo.addPromptCollectionID)
+	assert.Equal(t, ptID, repo.addPromptTemplateID)
+
+	// 2. Remove prompt from collection
+	err = svc.RemovePromptFromCollection(ctx, colID, ptID)
+	assert.NoError(t, err)
+	assert.True(t, repo.removePromptCalled)
+	assert.Equal(t, colID, repo.removePromptCollectionID)
+	assert.Equal(t, ptID, repo.removePromptTemplateID)
 }

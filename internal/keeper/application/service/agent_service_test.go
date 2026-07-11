@@ -85,6 +85,80 @@ func (m *mockLLMBindingRepository) Update(ctx context.Context, binding *model.LL
 func (m *mockLLMBindingRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return m.Called(ctx, id).Error(0)
 }
+
+type mockPromptRepository struct {
+	mock.Mock
+}
+
+func (m *mockPromptRepository) CreateTemplate(ctx context.Context, template *model.PromptTemplate) error {
+	return m.Called(ctx, template).Error(0)
+}
+func (m *mockPromptRepository) GetTemplateByID(ctx context.Context, id uuid.UUID) (*model.PromptTemplate, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.PromptTemplate), args.Error(1)
+}
+func (m *mockPromptRepository) ListTemplates(ctx context.Context) ([]*model.PromptTemplate, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*model.PromptTemplate), args.Error(1)
+}
+func (m *mockPromptRepository) UpdateTemplate(ctx context.Context, template *model.PromptTemplate) error {
+	return m.Called(ctx, template).Error(0)
+}
+func (m *mockPromptRepository) DeleteTemplate(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+func (m *mockPromptRepository) CreateCollection(ctx context.Context, collection *model.PromptCollection) error {
+	return m.Called(ctx, collection).Error(0)
+}
+func (m *mockPromptRepository) GetCollectionByID(ctx context.Context, id uuid.UUID) (*model.PromptCollection, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.PromptCollection), args.Error(1)
+}
+func (m *mockPromptRepository) ListCollections(ctx context.Context) ([]*model.PromptCollection, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*model.PromptCollection), args.Error(1)
+}
+func (m *mockPromptRepository) UpdateCollection(ctx context.Context, collection *model.PromptCollection) error {
+	return m.Called(ctx, collection).Error(0)
+}
+func (m *mockPromptRepository) DeleteCollection(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+func (m *mockPromptRepository) ResolveCollectionPrompts(ctx context.Context, collectionID uuid.UUID) ([]*model.PromptTemplate, error) {
+	args := m.Called(ctx, collectionID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*model.PromptTemplate), args.Error(1)
+}
+func (m *mockPromptRepository) CreateVersion(ctx context.Context, version *model.PromptVersion) error {
+	return m.Called(ctx, version).Error(0)
+}
+func (m *mockPromptRepository) GetLatestVersion(ctx context.Context, promptID uuid.UUID) (*model.PromptVersion, error) {
+	args := m.Called(ctx, promptID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.PromptVersion), args.Error(1)
+}
+func (m *mockPromptRepository) AddPromptToCollection(ctx context.Context, collectionID uuid.UUID, promptID uuid.UUID) error {
+	return m.Called(ctx, collectionID, promptID).Error(0)
+}
+func (m *mockPromptRepository) RemovePromptFromCollection(ctx context.Context, collectionID uuid.UUID, promptID uuid.UUID) error {
+	return m.Called(ctx, collectionID, promptID).Error(0)
+}
 func (m *mockAgentRepository) UnassignFromCommunity(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error {
 	return m.Called(ctx, agentID, communityID).Error(0)
 }
@@ -233,7 +307,7 @@ func TestAgentService_Assign_AsynchronousNonBlocking(t *testing.T) {
 	submitChan := make(chan struct{})
 	crd := &mockCRDCoordinator{submitChan: submitChan}
 
-	svc := NewAgentService(repo, commRepo, crd, nil, nil, new(mockLLMBindingRepository))
+	svc := NewAgentService(repo, commRepo, crd, nil, nil, new(mockLLMBindingRepository), new(mockPromptRepository))
 
 	ten, _ := tenant.New("acme.com", "")
 	ctx := tenant.ContextWithTenant(context.Background(), ten)
@@ -280,7 +354,7 @@ func TestAgentService_Unassign_AsynchronousNonBlocking(t *testing.T) {
 	teardownChan := make(chan struct{})
 	crd := &mockCRDCoordinator{teardownChan: teardownChan}
 
-	svc := NewAgentService(repo, nil, crd, nil, nil, new(mockLLMBindingRepository))
+	svc := NewAgentService(repo, nil, crd, nil, nil, new(mockLLMBindingRepository), new(mockPromptRepository))
 
 	ten, _ := tenant.New("acme.com", "")
 	ctx := tenant.ContextWithTenant(context.Background(), ten)
@@ -321,7 +395,7 @@ func TestAgentService_Unassign_EvictsAndPublishes(t *testing.T) {
 	cache := new(mockCache)
 	publisher := new(mockPublisher)
 
-	svc := NewAgentService(repo, nil, crd, cache, publisher, new(mockLLMBindingRepository))
+	svc := NewAgentService(repo, nil, crd, cache, publisher, new(mockLLMBindingRepository), new(mockPromptRepository))
 
 	ten, _ := tenant.New("acme.com", "")
 	ctx := tenant.ContextWithTenant(context.Background(), ten)
@@ -367,7 +441,7 @@ func TestAgentService_Assign_AlreadyAssigned_Running(t *testing.T) {
 	commRepo := new(mockCommunityRepository)
 	crd := new(mockCRDCoordinator)
 
-	svc := NewAgentService(repo, commRepo, crd, nil, nil, new(mockLLMBindingRepository))
+	svc := NewAgentService(repo, commRepo, crd, nil, nil, new(mockLLMBindingRepository), new(mockPromptRepository))
 
 	ten, _ := tenant.New("acme.com", "")
 	ctx := tenant.ContextWithTenant(context.Background(), ten)
@@ -403,7 +477,7 @@ func TestAgentService_Assign_AlreadyAssigned_NotRunning(t *testing.T) {
 	submitChan := make(chan struct{})
 	crd := &mockCRDCoordinator{submitChan: submitChan}
 
-	svc := NewAgentService(repo, commRepo, crd, nil, nil, new(mockLLMBindingRepository))
+	svc := NewAgentService(repo, commRepo, crd, nil, nil, new(mockLLMBindingRepository), new(mockPromptRepository))
 
 	ten, _ := tenant.New("acme.com", "")
 	ctx := tenant.ContextWithTenant(context.Background(), ten)
@@ -451,7 +525,7 @@ func TestAgentService_Unassign_AlreadyUnassigned_NotRunning(t *testing.T) {
 	repo := new(mockAgentRepository)
 	crd := new(mockCRDCoordinator)
 
-	svc := NewAgentService(repo, nil, crd, nil, nil, new(mockLLMBindingRepository))
+	svc := NewAgentService(repo, nil, crd, nil, nil, new(mockLLMBindingRepository), new(mockPromptRepository))
 
 	ten, _ := tenant.New("acme.com", "")
 	ctx := tenant.ContextWithTenant(context.Background(), ten)
@@ -482,7 +556,7 @@ func TestAgentService_Unassign_AlreadyUnassigned_Running(t *testing.T) {
 	cache := new(mockCache)
 	publisher := new(mockPublisher)
 
-	svc := NewAgentService(repo, nil, crd, cache, publisher, new(mockLLMBindingRepository))
+	svc := NewAgentService(repo, nil, crd, cache, publisher, new(mockLLMBindingRepository), new(mockPromptRepository))
 
 	ten, _ := tenant.New("acme.com", "")
 	ctx := tenant.ContextWithTenant(context.Background(), ten)
@@ -526,5 +600,74 @@ func TestAgentService_Unassign_AlreadyUnassigned_Running(t *testing.T) {
 	crd.AssertExpectations(t)
 	cache.AssertExpectations(t)
 	publisher.AssertExpectations(t)
+}
+
+func TestAgentService_PromptAttachmentAndResolution(t *testing.T) {
+	repo := new(mockAgentRepository)
+	promptRepo := new(mockPromptRepository)
+	cache := new(mockCache)
+	svc := NewAgentService(repo, nil, nil, cache, nil, new(mockLLMBindingRepository), promptRepo)
+
+	ten, _ := tenant.New("acme.com", "")
+	ctx := tenant.ContextWithTenant(context.Background(), ten)
+
+	agentID := uuid.New()
+	ptID := uuid.New()
+	colID := uuid.New()
+
+	agent := &model.Agent{
+		ID:                agentID,
+		TenantID:          ten.FullName(),
+		Name:              "test-agent",
+		Prompts:           []uuid.UUID{},
+		PromptCollections: []uuid.UUID{},
+	}
+
+	repo.On("GetByID", mock.Anything, agentID).Return(agent, nil).Times(5)
+	repo.On("Update", mock.Anything, agent).Return(nil).Times(4)
+
+	cacheKey := "agent-prompts:" + ten.FullName() + ":" + agentID.String()
+	cache.On("Invalidate", mock.Anything, cacheKey).Return(nil).Times(4)
+
+	// 1. Attach prompt
+	err := svc.AttachPromptToAgent(ctx, agentID, ptID)
+	assert.NoError(t, err)
+	assert.Contains(t, agent.Prompts, ptID)
+
+	// 2. Detach prompt
+	err = svc.DetachPromptFromAgent(ctx, agentID, ptID)
+	assert.NoError(t, err)
+	assert.NotContains(t, agent.Prompts, ptID)
+
+	// 3. Attach collection
+	err = svc.AttachCollectionToAgent(ctx, agentID, colID)
+	assert.NoError(t, err)
+	assert.Contains(t, agent.PromptCollections, colID)
+
+	// 4. Detach collection
+	err = svc.DetachCollectionFromAgent(ctx, agentID, colID)
+	assert.NoError(t, err)
+	assert.NotContains(t, agent.PromptCollections, colID)
+
+	// 5. Resolve prompts
+	pt := &model.PromptTemplate{
+		ID:      ptID,
+		Content: "Hello",
+		Status:  model.PromptStatusActive,
+	}
+	agent.Prompts = []uuid.UUID{ptID}
+	promptRepo.On("GetTemplateByID", mock.Anything, ptID).Return(pt, nil)
+
+	cache.On("Get", mock.Anything, cacheKey, mock.Anything).Return(errors.New("cache miss"))
+	cache.On("Set", mock.Anything, cacheKey, mock.Anything, mock.Anything).Return(nil)
+
+	resolved, err := svc.ResolveEffectivePrompts(ctx, agentID)
+	assert.NoError(t, err)
+	assert.Len(t, resolved, 1)
+	assert.Equal(t, ptID, resolved[0].ID)
+
+	repo.AssertExpectations(t)
+	promptRepo.AssertExpectations(t)
+	cache.AssertExpectations(t)
 }
 

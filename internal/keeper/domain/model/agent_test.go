@@ -31,7 +31,8 @@ func TestAgent_Validation(t *testing.T) {
 			VectorDimension: 1536,
 		},
 		Skills: []uuid.UUID{uuid.New()},
-		PromptTemplate: uuid.New(),
+		Prompts: []uuid.UUID{uuid.New()},
+		PromptCollections: []uuid.UUID{uuid.New()},
 		MCPClients: []MCPClientConfig{
 			{
 				ClientID: uuid.New(),

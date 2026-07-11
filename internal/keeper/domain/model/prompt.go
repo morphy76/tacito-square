@@ -36,6 +36,16 @@ type PromptTemplate struct {
 	CreatedAt time.Time    `json:"created_at"`
 }
 
+// ResolvedAgentPrompt represents a resolved prompt template with source metadata for agent resolution.
+type ResolvedAgentPrompt struct {
+	ID           uuid.UUID    `json:"id"`
+	Name         string       `json:"name"`
+	Content      string       `json:"content"`
+	Status       PromptStatus `json:"status"`
+	Source       string       `json:"source"` // "collection" or "individual"
+	CollectionID *uuid.UUID   `json:"collection_id"`
+}
+
 // PromptCollection represents a suite of templates used together by an agent profile.
 type PromptCollection struct {
 	ID          uuid.UUID   `json:"id"`
@@ -74,6 +84,29 @@ func (c PromptCollection) Validate() error {
 	}
 	if c.Name == "" {
 		return errors.New("name is required")
+	}
+	return nil
+}
+
+// PromptVersion represents a specific immutable content snapshot of a prompt template.
+type PromptVersion struct {
+	ID              uuid.UUID `json:"id"`
+	PromptID        uuid.UUID `json:"prompt_id"`
+	VersionNumber   int       `json:"version_number"`
+	ContentSnapshot string    `json:"content_snapshot"`
+	CreatedAt       time.Time `json:"created_at"`
+}
+
+// Validate checks business invariants for PromptVersion.
+func (v PromptVersion) Validate() error {
+	if v.ID == uuid.Nil {
+		return errors.New("id is required")
+	}
+	if v.PromptID == uuid.Nil {
+		return errors.New("prompt id is required")
+	}
+	if v.VersionNumber <= 0 {
+		return errors.New("version number must be positive")
 	}
 	return nil
 }

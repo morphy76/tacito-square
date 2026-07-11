@@ -317,3 +317,87 @@ func (h *PromptHandler) ResolveCollection(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, resolved)
 }
+
+// AddPromptToCollection handles POST /api/v1/prompt-collections/:id/prompts/:prompt_id
+func (h *PromptHandler) AddPromptToCollection(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.add_prompt_to_collection", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithContext(logger, ctx)
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	idStr := c.Param("id")
+	colID, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid collection uuid"})
+		return
+	}
+
+	promptIDStr := c.Param("prompt_id")
+	promptID, err := uuid.Parse(promptIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid prompt uuid"})
+		return
+	}
+
+	if err := h.repo.AddPromptToCollection(ctx, colID, promptID); err != nil {
+		if strings.Contains(err.Error(), "409 Conflict") || strings.Contains(err.Error(), "already in collection") {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+		reqLogger.Error().Err(err).Msg("failed to add prompt to collection")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+// RemovePromptFromCollection handles DELETE /api/v1/prompt-collections/:id/prompts/:prompt_id
+func (h *PromptHandler) RemovePromptFromCollection(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.remove_prompt_from_collection", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithContext(logger, ctx)
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	idStr := c.Param("id")
+	colID, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid collection uuid"})
+		return
+	}
+
+	promptIDStr := c.Param("prompt_id")
+	promptID, err := uuid.Parse(promptIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid prompt uuid"})
+		return
+	}
+
+	if err := h.repo.RemovePromptFromCollection(ctx, colID, promptID); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		reqLogger.Error().Err(err).Msg("failed to remove prompt from collection")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusOK)
+}

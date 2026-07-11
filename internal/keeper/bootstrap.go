@@ -151,7 +151,7 @@ func NewServer(
 	eventSubscriber := outboundNats.NewNATSEventSubscriber(nc)
 	eventService := service.NewEventService(eventPublisher, eventSubscriber, communityRepo)
 
-	agentService := service.NewAgentService(agentRepo, communityRepo, crdCoord, cacheClient, eventPublisher, repo)
+	agentService := service.NewAgentService(agentRepo, communityRepo, crdCoord, cacheClient, eventPublisher, repo, promptRepo)
 	communityService := service.NewCommunityService(communityRepo, nil)
 	lifecycleService := service.NewLifecycleService(agentRepo, communityRepo, crdCoord, nc)
 
@@ -242,12 +242,19 @@ func NewServer(
 		v1.PUT("/prompt-collections/:id", promptHandler.UpdateCollection)
 		v1.DELETE("/prompt-collections/:id", promptHandler.DeleteCollection)
 		v1.GET("/prompt-collections/:id/resolve", promptHandler.ResolveCollection)
+		v1.POST("/prompt-collections/:id/prompts/:prompt_id", promptHandler.AddPromptToCollection)
+		v1.DELETE("/prompt-collections/:id/prompts/:prompt_id", promptHandler.RemovePromptFromCollection)
 
 		v1.POST("/agents", agentHandler.Create)
 		v1.GET("/agents", agentHandler.List)
 		v1.GET("/agents/:agent_id", agentHandler.GetByID)
 		v1.PUT("/agents/:agent_id", agentHandler.Update)
 		v1.DELETE("/agents/:agent_id", agentHandler.Delete)
+		v1.POST("/agents/:agent_id/prompts/:prompt_id", agentHandler.AttachPromptToAgent)
+		v1.DELETE("/agents/:agent_id/prompts/:prompt_id", agentHandler.DetachPromptFromAgent)
+		v1.POST("/agents/:agent_id/prompt-collections/:collection_id", agentHandler.AttachCollectionToAgent)
+		v1.DELETE("/agents/:agent_id/prompt-collections/:collection_id", agentHandler.DetachCollectionFromAgent)
+		v1.GET("/agents/:agent_id/prompts", agentHandler.ResolveEffectivePrompts)
 
 		v1.POST("/communities", communityHandler.Create)
 		v1.GET("/communities", communityHandler.List)

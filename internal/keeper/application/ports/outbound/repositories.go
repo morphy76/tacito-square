@@ -72,6 +72,14 @@ type PromptRepository interface {
 
 	// Resolution helper
 	ResolveCollectionPrompts(ctx context.Context, collectionID uuid.UUID) ([]*model.PromptTemplate, error)
+
+	// Versioning
+	CreateVersion(ctx context.Context, version *model.PromptVersion) error
+	GetLatestVersion(ctx context.Context, promptID uuid.UUID) (*model.PromptVersion, error)
+
+	// Collection membership
+	AddPromptToCollection(ctx context.Context, collectionID uuid.UUID, promptID uuid.UUID) error
+	RemovePromptFromCollection(ctx context.Context, collectionID uuid.UUID, promptID uuid.UUID) error
 }
 
 // AgentRepository defines the persistent storage operations for Agent templates.

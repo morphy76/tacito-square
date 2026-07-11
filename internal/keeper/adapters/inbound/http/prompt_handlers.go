@@ -68,7 +68,7 @@ func (h *PromptHandler) CreateTemplate(c *gin.Context) {
 
 	status := req.Status
 	if status == "" {
-		status = model.PromptStatusActive
+		status = model.PromptStatusDraft
 	}
 
 	pt := &model.PromptTemplate{

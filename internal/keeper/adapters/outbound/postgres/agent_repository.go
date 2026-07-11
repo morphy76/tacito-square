@@ -53,25 +53,25 @@ func (r *AgentRepository) Create(ctx context.Context, a *model.Agent) error {
 		return fmt.Errorf("marshal mcp clients config: %w", err)
 	}
 
-	// Check if prompt_template is nil uuid
-	var promptTemplate interface{}
-	if a.PromptTemplate != uuid.Nil {
-		promptTemplate = a.PromptTemplate
-	}
-
 	return ExecuteInTxOrPool(ctx, r.pool, func(tx pgx.Tx) error {
 		query := `INSERT INTO agents (
-			id, tenant_id, name, description, role, brain, short_term_memory, long_term_memory, prompt_template, mcp_clients, status, community_id, tier, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`
+			id, tenant_id, name, description, role, brain, short_term_memory, long_term_memory, mcp_clients, status, community_id, tier, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`
 
 		_, err = tx.Exec(ctx, query,
-			a.ID, a.TenantID, a.Name, a.Description, "", brainJSON, shortTermJSON, longTermJSON, promptTemplate, mcpClientsJSON, a.Status, a.CommunityID, a.Tier, a.CreatedAt, a.UpdatedAt,
+			a.ID, a.TenantID, a.Name, a.Description, "", brainJSON, shortTermJSON, longTermJSON, mcpClientsJSON, a.Status, a.CommunityID, a.Tier, a.CreatedAt, a.UpdatedAt,
 		)
 		if err != nil {
 			return fmt.Errorf("insert agent: %w", err)
 		}
 
 		if err := r.saveSkills(ctx, tx, a.ID, a.Skills); err != nil {
+			return err
+		}
+		if err := r.savePrompts(ctx, tx, a.ID, a.Prompts); err != nil {
+			return err
+		}
+		if err := r.savePromptCollections(ctx, tx, a.ID, a.PromptCollections); err != nil {
 			return err
 		}
 		return nil
@@ -86,7 +86,7 @@ func (r *AgentRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Age
 	}
 
 	query := `SELECT 
-		id, tenant_id, name, description, role, brain, short_term_memory, long_term_memory, prompt_template, mcp_clients, status, community_id, tier, created_at, updated_at
+		id, tenant_id, name, description, role, brain, short_term_memory, long_term_memory, mcp_clients, status, community_id, tier, created_at, updated_at
 	FROM agents WHERE id = $1 AND tenant_id = $2`
 
 	var a model.Agent
@@ -94,22 +94,17 @@ func (r *AgentRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Age
 	var shortBytes []byte
 	var longBytes []byte
 	var mcpBytes []byte
-	var promptTemplate *uuid.UUID
 
 	var deprecatedRole string
 	exec := GetExecutor(ctx, r.pool)
 	err := exec.QueryRow(ctx, query, id, ten.FullName()).Scan(
-		&a.ID, &a.TenantID, &a.Name, &a.Description, &deprecatedRole, &brainBytes, &shortBytes, &longBytes, &promptTemplate, &mcpBytes, &a.Status, &a.CommunityID, &a.Tier, &a.CreatedAt, &a.UpdatedAt,
+		&a.ID, &a.TenantID, &a.Name, &a.Description, &deprecatedRole, &brainBytes, &shortBytes, &longBytes, &mcpBytes, &a.Status, &a.CommunityID, &a.Tier, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("agent not found: %s", id)
 		}
 		return nil, fmt.Errorf("get agent by id: %w", err)
-	}
-
-	if promptTemplate != nil {
-		a.PromptTemplate = *promptTemplate
 	}
 
 	if err := json.Unmarshal(brainBytes, &a.Brain); err != nil {
@@ -130,6 +125,18 @@ func (r *AgentRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Age
 		return nil, fmt.Errorf("load skills for agent: %w", err)
 	}
 	a.Skills = skills
+
+	prompts, err := r.loadPrompts(ctx, a.ID)
+	if err != nil {
+		return nil, fmt.Errorf("load prompts for agent: %w", err)
+	}
+	a.Prompts = prompts
+
+	promptCollections, err := r.loadPromptCollections(ctx, a.ID)
+	if err != nil {
+		return nil, fmt.Errorf("load prompt collections for agent: %w", err)
+	}
+	a.PromptCollections = promptCollections
 
 	return &a, nil
 }
@@ -142,7 +149,7 @@ func (r *AgentRepository) GetByName(ctx context.Context, name string) (*model.Ag
 	}
 
 	query := `SELECT 
-		id, tenant_id, name, description, role, brain, short_term_memory, long_term_memory, prompt_template, mcp_clients, status, community_id, tier, created_at, updated_at
+		id, tenant_id, name, description, role, brain, short_term_memory, long_term_memory, mcp_clients, status, community_id, tier, created_at, updated_at
 	FROM agents WHERE name = $1 AND tenant_id = $2`
 
 	var a model.Agent
@@ -150,22 +157,17 @@ func (r *AgentRepository) GetByName(ctx context.Context, name string) (*model.Ag
 	var shortBytes []byte
 	var longBytes []byte
 	var mcpBytes []byte
-	var promptTemplate *uuid.UUID
 
 	var deprecatedRole string
 	exec := GetExecutor(ctx, r.pool)
 	err := exec.QueryRow(ctx, query, name, ten.FullName()).Scan(
-		&a.ID, &a.TenantID, &a.Name, &a.Description, &deprecatedRole, &brainBytes, &shortBytes, &longBytes, &promptTemplate, &mcpBytes, &a.Status, &a.CommunityID, &a.Tier, &a.CreatedAt, &a.UpdatedAt,
+		&a.ID, &a.TenantID, &a.Name, &a.Description, &deprecatedRole, &brainBytes, &shortBytes, &longBytes, &mcpBytes, &a.Status, &a.CommunityID, &a.Tier, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("agent not found by name: %s", name)
 		}
 		return nil, fmt.Errorf("get agent by name: %w", err)
-	}
-
-	if promptTemplate != nil {
-		a.PromptTemplate = *promptTemplate
 	}
 
 	if err := json.Unmarshal(brainBytes, &a.Brain); err != nil {
@@ -187,6 +189,18 @@ func (r *AgentRepository) GetByName(ctx context.Context, name string) (*model.Ag
 	}
 	a.Skills = skills
 
+	prompts, err := r.loadPrompts(ctx, a.ID)
+	if err != nil {
+		return nil, fmt.Errorf("load prompts for agent: %w", err)
+	}
+	a.Prompts = prompts
+
+	promptCollections, err := r.loadPromptCollections(ctx, a.ID)
+	if err != nil {
+		return nil, fmt.Errorf("load prompt collections for agent: %w", err)
+	}
+	a.PromptCollections = promptCollections
+
 	return &a, nil
 }
 
@@ -198,7 +212,7 @@ func (r *AgentRepository) List(ctx context.Context) ([]*model.Agent, error) {
 	}
 
 	query := `SELECT 
-		id, tenant_id, name, description, role, brain, short_term_memory, long_term_memory, prompt_template, mcp_clients, status, community_id, tier, created_at, updated_at
+		id, tenant_id, name, description, role, brain, short_term_memory, long_term_memory, mcp_clients, status, community_id, tier, created_at, updated_at
 	FROM agents WHERE tenant_id = $1 ORDER BY name ASC`
 
 	exec := GetExecutor(ctx, r.pool)
@@ -215,18 +229,13 @@ func (r *AgentRepository) List(ctx context.Context) ([]*model.Agent, error) {
 		var shortBytes []byte
 		var longBytes []byte
 		var mcpBytes []byte
-		var promptTemplate *uuid.UUID
 
 		var deprecatedRole string
 		err := rows.Scan(
-			&a.ID, &a.TenantID, &a.Name, &a.Description, &deprecatedRole, &brainBytes, &shortBytes, &longBytes, &promptTemplate, &mcpBytes, &a.Status, &a.CommunityID, &a.Tier, &a.CreatedAt, &a.UpdatedAt,
+			&a.ID, &a.TenantID, &a.Name, &a.Description, &deprecatedRole, &brainBytes, &shortBytes, &longBytes, &mcpBytes, &a.Status, &a.CommunityID, &a.Tier, &a.CreatedAt, &a.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan agent: %w", err)
-		}
-
-		if promptTemplate != nil {
-			a.PromptTemplate = *promptTemplate
 		}
 
 		if err := json.Unmarshal(brainBytes, &a.Brain); err != nil {
@@ -247,6 +256,18 @@ func (r *AgentRepository) List(ctx context.Context) ([]*model.Agent, error) {
 			return nil, fmt.Errorf("load skills for agent: %w", err)
 		}
 		a.Skills = skills
+
+		prompts, err := r.loadPrompts(ctx, a.ID)
+		if err != nil {
+			return nil, fmt.Errorf("load prompts for agent: %w", err)
+		}
+		a.Prompts = prompts
+
+		promptCollections, err := r.loadPromptCollections(ctx, a.ID)
+		if err != nil {
+			return nil, fmt.Errorf("load prompt collections for agent: %w", err)
+		}
+		a.PromptCollections = promptCollections
 
 		agents = append(agents, &a)
 	}
@@ -281,19 +302,14 @@ func (r *AgentRepository) Update(ctx context.Context, a *model.Agent) error {
 		return fmt.Errorf("marshal mcp clients config: %w", err)
 	}
 
-	var promptTemplate interface{}
-	if a.PromptTemplate != uuid.Nil {
-		promptTemplate = a.PromptTemplate
-	}
-
 	return ExecuteInTxOrPool(ctx, r.pool, func(tx pgx.Tx) error {
 		query := `UPDATE agents SET 
-			name = $1, description = $2, brain = $3, short_term_memory = $4, long_term_memory = $5, prompt_template = $6, mcp_clients = $7, status = $8, community_id = $9, tier = $10, updated_at = $11
-		WHERE id = $12 AND tenant_id = $13`
+			name = $1, description = $2, brain = $3, short_term_memory = $4, long_term_memory = $5, mcp_clients = $6, status = $7, community_id = $8, tier = $9, updated_at = $10
+		WHERE id = $11 AND tenant_id = $12`
 
 		a.UpdatedAt = time.Now().UTC()
 		cmdTag, err := tx.Exec(ctx, query,
-			a.Name, a.Description, brainJSON, shortTermJSON, longTermJSON, promptTemplate, mcpClientsJSON, a.Status, a.CommunityID, a.Tier, a.UpdatedAt, a.ID, a.TenantID,
+			a.Name, a.Description, brainJSON, shortTermJSON, longTermJSON, mcpClientsJSON, a.Status, a.CommunityID, a.Tier, a.UpdatedAt, a.ID, a.TenantID,
 		)
 		if err != nil {
 			return fmt.Errorf("update agent: %w", err)
@@ -303,6 +319,12 @@ func (r *AgentRepository) Update(ctx context.Context, a *model.Agent) error {
 		}
 
 		if err := r.saveSkills(ctx, tx, a.ID, a.Skills); err != nil {
+			return err
+		}
+		if err := r.savePrompts(ctx, tx, a.ID, a.Prompts); err != nil {
+			return err
+		}
+		if err := r.savePromptCollections(ctx, tx, a.ID, a.PromptCollections); err != nil {
 			return err
 		}
 		return nil
@@ -361,6 +383,76 @@ func (r *AgentRepository) saveSkills(ctx context.Context, exec PgxExecutor, agen
 		_, err = exec.Exec(ctx, `INSERT INTO agent_skills (agent_id, skill_id) VALUES ($1, $2)`, agentID, skillID)
 		if err != nil {
 			return fmt.Errorf("insert agent skill: %w", err)
+		}
+	}
+	return nil
+}
+
+func (r *AgentRepository) loadPrompts(ctx context.Context, agentID uuid.UUID) ([]uuid.UUID, error) {
+	query := `SELECT prompt_template_id FROM agent_prompts WHERE agent_id = $1 ORDER BY position ASC`
+	exec := GetExecutor(ctx, r.pool)
+	rows, err := exec.Query(ctx, query, agentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var prompts []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		prompts = append(prompts, id)
+	}
+	return prompts, nil
+}
+
+func (r *AgentRepository) savePrompts(ctx context.Context, exec PgxExecutor, agentID uuid.UUID, promptIDs []uuid.UUID) error {
+	_, err := exec.Exec(ctx, `DELETE FROM agent_prompts WHERE agent_id = $1`, agentID)
+	if err != nil {
+		return fmt.Errorf("delete old agent prompts: %w", err)
+	}
+
+	for pos, promptID := range promptIDs {
+		_, err = exec.Exec(ctx, `INSERT INTO agent_prompts (agent_id, prompt_template_id, position) VALUES ($1, $2, $3)`, agentID, promptID, pos)
+		if err != nil {
+			return fmt.Errorf("insert agent prompt: %w", err)
+		}
+	}
+	return nil
+}
+
+func (r *AgentRepository) loadPromptCollections(ctx context.Context, agentID uuid.UUID) ([]uuid.UUID, error) {
+	query := `SELECT prompt_collection_id FROM agent_prompt_collections WHERE agent_id = $1 ORDER BY position ASC`
+	exec := GetExecutor(ctx, r.pool)
+	rows, err := exec.Query(ctx, query, agentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var collections []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		collections = append(collections, id)
+	}
+	return collections, nil
+}
+
+func (r *AgentRepository) savePromptCollections(ctx context.Context, exec PgxExecutor, agentID uuid.UUID, collectionIDs []uuid.UUID) error {
+	_, err := exec.Exec(ctx, `DELETE FROM agent_prompt_collections WHERE agent_id = $1`, agentID)
+	if err != nil {
+		return fmt.Errorf("delete old agent prompt collections: %w", err)
+	}
+
+	for pos, colID := range collectionIDs {
+		_, err = exec.Exec(ctx, `INSERT INTO agent_prompt_collections (agent_id, prompt_collection_id, position) VALUES ($1, $2, $3)`, agentID, colID, pos)
+		if err != nil {
+			return fmt.Errorf("insert agent prompt collection: %w", err)
 		}
 	}
 	return nil

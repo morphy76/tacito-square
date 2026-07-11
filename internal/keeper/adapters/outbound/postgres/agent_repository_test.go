@@ -55,6 +55,17 @@ func TestAgentRepository_Lifecycle(t *testing.T) {
 	err = promptRepo.CreateTemplate(ctx, pt)
 	require.NoError(t, err)
 
+	col := &model.PromptCollection{
+		ID:          uuid.New(),
+		Name:        "test-collection",
+		Description: "A test collection of prompts",
+		Templates:   []uuid.UUID{pt.ID},
+		CreatedAt:   time.Now().UTC(),
+		UpdatedAt:   time.Now().UTC(),
+	}
+	err = promptRepo.CreateCollection(ctx, col)
+	require.NoError(t, err)
+
 	// Create a prerequisite skill
 	sk := &model.Skill{
 		ID:           uuid.New(),
@@ -86,8 +97,9 @@ func TestAgentRepository_Lifecycle(t *testing.T) {
 			CollectionName:  "test-long",
 			VectorDimension: 1536,
 		},
-		Skills:         []uuid.UUID{sk.ID},
-		PromptTemplate: pt.ID,
+		Skills:            []uuid.UUID{sk.ID},
+		Prompts:           []uuid.UUID{pt.ID},
+		PromptCollections: []uuid.UUID{col.ID},
 		MCPClients: []model.MCPClientConfig{
 			{
 				ClientID: uuid.New(),
@@ -111,7 +123,6 @@ func TestAgentRepository_Lifecycle(t *testing.T) {
 		assert.Equal(t, agent.Brain.LLMBindingID, fetched.Brain.LLMBindingID)
 		assert.Equal(t, agent.ShortTermMemory.KeyNamespace, fetched.ShortTermMemory.KeyNamespace)
 		assert.Equal(t, agent.LongTermMemory.CollectionName, fetched.LongTermMemory.CollectionName)
-		assert.Equal(t, agent.PromptTemplate, fetched.PromptTemplate)
 		assert.Equal(t, agent.Status, fetched.Status)
 		assert.Equal(t, len(agent.Skills), len(fetched.Skills))
 		if len(fetched.Skills) > 0 {
@@ -121,6 +132,8 @@ func TestAgentRepository_Lifecycle(t *testing.T) {
 		if len(fetched.MCPClients) > 0 {
 			assert.Equal(t, agent.MCPClients[0].ClientID, fetched.MCPClients[0].ClientID)
 		}
+		assert.Equal(t, agent.Prompts, fetched.Prompts)
+		assert.Equal(t, agent.PromptCollections, fetched.PromptCollections)
 	})
 
 	t.Run("Get Agent by Name", func(t *testing.T) {
@@ -148,6 +161,8 @@ func TestAgentRepository_Lifecycle(t *testing.T) {
 		agent.Brain.Temperature = ptrFloat64(0.9)
 		agent.Status = model.AgentStatusActive
 		agent.Skills = []uuid.UUID{} // Clear skills
+		agent.Prompts = []uuid.UUID{} // Clear prompts
+		agent.PromptCollections = []uuid.UUID{} // Clear collections
 		agent.MCPClients = append(agent.MCPClients, model.MCPClientConfig{ClientID: uuid.New()})
 
 		err := repo.Update(ctx, agent)
@@ -159,6 +174,8 @@ func TestAgentRepository_Lifecycle(t *testing.T) {
 		assert.Equal(t, 0.9, *fetched.Brain.Temperature)
 		assert.Equal(t, model.AgentStatusActive, fetched.Status)
 		assert.Empty(t, fetched.Skills)
+		assert.Empty(t, fetched.Prompts)
+		assert.Empty(t, fetched.PromptCollections)
 		assert.Len(t, fetched.MCPClients, 2)
 	})
 
