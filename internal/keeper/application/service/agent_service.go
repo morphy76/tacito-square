@@ -13,6 +13,7 @@ import (
 	"github.com/morphy76/tacito-square/internal/shared/tenant"
 	"github.com/morphy76/tacito-square/pkg/events"
 	"github.com/morphy76/tacito-square/pkg/kubernetes/apis/tacito/v1alpha1"
+	"github.com/spf13/viper"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -67,7 +68,11 @@ func (s *AgentService) Update(ctx context.Context, agent *model.Agent) error {
 	if _, err := s.llmBindingRepo.GetByID(ctx, agent.Brain.LLMBindingID); err != nil {
 		return fmt.Errorf("llm binding does not exist: %w", err)
 	}
-	return s.repo.Update(ctx, agent)
+	if err := s.repo.Update(ctx, agent); err != nil {
+		return err
+	}
+	s.invalidatePromptCache(ctx, agent)
+	return nil
 }
 
 func (s *AgentService) Delete(ctx context.Context, id uuid.UUID) error {
@@ -292,6 +297,13 @@ func (s *AgentService) Unassign(ctx context.Context, communityID uuid.UUID, agen
 	return nil
 }
 
+func (s *AgentService) invalidatePromptCache(ctx context.Context, agent *model.Agent) {
+	if s.cache != nil {
+		cacheKey := fmt.Sprintf("agent-prompts:%s:%s", agent.TenantID, agent.ID.String())
+		_ = s.cache.Invalidate(ctx, cacheKey)
+	}
+}
+
 func (s *AgentService) AttachPromptToAgent(ctx context.Context, agentID uuid.UUID, promptID uuid.UUID) error {
 	agent, err := s.repo.GetByID(ctx, agentID)
 	if err != nil {
@@ -304,7 +316,11 @@ func (s *AgentService) AttachPromptToAgent(ctx context.Context, agentID uuid.UUI
 		}
 	}
 	agent.Prompts = append(agent.Prompts, promptID)
-	return s.repo.Update(ctx, agent)
+	if err := s.repo.Update(ctx, agent); err != nil {
+		return err
+	}
+	s.invalidatePromptCache(ctx, agent)
+	return nil
 }
 
 func (s *AgentService) DetachPromptFromAgent(ctx context.Context, agentID uuid.UUID, promptID uuid.UUID) error {
@@ -319,7 +335,11 @@ func (s *AgentService) DetachPromptFromAgent(ctx context.Context, agentID uuid.U
 		}
 	}
 	agent.Prompts = newPrompts
-	return s.repo.Update(ctx, agent)
+	if err := s.repo.Update(ctx, agent); err != nil {
+		return err
+	}
+	s.invalidatePromptCache(ctx, agent)
+	return nil
 }
 
 func (s *AgentService) AttachCollectionToAgent(ctx context.Context, agentID uuid.UUID, collectionID uuid.UUID) error {
@@ -334,7 +354,11 @@ func (s *AgentService) AttachCollectionToAgent(ctx context.Context, agentID uuid
 		}
 	}
 	agent.PromptCollections = append(agent.PromptCollections, collectionID)
-	return s.repo.Update(ctx, agent)
+	if err := s.repo.Update(ctx, agent); err != nil {
+		return err
+	}
+	s.invalidatePromptCache(ctx, agent)
+	return nil
 }
 
 func (s *AgentService) DetachCollectionFromAgent(ctx context.Context, agentID uuid.UUID, collectionID uuid.UUID) error {
@@ -349,7 +373,11 @@ func (s *AgentService) DetachCollectionFromAgent(ctx context.Context, agentID uu
 		}
 	}
 	agent.PromptCollections = newCollections
-	return s.repo.Update(ctx, agent)
+	if err := s.repo.Update(ctx, agent); err != nil {
+		return err
+	}
+	s.invalidatePromptCache(ctx, agent)
+	return nil
 }
 
 // promptRepoAdapter wraps the outbound.PromptRepository to satisfy domainsrv.PromptRepository interface.
@@ -366,10 +394,36 @@ func (a promptRepoAdapter) ResolveCollectionPrompts(ctx context.Context, collect
 }
 
 func (s *AgentService) ResolveEffectivePrompts(ctx context.Context, agentID uuid.UUID) ([]*model.PromptTemplate, error) {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return nil, fmt.Errorf("tenant resolution failed")
+	}
+
+	cacheKey := fmt.Sprintf("agent-prompts:%s:%s", ten.FullName(), agentID.String())
+	var cachedPrompts []*model.PromptTemplate
+	if s.cache != nil {
+		if err := s.cache.Get(ctx, cacheKey, &cachedPrompts); err == nil {
+			return cachedPrompts, nil
+		}
+	}
+
 	agent, err := s.repo.GetByID(ctx, agentID)
 	if err != nil {
 		return nil, err
 	}
 	adapter := promptRepoAdapter{repo: s.promptRepo}
-	return domainsrv.ResolveEffectivePrompts(ctx, agent, adapter)
+	resolved, err := domainsrv.ResolveEffectivePrompts(ctx, agent, adapter)
+	if err != nil {
+		return nil, err
+	}
+
+	if s.cache != nil {
+		ttl := viper.GetDuration("cache.agent_prompts_ttl")
+		if ttl <= 0 {
+			ttl = 5 * time.Minute
+		}
+		_ = s.cache.Set(ctx, cacheKey, resolved, ttl)
+	}
+
+	return resolved, nil
 }

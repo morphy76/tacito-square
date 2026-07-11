@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -89,6 +90,16 @@ func (m *MockPromptUseCase) ResolveCollectionPrompts(ctx context.Context, collec
 		return nil, args.Error(1)
 	}
 	return args.Get(0).([]*model.PromptTemplate), args.Error(1)
+}
+
+func (m *MockPromptUseCase) AddPromptToCollection(ctx context.Context, collectionID uuid.UUID, promptID uuid.UUID) error {
+	args := m.Called(ctx, collectionID, promptID)
+	return args.Error(0)
+}
+
+func (m *MockPromptUseCase) RemovePromptFromCollection(ctx context.Context, collectionID uuid.UUID, promptID uuid.UUID) error {
+	args := m.Called(ctx, collectionID, promptID)
+	return args.Error(0)
 }
 
 
@@ -338,6 +349,110 @@ func TestPromptHandlers_SystemImmutability(t *testing.T) {
 		err := json.Unmarshal(resp.Body.Bytes(), &respBody)
 		assert.NoError(t, err)
 		assert.Contains(t, respBody["error"], "cannot modify system-locked prompt template")
+	})
+}
+
+func TestPromptHandlers_CreateTemplate_DefaultDraft(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("Default status to draft when empty", func(t *testing.T) {
+		repo := new(MockPromptUseCase)
+		handler := NewPromptHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.POST("/api/v1/prompts", handler.CreateTemplate)
+
+		payload := map[string]interface{}{
+			"name":    "default-draft-test",
+			"content": "Check status field default",
+		}
+
+		var capturedTemplate *model.PromptTemplate
+		repo.On("CreateTemplate", mock.Anything, mock.AnythingOfType("*model.PromptTemplate")).Return(nil).Run(func(args mock.Arguments) {
+			capturedTemplate = args.Get(1).(*model.PromptTemplate)
+		})
+
+		body, _ := json.Marshal(payload)
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/prompts", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusCreated, resp.Code)
+		assert.NotNil(t, capturedTemplate)
+		assert.Equal(t, model.PromptStatusDraft, capturedTemplate.Status)
+	})
+}
+
+func TestPromptHandlers_CollectionMembership(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("Add Prompt to Collection Successfully", func(t *testing.T) {
+		repo := new(MockPromptUseCase)
+		handler := NewPromptHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.POST("/api/v1/prompt-collections/:id/prompts/:prompt_id", handler.AddPromptToCollection)
+
+		colID := uuid.New()
+		promptID := uuid.New()
+
+		repo.On("AddPromptToCollection", mock.Anything, colID, promptID).Return(nil)
+
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/prompt-collections/"+colID.String()+"/prompts/"+promptID.String(), nil)
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
+	})
+
+	t.Run("Add Prompt to Collection Duplicate Returns 409 Conflict", func(t *testing.T) {
+		repo := new(MockPromptUseCase)
+		handler := NewPromptHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.POST("/api/v1/prompt-collections/:id/prompts/:prompt_id", handler.AddPromptToCollection)
+
+		colID := uuid.New()
+		promptID := uuid.New()
+
+		repo.On("AddPromptToCollection", mock.Anything, colID, promptID).Return(errors.New("prompt is already in collection: 409 Conflict"))
+
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/prompt-collections/"+colID.String()+"/prompts/"+promptID.String(), nil)
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusConflict, resp.Code)
+		var respBody map[string]string
+		json.Unmarshal(resp.Body.Bytes(), &respBody)
+		assert.Contains(t, respBody["error"], "409 Conflict")
+	})
+
+	t.Run("Remove Prompt from Collection Successfully", func(t *testing.T) {
+		repo := new(MockPromptUseCase)
+		handler := NewPromptHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.DELETE("/api/v1/prompt-collections/:id/prompts/:prompt_id", handler.RemovePromptFromCollection)
+
+		colID := uuid.New()
+		promptID := uuid.New()
+
+		repo.On("RemovePromptFromCollection", mock.Anything, colID, promptID).Return(nil)
+
+		req, _ := http.NewRequest(http.MethodDelete, "/api/v1/prompt-collections/"+colID.String()+"/prompts/"+promptID.String(), nil)
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
 	})
 }
 

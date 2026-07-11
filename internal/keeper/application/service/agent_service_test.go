@@ -605,15 +605,19 @@ func TestAgentService_Unassign_AlreadyUnassigned_Running(t *testing.T) {
 func TestAgentService_PromptAttachmentAndResolution(t *testing.T) {
 	repo := new(mockAgentRepository)
 	promptRepo := new(mockPromptRepository)
-	svc := NewAgentService(repo, nil, nil, nil, nil, new(mockLLMBindingRepository), promptRepo)
+	cache := new(mockCache)
+	svc := NewAgentService(repo, nil, nil, cache, nil, new(mockLLMBindingRepository), promptRepo)
 
-	ctx := context.Background()
+	ten, _ := tenant.New("acme.com", "")
+	ctx := tenant.ContextWithTenant(context.Background(), ten)
+
 	agentID := uuid.New()
 	ptID := uuid.New()
 	colID := uuid.New()
 
 	agent := &model.Agent{
 		ID:                agentID,
+		TenantID:          ten.FullName(),
 		Name:              "test-agent",
 		Prompts:           []uuid.UUID{},
 		PromptCollections: []uuid.UUID{},
@@ -621,6 +625,9 @@ func TestAgentService_PromptAttachmentAndResolution(t *testing.T) {
 
 	repo.On("GetByID", mock.Anything, agentID).Return(agent, nil).Times(5)
 	repo.On("Update", mock.Anything, agent).Return(nil).Times(4)
+
+	cacheKey := "agent-prompts:" + ten.FullName() + ":" + agentID.String()
+	cache.On("Invalidate", mock.Anything, cacheKey).Return(nil).Times(4)
 
 	// 1. Attach prompt
 	err := svc.AttachPromptToAgent(ctx, agentID, ptID)
@@ -651,6 +658,9 @@ func TestAgentService_PromptAttachmentAndResolution(t *testing.T) {
 	agent.Prompts = []uuid.UUID{ptID}
 	promptRepo.On("GetTemplateByID", mock.Anything, ptID).Return(pt, nil)
 
+	cache.On("Get", mock.Anything, cacheKey, mock.Anything).Return(errors.New("cache miss"))
+	cache.On("Set", mock.Anything, cacheKey, mock.Anything, mock.Anything).Return(nil)
+
 	resolved, err := svc.ResolveEffectivePrompts(ctx, agentID)
 	assert.NoError(t, err)
 	assert.Len(t, resolved, 1)
@@ -658,5 +668,6 @@ func TestAgentService_PromptAttachmentAndResolution(t *testing.T) {
 
 	repo.AssertExpectations(t)
 	promptRepo.AssertExpectations(t)
+	cache.AssertExpectations(t)
 }
 

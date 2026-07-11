@@ -71,6 +71,34 @@ func (m *MockAgentRepository) UnassignFromCommunity(ctx context.Context, agentID
 	return args.Error(0)
 }
 
+func (m *MockAgentRepository) AttachPromptToAgent(ctx context.Context, agentID uuid.UUID, promptID uuid.UUID) error {
+	args := m.Called(ctx, agentID, promptID)
+	return args.Error(0)
+}
+
+func (m *MockAgentRepository) DetachPromptFromAgent(ctx context.Context, agentID uuid.UUID, promptID uuid.UUID) error {
+	args := m.Called(ctx, agentID, promptID)
+	return args.Error(0)
+}
+
+func (m *MockAgentRepository) AttachCollectionToAgent(ctx context.Context, agentID uuid.UUID, collectionID uuid.UUID) error {
+	args := m.Called(ctx, agentID, collectionID)
+	return args.Error(0)
+}
+
+func (m *MockAgentRepository) DetachCollectionFromAgent(ctx context.Context, agentID uuid.UUID, collectionID uuid.UUID) error {
+	args := m.Called(ctx, agentID, collectionID)
+	return args.Error(0)
+}
+
+func (m *MockAgentRepository) ResolveEffectivePrompts(ctx context.Context, agentID uuid.UUID) ([]*model.PromptTemplate, error) {
+	args := m.Called(ctx, agentID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*model.PromptTemplate), args.Error(1)
+}
+
 func TestAgentHandlers_Create(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -521,5 +549,130 @@ func TestAgentHandlers_Tier(t *testing.T) {
 
 func ptrFloat64(v float64) *float64 { return &v }
 func ptrInt(v int) *int { return &v }
+
+func TestAgentHandlers_PromptAttachmentAndResolution(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("Attach Prompt to Agent Successfully", func(t *testing.T) {
+		repo := new(MockAgentRepository)
+		handler := NewAgentHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.POST("/api/v1/agents/:id/prompts/:prompt_id", handler.AttachPromptToAgent)
+
+		agentID := uuid.New()
+		promptID := uuid.New()
+
+		repo.On("AttachPromptToAgent", mock.Anything, agentID, promptID).Return(nil)
+
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/agents/"+agentID.String()+"/prompts/"+promptID.String(), nil)
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
+		repo.AssertExpectations(t)
+	})
+
+	t.Run("Detach Prompt from Agent Successfully", func(t *testing.T) {
+		repo := new(MockAgentRepository)
+		handler := NewAgentHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.DELETE("/api/v1/agents/:id/prompts/:prompt_id", handler.DetachPromptFromAgent)
+
+		agentID := uuid.New()
+		promptID := uuid.New()
+
+		repo.On("DetachPromptFromAgent", mock.Anything, agentID, promptID).Return(nil)
+
+		req, _ := http.NewRequest(http.MethodDelete, "/api/v1/agents/"+agentID.String()+"/prompts/"+promptID.String(), nil)
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
+		repo.AssertExpectations(t)
+	})
+
+	t.Run("Attach Collection to Agent Successfully", func(t *testing.T) {
+		repo := new(MockAgentRepository)
+		handler := NewAgentHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.POST("/api/v1/agents/:id/prompt-collections/:collection_id", handler.AttachCollectionToAgent)
+
+		agentID := uuid.New()
+		colID := uuid.New()
+
+		repo.On("AttachCollectionToAgent", mock.Anything, agentID, colID).Return(nil)
+
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/agents/"+agentID.String()+"/prompt-collections/"+colID.String(), nil)
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
+		repo.AssertExpectations(t)
+	})
+
+	t.Run("Detach Collection from Agent Successfully", func(t *testing.T) {
+		repo := new(MockAgentRepository)
+		handler := NewAgentHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.DELETE("/api/v1/agents/:id/prompt-collections/:collection_id", handler.DetachCollectionFromAgent)
+
+		agentID := uuid.New()
+		colID := uuid.New()
+
+		repo.On("DetachCollectionFromAgent", mock.Anything, agentID, colID).Return(nil)
+
+		req, _ := http.NewRequest(http.MethodDelete, "/api/v1/agents/"+agentID.String()+"/prompt-collections/"+colID.String(), nil)
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
+		repo.AssertExpectations(t)
+	})
+
+	t.Run("Resolve Effective Prompts Successfully", func(t *testing.T) {
+		repo := new(MockAgentRepository)
+		handler := NewAgentHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.GET("/api/v1/agents/:id/prompts", handler.ResolveEffectivePrompts)
+
+		agentID := uuid.New()
+		prompts := []*model.PromptTemplate{
+			{
+				ID:      uuid.New(),
+				Name:    "sys-prompt",
+				Content: "Be helpful",
+				Status:  model.PromptStatusActive,
+			},
+		}
+
+		repo.On("ResolveEffectivePrompts", mock.Anything, agentID).Return(prompts, nil)
+
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/agents/"+agentID.String()+"/prompts", nil)
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
+		var respBody []*model.PromptTemplate
+		json.Unmarshal(resp.Body.Bytes(), &respBody)
+		assert.Len(t, respBody, 1)
+		assert.Equal(t, "sys-prompt", respBody[0].Name)
+		repo.AssertExpectations(t)
+	})
+}
 
 
