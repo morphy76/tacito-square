@@ -639,6 +639,13 @@ func (h *AgentHandler) ResolveEffectivePrompts(c *gin.Context) {
 		return
 	}
 
+	_, err = h.repo.GetByID(ctx, agentID)
+	if err != nil {
+		reqLogger.Warn().Err(err).Str("agent_id", agentID.String()).Msg("agent not found")
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
 	resolved, err := h.repo.ResolveEffectivePrompts(ctx, agentID)
 	if err != nil {
 		reqLogger.Error().Err(err).Msg("failed to resolve effective prompts")
@@ -646,8 +653,12 @@ func (h *AgentHandler) ResolveEffectivePrompts(c *gin.Context) {
 		return
 	}
 	if resolved == nil {
-		resolved = make([]*model.PromptTemplate, 0)
+		resolved = make([]*model.ResolvedAgentPrompt, 0)
 	}
 
-	c.JSON(http.StatusOK, resolved)
+	c.JSON(http.StatusOK, gin.H{
+		"agent_id":         agentID,
+		"resolved_prompts": resolved,
+		"total":            len(resolved),
+	})
 }

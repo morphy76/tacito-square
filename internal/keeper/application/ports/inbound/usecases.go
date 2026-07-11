@@ -79,7 +79,7 @@ type AgentUseCase interface {
 	DetachPromptFromAgent(ctx context.Context, agentID uuid.UUID, promptID uuid.UUID) error
 	AttachCollectionToAgent(ctx context.Context, agentID uuid.UUID, collectionID uuid.UUID) error
 	DetachCollectionFromAgent(ctx context.Context, agentID uuid.UUID, collectionID uuid.UUID) error
-	ResolveEffectivePrompts(ctx context.Context, agentID uuid.UUID) ([]*model.PromptTemplate, error)
+	ResolveEffectivePrompts(ctx context.Context, agentID uuid.UUID) ([]*model.ResolvedAgentPrompt, error)
 }
 
 // CommunityUseCase defines the driving operations for Community configurations.

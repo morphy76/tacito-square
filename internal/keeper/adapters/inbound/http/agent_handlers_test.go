@@ -91,12 +91,12 @@ func (m *MockAgentRepository) DetachCollectionFromAgent(ctx context.Context, age
 	return args.Error(0)
 }
 
-func (m *MockAgentRepository) ResolveEffectivePrompts(ctx context.Context, agentID uuid.UUID) ([]*model.PromptTemplate, error) {
+func (m *MockAgentRepository) ResolveEffectivePrompts(ctx context.Context, agentID uuid.UUID) ([]*model.ResolvedAgentPrompt, error) {
 	args := m.Called(ctx, agentID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).([]*model.PromptTemplate), args.Error(1)
+	return args.Get(0).([]*model.ResolvedAgentPrompt), args.Error(1)
 }
 
 func TestAgentHandlers_Create(t *testing.T) {
@@ -650,12 +650,18 @@ func TestAgentHandlers_PromptAttachmentAndResolution(t *testing.T) {
 		r.GET("/api/v1/agents/:id/prompts", handler.ResolveEffectivePrompts)
 
 		agentID := uuid.New()
-		prompts := []*model.PromptTemplate{
+		agent := &model.Agent{
+			ID: agentID,
+		}
+		repo.On("GetByID", mock.Anything, agentID).Return(agent, nil)
+
+		prompts := []*model.ResolvedAgentPrompt{
 			{
 				ID:      uuid.New(),
 				Name:    "sys-prompt",
 				Content: "Be helpful",
 				Status:  model.PromptStatusActive,
+				Source:  "individual",
 			},
 		}
 
@@ -667,10 +673,18 @@ func TestAgentHandlers_PromptAttachmentAndResolution(t *testing.T) {
 		r.ServeHTTP(resp, req)
 
 		assert.Equal(t, http.StatusOK, resp.Code)
-		var respBody []*model.PromptTemplate
-		json.Unmarshal(resp.Body.Bytes(), &respBody)
-		assert.Len(t, respBody, 1)
-		assert.Equal(t, "sys-prompt", respBody[0].Name)
+		
+		var respBody struct {
+			AgentID         uuid.UUID                    `json:"agent_id"`
+			ResolvedPrompts []*model.ResolvedAgentPrompt `json:"resolved_prompts"`
+			Total           int                          `json:"total"`
+		}
+		err := json.Unmarshal(resp.Body.Bytes(), &respBody)
+		assert.NoError(t, err)
+		assert.Equal(t, agentID, respBody.AgentID)
+		assert.Len(t, respBody.ResolvedPrompts, 1)
+		assert.Equal(t, "sys-prompt", respBody.ResolvedPrompts[0].Name)
+		assert.Equal(t, 1, respBody.Total)
 		repo.AssertExpectations(t)
 	})
 }

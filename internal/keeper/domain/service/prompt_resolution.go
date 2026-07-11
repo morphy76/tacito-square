@@ -17,8 +17,8 @@ type PromptRepository interface {
 }
 
 // ResolveEffectivePrompts resolves all active prompts associated with an agent, preserving order and removing duplicates.
-func ResolveEffectivePrompts(ctx context.Context, agent *model.Agent, promptRepo PromptRepository) ([]*model.PromptTemplate, error) {
-	var resolved []*model.PromptTemplate
+func ResolveEffectivePrompts(ctx context.Context, agent *model.Agent, promptRepo PromptRepository) ([]*model.ResolvedAgentPrompt, error) {
+	var resolved []*model.ResolvedAgentPrompt
 	seen := make(map[uuid.UUID]bool)
 
 	// 1. Process prompt collections in agent attachment order
@@ -38,8 +38,18 @@ func ResolveEffectivePrompts(ctx context.Context, agent *model.Agent, promptRepo
 				continue
 			}
 
+			// Capture colID for closure/loop safety
+			cID := colID
+
 			seen[p.ID] = true
-			resolved = append(resolved, p)
+			resolved = append(resolved, &model.ResolvedAgentPrompt{
+				ID:           p.ID,
+				Name:         p.Name,
+				Content:      p.Content,
+				Status:       p.Status,
+				Source:       "collection",
+				CollectionID: &cID,
+			})
 		}
 	}
 
@@ -60,7 +70,14 @@ func ResolveEffectivePrompts(ctx context.Context, agent *model.Agent, promptRepo
 		}
 
 		seen[pID] = true
-		resolved = append(resolved, p)
+		resolved = append(resolved, &model.ResolvedAgentPrompt{
+			ID:           p.ID,
+			Name:         p.Name,
+			Content:      p.Content,
+			Status:       p.Status,
+			Source:       "individual",
+			CollectionID: nil,
+		})
 	}
 
 	return resolved, nil

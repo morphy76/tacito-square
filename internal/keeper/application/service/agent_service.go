@@ -393,14 +393,14 @@ func (a promptRepoAdapter) ResolveCollectionPrompts(ctx context.Context, collect
 	return a.repo.ResolveCollectionPrompts(ctx, collectionID)
 }
 
-func (s *AgentService) ResolveEffectivePrompts(ctx context.Context, agentID uuid.UUID) ([]*model.PromptTemplate, error) {
+func (s *AgentService) ResolveEffectivePrompts(ctx context.Context, agentID uuid.UUID) ([]*model.ResolvedAgentPrompt, error) {
 	ten := tenant.FromContext(ctx)
 	if ten == nil {
 		return nil, fmt.Errorf("tenant resolution failed")
 	}
 
 	cacheKey := fmt.Sprintf("agent-prompts:%s:%s", ten.FullName(), agentID.String())
-	var cachedPrompts []*model.PromptTemplate
+	var cachedPrompts []*model.ResolvedAgentPrompt
 	if s.cache != nil {
 		if err := s.cache.Get(ctx, cacheKey, &cachedPrompts); err == nil {
 			return cachedPrompts, nil

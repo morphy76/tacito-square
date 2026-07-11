@@ -36,6 +36,16 @@ type PromptTemplate struct {
 	CreatedAt time.Time    `json:"created_at"`
 }
 
+// ResolvedAgentPrompt represents a resolved prompt template with source metadata for agent resolution.
+type ResolvedAgentPrompt struct {
+	ID           uuid.UUID    `json:"id"`
+	Name         string       `json:"name"`
+	Content      string       `json:"content"`
+	Status       PromptStatus `json:"status"`
+	Source       string       `json:"source"` // "collection" or "individual"
+	CollectionID *uuid.UUID   `json:"collection_id"`
+}
+
 // PromptCollection represents a suite of templates used together by an agent profile.
 type PromptCollection struct {
 	ID          uuid.UUID   `json:"id"`
