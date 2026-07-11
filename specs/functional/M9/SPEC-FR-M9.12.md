@@ -1,10 +1,10 @@
-# SPEC-FR-M10.12: Integrate Unleash feature flag management
+# SPEC-FR-M9.12: Integrate Unleash feature flag management
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
-| ID            | SPEC-FR-M10.12                               |
+| ID            | SPEC-FR-M9.12                               |
 | Status        | DRAFT                                       |
-| Milestone     | M10                                          |
+| Milestone     | M9                                          |
 | Component     | shared, keeper, bff, agent                  |
 | Depends On    | none                                        |
 | Supersedes    | none                                        |

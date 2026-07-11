@@ -1,10 +1,10 @@
-# SPEC-FR-M10.17: Introduce template engines for brain prompts
+# SPEC-FR-M9.17: Introduce template engines for brain prompts
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
-| ID            | SPEC-FR-M10.17                               |
+| ID            | SPEC-FR-M9.17                               |
 | Status        | DRAFT                                       |
-| Milestone     | M10                                          |
+| Milestone     | M9                                          |
 | Component     | agent, shared                               |
 | Depends On    | none                                        |
 | Supersedes    | none                                        |

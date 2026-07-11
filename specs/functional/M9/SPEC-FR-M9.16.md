@@ -1,10 +1,10 @@
-# SPEC-FR-M10.16: Provide configuration flags to opt-out of specific built-in tools
+# SPEC-FR-M9.16: Provide configuration flags to opt-out of specific built-in tools
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
-| ID            | SPEC-FR-M10.16                               |
+| ID            | SPEC-FR-M9.16                               |
 | Status        | DRAFT                                       |
-| Milestone     | M10                                          |
+| Milestone     | M9                                          |
 | Component     | keeper, agent                               |
 | Depends On    | none                                        |
 | Supersedes    | none                                        |

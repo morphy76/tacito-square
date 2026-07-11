@@ -1,10 +1,10 @@
-# SPEC-FR-M10.15: Create a Skillset abstraction to group multiple skills
+# SPEC-FR-M9.15: Create a Skillset abstraction to group multiple skills
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
-| ID            | SPEC-FR-M10.15                               |
+| ID            | SPEC-FR-M9.15                               |
 | Status        | DRAFT                                       |
-| Milestone     | M10                                          |
+| Milestone     | M9                                          |
 | Component     | keeper, shared, agent                       |
 | Depends On    | none                                        |
 | Supersedes    | none                                        |

@@ -1,10 +1,10 @@
-# SPEC-FR-M9.1: Design architectural integration patterns for RAG and web search
+# SPEC-FR-M8.1: Design architectural integration patterns for RAG and web search
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
-| ID            | SPEC-FR-M9.1                                |
+| ID            | SPEC-FR-M8.1                                |
 | Status        | DRAFT                                       |
-| Milestone     | M9                                          |
+| Milestone     | M8                                          |
 | Component     | agent, shared                               |
 | Depends On    | none                                        |
 | Supersedes    | none                                        |

@@ -1,10 +1,10 @@
-# SPEC-FR-M10.14: Provide APIs to manage tenant secrets for LLM bindings
+# SPEC-FR-M9.14: Provide APIs to manage tenant secrets for LLM bindings
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
-| ID            | SPEC-FR-M10.14                               |
+| ID            | SPEC-FR-M9.14                               |
 | Status        | DRAFT                                       |
-| Milestone     | M10                                          |
+| Milestone     | M9                                          |
 | Component     | keeper, bff                                 |
 | Depends On    | none                                        |
 | Supersedes    | none                                        |

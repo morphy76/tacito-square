@@ -1,10 +1,10 @@
-# SPEC-FR-M10.13: Track brain token usage per agent and thread
+# SPEC-FR-M9.13: Track brain token usage per agent and thread
 
 | Field         | Value                                       |
 |---------------|---------------------------------------------|
-| ID            | SPEC-FR-M10.13                               |
+| ID            | SPEC-FR-M9.13                               |
 | Status        | DRAFT                                       |
-| Milestone     | M10                                          |
+| Milestone     | M9                                          |
 | Component     | agent, keeper                               |
 | Depends On    | none                                        |
 | Supersedes    | none                                        |
