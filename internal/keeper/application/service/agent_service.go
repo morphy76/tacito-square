@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
+	domainsrv "github.com/morphy76/tacito-square/internal/keeper/domain/service"
 	sharedports "github.com/morphy76/tacito-square/internal/shared/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/shared/tenant"
 	"github.com/morphy76/tacito-square/pkg/events"
@@ -23,6 +24,7 @@ type AgentService struct {
 	cache          sharedports.Cache
 	publisher      outbound.EventPublisher
 	llmBindingRepo outbound.LLMBindingRepository
+	promptRepo     outbound.PromptRepository
 }
 
 // NewAgentService creates a new instance of AgentService.
@@ -33,6 +35,7 @@ func NewAgentService(
 	cache sharedports.Cache,
 	publisher outbound.EventPublisher,
 	llmBindingRepo outbound.LLMBindingRepository,
+	promptRepo outbound.PromptRepository,
 ) *AgentService {
 	return &AgentService{
 		repo:           repo,
@@ -41,6 +44,7 @@ func NewAgentService(
 		cache:          cache,
 		publisher:      publisher,
 		llmBindingRepo: llmBindingRepo,
+		promptRepo:     promptRepo,
 	}
 }
 
@@ -286,4 +290,86 @@ func (s *AgentService) Unassign(ctx context.Context, communityID uuid.UUID, agen
 	}
 
 	return nil
+}
+
+func (s *AgentService) AttachPromptToAgent(ctx context.Context, agentID uuid.UUID, promptID uuid.UUID) error {
+	agent, err := s.repo.GetByID(ctx, agentID)
+	if err != nil {
+		return err
+	}
+	// Check if already attached
+	for _, id := range agent.Prompts {
+		if id == promptID {
+			return nil
+		}
+	}
+	agent.Prompts = append(agent.Prompts, promptID)
+	return s.repo.Update(ctx, agent)
+}
+
+func (s *AgentService) DetachPromptFromAgent(ctx context.Context, agentID uuid.UUID, promptID uuid.UUID) error {
+	agent, err := s.repo.GetByID(ctx, agentID)
+	if err != nil {
+		return err
+	}
+	var newPrompts []uuid.UUID
+	for _, id := range agent.Prompts {
+		if id != promptID {
+			newPrompts = append(newPrompts, id)
+		}
+	}
+	agent.Prompts = newPrompts
+	return s.repo.Update(ctx, agent)
+}
+
+func (s *AgentService) AttachCollectionToAgent(ctx context.Context, agentID uuid.UUID, collectionID uuid.UUID) error {
+	agent, err := s.repo.GetByID(ctx, agentID)
+	if err != nil {
+		return err
+	}
+	// Check if already attached
+	for _, id := range agent.PromptCollections {
+		if id == collectionID {
+			return nil
+		}
+	}
+	agent.PromptCollections = append(agent.PromptCollections, collectionID)
+	return s.repo.Update(ctx, agent)
+}
+
+func (s *AgentService) DetachCollectionFromAgent(ctx context.Context, agentID uuid.UUID, collectionID uuid.UUID) error {
+	agent, err := s.repo.GetByID(ctx, agentID)
+	if err != nil {
+		return err
+	}
+	var newCollections []uuid.UUID
+	for _, id := range agent.PromptCollections {
+		if id != collectionID {
+			newCollections = append(newCollections, id)
+		}
+	}
+	agent.PromptCollections = newCollections
+	return s.repo.Update(ctx, agent)
+}
+
+// promptRepoAdapter wraps the outbound.PromptRepository to satisfy domainsrv.PromptRepository interface.
+type promptRepoAdapter struct {
+	repo outbound.PromptRepository
+}
+
+func (a promptRepoAdapter) GetTemplateByID(ctx context.Context, id uuid.UUID) (*model.PromptTemplate, error) {
+	return a.repo.GetTemplateByID(ctx, id)
+}
+
+func (a promptRepoAdapter) ResolveCollectionPrompts(ctx context.Context, collectionID uuid.UUID) ([]*model.PromptTemplate, error) {
+	return a.repo.ResolveCollectionPrompts(ctx, collectionID)
+}
+
+func (s *AgentService) ResolveEffectivePrompts(ctx context.Context, agentID uuid.UUID) ([]*model.PromptTemplate, error) {
+	agent, err := s.repo.GetByID(ctx, agentID)
+	if err != nil {
+		return nil, err
+	}
+	adapter := promptRepoAdapter{repo: s.promptRepo}
+	return domainsrv.ResolveEffectivePrompts(ctx, agent, adapter)
 }

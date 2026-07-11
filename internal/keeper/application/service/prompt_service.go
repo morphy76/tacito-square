@@ -66,3 +66,11 @@ func (s *PromptService) DeleteCollection(ctx context.Context, id uuid.UUID) erro
 func (s *PromptService) ResolveCollectionPrompts(ctx context.Context, id uuid.UUID) ([]*model.PromptTemplate, error) {
 	return s.repo.ResolveCollectionPrompts(ctx, id)
 }
+
+func (s *PromptService) AddPromptToCollection(ctx context.Context, collectionID uuid.UUID, promptID uuid.UUID) error {
+	return s.repo.AddPromptToCollection(ctx, collectionID, promptID)
+}
+
+func (s *PromptService) RemovePromptFromCollection(ctx context.Context, collectionID uuid.UUID, promptID uuid.UUID) error {
+	return s.repo.RemovePromptFromCollection(ctx, collectionID, promptID)
+}

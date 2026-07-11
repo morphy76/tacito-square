@@ -62,6 +62,9 @@ type PromptUseCase interface {
 	UpdateCollection(ctx context.Context, collection *model.PromptCollection) error
 	DeleteCollection(ctx context.Context, id uuid.UUID) error
 	ResolveCollectionPrompts(ctx context.Context, id uuid.UUID) ([]*model.PromptTemplate, error)
+
+	AddPromptToCollection(ctx context.Context, collectionID uuid.UUID, promptID uuid.UUID) error
+	RemovePromptFromCollection(ctx context.Context, collectionID uuid.UUID, promptID uuid.UUID) error
 }
 
 // AgentUseCase defines the driving operations for Agent configurations.
@@ -71,6 +74,12 @@ type AgentUseCase interface {
 	List(ctx context.Context) ([]*model.Agent, error)
 	Update(ctx context.Context, agent *model.Agent) error
 	Delete(ctx context.Context, id uuid.UUID) error
+
+	AttachPromptToAgent(ctx context.Context, agentID uuid.UUID, promptID uuid.UUID) error
+	DetachPromptFromAgent(ctx context.Context, agentID uuid.UUID, promptID uuid.UUID) error
+	AttachCollectionToAgent(ctx context.Context, agentID uuid.UUID, collectionID uuid.UUID) error
+	DetachCollectionFromAgent(ctx context.Context, agentID uuid.UUID, collectionID uuid.UUID) error
+	ResolveEffectivePrompts(ctx context.Context, agentID uuid.UUID) ([]*model.PromptTemplate, error)
 }
 
 // CommunityUseCase defines the driving operations for Community configurations.
