@@ -63,7 +63,9 @@ func TestSubmitAgentCRD_CreateSuccess(t *testing.T) {
 			Temperature:  ptrFloat64(0.5),
 			MaxTokens:    ptrInt(1000),
 		},
-		CommunityID: &communityID,
+		Prompts:           []uuid.UUID{},
+		PromptCollections: []uuid.UUID{},
+		CommunityID:       &communityID,
 	}
 
 	err = coordinator.SubmitAgentCRD(context.Background(), agent)
@@ -137,7 +139,9 @@ func TestSubmitAgentCRD_UpdateSuccess(t *testing.T) {
 			Temperature:  ptrFloat64(0.7),
 			MaxTokens:    ptrInt(2000),
 		},
-		CommunityID: &communityID,
+		Prompts:           []uuid.UUID{},
+		PromptCollections: []uuid.UUID{},
+		CommunityID:       &communityID,
 	}
 
 	err = coordinator.SubmitAgentCRD(context.Background(), agent)
@@ -334,8 +338,9 @@ func startTestNatsServer(t *testing.T) (*server.Server, *nats.Conn) {
 
 type mockPromptRepository struct {
 	outbound.PromptRepository
-	templates map[uuid.UUID]*model.PromptTemplate
-	getErr    error
+	templates   map[uuid.UUID]*model.PromptTemplate
+	collections map[uuid.UUID][]*model.PromptTemplate
+	getErr      error
 }
 
 func (m *mockPromptRepository) GetTemplateByID(ctx context.Context, id uuid.UUID) (*model.PromptTemplate, error) {
@@ -347,6 +352,13 @@ func (m *mockPromptRepository) GetTemplateByID(ctx context.Context, id uuid.UUID
 		return nil, fmt.Errorf("prompt template not found: %s", id)
 	}
 	return t, nil
+}
+
+func (m *mockPromptRepository) ResolveCollectionPrompts(ctx context.Context, collectionID uuid.UUID) ([]*model.PromptTemplate, error) {
+	if m.getErr != nil {
+		return nil, m.getErr
+	}
+	return m.collections[collectionID], nil
 }
 
 type mockSkillRepository struct {
@@ -577,8 +589,10 @@ func TestResolveAndSynthesizeSystemPrompt_Success(t *testing.T) {
 			promptID: {
 				ID:      promptID,
 				Content: "Always be professional.",
+				Status:  model.PromptStatusActive,
 			},
 		},
+		collections: make(map[uuid.UUID][]*model.PromptTemplate),
 	}
 	skillRepo := &mockSkillRepository{
 		skills: map[uuid.UUID]*model.Skill{
@@ -600,10 +614,11 @@ func TestResolveAndSynthesizeSystemPrompt_Success(t *testing.T) {
 	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(nil, "tacito", newMockLLMBindingRepository(), promptRepo, skillRepo, nil, nil)
 
 	agent := &model.Agent{
-		ID:             uuid.New(),
-		Description:    "A helpful AI assistant",
-		PromptTemplate: promptID,
-		Skills:         []uuid.UUID{skillID1, skillID2},
+		ID:                uuid.New(),
+		Description:       "A helpful AI assistant",
+		Prompts:           []uuid.UUID{promptID},
+		PromptCollections: []uuid.UUID{},
+		Skills:            []uuid.UUID{skillID1, skillID2},
 	}
 
 	synthesized, err := coordinator.ResolveAndSynthesizeSystemPrompt(context.Background(), agent, "")
@@ -631,20 +646,24 @@ func TestResolveAndSynthesizeSystemPrompt_HubAgentMerging_Success(t *testing.T) 
 			model.HubSystemPromptTemplateID: {
 				ID:      model.HubSystemPromptTemplateID,
 				Content: "Role instructions: {{.Description}} and spokes: {{.Spokes}}",
+				Status:  model.PromptStatusActive,
 			},
 			businessPromptID: {
 				ID:      businessPromptID,
 				Content: "Business specific instructions.",
+				Status:  model.PromptStatusActive,
 			},
 		},
+		collections: make(map[uuid.UUID][]*model.PromptTemplate),
 	}
 
 	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(nil, "tacito", newMockLLMBindingRepository(), promptRepo, nil, nil, nil)
 
 	agent := &model.Agent{
-		ID:             uuid.New(),
-		Description:    "A helpful assistant",
-		PromptTemplate: businessPromptID,
+		ID:                uuid.New(),
+		Description:       "A helpful assistant",
+		Prompts:           []uuid.UUID{businessPromptID},
+		PromptCollections: []uuid.UUID{},
 	}
 
 	synthesized, err := coordinator.ResolveAndSynthesizeSystemPrompt(context.Background(), agent, "hub")
@@ -654,8 +673,8 @@ func TestResolveAndSynthesizeSystemPrompt_HubAgentMerging_Success(t *testing.T) 
 	err = json.Unmarshal([]byte(synthesized), &config)
 	require.NoError(t, err)
 
-	assert.Equal(t, "Role instructions: {{.Description}} and spokes: {{.Spokes}}", config.Directives)
-	assert.Equal(t, "A helpful assistant\n\nBusiness specific instructions.", config.Description)
+	assert.Equal(t, "Role instructions: {{.Description}} and spokes: {{.Spokes}}\n\nBusiness specific instructions.", config.Directives)
+	assert.Equal(t, "A helpful assistant", config.Description)
 }
 
 func TestSubmitAgentCRD_SynthesizedPromptAndTenantMapped(t *testing.T) {
@@ -667,14 +686,15 @@ func TestSubmitAgentCRD_SynthesizedPromptAndTenantMapped(t *testing.T) {
 
 	promptID := uuid.New()
 	skillID := uuid.New()
-
 	promptRepo := &mockPromptRepository{
 		templates: map[uuid.UUID]*model.PromptTemplate{
 			promptID: {
 				ID:      promptID,
 				Content: "Be short.",
+				Status:  model.PromptStatusActive,
 			},
 		},
+		collections: make(map[uuid.UUID][]*model.PromptTemplate),
 	}
 	skillRepo := &mockSkillRepository{
 		skills: map[uuid.UUID]*model.Skill{
@@ -689,15 +709,15 @@ func TestSubmitAgentCRD_SynthesizedPromptAndTenantMapped(t *testing.T) {
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(fakeClient, "tacito", newMockLLMBindingRepository(), promptRepo, skillRepo, nil, nil)
-
 	agentID := uuid.New()
 	agent := &model.Agent{
-		ID:             agentID,
-		TenantID:       "tenant-crd-tenant",
-		Name:           "agent-crd",
-		Description:    "Direct assistant",
-		PromptTemplate: promptID,
-		Skills:         []uuid.UUID{skillID},
+		ID:                agentID,
+		TenantID:          "tenant-crd-tenant",
+		Name:              "agent-crd",
+		Description:       "Direct assistant",
+		Prompts:           []uuid.UUID{promptID},
+		PromptCollections: []uuid.UUID{},
+		Skills:            []uuid.UUID{skillID},
 		Brain: model.BrainConfig{
 			LLMBindingID: uuid.New(),
 		},
@@ -731,7 +751,8 @@ func TestResolveAndSynthesizeSystemPrompt_MissingResources(t *testing.T) {
 
 	// Missing template
 	promptRepoMissing := &mockPromptRepository{
-		templates: map[uuid.UUID]*model.PromptTemplate{},
+		templates:   map[uuid.UUID]*model.PromptTemplate{},
+		collections: make(map[uuid.UUID][]*model.PromptTemplate),
 	}
 	skillRepo := &mockSkillRepository{
 		skills: map[uuid.UUID]*model.Skill{
@@ -744,8 +765,9 @@ func TestResolveAndSynthesizeSystemPrompt_MissingResources(t *testing.T) {
 
 	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(nil, "tacito", newMockLLMBindingRepository(), promptRepoMissing, skillRepo, nil, nil)
 	agent := &model.Agent{
-		ID:             uuid.New(),
-		PromptTemplate: promptID,
+		ID:                uuid.New(),
+		Prompts:           []uuid.UUID{promptID},
+		PromptCollections: []uuid.UUID{},
 	}
 
 	_, err := coordinator.ResolveAndSynthesizeSystemPrompt(context.Background(), agent, "")
@@ -756,9 +778,11 @@ func TestResolveAndSynthesizeSystemPrompt_MissingResources(t *testing.T) {
 	promptRepo := &mockPromptRepository{
 		templates: map[uuid.UUID]*model.PromptTemplate{
 			promptID: {
-				ID: promptID,
+				ID:     promptID,
+				Status: model.PromptStatusActive,
 			},
 		},
+		collections: make(map[uuid.UUID][]*model.PromptTemplate),
 	}
 	skillRepoMissing := &mockSkillRepository{
 		skills: map[uuid.UUID]*model.Skill{},
@@ -766,9 +790,10 @@ func TestResolveAndSynthesizeSystemPrompt_MissingResources(t *testing.T) {
 
 	coordinator = crdadapter.NewK8sCRDCoordinatorWithClient(nil, "tacito", newMockLLMBindingRepository(), promptRepo, skillRepoMissing, nil, nil)
 	agent = &model.Agent{
-		ID:             uuid.New(),
-		PromptTemplate: promptID,
-		Skills:         []uuid.UUID{skillID},
+		ID:                uuid.New(),
+		Prompts:           []uuid.UUID{promptID},
+		PromptCollections: []uuid.UUID{},
+		Skills:            []uuid.UUID{skillID},
 	}
 
 	_, err = coordinator.ResolveAndSynthesizeSystemPrompt(context.Background(), agent, "")
