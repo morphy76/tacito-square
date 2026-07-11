@@ -87,7 +87,6 @@ func TestAgentRepository_Lifecycle(t *testing.T) {
 			VectorDimension: 1536,
 		},
 		Skills:         []uuid.UUID{sk.ID},
-		PromptTemplate: pt.ID,
 		MCPClients: []model.MCPClientConfig{
 			{
 				ClientID: uuid.New(),
@@ -111,7 +110,6 @@ func TestAgentRepository_Lifecycle(t *testing.T) {
 		assert.Equal(t, agent.Brain.LLMBindingID, fetched.Brain.LLMBindingID)
 		assert.Equal(t, agent.ShortTermMemory.KeyNamespace, fetched.ShortTermMemory.KeyNamespace)
 		assert.Equal(t, agent.LongTermMemory.CollectionName, fetched.LongTermMemory.CollectionName)
-		assert.Equal(t, agent.PromptTemplate, fetched.PromptTemplate)
 		assert.Equal(t, agent.Status, fetched.Status)
 		assert.Equal(t, len(agent.Skills), len(fetched.Skills))
 		if len(fetched.Skills) > 0 {
