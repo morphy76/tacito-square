@@ -75,7 +75,7 @@ Milestone 5 has been completed and consolidated. For the complete list of specif
 | SPEC-FR-M6.5.1 | Agent Role as Community Assignment Behavior | VERIFIED | keeper, operator | [SPEC-FR-M6.5.1](functional/M6.5/SPEC-FR-M6.5.1.md) |
 | SPEC-FR-M6.5.2 | LLM Binding CRUD APIs | VERIFIED | keeper | [SPEC-FR-M6.5.2](functional/M6.5/SPEC-FR-M6.5.2.md) |
 | SPEC-FR-M6.5.3 | Prompt & PromptCollection CRUD APIs + Agent Association | VERIFIED | keeper | [SPEC-FR-M6.5.3](functional/M6.5/SPEC-FR-M6.5.3.md) |
-| SPEC-FR-M6.5.4 | Skill & SkillCollection CRUD APIs + Agent Association | DRAFT | keeper | [SPEC-FR-M6.5.4](functional/M6.5/SPEC-FR-M6.5.4.md) |
+| SPEC-FR-M6.5.4 | Skill & SkillCollection CRUD APIs + Agent Association | ACCEPTED | keeper | [SPEC-FR-M6.5.4](functional/M6.5/SPEC-FR-M6.5.4.md) |
 | SPEC-FR-M6.5.5 | MCP Client CRUD APIs + Per-Agent Tool Filter | DRAFT | keeper | [SPEC-FR-M6.5.5](functional/M6.5/SPEC-FR-M6.5.5.md) |
 | SPEC-FR-M6.5.6 | PropagatedAgentConfig: Shared Schema & Reconciler Delivery Protocol | DRAFT | shared, keeper, operator, agent | [SPEC-FR-M6.5.6](functional/M6.5/SPEC-FR-M6.5.6.md) |
 | SPEC-FR-M6.5.7 | Role-Driven System Prompt Templates (Helm ConfigMaps) | DRAFT | agent, operator, deploy | [SPEC-FR-M6.5.7](functional/M6.5/SPEC-FR-M6.5.7.md) |
