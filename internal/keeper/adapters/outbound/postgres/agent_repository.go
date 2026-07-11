@@ -68,6 +68,12 @@ func (r *AgentRepository) Create(ctx context.Context, a *model.Agent) error {
 		if err := r.saveSkills(ctx, tx, a.ID, a.Skills); err != nil {
 			return err
 		}
+		if err := r.savePrompts(ctx, tx, a.ID, a.Prompts); err != nil {
+			return err
+		}
+		if err := r.savePromptCollections(ctx, tx, a.ID, a.PromptCollections); err != nil {
+			return err
+		}
 		return nil
 	})
 }
@@ -120,6 +126,18 @@ func (r *AgentRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Age
 	}
 	a.Skills = skills
 
+	prompts, err := r.loadPrompts(ctx, a.ID)
+	if err != nil {
+		return nil, fmt.Errorf("load prompts for agent: %w", err)
+	}
+	a.Prompts = prompts
+
+	promptCollections, err := r.loadPromptCollections(ctx, a.ID)
+	if err != nil {
+		return nil, fmt.Errorf("load prompt collections for agent: %w", err)
+	}
+	a.PromptCollections = promptCollections
+
 	return &a, nil
 }
 
@@ -170,6 +188,18 @@ func (r *AgentRepository) GetByName(ctx context.Context, name string) (*model.Ag
 		return nil, fmt.Errorf("load skills for agent: %w", err)
 	}
 	a.Skills = skills
+
+	prompts, err := r.loadPrompts(ctx, a.ID)
+	if err != nil {
+		return nil, fmt.Errorf("load prompts for agent: %w", err)
+	}
+	a.Prompts = prompts
+
+	promptCollections, err := r.loadPromptCollections(ctx, a.ID)
+	if err != nil {
+		return nil, fmt.Errorf("load prompt collections for agent: %w", err)
+	}
+	a.PromptCollections = promptCollections
 
 	return &a, nil
 }
@@ -227,6 +257,18 @@ func (r *AgentRepository) List(ctx context.Context) ([]*model.Agent, error) {
 		}
 		a.Skills = skills
 
+		prompts, err := r.loadPrompts(ctx, a.ID)
+		if err != nil {
+			return nil, fmt.Errorf("load prompts for agent: %w", err)
+		}
+		a.Prompts = prompts
+
+		promptCollections, err := r.loadPromptCollections(ctx, a.ID)
+		if err != nil {
+			return nil, fmt.Errorf("load prompt collections for agent: %w", err)
+		}
+		a.PromptCollections = promptCollections
+
 		agents = append(agents, &a)
 	}
 	return agents, nil
@@ -277,6 +319,12 @@ func (r *AgentRepository) Update(ctx context.Context, a *model.Agent) error {
 		}
 
 		if err := r.saveSkills(ctx, tx, a.ID, a.Skills); err != nil {
+			return err
+		}
+		if err := r.savePrompts(ctx, tx, a.ID, a.Prompts); err != nil {
+			return err
+		}
+		if err := r.savePromptCollections(ctx, tx, a.ID, a.PromptCollections); err != nil {
 			return err
 		}
 		return nil
@@ -335,6 +383,76 @@ func (r *AgentRepository) saveSkills(ctx context.Context, exec PgxExecutor, agen
 		_, err = exec.Exec(ctx, `INSERT INTO agent_skills (agent_id, skill_id) VALUES ($1, $2)`, agentID, skillID)
 		if err != nil {
 			return fmt.Errorf("insert agent skill: %w", err)
+		}
+	}
+	return nil
+}
+
+func (r *AgentRepository) loadPrompts(ctx context.Context, agentID uuid.UUID) ([]uuid.UUID, error) {
+	query := `SELECT prompt_template_id FROM agent_prompts WHERE agent_id = $1 ORDER BY position ASC`
+	exec := GetExecutor(ctx, r.pool)
+	rows, err := exec.Query(ctx, query, agentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var prompts []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		prompts = append(prompts, id)
+	}
+	return prompts, nil
+}
+
+func (r *AgentRepository) savePrompts(ctx context.Context, exec PgxExecutor, agentID uuid.UUID, promptIDs []uuid.UUID) error {
+	_, err := exec.Exec(ctx, `DELETE FROM agent_prompts WHERE agent_id = $1`, agentID)
+	if err != nil {
+		return fmt.Errorf("delete old agent prompts: %w", err)
+	}
+
+	for pos, promptID := range promptIDs {
+		_, err = exec.Exec(ctx, `INSERT INTO agent_prompts (agent_id, prompt_template_id, position) VALUES ($1, $2, $3)`, agentID, promptID, pos)
+		if err != nil {
+			return fmt.Errorf("insert agent prompt: %w", err)
+		}
+	}
+	return nil
+}
+
+func (r *AgentRepository) loadPromptCollections(ctx context.Context, agentID uuid.UUID) ([]uuid.UUID, error) {
+	query := `SELECT prompt_collection_id FROM agent_prompt_collections WHERE agent_id = $1 ORDER BY position ASC`
+	exec := GetExecutor(ctx, r.pool)
+	rows, err := exec.Query(ctx, query, agentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var collections []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		collections = append(collections, id)
+	}
+	return collections, nil
+}
+
+func (r *AgentRepository) savePromptCollections(ctx context.Context, exec PgxExecutor, agentID uuid.UUID, collectionIDs []uuid.UUID) error {
+	_, err := exec.Exec(ctx, `DELETE FROM agent_prompt_collections WHERE agent_id = $1`, agentID)
+	if err != nil {
+		return fmt.Errorf("delete old agent prompt collections: %w", err)
+	}
+
+	for pos, colID := range collectionIDs {
+		_, err = exec.Exec(ctx, `INSERT INTO agent_prompt_collections (agent_id, prompt_collection_id, position) VALUES ($1, $2, $3)`, agentID, colID, pos)
+		if err != nil {
+			return fmt.Errorf("insert agent prompt collection: %w", err)
 		}
 	}
 	return nil

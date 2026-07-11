@@ -77,3 +77,26 @@ func (c PromptCollection) Validate() error {
 	}
 	return nil
 }
+
+// PromptVersion represents a specific immutable content snapshot of a prompt template.
+type PromptVersion struct {
+	ID              uuid.UUID `json:"id"`
+	PromptID        uuid.UUID `json:"prompt_id"`
+	VersionNumber   int       `json:"version_number"`
+	ContentSnapshot string    `json:"content_snapshot"`
+	CreatedAt       time.Time `json:"created_at"`
+}
+
+// Validate checks business invariants for PromptVersion.
+func (v PromptVersion) Validate() error {
+	if v.ID == uuid.Nil {
+		return errors.New("id is required")
+	}
+	if v.PromptID == uuid.Nil {
+		return errors.New("prompt id is required")
+	}
+	if v.VersionNumber <= 0 {
+		return errors.New("version number must be positive")
+	}
+	return nil
+}

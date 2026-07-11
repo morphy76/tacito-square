@@ -245,6 +245,88 @@ func TestPromptRepository_Lifecycle(t *testing.T) {
 		_ = repo.DeleteTemplate(ctxB, ptB.ID)
 	})
 
+	t.Run("Prompt Versioning on Update", func(t *testing.T) {
+		ptVer := &model.PromptTemplate{
+			ID:        uuid.New(),
+			Name:      "test-versioned-prompt",
+			Content:   "Original Content",
+			Status:    model.PromptStatusActive,
+			CreatedAt: time.Now().UTC(),
+		}
+		err := repo.CreateTemplate(ctx, ptVer)
+		require.NoError(t, err)
+
+		// 1. Get latest version — should be version 1
+		lv, err := repo.GetLatestVersion(ctx, ptVer.ID)
+		require.NoError(t, err)
+		assert.Equal(t, 1, lv.VersionNumber)
+		assert.Equal(t, "Original Content", lv.ContentSnapshot)
+
+		// 2. Update with modified content
+		ptVer.Content = "Modified Content"
+		err = repo.UpdateTemplate(ctx, ptVer)
+		require.NoError(t, err)
+
+		// Verify new version was created
+		lv, err = repo.GetLatestVersion(ctx, ptVer.ID)
+		require.NoError(t, err)
+		assert.Equal(t, 2, lv.VersionNumber)
+		assert.Equal(t, "Modified Content", lv.ContentSnapshot)
+
+		// ResolveTemplate content should be from latest version (v2)
+		fetched, err := repo.GetTemplateByID(ctx, ptVer.ID)
+		require.NoError(t, err)
+		assert.Equal(t, "Modified Content", fetched.Content)
+
+		// Content in prompt_templates table remains unchanged
+		var rawContent string
+		err = pool.QueryRow(ctx, "SELECT content FROM prompt_templates WHERE id = $1", ptVer.ID).Scan(&rawContent)
+		require.NoError(t, err)
+		assert.Equal(t, "Original Content", rawContent)
+
+		// Clean up
+		_ = repo.DeleteTemplate(ctx, ptVer.ID)
+	})
+
+	t.Run("Collection Prompt Membership and Conflict", func(t *testing.T) {
+		ptMem := &model.PromptTemplate{
+			ID:        uuid.New(),
+			Name:      "test-mem-prompt",
+			Content:   "Mem",
+			Status:    model.PromptStatusActive,
+			CreatedAt: time.Now().UTC(),
+		}
+		err := repo.CreateTemplate(ctx, ptMem)
+		require.NoError(t, err)
+
+		collMem := &model.PromptCollection{
+			ID:        uuid.New(),
+			Name:      "test-mem-coll",
+			Templates: []uuid.UUID{},
+			CreatedAt: time.Now().UTC(),
+			UpdatedAt: time.Now().UTC(),
+		}
+		err = repo.CreateCollection(ctx, collMem)
+		require.NoError(t, err)
+
+		// Add prompt to collection
+		err = repo.AddPromptToCollection(ctx, collMem.ID, ptMem.ID)
+		require.NoError(t, err)
+
+		// Add duplicate prompt — should fail with 409 conflict
+		err = repo.AddPromptToCollection(ctx, collMem.ID, ptMem.ID)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "409 Conflict")
+
+		// Remove prompt
+		err = repo.RemovePromptFromCollection(ctx, collMem.ID, ptMem.ID)
+		require.NoError(t, err)
+
+		// Clean up
+		_ = repo.DeleteCollection(ctx, collMem.ID)
+		_ = repo.DeleteTemplate(ctx, ptMem.ID)
+	})
+
 	t.Run("Delete Collection", func(t *testing.T) {
 		err := repo.DeleteCollection(ctx, collection.ID)
 		require.NoError(t, err)
