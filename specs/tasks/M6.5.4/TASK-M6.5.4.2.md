@@ -3,7 +3,7 @@
 | Field       | Value |
 |-------------|-------|
 | ID          | TASK-M6.5.4.2 |
-| Status      | IN_PROGRESS |
+| Status      | IMPLEMENTED |
 | Spec        | SPEC-FR-M6.5.4 |
 | Depends On  | TASK-M6.5.4.1 |
 
