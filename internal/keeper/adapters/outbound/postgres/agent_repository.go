@@ -74,6 +74,9 @@ func (r *AgentRepository) Create(ctx context.Context, a *model.Agent) error {
 		if err := r.savePromptCollections(ctx, tx, a.ID, a.PromptCollections); err != nil {
 			return err
 		}
+		if err := r.saveAgentSkillCollections(ctx, tx, a.ID, a.SkillCollections); err != nil {
+			return err
+		}
 		return nil
 	})
 }
@@ -138,6 +141,12 @@ func (r *AgentRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Age
 	}
 	a.PromptCollections = promptCollections
 
+	skillCollections, err := r.loadAgentSkillCollections(ctx, a.ID)
+	if err != nil {
+		return nil, fmt.Errorf("load skill collections for agent: %w", err)
+	}
+	a.SkillCollections = skillCollections
+
 	return &a, nil
 }
 
@@ -200,6 +209,12 @@ func (r *AgentRepository) GetByName(ctx context.Context, name string) (*model.Ag
 		return nil, fmt.Errorf("load prompt collections for agent: %w", err)
 	}
 	a.PromptCollections = promptCollections
+
+	skillCollections, err := r.loadAgentSkillCollections(ctx, a.ID)
+	if err != nil {
+		return nil, fmt.Errorf("load skill collections for agent: %w", err)
+	}
+	a.SkillCollections = skillCollections
 
 	return &a, nil
 }
@@ -269,6 +284,12 @@ func (r *AgentRepository) List(ctx context.Context) ([]*model.Agent, error) {
 		}
 		a.PromptCollections = promptCollections
 
+		skillCollections, err := r.loadAgentSkillCollections(ctx, a.ID)
+		if err != nil {
+			return nil, fmt.Errorf("load skill collections for agent: %w", err)
+		}
+		a.SkillCollections = skillCollections
+
 		agents = append(agents, &a)
 	}
 	return agents, nil
@@ -325,6 +346,9 @@ func (r *AgentRepository) Update(ctx context.Context, a *model.Agent) error {
 			return err
 		}
 		if err := r.savePromptCollections(ctx, tx, a.ID, a.PromptCollections); err != nil {
+			return err
+		}
+		if err := r.saveAgentSkillCollections(ctx, tx, a.ID, a.SkillCollections); err != nil {
 			return err
 		}
 		return nil
@@ -457,6 +481,42 @@ func (r *AgentRepository) savePromptCollections(ctx context.Context, exec PgxExe
 	}
 	return nil
 }
+
+func (r *AgentRepository) loadAgentSkillCollections(ctx context.Context, agentID uuid.UUID) ([]uuid.UUID, error) {
+	query := `SELECT skill_collection_id FROM agent_skill_collections WHERE agent_id = $1 ORDER BY position ASC`
+	exec := GetExecutor(ctx, r.pool)
+	rows, err := exec.Query(ctx, query, agentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var collections []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		collections = append(collections, id)
+	}
+	return collections, nil
+}
+
+func (r *AgentRepository) saveAgentSkillCollections(ctx context.Context, exec PgxExecutor, agentID uuid.UUID, collectionIDs []uuid.UUID) error {
+	_, err := exec.Exec(ctx, `DELETE FROM agent_skill_collections WHERE agent_id = $1`, agentID)
+	if err != nil {
+		return fmt.Errorf("delete old agent skill collections: %w", err)
+	}
+
+	for pos, colID := range collectionIDs {
+		_, err = exec.Exec(ctx, `INSERT INTO agent_skill_collections (agent_id, skill_collection_id, position) VALUES ($1, $2, $3)`, agentID, colID, pos)
+		if err != nil {
+			return fmt.Errorf("insert agent skill collection: %w", err)
+		}
+	}
+	return nil
+}
+
 
 // AssignToCommunity binds an Agent template to a Community within a transaction-safe context.
 func (r *AgentRepository) AssignToCommunity(ctx context.Context, agentID uuid.UUID, communityID uuid.UUID) error {

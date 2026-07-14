@@ -57,8 +57,9 @@ type Agent struct {
 	Brain           BrainConfig           `json:"brain"`
 	ShortTermMemory ShortTermMemoryConfig `json:"short_term_memory"`
 	LongTermMemory  LongTermMemoryConfig  `json:"long_term_memory,omitempty"`
-	Skills          []uuid.UUID           `json:"skills,omitempty"`
-	Prompts         []uuid.UUID           `json:"prompts,omitempty"`
+	Skills            []uuid.UUID           `json:"skills,omitempty"`
+	SkillCollections  []uuid.UUID           `json:"skill_collections,omitempty"`
+	Prompts           []uuid.UUID           `json:"prompts,omitempty"`
 	PromptCollections []uuid.UUID         `json:"prompt_collections,omitempty"`
 	MCPClients      []MCPClientConfig     `json:"mcp_clients,omitempty"`
 	Status          AgentStatus           `json:"status"`

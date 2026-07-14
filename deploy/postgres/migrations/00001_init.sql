@@ -282,6 +282,18 @@ FROM prompt_templates
 WHERE id = 'ffffffff-0000-0000-0000-000000000001'
 ON CONFLICT DO NOTHING;
 
+-- ============================================================
+-- Agent Skill Collections (Join Table)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS agent_skill_collections (
+    agent_id            UUID    NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+    skill_collection_id UUID    NOT NULL REFERENCES skill_collections(id) ON DELETE CASCADE,
+    position            INT     NOT NULL DEFAULT 0,
+    PRIMARY KEY (agent_id, skill_collection_id)
+);
+CREATE INDEX IF NOT EXISTS idx_agent_skill_collections_agent_id
+    ON agent_skill_collections(agent_id);
+
 -- +goose StatementEnd
 
 -- +goose Down
@@ -293,6 +305,7 @@ DROP TABLE IF EXISTS agent_registrations;
 DROP TABLE IF EXISTS agent_prompt_collections;
 DROP TABLE IF EXISTS agent_prompts;
 DROP TABLE IF EXISTS agent_skills;
+DROP TABLE IF EXISTS agent_skill_collections;
 DROP TABLE IF EXISTS agents;
 DROP TABLE IF EXISTS communities;
 DROP TABLE IF EXISTS prompt_collection_templates;

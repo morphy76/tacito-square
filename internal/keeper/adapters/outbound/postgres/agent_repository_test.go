@@ -78,6 +78,18 @@ func TestAgentRepository_Lifecycle(t *testing.T) {
 	err = skillRepo.Create(ctx, sk)
 	require.NoError(t, err)
 
+	// Create a prerequisite skill collection
+	scCol := &model.SkillCollection{
+		ID:          uuid.New(),
+		Name:        "test-skill-collection",
+		Description: "A test collection of skills",
+		Skills:      []uuid.UUID{sk.ID},
+		CreatedAt:   time.Now().UTC(),
+		UpdatedAt:   time.Now().UTC(),
+	}
+	err = skillRepo.CreateCollection(ctx, scCol)
+	require.NoError(t, err)
+
 	tempVal := 0.7
 	maxTokensVal := 2048
 	agent := &model.Agent{
@@ -98,6 +110,7 @@ func TestAgentRepository_Lifecycle(t *testing.T) {
 			VectorDimension: 1536,
 		},
 		Skills:            []uuid.UUID{sk.ID},
+		SkillCollections:  []uuid.UUID{scCol.ID},
 		Prompts:           []uuid.UUID{pt.ID},
 		PromptCollections: []uuid.UUID{col.ID},
 		MCPClients: []model.MCPClientConfig{
@@ -134,6 +147,7 @@ func TestAgentRepository_Lifecycle(t *testing.T) {
 		}
 		assert.Equal(t, agent.Prompts, fetched.Prompts)
 		assert.Equal(t, agent.PromptCollections, fetched.PromptCollections)
+		assert.Equal(t, agent.SkillCollections, fetched.SkillCollections)
 	})
 
 	t.Run("Get Agent by Name", func(t *testing.T) {
@@ -161,6 +175,7 @@ func TestAgentRepository_Lifecycle(t *testing.T) {
 		agent.Brain.Temperature = ptrFloat64(0.9)
 		agent.Status = model.AgentStatusActive
 		agent.Skills = []uuid.UUID{} // Clear skills
+		agent.SkillCollections = []uuid.UUID{} // Clear skill collections
 		agent.Prompts = []uuid.UUID{} // Clear prompts
 		agent.PromptCollections = []uuid.UUID{} // Clear collections
 		agent.MCPClients = append(agent.MCPClients, model.MCPClientConfig{ClientID: uuid.New()})
@@ -174,6 +189,7 @@ func TestAgentRepository_Lifecycle(t *testing.T) {
 		assert.Equal(t, 0.9, *fetched.Brain.Temperature)
 		assert.Equal(t, model.AgentStatusActive, fetched.Status)
 		assert.Empty(t, fetched.Skills)
+		assert.Empty(t, fetched.SkillCollections)
 		assert.Empty(t, fetched.Prompts)
 		assert.Empty(t, fetched.PromptCollections)
 		assert.Len(t, fetched.MCPClients, 2)
