@@ -39,6 +39,17 @@ type SkillCollection struct {
 	UpdatedAt   time.Time   `json:"updated_at"`
 }
 
+// ResolvedSkill represents a skill in an agent's effective skill list, enriched with source metadata.
+type ResolvedSkill struct {
+	ID           uuid.UUID   `json:"id"`
+	Name         string      `json:"name"`
+	Description  string      `json:"description"`
+	Content      string      `json:"content"`
+	Status       SkillStatus `json:"status"`
+	Source       string      `json:"source"` // "collection" or "individual"
+	CollectionID *uuid.UUID  `json:"collection_id"`
+}
+
 // Validate checks all business rules and invariants of the Skill aggregate.
 func (s Skill) Validate() error {
 	if s.ID == uuid.Nil {
