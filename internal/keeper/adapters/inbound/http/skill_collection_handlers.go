@@ -309,3 +309,107 @@ func (h *SkillHandler) ResolveCollection(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, resolved)
 }
+
+// AddSkillToCollection handles POST /api/v1/skill-collections/:id/skills/:skill_id
+func (h *SkillHandler) AddSkillToCollection(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.add_skill_to_collection", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithContext(logger, ctx)
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	collectionID, ok := h.parseUUID(c, "id")
+	if !ok {
+		return
+	}
+
+	skillID, ok := h.parseUUID(c, "skill_id")
+	if !ok {
+		return
+	}
+
+	if err := h.repo.AddSkillToCollection(ctx, collectionID, skillID); err != nil {
+		if strings.Contains(err.Error(), "already member") || strings.Contains(err.Error(), "already exists") {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		reqLogger.Error().Err(err).Msg("failed to add skill to collection")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	col, err := h.repo.GetCollectionByID(ctx, collectionID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	reqLogger.Info().
+		Str("tenant_id", ten.FullName()).
+		Str("collection_id", collectionID.String()).
+		Str("skill_id", skillID.String()).
+		Msg("Skill successfully added to collection")
+
+	c.JSON(http.StatusOK, col)
+}
+
+// RemoveSkillFromCollection handles DELETE /api/v1/skill-collections/:id/skills/:skill_id
+func (h *SkillHandler) RemoveSkillFromCollection(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.remove_skill_from_collection", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithContext(logger, ctx)
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	collectionID, ok := h.parseUUID(c, "id")
+	if !ok {
+		return
+	}
+
+	skillID, ok := h.parseUUID(c, "skill_id")
+	if !ok {
+		return
+	}
+
+	if err := h.repo.RemoveSkillFromCollection(ctx, collectionID, skillID); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		reqLogger.Error().Err(err).Msg("failed to remove skill from collection")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	col, err := h.repo.GetCollectionByID(ctx, collectionID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	reqLogger.Info().
+		Str("tenant_id", ten.FullName()).
+		Str("collection_id", collectionID.String()).
+		Str("skill_id", skillID.String()).
+		Msg("Skill successfully removed from collection")
+
+	c.JSON(http.StatusOK, col)
+}

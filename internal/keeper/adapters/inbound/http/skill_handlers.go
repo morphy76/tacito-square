@@ -368,4 +368,197 @@ func (h *SkillHandler) DetachSkillFromAgent(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// PatchSkillStatusRequest defines the PATCH payload.
+type PatchSkillStatusRequest struct {
+	Status model.SkillStatus `json:"status" binding:"required"`
+}
+
+// PatchStatus handles PATCH /api/v1/skills/:id
+func (h *SkillHandler) PatchStatus(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.patch_skill_status", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithContext(logger, ctx)
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	id, ok := h.parseUUID(c, "id")
+	if !ok {
+		return
+	}
+
+	var req PatchSkillStatusRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if req.Status != model.SkillStatusActive && req.Status != model.SkillStatusSuspended && req.Status != model.SkillStatusInactive {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid skill status"})
+		return
+	}
+
+	updated, err := h.repo.PatchStatus(ctx, id, req.Status)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		reqLogger.Error().Err(err).Msg("failed to patch skill status")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	reqLogger.Info().
+		Str("tenant_id", ten.FullName()).
+		Str("skill_id", id.String()).
+		Str("status", string(req.Status)).
+		Msg("Skill status successfully patched")
+
+	c.JSON(http.StatusOK, updated)
+}
+
+// AttachCollectionToAgent handles POST /api/v1/agents/:agent_id/skill-collections/:collection_id
+func (h *SkillHandler) AttachCollectionToAgent(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.attach_collection_to_agent", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithContext(logger, ctx)
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	agentID, ok := h.parseUUID(c, "agent_id")
+	if !ok {
+		return
+	}
+
+	collectionID, ok := h.parseUUID(c, "collection_id")
+	if !ok {
+		return
+	}
+
+	if err := h.repo.AttachCollectionToAgent(ctx, agentID, collectionID); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		reqLogger.Error().Err(err).Msg("failed to attach collection to agent")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	reqLogger.Info().
+		Str("tenant_id", ten.FullName()).
+		Str("agent_id", agentID.String()).
+		Str("collection_id", collectionID.String()).
+		Msg("Skill collection successfully attached to agent")
+
+	c.JSON(http.StatusOK, gin.H{"status": "attached"})
+}
+
+// DetachCollectionFromAgent handles DELETE /api/v1/agents/:agent_id/skill-collections/:collection_id
+func (h *SkillHandler) DetachCollectionFromAgent(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.detach_collection_from_agent", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithContext(logger, ctx)
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	agentID, ok := h.parseUUID(c, "agent_id")
+	if !ok {
+		return
+	}
+
+	collectionID, ok := h.parseUUID(c, "collection_id")
+	if !ok {
+		return
+	}
+
+	if err := h.repo.DetachCollectionFromAgent(ctx, agentID, collectionID); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		reqLogger.Error().Err(err).Msg("failed to detach collection from agent")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	reqLogger.Info().
+		Str("tenant_id", ten.FullName()).
+		Str("agent_id", agentID.String()).
+		Str("collection_id", collectionID.String()).
+		Msg("Skill collection successfully detached from agent")
+
+	c.Status(http.StatusNoContent)
+}
+
+// ResolvedSkillsResponse defines the resolved skills payload.
+type ResolvedSkillsResponse struct {
+	AgentID        uuid.UUID              `json:"agent_id"`
+	ResolvedSkills []*model.ResolvedSkill `json:"resolved_skills"`
+	Total          int                    `json:"total"`
+}
+
+// GetResolvedSkills handles GET /api/v1/agents/:agent_id/skills
+func (h *SkillHandler) GetResolvedSkills(c *gin.Context) {
+	ctx, span := otel.Tracer("keeper").Start(c.Request.Context(), "http.get_resolved_agent_skills", trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
+
+	logger := observability.NewLogger("info", os.Stdout)
+	reqLogger := observability.WithContext(logger, ctx)
+
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		reqLogger.Warn().Msg("unauthorized: missing tenant context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "tenant is required"})
+		return
+	}
+
+	agentID, ok := h.parseUUID(c, "agent_id")
+	if !ok {
+		return
+	}
+
+	resolved, err := h.repo.ResolveAgentSkills(ctx, agentID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		reqLogger.Error().Err(err).Msg("failed to resolve agent skills")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if resolved == nil {
+		resolved = make([]*model.ResolvedSkill, 0)
+	}
+
+	c.JSON(http.StatusOK, ResolvedSkillsResponse{
+		AgentID:        agentID,
+		ResolvedSkills: resolved,
+		Total:          len(resolved),
+	})
+}
+
 

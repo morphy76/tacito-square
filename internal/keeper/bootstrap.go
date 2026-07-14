@@ -193,7 +193,7 @@ func NewServer(
 	promptHandler := httpAdapter.NewPromptHandler(promptService)
 	agentHandler := httpAdapter.NewAgentHandler(agentService)
 	communityHandler := httpAdapter.NewCommunityHandler(communityService)
-	assignmentHandler := httpAdapter.NewAssignmentHandler(communityService)
+	assignmentHandler := httpAdapter.NewAssignmentHandler(communityService, agentService)
 	lifecycleHandler := httpAdapter.NewLifecycleHandler(lifecycleService)
 	eventHandler := httpAdapter.NewEventHandler(eventService, eventService)
 	cardHandler := httpAdapter.NewCardHandler(agentRepo, communityRepo)
@@ -219,9 +219,13 @@ func NewServer(
 		v1.GET("/skills/:id", skillHandler.GetByID)
 		v1.PUT("/skills/:id", skillHandler.Update)
 		v1.DELETE("/skills/:id", skillHandler.Delete)
+		v1.PATCH("/skills/:id", skillHandler.PatchStatus)
 
 		v1.POST("/agents/:agent_id/skills/:skill_id", skillHandler.AttachSkillToAgent)
 		v1.DELETE("/agents/:agent_id/skills/:skill_id", skillHandler.DetachSkillFromAgent)
+		v1.POST("/agents/:agent_id/skill-collections/:collection_id", skillHandler.AttachCollectionToAgent)
+		v1.DELETE("/agents/:agent_id/skill-collections/:collection_id", skillHandler.DetachCollectionFromAgent)
+		v1.GET("/agents/:agent_id/skills", skillHandler.GetResolvedSkills)
 
 		v1.POST("/skill-collections", skillHandler.CreateCollection)
 		v1.GET("/skill-collections", skillHandler.ListCollections)
@@ -229,6 +233,8 @@ func NewServer(
 		v1.PUT("/skill-collections/:id", skillHandler.UpdateCollection)
 		v1.DELETE("/skill-collections/:id", skillHandler.DeleteCollection)
 		v1.GET("/skill-collections/:id/resolve", skillHandler.ResolveCollection)
+		v1.POST("/skill-collections/:id/skills/:skill_id", skillHandler.AddSkillToCollection)
+		v1.DELETE("/skill-collections/:id/skills/:skill_id", skillHandler.RemoveSkillFromCollection)
 
 		v1.POST("/prompts", promptHandler.CreateTemplate)
 		v1.GET("/prompts", promptHandler.ListTemplates)

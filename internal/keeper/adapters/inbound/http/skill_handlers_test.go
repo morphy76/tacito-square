@@ -601,4 +601,180 @@ func TestSkillHandlers_Collections(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, resp.Code)
 	})
+
+	t.Run("Patch Skill Status Successfully", func(t *testing.T) {
+		repo := new(MockSkillUseCase)
+		handler := NewSkillHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.PATCH("/api/v1/skills/:id", handler.PatchStatus)
+
+		id := uuid.New()
+		updated := &model.Skill{
+			ID:     id,
+			Name:   "web-search",
+			Status: model.SkillStatusSuspended,
+		}
+
+		repo.On("PatchStatus", mock.Anything, id, model.SkillStatusSuspended).Return(updated, nil)
+
+		payload := map[string]interface{}{
+			"status": "suspended",
+		}
+		body, _ := json.Marshal(payload)
+		req, _ := http.NewRequest(http.MethodPatch, "/api/v1/skills/"+id.String(), bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
+
+		var respBody map[string]interface{}
+		err := json.Unmarshal(resp.Body.Bytes(), &respBody)
+		assert.NoError(t, err)
+		assert.Equal(t, "suspended", respBody["status"])
+	})
+
+	t.Run("Add Skill to Collection Successfully", func(t *testing.T) {
+		repo := new(MockSkillUseCase)
+		handler := NewSkillHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.POST("/api/v1/skill-collections/:id/skills/:skill_id", handler.AddSkillToCollection)
+
+		collectionID := uuid.New()
+		skillID := uuid.New()
+		col := &model.SkillCollection{
+			ID:   collectionID,
+			Name: "general-skills",
+		}
+
+		repo.On("AddSkillToCollection", mock.Anything, collectionID, skillID).Return(nil)
+		repo.On("GetCollectionByID", mock.Anything, collectionID).Return(col, nil)
+
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/skill-collections/"+collectionID.String()+"/skills/"+skillID.String(), nil)
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
+
+		var respBody map[string]interface{}
+		err := json.Unmarshal(resp.Body.Bytes(), &respBody)
+		assert.NoError(t, err)
+		assert.Equal(t, "general-skills", respBody["name"])
+	})
+
+	t.Run("Remove Skill from Collection Successfully", func(t *testing.T) {
+		repo := new(MockSkillUseCase)
+		handler := NewSkillHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.DELETE("/api/v1/skill-collections/:id/skills/:skill_id", handler.RemoveSkillFromCollection)
+
+		collectionID := uuid.New()
+		skillID := uuid.New()
+		col := &model.SkillCollection{
+			ID:   collectionID,
+			Name: "general-skills",
+		}
+
+		repo.On("RemoveSkillFromCollection", mock.Anything, collectionID, skillID).Return(nil)
+		repo.On("GetCollectionByID", mock.Anything, collectionID).Return(col, nil)
+
+		req, _ := http.NewRequest(http.MethodDelete, "/api/v1/skill-collections/"+collectionID.String()+"/skills/"+skillID.String(), nil)
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
+
+		var respBody map[string]interface{}
+		err := json.Unmarshal(resp.Body.Bytes(), &respBody)
+		assert.NoError(t, err)
+		assert.Equal(t, "general-skills", respBody["name"])
+	})
+
+	t.Run("Attach Collection to Agent Successfully", func(t *testing.T) {
+		repo := new(MockSkillUseCase)
+		handler := NewSkillHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.POST("/api/v1/agents/:agent_id/skill-collections/:collection_id", handler.AttachCollectionToAgent)
+
+		agentID := uuid.New()
+		collectionID := uuid.New()
+
+		repo.On("AttachCollectionToAgent", mock.Anything, agentID, collectionID).Return(nil)
+
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/agents/"+agentID.String()+"/skill-collections/"+collectionID.String(), nil)
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
+		assert.Contains(t, resp.Body.String(), "attached")
+	})
+
+	t.Run("Detach Collection from Agent Successfully", func(t *testing.T) {
+		repo := new(MockSkillUseCase)
+		handler := NewSkillHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.DELETE("/api/v1/agents/:agent_id/skill-collections/:collection_id", handler.DetachCollectionFromAgent)
+
+		agentID := uuid.New()
+		collectionID := uuid.New()
+
+		repo.On("DetachCollectionFromAgent", mock.Anything, agentID, collectionID).Return(nil)
+
+		req, _ := http.NewRequest(http.MethodDelete, "/api/v1/agents/"+agentID.String()+"/skill-collections/"+collectionID.String(), nil)
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusNoContent, resp.Code)
+	})
+
+	t.Run("Get Resolved Agent Skills Successfully", func(t *testing.T) {
+		repo := new(MockSkillUseCase)
+		handler := NewSkillHandler(repo)
+
+		r := gin.New()
+		r.Use(testTenantMiddleware())
+		r.GET("/api/v1/agents/:agent_id/skills", handler.GetResolvedSkills)
+
+		agentID := uuid.New()
+		resolved := []*model.ResolvedSkill{
+			{
+				ID:           uuid.New(),
+				Name:         "web-search",
+				Source:       "collection",
+				CollectionID: func() *uuid.UUID { u := uuid.New(); return &u }(),
+			},
+		}
+
+		repo.On("ResolveAgentSkills", mock.Anything, agentID).Return(resolved, nil)
+
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/agents/"+agentID.String()+"/skills", nil)
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
+
+		var respBody map[string]interface{}
+		err := json.Unmarshal(resp.Body.Bytes(), &respBody)
+		assert.NoError(t, err)
+		assert.Equal(t, float64(1), respBody["total"])
+		skillsVal := respBody["resolved_skills"].([]interface{})
+		assert.Len(t, skillsVal, 1)
+		assert.Equal(t, "web-search", skillsVal[0].(map[string]interface{})["name"])
+	})
 }

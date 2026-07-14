@@ -785,6 +785,92 @@
           }
         },
         "description": "Removes a skill definition by UUID. Why: Cleans up obsolete behavioral directives."
+      },
+      "patch": {
+        "summary": "Transition skill status",
+        "operationId": "patchSkillStatus",
+        "tags": [
+          "agent-config/skills"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Skill capability to transition.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "active",
+                      "suspended",
+                      "inactive"
+                    ],
+                    "description": "The new status for the skill."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully updated Skill status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Skill"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Skill not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Transition skill status between active, suspended, and inactive."
       }
     },
     "/agents/{agent_id}/skills/{skill_id}": {
@@ -910,6 +996,185 @@
           }
         },
         "description": "Removes a mounted skill capability from an agent template. Why: Revokes the agent's access to specific guidelines or tool constraints."
+      }
+    },
+    "/agents/{agent_id}/skills": {
+      "get": {
+        "summary": "Get resolved skills for an agent",
+        "operationId": "getResolvedAgentSkills",
+        "tags": [
+          "agent-config/skills"
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Agent.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved resolved skills",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolvedSkillsResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Returns the effective resolved skill list for the specified agent template, containing union-resolved and deduplicated active skills."
+      }
+    },
+    "/agents/{agent_id}/skill-collections/{collection_id}": {
+      "post": {
+        "summary": "Attach a Skill Collection to an Agent",
+        "operationId": "attachSkillCollectionToAgent",
+        "tags": [
+          "agent-config/skill-collections"
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Agent.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "collection_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Skill Collection.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully attached skill collection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "attached"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent or Collection not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Mounts a skill collection bundle onto an agent template."
+      },
+      "delete": {
+        "summary": "Detach a Skill Collection from an Agent",
+        "operationId": "detachSkillCollectionFromAgent",
+        "tags": [
+          "agent-config/skill-collections"
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Agent.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "collection_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Skill Collection.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully detached"
+          },
+          "404": {
+            "description": "Agent or Collection not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Removes a mounted skill collection from an agent template."
       }
     },
     "/skill-collections": {
@@ -1194,6 +1459,142 @@
           "agent-config/skills"
         ],
         "description": "Queries a collection and returns the fully hydrated, flattened list of all Skills inside. Why: Resolves hierarchical capability graphs, providing the downstream runtime or compiler with the complete set of natural language system prompt instructions to serve the agent's LLM."
+      }
+    },
+    "/skill-collections/{id}/skills/{skill_id}": {
+      "post": {
+        "summary": "Add a Skill to a Collection",
+        "operationId": "addSkillToCollection",
+        "tags": [
+          "agent-config/skill-collections"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Skill Collection.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "skill_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Skill to add.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully added skill to collection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCollection"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Skill already in collection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Collection or Skill not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Adds a capability skill definition to a skill collection bundle."
+      },
+      "delete": {
+        "summary": "Remove a Skill from a Collection",
+        "operationId": "removeSkillFromCollection",
+        "tags": [
+          "agent-config/skill-collections"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Skill Collection.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "skill_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Skill to remove.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully removed skill from collection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCollection"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Collection or Skill not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Removes a capability skill definition from a skill collection bundle."
       }
     },
     "/prompts": {
@@ -3743,6 +4144,80 @@
           }
         },
         "description": "Represents a distinct capability skill containing domain behavior constraints. Why: Defines the specific operational rules and guidelines an agent must follow for a feature area."
+      },
+      "ResolvedSkill": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "status",
+          "source"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of the skill."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the skill."
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the skill."
+          },
+          "content": {
+            "type": "string",
+            "description": "Natural language prompt content of the skill."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended",
+              "inactive"
+            ],
+            "description": "Status of the skill."
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "collection",
+              "individual"
+            ],
+            "description": "Source of this skill resolution."
+          },
+          "collection_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "UUID of the parent collection if resolved via collection."
+          }
+        }
+      },
+      "ResolvedSkillsResponse": {
+        "type": "object",
+        "required": [
+          "agent_id",
+          "resolved_skills",
+          "total"
+        ],
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "resolved_skills": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResolvedSkill"
+            }
+          },
+          "total": {
+            "type": "integer"
+          }
+        }
       },
       "CreateSkillCollectionRequest": {
         "type": "object",

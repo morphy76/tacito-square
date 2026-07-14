@@ -25,6 +25,7 @@ type assignmentResponse struct {
 	AgentID    uuid.UUID `json:"agent_id"`
 	Role       string    `json:"role"`
 	AssignedAt time.Time `json:"assigned_at"`
+	Warnings   []string  `json:"warnings,omitempty"`
 }
 
 type assignmentListItem struct {
@@ -36,13 +37,15 @@ type assignmentListItem struct {
 
 // AssignmentHandler implements HTTP endpoints for Agent-Community Assignment lifecycle.
 type AssignmentHandler struct {
-	usecase inbound.AssignmentUseCase
+	usecase      inbound.AssignmentUseCase
+	agentUsecase inbound.AgentUseCase
 }
 
 // NewAssignmentHandler creates a new instance of AssignmentHandler.
-func NewAssignmentHandler(usecase inbound.AssignmentUseCase) *AssignmentHandler {
+func NewAssignmentHandler(usecase inbound.AssignmentUseCase, agentUsecase inbound.AgentUseCase) *AssignmentHandler {
 	return &AssignmentHandler{
-		usecase: usecase,
+		usecase:      usecase,
+		agentUsecase: agentUsecase,
 	}
 }
 
@@ -89,10 +92,20 @@ func (h *AssignmentHandler) Assign(c *gin.Context) {
 		Str("agent_id", req.AgentID.String()).
 		Msg("Agent successfully assigned to community")
 
+	var warnings []string
+	if req.Role == model.AgentRoleHub {
+		if agent, err := h.agentUsecase.GetByID(ctx, req.AgentID); err == nil && agent != nil {
+			if len(agent.Skills) > 0 || len(agent.SkillCollections) > 0 {
+				warnings = append(warnings, "agent has individual skills or skill collections attached, which will be ignored in hub role")
+			}
+		}
+	}
+
 	c.JSON(http.StatusCreated, assignmentResponse{
 		AgentID:    req.AgentID,
 		Role:       string(req.Role),
 		AssignedAt: time.Now().UTC(),
+		Warnings:   warnings,
 	})
 }
 
