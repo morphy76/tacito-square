@@ -257,6 +257,107 @@ func TestSkillRepository_Lifecycle(t *testing.T) {
 		_ = repo.Delete(ctxB, skillB.ID)
 	})
 
+	t.Run("Collection-Agent and Collection-Skill Association", func(t *testing.T) {
+		agentRepo := NewAgentRepository(pool)
+		agentID := uuid.New()
+		agent := &model.Agent{
+			ID:          agentID,
+			Name:        "test-agent-coll-assoc",
+			Description: "Test agent for collection association",
+			Brain: model.BrainConfig{
+				LLMBindingID: uuid.New(),
+				Temperature:  ptrFloat64(0.7),
+				MaxTokens:    ptrInt(2048),
+			},
+			ShortTermMemory: model.ShortTermMemoryConfig{
+				KeyNamespace: "test:short",
+				TTLSeconds:   3600,
+			},
+			LongTermMemory: model.LongTermMemoryConfig{
+				CollectionName:  "test-long",
+				VectorDimension: 1536,
+			},
+			Skills:         []uuid.UUID{},
+			MCPClients:     []model.MCPClientConfig{},
+			Status:         model.AgentStatusDefined,
+			CreatedAt:      time.Now().UTC(),
+			UpdatedAt:      time.Now().UTC(),
+		}
+		err := agentRepo.Create(ctx, agent)
+		require.NoError(t, err)
+		defer func() {
+			_ = agentRepo.Delete(ctx, agentID)
+		}()
+
+		colID := uuid.New()
+		collection := &model.SkillCollection{
+			ID:          colID,
+			Name:        "test-collection-assoc",
+			Description: "Test collection",
+			Skills:      []uuid.UUID{},
+			CreatedAt:   time.Now().UTC(),
+			UpdatedAt:   time.Now().UTC(),
+		}
+		err = repo.CreateCollection(ctx, collection)
+		require.NoError(t, err)
+		defer func() {
+			_ = repo.DeleteCollection(ctx, colID)
+		}()
+
+		// Attach Collection to Agent
+		err = repo.AttachCollectionToAgent(ctx, agentID, colID)
+		require.NoError(t, err)
+
+		// Verify collection attached in Agent database record
+		fetchedAgent, err := agentRepo.GetByID(ctx, agentID)
+		require.NoError(t, err)
+		assert.Contains(t, fetchedAgent.SkillCollections, colID)
+
+		// Detach Collection from Agent
+		err = repo.DetachCollectionFromAgent(ctx, agentID, colID)
+		require.NoError(t, err)
+
+		// Verify collection detached in Agent database record
+		fetchedAgent, err = agentRepo.GetByID(ctx, agentID)
+		require.NoError(t, err)
+		assert.NotContains(t, fetchedAgent.SkillCollections, colID)
+
+		// Create a skill to add to collection
+		sID := uuid.New()
+		tempSkill := &model.Skill{
+			ID:          sID,
+			Name:        "test-skill-for-coll",
+			Description: "Temp skill",
+			Status:      model.SkillStatusActive,
+			CreatedAt:   time.Now().UTC(),
+			UpdatedAt:   time.Now().UTC(),
+		}
+		err = repo.Create(ctx, tempSkill)
+		require.NoError(t, err)
+		defer func() {
+			_ = repo.Delete(ctx, sID)
+		}()
+
+		// Add Skill to Collection
+		err = repo.AddSkillToCollection(ctx, colID, sID)
+		require.NoError(t, err)
+
+		// Verify resolution
+		resolved, err := repo.ResolveCollectionSkills(ctx, colID)
+		require.NoError(t, err)
+		assert.Len(t, resolved, 1)
+		assert.Equal(t, sID, resolved[0].ID)
+
+		// Remove Skill from Collection
+		err = repo.RemoveSkillFromCollection(ctx, colID, sID)
+		require.NoError(t, err)
+
+		// Verify resolution is empty
+		resolved, err = repo.ResolveCollectionSkills(ctx, colID)
+		require.NoError(t, err)
+		assert.Empty(t, resolved)
+	})
+
 	t.Run("Delete Skill", func(t *testing.T) {
 		err := repo.Delete(ctx, skill.ID)
 		require.NoError(t, err)

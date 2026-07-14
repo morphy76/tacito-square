@@ -458,3 +458,100 @@ func (r *SkillRepository) saveCollectionSkills(ctx context.Context, tx pgx.Tx, c
 	}
 	return nil
 }
+
+// AttachCollectionToAgent associates a skill collection with an agent.
+func (r *SkillRepository) AttachCollectionToAgent(ctx context.Context, agentID uuid.UUID, collectionID uuid.UUID) error {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return errors.New("tenant resolution failed")
+	}
+
+	query := `INSERT INTO agent_skill_collections (agent_id, skill_collection_id, position)
+		SELECT $1, $2,
+			COALESCE((SELECT MAX(position) + 1 FROM agent_skill_collections WHERE agent_id = $1), 0)
+		WHERE EXISTS (SELECT 1 FROM skill_collections WHERE id = $2 AND tenant_id = $3)
+		ON CONFLICT (agent_id, skill_collection_id) DO NOTHING`
+	cmdTag, err := r.pool.Exec(ctx, query, agentID, collectionID, ten.FullName())
+	if err != nil {
+		return fmt.Errorf("attach collection to agent: %w", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("skill collection not found: %s", collectionID)
+	}
+	return nil
+}
+
+// DetachCollectionFromAgent removes the association between a skill collection and an agent.
+func (r *SkillRepository) DetachCollectionFromAgent(ctx context.Context, agentID uuid.UUID, collectionID uuid.UUID) error {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return errors.New("tenant resolution failed")
+	}
+
+	query := `DELETE FROM agent_skill_collections
+		WHERE agent_id = $1 AND skill_collection_id = $2
+		  AND EXISTS (SELECT 1 FROM skill_collections WHERE id = $2 AND tenant_id = $3)`
+	cmdTag, err := r.pool.Exec(ctx, query, agentID, collectionID, ten.FullName())
+	if err != nil {
+		return fmt.Errorf("detach collection from agent: %w", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("skill collection association not found: %s", collectionID)
+	}
+	return nil
+}
+
+// AddSkillToCollection adds a skill to a skill collection.
+func (r *SkillRepository) AddSkillToCollection(ctx context.Context, collectionID uuid.UUID, skillID uuid.UUID) error {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return errors.New("tenant resolution failed")
+	}
+
+	// Verify both collection and skill belong to the tenant
+	var exists bool
+	err := r.pool.QueryRow(ctx, 
+		`SELECT EXISTS (
+			SELECT 1 FROM skill_collections WHERE id = $1 AND tenant_id = $3
+		) AND EXISTS (
+			SELECT 1 FROM skills WHERE id = $2 AND tenant_id = $3
+		)`, 
+		collectionID, skillID, ten.FullName()).Scan(&exists)
+	if err != nil {
+		return fmt.Errorf("check skill collection membership validation: %w", err)
+	}
+	if !exists {
+		return fmt.Errorf("skill or collection not found")
+	}
+
+	query := `INSERT INTO skill_collection_skills (skill_collection_id, skill_id) VALUES ($1, $2)
+		ON CONFLICT (skill_collection_id, skill_id) DO NOTHING`
+	cmdTag, err := r.pool.Exec(ctx, query, collectionID, skillID)
+	if err != nil {
+		return fmt.Errorf("add skill to collection: %w", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("skill already member of collection: %s", skillID)
+	}
+	return nil
+}
+
+// RemoveSkillFromCollection removes a skill from a skill collection.
+func (r *SkillRepository) RemoveSkillFromCollection(ctx context.Context, collectionID uuid.UUID, skillID uuid.UUID) error {
+	ten := tenant.FromContext(ctx)
+	if ten == nil {
+		return errors.New("tenant resolution failed")
+	}
+
+	query := `DELETE FROM skill_collection_skills 
+		WHERE skill_collection_id = $1 AND skill_id = $2
+		  AND EXISTS (SELECT 1 FROM skill_collections WHERE id = $1 AND tenant_id = $3)`
+	cmdTag, err := r.pool.Exec(ctx, query, collectionID, skillID, ten.FullName())
+	if err != nil {
+		return fmt.Errorf("remove skill from collection: %w", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("skill collection membership not found")
+	}
+	return nil
+}

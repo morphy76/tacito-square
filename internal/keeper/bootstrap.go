@@ -136,7 +136,7 @@ func NewServer(
 	// Application Services (orchestrators)
 	llmService := service.NewLLMBindingService(repo, cacheClient)
 	mcpService := service.NewMCPClientService(mcpRepo)
-	skillService := service.NewSkillService(skillRepo)
+	skillService := service.NewSkillService(skillRepo, agentRepo)
 	promptService := service.NewPromptService(promptRepo)
 	var crdCoord outbound.CRDCoordinator = &noOpCRDCoordinator{}
 	if k8sConfig != nil {

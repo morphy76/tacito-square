@@ -46,6 +46,13 @@ type SkillUseCase interface {
 	UpdateCollection(ctx context.Context, collection *model.SkillCollection) error
 	DeleteCollection(ctx context.Context, id uuid.UUID) error
 	ResolveCollectionSkills(ctx context.Context, id uuid.UUID) ([]*model.Skill, error)
+
+	AttachCollectionToAgent(ctx context.Context, agentID uuid.UUID, collectionID uuid.UUID) error
+	DetachCollectionFromAgent(ctx context.Context, agentID uuid.UUID, collectionID uuid.UUID) error
+	ResolveAgentSkills(ctx context.Context, agentID uuid.UUID) ([]*model.ResolvedSkill, error)
+	PatchStatus(ctx context.Context, id uuid.UUID, status model.SkillStatus) (*model.Skill, error)
+	AddSkillToCollection(ctx context.Context, collectionID uuid.UUID, skillID uuid.UUID) error
+	RemoveSkillFromCollection(ctx context.Context, collectionID uuid.UUID, skillID uuid.UUID) error
 }
 
 // PromptUseCase defines the driving operations for managing Prompts and resolution.

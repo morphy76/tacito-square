@@ -117,6 +117,42 @@ func (m *MockSkillUseCase) ResolveCollectionSkills(ctx context.Context, id uuid.
 	return args.Get(0).([]*model.Skill), args.Error(1)
 }
 
+func (m *MockSkillUseCase) AttachCollectionToAgent(ctx context.Context, agentID uuid.UUID, collectionID uuid.UUID) error {
+	args := m.Called(ctx, agentID, collectionID)
+	return args.Error(0)
+}
+
+func (m *MockSkillUseCase) DetachCollectionFromAgent(ctx context.Context, agentID uuid.UUID, collectionID uuid.UUID) error {
+	args := m.Called(ctx, agentID, collectionID)
+	return args.Error(0)
+}
+
+func (m *MockSkillUseCase) ResolveAgentSkills(ctx context.Context, agentID uuid.UUID) ([]*model.ResolvedSkill, error) {
+	args := m.Called(ctx, agentID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*model.ResolvedSkill), args.Error(1)
+}
+
+func (m *MockSkillUseCase) PatchStatus(ctx context.Context, id uuid.UUID, status model.SkillStatus) (*model.Skill, error) {
+	args := m.Called(ctx, id, status)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Skill), args.Error(1)
+}
+
+func (m *MockSkillUseCase) AddSkillToCollection(ctx context.Context, collectionID uuid.UUID, skillID uuid.UUID) error {
+	args := m.Called(ctx, collectionID, skillID)
+	return args.Error(0)
+}
+
+func (m *MockSkillUseCase) RemoveSkillFromCollection(ctx context.Context, collectionID uuid.UUID, skillID uuid.UUID) error {
+	args := m.Called(ctx, collectionID, skillID)
+	return args.Error(0)
+}
+
 func TestSkillHandlers_Create(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

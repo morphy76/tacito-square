@@ -52,6 +52,14 @@ type SkillRepository interface {
 
 	// Resolution helper
 	ResolveCollectionSkills(ctx context.Context, collectionID uuid.UUID) ([]*model.Skill, error)
+
+	// Agent-SkillCollection associations
+	AttachCollectionToAgent(ctx context.Context, agentID uuid.UUID, collectionID uuid.UUID) error
+	DetachCollectionFromAgent(ctx context.Context, agentID uuid.UUID, collectionID uuid.UUID) error
+
+	// Collection membership management
+	AddSkillToCollection(ctx context.Context, collectionID uuid.UUID, skillID uuid.UUID) error
+	RemoveSkillFromCollection(ctx context.Context, collectionID uuid.UUID, skillID uuid.UUID) error
 }
 
 // PromptRepository defines the persistent storage operations for Prompt Templates and Prompt Collections.
