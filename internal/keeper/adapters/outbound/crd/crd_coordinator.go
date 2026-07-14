@@ -172,6 +172,18 @@ func (a promptRepoAdapter) ResolveCollectionPrompts(ctx context.Context, collect
 	return a.repo.ResolveCollectionPrompts(ctx, collectionID)
 }
 
+type skillRepoAdapter struct {
+	repo outbound.SkillRepository
+}
+
+func (a skillRepoAdapter) GetByID(ctx context.Context, id uuid.UUID) (*model.Skill, error) {
+	return a.repo.GetByID(ctx, id)
+}
+
+func (a skillRepoAdapter) ResolveCollectionSkills(ctx context.Context, collectionID uuid.UUID) ([]*model.Skill, error) {
+	return a.repo.ResolveCollectionSkills(ctx, collectionID)
+}
+
 // ResolveAndSynthesizeSystemPrompt fetches templates and skills out-of-band and compiles them into a system prompt.
 // The role parameter carries the agent's community-assignment role (hub, spoke, standalone) and is used
 // to select the appropriate role-specific prompt template. It is no longer read from agent.Role.
@@ -207,15 +219,16 @@ func (c *K8sCRDCoordinator) ResolveAndSynthesizeSystemPrompt(ctx context.Context
 
 	var skillsList []SkillConfig
 	if c.skillRepo != nil {
-		for _, skillID := range agent.Skills {
-			skill, err := c.skillRepo.GetByID(ctx, skillID)
-			if err != nil {
-				return "", fmt.Errorf("fetching skill: %w", err)
-			}
+		adapter := skillRepoAdapter{repo: c.skillRepo}
+		resolved, err := domainsrv.ResolveAgentSkills(ctx, agent, adapter)
+		if err != nil {
+			return "", fmt.Errorf("resolving agent skills: %w", err)
+		}
+		for _, rs := range resolved {
 			skillsList = append(skillsList, SkillConfig{
-				Name:        skill.Name,
-				Description: skill.Description,
-				Content:     skill.Content,
+				Name:        rs.Name,
+				Description: rs.Description,
+				Content:     rs.Content,
 			})
 		}
 	}

@@ -363,8 +363,9 @@ func (m *mockPromptRepository) ResolveCollectionPrompts(ctx context.Context, col
 
 type mockSkillRepository struct {
 	outbound.SkillRepository
-	skills map[uuid.UUID]*model.Skill
-	getErr error
+	skills      map[uuid.UUID]*model.Skill
+	collections map[uuid.UUID][]*model.Skill
+	getErr      error
 }
 
 func (m *mockSkillRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Skill, error) {
@@ -374,6 +375,25 @@ func (m *mockSkillRepository) GetByID(ctx context.Context, id uuid.UUID) (*model
 	s, ok := m.skills[id]
 	if !ok {
 		return nil, fmt.Errorf("skill not found: %s", id)
+	}
+	if s.Status == "" {
+		s.Status = model.SkillStatusActive
+	}
+	return s, nil
+}
+
+func (m *mockSkillRepository) ResolveCollectionSkills(ctx context.Context, collectionID uuid.UUID) ([]*model.Skill, error) {
+	if m.getErr != nil {
+		return nil, m.getErr
+	}
+	s, ok := m.collections[collectionID]
+	if !ok {
+		return nil, fmt.Errorf("collection not found: %s", collectionID)
+	}
+	for _, sk := range s {
+		if sk.Status == "" {
+			sk.Status = model.SkillStatusActive
+		}
 	}
 	return s, nil
 }
@@ -675,6 +695,151 @@ func TestResolveAndSynthesizeSystemPrompt_HubAgentMerging_Success(t *testing.T) 
 
 	assert.Equal(t, "Role instructions: {{.Description}} and spokes: {{.Spokes}}\n\nBusiness specific instructions.", config.Directives)
 	assert.Equal(t, "A helpful assistant", config.Description)
+}
+
+func TestResolveAndSynthesizeSystemPrompt_WithSkillCollection(t *testing.T) {
+	skillID1 := uuid.New()
+	skillID2 := uuid.New()
+	colID := uuid.New()
+
+	skillRepo := &mockSkillRepository{
+		skills: make(map[uuid.UUID]*model.Skill),
+		collections: map[uuid.UUID][]*model.Skill{
+			colID: {
+				{
+					ID:          skillID1,
+					Name:        "WebSearch",
+					Description: "Search the web",
+					Content:     "WebSearch guidelines",
+					Status:      model.SkillStatusActive,
+				},
+				{
+					ID:          skillID2,
+					Name:        "Calculations",
+					Description: "Perform math operations",
+					Content:     "Calculations guidelines",
+					Status:      model.SkillStatusActive,
+				},
+			},
+		},
+	}
+
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(nil, "tacito", newMockLLMBindingRepository(), nil, skillRepo, nil, nil)
+
+	agent := &model.Agent{
+		ID:                uuid.New(),
+		Description:       "A helpful assistant",
+		Prompts:           []uuid.UUID{},
+		PromptCollections: []uuid.UUID{},
+		Skills:            []uuid.UUID{},
+		SkillCollections:  []uuid.UUID{colID},
+	}
+
+	synthesized, err := coordinator.ResolveAndSynthesizeSystemPrompt(context.Background(), agent, "")
+	require.NoError(t, err)
+
+	var config crdadapter.PropagatedAgentConfig
+	err = json.Unmarshal([]byte(synthesized), &config)
+	require.NoError(t, err)
+
+	assert.Equal(t, "A helpful assistant", config.Description)
+	require.Len(t, config.Skills, 2)
+	assert.Equal(t, "WebSearch", config.Skills[0].Name)
+	assert.Equal(t, "Calculations", config.Skills[1].Name)
+}
+
+func TestResolveAndSynthesizeSystemPrompt_CollectionAndIndividual_Deduplicated(t *testing.T) {
+	skillID1 := uuid.New()
+	colID := uuid.New()
+
+	skill := &model.Skill{
+		ID:          skillID1,
+		Name:        "WebSearch",
+		Description: "Search the web",
+		Content:     "WebSearch guidelines",
+		Status:      model.SkillStatusActive,
+	}
+
+	skillRepo := &mockSkillRepository{
+		skills: map[uuid.UUID]*model.Skill{
+			skillID1: skill,
+		},
+		collections: map[uuid.UUID][]*model.Skill{
+			colID: {skill},
+		},
+	}
+
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(nil, "tacito", newMockLLMBindingRepository(), nil, skillRepo, nil, nil)
+
+	agent := &model.Agent{
+		ID:                uuid.New(),
+		Description:       "A helpful assistant",
+		Prompts:           []uuid.UUID{},
+		PromptCollections: []uuid.UUID{},
+		Skills:            []uuid.UUID{skillID1},
+		SkillCollections:  []uuid.UUID{colID},
+	}
+
+	synthesized, err := coordinator.ResolveAndSynthesizeSystemPrompt(context.Background(), agent, "")
+	require.NoError(t, err)
+
+	var config crdadapter.PropagatedAgentConfig
+	err = json.Unmarshal([]byte(synthesized), &config)
+	require.NoError(t, err)
+
+	require.Len(t, config.Skills, 1)
+	assert.Equal(t, "WebSearch", config.Skills[0].Name)
+}
+
+func TestResolveAndSynthesizeSystemPrompt_SuspendedSkillOmitted(t *testing.T) {
+	skillID1 := uuid.New()
+	skillID2 := uuid.New()
+	colID := uuid.New()
+
+	activeSkill := &model.Skill{
+		ID:          skillID1,
+		Name:        "WebSearch",
+		Description: "Search the web",
+		Content:     "WebSearch guidelines",
+		Status:      model.SkillStatusActive,
+	}
+	suspendedSkill := &model.Skill{
+		ID:          skillID2,
+		Name:        "Calculations",
+		Description: "Perform math operations",
+		Content:     "Calculations guidelines",
+		Status:      model.SkillStatusSuspended,
+	}
+
+	skillRepo := &mockSkillRepository{
+		skills: map[uuid.UUID]*model.Skill{
+			skillID2: suspendedSkill,
+		},
+		collections: map[uuid.UUID][]*model.Skill{
+			colID: {activeSkill, suspendedSkill},
+		},
+	}
+
+	coordinator := crdadapter.NewK8sCRDCoordinatorWithClient(nil, "tacito", newMockLLMBindingRepository(), nil, skillRepo, nil, nil)
+
+	agent := &model.Agent{
+		ID:                uuid.New(),
+		Description:       "A helpful assistant",
+		Prompts:           []uuid.UUID{},
+		PromptCollections: []uuid.UUID{},
+		Skills:            []uuid.UUID{skillID2},
+		SkillCollections:  []uuid.UUID{colID},
+	}
+
+	synthesized, err := coordinator.ResolveAndSynthesizeSystemPrompt(context.Background(), agent, "")
+	require.NoError(t, err)
+
+	var config crdadapter.PropagatedAgentConfig
+	err = json.Unmarshal([]byte(synthesized), &config)
+	require.NoError(t, err)
+
+	require.Len(t, config.Skills, 1)
+	assert.Equal(t, "WebSearch", config.Skills[0].Name)
 }
 
 func TestSubmitAgentCRD_SynthesizedPromptAndTenantMapped(t *testing.T) {
