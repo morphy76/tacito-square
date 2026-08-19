@@ -263,6 +263,7 @@ func NewServer(
 		v1.DELETE("/communities/:community_id", communityHandler.Delete)
 
 		v1.POST("/communities/:community_id/agents", assignmentHandler.Assign)
+		v1.POST("/communities/:community_id/agents/:agent_id", assignmentHandler.Assign)
 		v1.GET("/communities/:community_id/agents", assignmentHandler.ListAssignments)
 		v1.DELETE("/communities/:community_id/agents/:agent_id", assignmentHandler.Unassign)
 
