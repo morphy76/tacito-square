@@ -1,5 +1,6 @@
 ---
-trigger: always_on
+trigger: glob
+globs: ["**/*.go", "**/*.ts", "**/*.tsx"]
 description: Systems observability standards, including Prometheus metrics, OpenTelemetry distributed tracing, and zerolog/winston structured JSON logging.
 ---
 
@@ -45,17 +46,15 @@ Ensure all application logs are highly structured and machine-readable:
 
 Log levels:
 
-- errors for unexpected conditions, they are blocking at business flow level or technical level
-- warnings for recoverable conditions or non blocking at business level
-- troubleshooting messages has to be at trace level
-- info is for business logic that "is done" 
-- debug is for business logic related to undestanding the business flow
+- **error**: For unexpected conditions that are blocking at business flow or technical levels.
+- **warn**: For recoverable conditions or non-blocking issues at the business level.
+- **info**: For business logic milestones ("is done", state mutations, completions).
+- **debug**: For understanding the internal business flow and branching decisions.
+- **trace**: For troubleshooting details, payload dumps, and loop iterations.
 
-Here it is an example for business logic logging criteria:
-
-- a private method can contain just warning or debug levels
-- a public method uses debug level when entering, debug level when branching, info level for mutations and info level for completion, it can contain error levels
-- trace level is allowed everywhere
+### Business Logic Logging Criteria:
+- Private methods should contain `trace`, `debug`, or `warn` levels.
+- Public methods use `debug` when entering, `debug` when branching, `info` for mutations and completion, and `error` on failures.
 
 ---
 

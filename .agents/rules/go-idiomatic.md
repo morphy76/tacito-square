@@ -1,7 +1,7 @@
 ---
-trigger: always_on
-glob: ["**/*.go"]
-description: Enforce Go idiomatic coding style, patterns, and efficiency rules across the project.
+trigger: glob
+globs: ["**/*.go"]
+description: Enforce Go idiomatic coding style, error wrapping, context propagation, and concurrency patterns.
 ---
 
 # Go Idiomatic Coding Rules
