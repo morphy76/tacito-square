@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { getApiUrl } from '../../App';
+import { getApiUrl } from '../../utils/api';
 
 export interface AgentPayload {
   name: string;
@@ -113,8 +113,9 @@ export default function AgentForm({ initialData, options, onSave, onRefreshOptio
       setNewBrainBaseURL('');
       setNewBrainModel('');
       setErrors(prev => {
-        const { brainForm, ...rest } = prev;
-        return rest;
+        const next = { ...prev };
+        delete next.brainForm;
+        return next;
       });
     } catch (err) {
       setErrors(prev => ({ ...prev, brainForm: err instanceof Error ? err.message : 'Error' }));
@@ -146,8 +147,9 @@ export default function AgentForm({ initialData, options, onSave, onRefreshOptio
       setNewPromptName('');
       setNewPromptContent('');
       setErrors(prev => {
-        const { promptForm, ...rest } = prev;
-        return rest;
+        const next = { ...prev };
+        delete next.promptForm;
+        return next;
       });
     } catch (err) {
       setErrors(prev => ({ ...prev, promptForm: err instanceof Error ? err.message : 'Error' }));
@@ -190,8 +192,9 @@ export default function AgentForm({ initialData, options, onSave, onRefreshOptio
       setNewSkillDesc('');
       setNewSkillContent('');
       setErrors(prev => {
-        const { skillForm, ...rest } = prev;
-        return rest;
+        const next = { ...prev };
+        delete next.skillForm;
+        return next;
       });
     } catch (err) {
       setErrors(prev => ({ ...prev, skillForm: err instanceof Error ? err.message : 'Error' }));

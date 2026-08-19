@@ -81,7 +81,7 @@ test-integration: ## Run integration tests (requires Docker for testcontainers)
 	$(GOTEST) ./... -tags=integration -count=1 -v
 
 test-operator: ## Run operator tests with envtest
-	$(GOTEST) ./operator/... -count=1 -v
+	$(GOTEST) ./internal/operator/... -count=1 -v
 
 test-e2e: ## Run end-to-end tests (requires Kind cluster)
 	$(GOTEST) ./test/e2e/... -tags=e2e -count=1 -v

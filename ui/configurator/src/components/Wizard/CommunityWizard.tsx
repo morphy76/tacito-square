@@ -27,7 +27,7 @@ export default function CommunityWizard({ onSave, onCancel }: CommunityWizardPro
     if (configStr.trim()) {
       try {
         parsedConfig = JSON.parse(configStr);
-      } catch (err) {
+      } catch {
         setError('Invalid JSON format for Configuration');
         return;
       }

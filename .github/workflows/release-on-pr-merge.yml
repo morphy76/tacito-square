@@ -1,0 +1,223 @@
+name: Release on PR Merge
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+jobs:
+  detect-changes:
+    name: Detect Component & Chart Version Bumps
+    runs-on: ubuntu-latest
+    outputs:
+      components: ${{ steps.check.outputs.components }}
+      has_components: ${{ steps.check.outputs.has_components }}
+      charts: ${{ steps.check.outputs.charts }}
+      has_charts: ${{ steps.check.outputs.has_charts }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect Modified Version Files
+        id: check
+        run: |
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            DIFF_BASE="HEAD~1"
+          else
+            DIFF_BASE="4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+          fi
+
+          echo "Diffing against base: $DIFF_BASE"
+          git diff --name-only "$DIFF_BASE" HEAD
+
+          COMPONENTS=()
+          for comp in agent keeper operator bff ui-configurator ollama; do
+            vfile="VERSION.${comp}"
+            if [ -f "$vfile" ]; then
+              if git diff --name-only "$DIFF_BASE" HEAD | grep -q "^${vfile}$"; then
+                version=$(cat "$vfile" | tr -d '[:space:]')
+                if [ -n "$version" ]; then
+                  echo "Detected version bump for $comp: $version"
+                  COMPONENTS+=("{\"name\":\"$comp\",\"version\":\"$version\",\"dockerfile\":\"tools/docker/Dockerfile.$comp\"}")
+                fi
+              fi
+            fi
+          done
+
+          CHARTS=()
+          for chart_path in tools/helm/*; do
+            if [ -f "$chart_path/Chart.yaml" ]; then
+              chart_name=$(basename "$chart_path")
+              if git diff --name-only "$DIFF_BASE" HEAD | grep -q "^${chart_path}/Chart.yaml$"; then
+                chart_ver=$(grep '^version:' "$chart_path/Chart.yaml" | awk '{print $2}' | tr -d '"' | tr -d "'" | tr -d '[:space:]')
+                if [ -n "$chart_ver" ]; then
+                  echo "Detected version bump for chart $chart_name: $chart_ver"
+                  CHARTS+=("{\"name\":\"$chart_name\",\"version\":\"$chart_ver\",\"path\":\"$chart_path\"}")
+                fi
+              fi
+            fi
+          done
+
+          if [ ${#COMPONENTS[@]} -gt 0 ]; then
+            comp_json=$(printf '%s\n' "${COMPONENTS[@]}" | jq -s -c '.')
+            echo "components=$comp_json" >> "$GITHUB_OUTPUT"
+            echo "has_components=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "components=[]" >> "$GITHUB_OUTPUT"
+            echo "has_components=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ ${#CHARTS[@]} -gt 0 ]; then
+            charts_json=$(printf '%s\n' "${CHARTS[@]}" | jq -s -c '.')
+            echo "charts=$charts_json" >> "$GITHUB_OUTPUT"
+            echo "has_charts=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "charts=[]" >> "$GITHUB_OUTPUT"
+            echo "has_charts=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  release-component:
+    name: Release Component (${{ matrix.name }})
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has_components == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.detect-changes.outputs.components) }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create Git Tag
+        run: |
+          TAG="${{ matrix.name }}-v${{ matrix.version }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists, skipping tag creation."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag -a "$TAG" -m "Release ${{ matrix.name }} v${{ matrix.version }}"
+            git push origin "$TAG"
+          fi
+
+      - name: Setup Go
+        if: matrix.name != 'ollama'
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+          cache: true
+
+      - name: Build Static Binaries
+        if: matrix.name == 'agent' || matrix.name == 'keeper' || matrix.name == 'operator' || matrix.name == 'bff'
+        run: |
+          mkdir -p dist
+          for target in "linux/amd64" "linux/arm64" "darwin/arm64"; do
+            os=$(echo $target | cut -d'/' -f1)
+            arch=$(echo $target | cut -d'/' -f2)
+            bin_name="${{ matrix.name }}-${os}-${arch}"
+            echo "Compiling $bin_name..."
+            CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -mod=vendor -ldflags="-s -w" -o "dist/$bin_name" "./cmd/${{ matrix.name }}"
+          done
+          cd dist && sha256sum * > checksums.txt
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Multi-Arch Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/tacito-square/${{ matrix.name }}:${{ matrix.version }}
+            ghcr.io/${{ github.repository_owner }}/tacito-square/${{ matrix.name }}:latest
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ matrix.name }}-v${{ matrix.version }}
+          name: "${{ matrix.name }} v${{ matrix.version }}"
+          generate_release_notes: true
+          files: |
+            dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release-helm:
+    name: Release Helm Chart (${{ matrix.name }})
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has_charts == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.detect-changes.outputs.charts) }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create Git Tag
+        run: |
+          TAG="chart-${{ matrix.name }}-v${{ matrix.version }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists, skipping tag creation."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag -a "$TAG" -m "Release Helm Chart ${{ matrix.name }} v${{ matrix.version }}"
+            git push origin "$TAG"
+          fi
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'v3.17.0'
+
+      - name: Package Chart
+        run: |
+          mkdir -p dist
+          helm package "${{ matrix.path }}" --destination dist
+
+      - name: Log in to GHCR OCI Registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Push Helm Chart to GHCR OCI
+        run: |
+          PKG="dist/${{ matrix.name }}-${{ matrix.version }}.tgz"
+          helm push "$PKG" "oci://ghcr.io/${{ github.repository_owner }}/tacito-square/charts"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: chart-${{ matrix.name }}-v${{ matrix.version }}
+          name: "Helm Chart ${{ matrix.name }} v${{ matrix.version }}"
+          generate_release_notes: true
+          files: |
+            dist/${{ matrix.name }}-${{ matrix.version }}.tgz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
