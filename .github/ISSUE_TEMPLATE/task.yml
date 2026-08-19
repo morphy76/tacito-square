@@ -1,0 +1,70 @@
+name: "Task (Work Breakdown)"
+description: "Decompose a functional specification into logical boundaries with a TDD plan"
+title: "[TASK]: "
+labels: ["type:task", "status:draft"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Tacito Square Task Breakdown
+        Tasks organize work around logical subsystem boundaries and enforce TDD execution (Red -> Green -> Refactor).
+  - type: input
+    id: parent-spec
+    attributes:
+      label: Parent Specification Issue
+      description: Link to the parent specification issue (e.g. #23, #45).
+      placeholder: "#..."
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Primary Affected Component
+      description: Select the main Tacito Square bounded context / component.
+      options:
+        - "comp:keeper"
+        - "comp:agent"
+        - "comp:operator"
+        - "comp:bff"
+        - "comp:ui"
+        - "comp:shared"
+        - "comp:deploy"
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Task Description & Logical Boundary
+      description: Detailed description of the task scope, DDD aggregates, or interface boundaries covered.
+      placeholder: Describe the package or subsystem boundary...
+    validations:
+      required: true
+  - type: textarea
+    id: tdd-plan
+    attributes:
+      label: TDD Work Items (Red -> Green -> Refactor)
+      description: Outline the test-driven development phases.
+      value: |
+        ### 1. RED Phase (Write Tests First)
+        - [ ] Write unit/contract tests for ...
+        - [ ] Verify tests compile and FAIL as expected.
+
+        ### 2. GREEN Phase (Implement Minimum Code)
+        - [ ] Implement domain logic / ports / adapters ...
+        - [ ] Verify test suite PASSES.
+
+        ### 3. REFACTOR Phase (Clean & Generalize)
+        - [ ] Clean up duplication, improve naming, ensure zero import violations.
+        - [ ] Verify test suite remains GREEN.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: Concrete deliverables and acceptance benchmarks.
+      placeholder: |
+        1. All unit and integration tests pass cleanly with race detection enabled.
+        2. No architectural layer boundary violations.
+    validations:
+      required: true

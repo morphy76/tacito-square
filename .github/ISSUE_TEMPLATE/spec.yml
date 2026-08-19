@@ -1,0 +1,97 @@
+name: "Functional / Architectural Specification"
+description: "Propose and specify a new capability or architectural change in Tacito Square"
+title: "[SPEC]: "
+labels: ["type:spec", "status:draft"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Tacito Square Specification Form
+        Every functional change or capability must be specified before implementation (Principle P1).
+  - type: textarea
+    id: context
+    attributes:
+      label: Context & Problem Statement
+      description: Why does this specification exist? What business or technical problem is being solved?
+      placeholder: Describe the problem, user motivation, and architectural background...
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Primary Affected Component
+      description: Select the main Tacito Square bounded context / component.
+      options:
+        - "comp:keeper"
+        - "comp:agent"
+        - "comp:operator"
+        - "comp:bff"
+        - "comp:ui"
+        - "comp:shared"
+        - "comp:deploy"
+    validations:
+      required: true
+  - type: textarea
+    id: specification
+    attributes:
+      label: RFC 2119 Specifications
+      description: Precise, testable requirements using RFC 2119 keywords (MUST, SHOULD, MAY).
+      placeholder: |
+        1. The keeper component MUST ...
+        2. The agent runtime MUST ...
+        3. The operator SHOULD ...
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: Numbered list of concrete, verifiable conditions for success.
+      placeholder: |
+        1. All domain model validations reject invalid input with appropriate domain errors.
+        2. REST endpoint returns 200 OK with the specified payload.
+        3. Hexagonal architecture boundaries are respected with zero forbidden imports.
+    validations:
+      required: true
+  - type: textarea
+    id: test-plan
+    attributes:
+      label: Test Plan
+      description: Exact test cases to be implemented during TDD (unit, integration with testcontainers, contract, manual).
+      placeholder: |
+        ### Unit Tests
+        - Test 1: ...
+        - Test 2: ...
+
+        ### Integration Tests
+        - Test 1: ...
+    validations:
+      required: true
+  - type: textarea
+    id: api-contract
+    attributes:
+      label: API Contract / Messaging Schema (if applicable)
+      description: Define HTTP REST payloads, status codes, or NATS message topics.
+      placeholder: |
+        - Endpoint: `POST /api/v1/...`
+        - Request Payload:
+          ```json
+          { "name": "example" }
+          ```
+        - Response Payload (201 Created):
+          ```json
+          { "id": "uuid", "name": "example" }
+          ```
+    validations:
+      required: false
+  - type: textarea
+    id: affected-files
+    attributes:
+      label: Files / Packages Affected
+      description: List files or packages expected to be created or modified.
+      placeholder: |
+        - `internal/keeper/domain/model/...`
+        - `internal/keeper/application/ports/outbound/...`
+        - `internal/keeper/adapters/inbound/http/...`
+    validations:
+      required: false

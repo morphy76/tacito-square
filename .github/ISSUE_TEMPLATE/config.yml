@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Tacito Square Architecture Overview
+    url: https://github.com/morphy76/tacito-square/blob/main/docs/architecture/overview.md
+    about: Read the architectural foundations and component boundaries of Tacito Square.
+  - name: Project Constitution
+    url: https://github.com/morphy76/tacito-square/blob/main/specs/constitution.md
+    about: Read the governing principles, SDD workflows, and technical constraints.

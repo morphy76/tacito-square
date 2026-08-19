@@ -1,0 +1,77 @@
+name: "Bug Report (Defect Spec)"
+description: "Report a bug or unexpected behavior in Tacito Square with reproduction steps"
+title: "[BUG]: "
+labels: ["type:bug", "status:draft"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Tacito Square Defect Specification
+        Bug fixes must follow TDD: write a reproducing failing test before fixing the bug.
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Component
+      description: Select the Tacito Square bounded context / component.
+      options:
+        - "comp:keeper"
+        - "comp:agent"
+        - "comp:operator"
+        - "comp:bff"
+        - "comp:ui"
+        - "comp:shared"
+        - "comp:deploy"
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: Impact of the defect.
+      options:
+        - "severity:low"
+        - "severity:medium"
+        - "severity:high"
+        - "severity:critical"
+    validations:
+      required: true
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: Defect Description
+      description: Clear description of what is happening vs. what is expected.
+      placeholder: Describe the defect...
+    validations:
+      required: true
+  - type: textarea
+    id: repro-steps
+    attributes:
+      label: Reproduction Steps & Logs
+      description: Detailed reproduction steps, log outputs, or curl commands.
+      placeholder: |
+        1. Start keeper and agent...
+        2. Send message...
+        3. Observe error logs:
+           ```
+           ...
+           ```
+    validations:
+      required: true
+  - type: textarea
+    id: tdd-fix-plan
+    attributes:
+      label: TDD Reproduction & Fix Plan
+      description: Plan for reproducing via automated tests first.
+      value: |
+        ### 1. RED Phase (Reproducing Test)
+        - [ ] Write failing test reproducing the defect in ...
+        - [ ] Run test and confirm RED.
+
+        ### 2. GREEN Phase (Minimal Fix)
+        - [ ] Apply root cause fix in ...
+        - [ ] Verify test suite turns GREEN.
+
+        ### 3. REFACTOR Phase
+        - [ ] Verify edge cases and ensure no regressions.
+    validations:
+      required: true
