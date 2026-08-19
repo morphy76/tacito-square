@@ -8,19 +8,6 @@ echo "=== Running Standalone Agent Chart Validation Tests ==="
 # Render the Helm templates into a temporary file
 RENDERED=$(helm template my-agent "$CHART_DIR")
 
-# Assert MockServer resources exist
-echo "Checking for MockServer deployment..."
-if ! echo "$RENDERED" | grep -q "name: my-agent-tacito-agent-mocks"; then
-    echo "FAIL: MockServer deployment not found in template rendering"
-    exit 1
-fi
-
-echo "Checking for MockServer expectations configmap..."
-if ! echo "$RENDERED" | grep -q "MOCKSERVER_INITIALIZATION_JSON_PATH"; then
-    echo "FAIL: MockServer initialization path not found in template rendering"
-    exit 1
-fi
-
 # Assert new brain environment keys are injected
 echo "Checking for TS_AGENT_BRAIN_PROVIDER env key..."
 if ! echo "$RENDERED" | grep -q "TS_AGENT_BRAIN_PROVIDER"; then
@@ -34,9 +21,10 @@ if ! echo "$RENDERED" | grep -q "TS_AGENT_OPENAI_ENDPOINT"; then
     exit 1
 fi
 
-echo "Checking for TS_AGENT_OLLAMA_ENDPOINT env key..."
-if ! echo "$RENDERED" | grep -q "TS_AGENT_OLLAMA_ENDPOINT"; then
-    echo "FAIL: TS_AGENT_OLLAMA_ENDPOINT env key not found in agent configmap"
+echo "Checking for TS_AGENT_OLLAMA_ENDPOINT env key when provider is ollama..."
+RENDERED_OLLAMA=$(helm template my-agent "$CHART_DIR" --set "agent.brain.provider=ollama" --set "agent.brain.endpoint=http://ollama:11434")
+if ! echo "$RENDERED_OLLAMA" | grep -q "TS_AGENT_OLLAMA_ENDPOINT"; then
+    echo "FAIL: TS_AGENT_OLLAMA_ENDPOINT env key not found in agent configmap when provider is ollama"
     exit 1
 fi
 

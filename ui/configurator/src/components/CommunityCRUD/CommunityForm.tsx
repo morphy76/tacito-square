@@ -4,7 +4,7 @@ export interface CommunityPayload {
   name: string;
   description: string;
   topology: string;
-  configuration: Record<string, any>;
+  configuration: Record<string, unknown>;
 }
 
 interface CommunityFormProps {
@@ -37,7 +37,7 @@ export default function CommunityForm({ initialData, onSave }: CommunityFormProp
     if (configStr.trim()) {
       try {
         parsedConfig = JSON.parse(configStr);
-      } catch (err) {
+      } catch {
         newErrors.config = 'Invalid JSON format';
       }
     }

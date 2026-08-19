@@ -71,8 +71,16 @@ func (h *AssignmentHandler) Assign(c *gin.Context) {
 	}
 
 	var req assignRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	_ = c.ShouldBindJSON(&req)
+	if req.AgentID == uuid.Nil {
+		if agentIDStr := c.Param("agent_id"); agentIDStr != "" {
+			if parsed, parseErr := uuid.Parse(agentIDStr); parseErr == nil {
+				req.AgentID = parsed
+			}
+		}
+	}
+	if req.AgentID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "agent_id is required"})
 		return
 	}
 

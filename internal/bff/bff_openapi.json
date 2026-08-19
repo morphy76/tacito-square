@@ -200,6 +200,126 @@
         }
       }
     },
+    "/api/v1/configurator/llm-bindings": {
+      "get": {
+        "tags": ["configurator"],
+        "summary": "List LLM bindings",
+        "security": [
+          {
+            "CookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of LLM bindings"
+          }
+        }
+      },
+      "post": {
+        "tags": ["configurator"],
+        "summary": "Create LLM binding",
+        "security": [
+          {
+            "CookieAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created LLM binding"
+          }
+        }
+      }
+    },
+    "/api/v1/configurator/prompts": {
+      "get": {
+        "tags": ["configurator"],
+        "summary": "List prompts",
+        "security": [
+          {
+            "CookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of prompts"
+          }
+        }
+      },
+      "post": {
+        "tags": ["configurator"],
+        "summary": "Create prompt",
+        "security": [
+          {
+            "CookieAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created prompt"
+          }
+        }
+      }
+    },
+    "/api/v1/configurator/skills": {
+      "get": {
+        "tags": ["configurator"],
+        "summary": "List skills",
+        "security": [
+          {
+            "CookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of skills"
+          }
+        }
+      },
+      "post": {
+        "tags": ["configurator"],
+        "summary": "Create skill",
+        "security": [
+          {
+            "CookieAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created skill"
+          }
+        }
+      }
+    },
+    "/api/v1/configurator/mcp-servers": {
+      "get": {
+        "tags": ["configurator"],
+        "summary": "List MCP servers",
+        "security": [
+          {
+            "CookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of MCP servers"
+          }
+        }
+      },
+      "post": {
+        "tags": ["configurator"],
+        "summary": "Create MCP server",
+        "security": [
+          {
+            "CookieAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created MCP server"
+          }
+        }
+      }
+    },
     "/api/v1/configurator/agents": {
       "get": {
         "tags": ["configurator"],

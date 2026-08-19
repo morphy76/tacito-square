@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AgentPayload, WizardOptions } from '../AgentCRUD/AgentForm';
-import { getApiUrl } from '../../App';
+import { getApiUrl } from '../../utils/api';
 
 interface AgentWizardProps {
   options: WizardOptions | null;

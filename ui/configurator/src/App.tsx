@@ -7,12 +7,7 @@ import RawJsonEditor from './components/AdvancedSettings/RawJsonEditor';
 import AgentForm, { AgentPayload, WizardOptions } from './components/AgentCRUD/AgentForm';
 import CommunityForm, { CommunityPayload } from './components/CommunityCRUD/CommunityForm';
 import TopologyView from './components/Topology/TopologyView';
-
-export const getApiUrl = (path: string) => {
-  const base = import.meta.env.BASE_URL;
-  const cleanBase = base.endsWith('/') ? base.slice(0, -1) : base;
-  return `${cleanBase}${path}`;
-};
+import { getApiUrl } from './utils/api';
 
 interface Agent extends AgentPayload {
   id: string;
@@ -23,7 +18,7 @@ interface Community {
   name: string;
   description: string;
   topology: string;
-  configuration: Record<string, any>;
+  configuration: Record<string, unknown>;
   agents: string[];
 }
 

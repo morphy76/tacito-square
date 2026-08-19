@@ -13,7 +13,7 @@ describe('AuthGuard Component', () => {
 
   beforeEach(() => {
     // Mock window.location
-    const windowMock = window as any;
+    const windowMock = window as unknown as { location?: Location };
     delete windowMock.location;
     windowMock.location = {
       ...originalLocation,
@@ -22,7 +22,7 @@ describe('AuthGuard Component', () => {
   });
 
   afterEach(() => {
-    const windowMock = window as any;
+    const windowMock = window as unknown as { location?: Location };
     windowMock.location = originalLocation;
     vi.restoreAllMocks();
   });

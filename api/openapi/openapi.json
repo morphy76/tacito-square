@@ -1717,6 +1717,128 @@
         "description": "Compiles and flattens a prompt collection into a fully hydrated array of prompt contents. Why: Provides the runtime container with the complete, compiled instructional payload needed to build the cognitive engine context before execution."
       }
     },
+    "/prompt-collections/{id}/prompts/{prompt_id}": {
+      "post": {
+        "summary": "Add a Prompt template to a Prompt Collection",
+        "operationId": "addPromptToCollection",
+        "tags": [
+          "agent-config/prompt-engineering"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Prompt Collection.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "prompt_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Prompt template to add.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully added prompt to collection"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Collection or prompt not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Prompt already exists in collection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Adds a prompt template to a prompt collection."
+      },
+      "delete": {
+        "summary": "Remove a Prompt template from a Prompt Collection",
+        "operationId": "removePromptFromCollection",
+        "tags": [
+          "agent-config/prompt-engineering"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Prompt Collection.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "prompt_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Prompt template to remove.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully removed prompt from collection"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Collection or prompt not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Removes a prompt template from a prompt collection."
+      }
+    },
     "/agents": {
       "post": {
         "summary": "Create a new Agent template",
@@ -1962,6 +2084,289 @@
           }
         },
         "description": "Deletes an agent configuration blueprint from the database by UUID. Why: Cleans up obsolete blueprints. Caution: This operation will reject if the agent is actively deployed in a Kubernetes cluster or assigned to a community."
+      }
+    },
+    "/agents/{agent_id}/prompts/{prompt_id}": {
+      "post": {
+        "summary": "Attach a Prompt template to an Agent",
+        "operationId": "attachPromptToAgent",
+        "tags": [
+          "agent-config/agents"
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Agent template.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "prompt_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Prompt template to attach.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully attached prompt template"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent or prompt not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Attaches an individual prompt template to an agent."
+      },
+      "delete": {
+        "summary": "Detach a Prompt template from an Agent",
+        "operationId": "detachPromptFromAgent",
+        "tags": [
+          "agent-config/agents"
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Agent template.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "prompt_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Prompt template to detach.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully detached prompt template"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent or prompt not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Detaches an individual prompt template from an agent."
+      }
+    },
+    "/agents/{agent_id}/prompt-collections/{collection_id}": {
+      "post": {
+        "summary": "Attach a Prompt Collection to an Agent",
+        "operationId": "attachCollectionToAgent",
+        "tags": [
+          "agent-config/agents"
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Agent template.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "collection_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Prompt Collection to attach.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully attached prompt collection"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent or collection not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Attaches a prompt collection to an agent."
+      },
+      "delete": {
+        "summary": "Detach a Prompt Collection from an Agent",
+        "operationId": "detachCollectionFromAgent",
+        "tags": [
+          "agent-config/agents"
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Agent template.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "collection_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Prompt Collection to detach.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully detached prompt collection"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent or collection not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Detaches a prompt collection from an agent."
+      }
+    },
+    "/agents/{agent_id}/prompts": {
+      "get": {
+        "summary": "Resolve effective prompts for an Agent",
+        "operationId": "resolveEffectiveAgentPrompts",
+        "tags": [
+          "agent-config/agents"
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Agent template.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resolved effective prompts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "agent_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "resolved_prompts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "total": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Resolves all direct and collection-derived prompt templates assigned to this agent."
       }
     },
     "/communities": {
@@ -2211,7 +2616,7 @@
         "description": "Removes a community network registry from the database. Why: Deprecates active collaboration zones. Note: Rejects if the community has active agents assigned."
       }
     },
-    "/communities/{community_id}/agents/{agent_id}": {
+    "/communities/{community_id}/agents": {
       "post": {
         "summary": "Assign an Agent to a Community",
         "operationId": "assignAgentToCommunity",
@@ -2228,18 +2633,37 @@
               "type": "string",
               "format": "uuid"
             }
-          },
-          {
-            "name": "agent_id",
-            "in": "path",
-            "required": true,
-            "description": "The UUID of the Agent template to assign.",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "agent_id"
+                ],
+                "properties": {
+                  "agent_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID of the agent to assign."
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "hub",
+                      "spoke"
+                    ],
+                    "default": "spoke",
+                    "description": "Role of the agent within the community."
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successfully assigned Agent to Community",
@@ -2248,9 +2672,16 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "status": {
+                    "agent_id": {
                       "type": "string",
-                      "example": "assigned"
+                      "format": "uuid"
+                    },
+                    "role": {
+                      "type": "string"
+                    },
+                    "assigned_at": {
+                      "type": "string",
+                      "format": "date-time"
                     }
                   }
                 }
@@ -2308,7 +2739,146 @@
             }
           }
         },
-        "description": "Binds an agent template to a specific community network boundary. Why: Binds the agent's event routes to the community's communication mesh and sets the `community_id` foreign key. Crucial step before deploying the agent, ensuring it wakes up in a secure, isolated workspace."
+        "description": "Binds an agent template to a specific community network boundary."
+      },
+      "get": {
+        "summary": "List Agents Assigned to a Community",
+        "operationId": "listCommunityAssignedAgents",
+        "tags": [
+          "community/communities"
+        ],
+        "parameters": [
+          {
+            "name": "community_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Community network boundary.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of agents assigned to the community",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "agent_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "role": {
+                        "type": "string"
+                      },
+                      "assigned_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "informed_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Community not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Retrieves the list of all agents currently assigned to the given community."
+      }
+    },
+    "/communities/{community_id}/agents/{agent_id}": {
+      "post": {
+        "summary": "Assign an Agent to a Community",
+        "operationId": "assignAgentToCommunityByPath",
+        "tags": [
+          "community/communities"
+        ],
+        "parameters": [
+          {
+            "name": "community_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Community network boundary.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "description": "The UUID of the Agent template to assign.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully assigned Agent to Community"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Binds an agent template to a specific community network boundary."
       },
       "delete": {
         "summary": "Unassign an Agent from a Community",
@@ -4354,15 +4924,6 @@
             "type": "string",
             "description": "Explanation of the agent's functional role."
           },
-          "role": {
-            "type": "string",
-            "enum": [
-              "hub",
-              "spoke"
-            ],
-            "default": "spoke",
-            "description": "Topology role of the agent."
-          },
           "brain": {
             "allOf": [
               {
@@ -4395,10 +4956,21 @@
             },
             "description": "Array of skill UUIDs currently attached to this agent."
           },
-          "prompt_template": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Active prompt template UUID pointer guiding reasoning."
+          "prompts": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Array of prompt template UUIDs attached to this agent."
+          },
+          "prompt_collections": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Array of prompt collection UUIDs attached to this agent."
           },
           "mcp_clients": {
             "type": "array",

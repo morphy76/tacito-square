@@ -35,7 +35,7 @@ beforeEach(() => {
       });
     }
     return Promise.reject(new Error('Unknown url: ' + url));
-  }) as any;
+  }) as unknown as typeof fetch;
 });
 
 test('renders app header', async () => {

@@ -4,6 +4,7 @@ bin/
 /keeper
 /operator
 /bff
+/ui-server
 
 # IDE
 .idea/
@@ -22,3 +23,4 @@ deploy/helm/tacito-square/Chart.lock
 
 # UI
 node_modules/
+ui/configurator/dist/
