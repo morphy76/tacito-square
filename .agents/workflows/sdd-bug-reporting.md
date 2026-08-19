@@ -1,80 +1,59 @@
-# SDD Workflow: Bug Reporting (Self-Contained Task)
+---
+trigger: manual
+description: Reporting, triaging, and executing bug fixes through GitHub Issues and TDD cycles.
+---
 
-This workflow defines the step-by-step process for documenting, staging, and executing a bug fix, fully aligned with the [Project Constitution](file:///Users/R.Pasquini/Projects/side/tacito-square/specs/constitution.md) and tracked via the master [Specs Index](file:///Users/R.Pasquini/Projects/side/tacito-square/specs/INDEX.md).
+# SDD Workflow: Bug Reporting & Resolution (TDD Defect Lifecycle)
 
-In Tacito Square, **a bug is treated just like a task** — a single self-contained document that encapsulates both the specification of the defect (expected vs actual behavior) and the task requirements. (Section 3 of the [Project Constitution](file:///Users/R.Pasquini/Projects/side/tacito-square/specs/constitution.md)).
+This workflow defines the step-by-step process for documenting, staging, and executing a bug fix via GitHub Issues and Pull Requests, fully aligned with the [Project Constitution](specs/constitution.md).
+
+In Tacito Square, **a bug is treated just like a task** — it encapsulates both the specification of the defect (expected vs. actual behavior) and the TDD fix requirements.
 
 ---
 
 ## Step 1: Bug Analysis & Triage
 When a defect, crash, or test failure is identified:
-1.  **Isolate the Defect**: Run logs, database inspections, or GORM schema queries to pinpoint the root cause.
-2.  **Define the Scope**: Identify which components (`keeper`, `agent`, `operator`, `bff`) and files are affected, and which principles/specifications of the [Project Constitution](file:///Users/R.Pasquini/Projects/side/tacito-square/specs/constitution.md) are violated.
+1.  **Isolate the Defect**: Inspect logs, test outputs, or database queries to pinpoint the root cause.
+2.  **Define the Scope**: Identify which components (`keeper`, `agent`, `operator`, `bff`, `ui`, `shared`, `deploy`) are affected, and whether any architectural rules or specifications are violated.
 
 ---
 
-## Step 2: Bug Document Creation & Indexing
-Create a self-contained BUG document following the exact template below:
+## Step 2: GitHub Bug Issue Creation
+Create a GitHub Bug Issue using `.github/ISSUE_TEMPLATE/bug.yml` or the GitHub CLI:
 
-1.  **Path**: `specs/tasks/M<Milestone-Number>.BUG<Bug-Number>/BUG-M<Milestone-Number>.<Bug-Number>.md`
-2.  **Initial Status**: Set `Status` to `OPEN`.
-3.  **Specs Index Registration**: Open the master [Specs Index](file:///Users/R.Pasquini/Projects/side/tacito-square/specs/INDEX.md), find the corresponding Milestone's Bugs table, and append a new entry for the bug mapping its ID, Title, status `OPEN`, severity, and clickable file link.
+```bash
+gh issue create \
+  --title "[BUG]: <Short defect title>" \
+  --label "type:bug,status:accepted,comp:<component>,severity:<low|medium|high|critical>" \
+  --body "## Defect Description
+<Detailed explanation of incorrect behavior>
+
+## Reproduction Steps & Logs
+1. ...
+2. ...
+
+## Expected Behavior
+The system MUST ...
+
+## TDD Fix Plan
+- [ ] Write reproducing failing test (RED)
+- [ ] Implement root cause fix (GREEN)
+- [ ] Clean up and verify no regressions (REFACTOR)
+"
+```
 
 ---
 
 ## Step 3: Execution via TDD Operational Loop
-Under the "bug is just like a task" philosophy, execution follows the exact same Test-Driven Development (TDD) cycle as task execution. This directly implements Principle P2 (**TDD**) of the [Project Constitution](file:///Users/R.Pasquini/Projects/side/tacito-square/specs/constitution.md):
-1.  **RED Phase**: Write tests replicating the defect. Run the tests to witness a clean, expected **test failure (RED)** showing that the bug is reproduced.
-2.  **GREEN Phase**: Implement the minimum possible code change to resolve the defect and make all tests pass successfully (**GREEN**).
-3.  **REFACTOR Phase**: Refactor code logic, efficiency, or formatting while keeping test contracts frozen and completely GREEN.
+Follow the standard TDD cycle on a feature branch (Principle P2: "Tests are written FIRST. Implementation follows. No exception"):
+
+1.  **RED Phase**: Write an automated test replicating the defect (unit, integration, or HTTP test). Run the test to witness a clean, expected **test failure (RED)** proving the bug is reproduced.
+2.  **GREEN Phase**: Implement the minimum possible code change using approved stack patterns (`pgx/v5`, `goose/v3`, Gin test recorder) to make the test pass (**GREEN**).
+3.  **REFACTOR Phase**: Refactor code logic or formatting while keeping test contracts frozen and completely GREEN.
 
 ---
 
-## Step 4: Present for Bug Closure
-Once resolved:
-1.  **Accepted Transition**: Move the BUG document status to `CLOSED` in its own metadata header.
-2.  **Specs Index Update**: Open the master [Specs Index](file:///Users/R.Pasquini/Projects/side/tacito-square/specs/INDEX.md) and update the status of the bug to `CLOSED` inside the corresponding Milestone's Bugs table.
-3.  Present the solution and clickable file link to the User, and wait for confirmation (adhering to Section 3 of the [Project Constitution](file:///Users/R.Pasquini/Projects/side/tacito-square/specs/constitution.md)).
-
----
-
-## BUG DOCUMENT TEMPLATE
-
-```markdown
-# BUG-M{Milestone}.{Bug-Number}: {Title}
-
-| Field         | Value                                                              |
-|---------------|--------------------------------------------------------------------|
-| ID            | BUG-M{Milestone}.{Bug-Number}                                      |
-| Status        | OPEN                                                               |
-| Severity      | {LOW|MEDIUM|HIGH}                                                   |
-| Milestone     | M{Milestone} — {Milestone Name}                                    |
-| Affects       | {file/component path}                                              |
-| Violates      | SPEC-FR-M{X}.{Y}, SPEC-NFR-{Z}                                     |
-| Discovered    | {Context, logs, or readyz readiness test failures}                  |
-
-## Problem Statement
-
-{Detailed explanation of the current incorrect behavior, root cause analysis, GORM/Postgres config conflicts, or TLS mounting issues.}
-
-## Affected Components and Files
-
-| Component / File | Location | Issue |
-|------------------|----------|-------|
-| {Component Name} | {Path to File} | {Specific code lack, GORM Gaps, or configuration error} |
-
-## Impact
-
-1. {Logical impact on security, database state, or connectivity.}
-2. {Impact on downstream component readiness probes (/readyz).}
-
-## Expected Behaviour
-
-1. {Requirement 1: The system MUST...}
-2. {Requirement 2: GORM migration scripts MUST...}
-
-## Acceptance Criteria
-
-1. {Concrete verification check, e.g. running connection verification script connects successfully.}
-2. {Readiness checks pass successfully and /readyz returns 200 OK.}
-```
+## Step 4: PR Submission & Bug Closure
+Once all unit and integration tests pass:
+1.  Submit a Pull Request referencing `Fixes #<ID>` using `gh pr create`.
+2.  Upon review and merge by the user, the PR closes the issue and completes the bug resolution.

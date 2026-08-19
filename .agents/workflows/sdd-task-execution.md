@@ -1,93 +1,89 @@
 ---
-description: 
+trigger: manual
+description: Executing tasks and specs through the TDD lifecycle on Git feature branches and Pull Requests.
 ---
 
-# SDD Workflow: Task Execution (TDD Lifecycle)
+# SDD Workflow: Task Execution (TDD Lifecycle & Pull Request Workflow)
 
-This workflow defines the step-by-step process for planning, decomposing, executing, and refactoring a system change using **Test-Driven Development (TDD)** within defined logical boundaries, fully aligned with the [Project Constitution](file:///Users/R.Pasquini/Projects/side/tacito-square/specs/constitution.md) and tracked via the master [Specs Index](file:///Users/R.Pasquini/Projects/side/tacito-square/specs/INDEX.md).
+This workflow defines the step-by-step process for executing a specification or task using **Test-Driven Development (TDD)** on dedicated Git feature branches and delivering changes via Pull Requests, fully aligned with the [Project Constitution](specs/constitution.md).
 
 ---
 
-## Step 1: Task Planning & Boundary Organization
-Before writing any code, decompose your work into structured task files. In accordance with Section 3 (**Rules**) of the [Project Constitution](file:///Users/R.Pasquini/Projects/side/tacito-square/specs/constitution.md):
+## Step 1: Pre-Execution Alignment & Branch Setup
+Before writing any code:
 
-1.  **Decompose by Logical Boundary**: Organize tasks strictly around package boundaries, DDD aggregates, module boundaries, components, or functional subsystems. (Constitution Section 3, Rule 7).
-2.  **Strict Avoidance**: **NEVER** organize tasks by TDD phases (e.g., do not make separate tasks for "write tests" vs. "write implementation"). TDD is purely an operational developer methodology used to execute a task, not an organizational boundary. (Constitution Section 3, Rule 8).
-3.  **Task File Generation**: Create a task spec file under the corresponding milestone/feature folder:
-    -   **Path**: `specs/tasks/M<Milestone-Number>.<Feature-Number>/TASK-M<Milestone-Number>.<Feature-Number>.<Task-Number>.md`
-    -   **Initial Status**: Set status to `DRAFT`.
-4.  **Interactive Approval Loop**: Present the task plan to the User with a direct clickable link. **STOP and wait** for the User's explicit review and approval before moving the status to `IN_PROGRESS` and modifying any codebase file. (Constitution Section 3, Rule 3).
-5.  **Index Status Transition (IN_PROGRESS)**: Once the User approves the task, set the task file status to `IN_PROGRESS`. Simultaneously, you MUST open the master [Specs Index](file:///Users/R.Pasquini/Projects/side/tacito-square/specs/INDEX.md) and update the status of the **parent functional specification (FR)** to `IN_PROGRESS` inside the milestone specification table.
+1.  **Verify Status**: Ensure the target issue has label `status:accepted` (or is an assigned bug/task) and is assigned to the user (`morphy76`).
+2.  **Branch Setup**: Ensure the remote branch is created and checked out locally:
+    ```bash
+    git checkout <branch-name>
+    ```
+3.  **Update Label**: Mark the issue as in progress:
+    ```bash
+    gh issue edit <ID> --remove-label "status:accepted" --add-label "status:in-progress"
+    ```
+4.  **Decompose by Logical Boundary**: If the issue is large, decompose it logically by subsystem or DDD package (never by TDD phase).
 
 ---
 
 ## Step 2: Test-Driven Development (TDD) Operational Loop
-Once the task is approved and set to `IN_PROGRESS`, you must strictly follow the operational TDD cycle. This directly implements Principle P2 (**TDD**) of the [Project Constitution](file:///Users/R.Pasquini/Projects/side/tacito-square/specs/constitution.md) ("Tests are written FIRST. Implementation follows. No exception"):
+Execute the core development cycle on the branch (Principle P2: "Tests are written FIRST. Implementation follows. No exception"):
 
 ### A. RED Phase (Write Tests First)
-1.  Write unit, or contract tests **before** creating or modifying any business logic or implementation code.
-2.  Verify that your new tests compile successfully but **fail (RED)** when executed against the existing codebase.
-3.  Do not proceed to the Green phase until you have witnessed a clean, expected test failure.
-4. Think twice before changing existing unit tests because potential regressions, changing an existing unit test is usually related to a change in a specification.
+1.  Write unit, contract, or integration tests **before** modifying any implementation logic.
+2.  Adhere to approved database and architecture standards: PostgreSQL with `pgx/v5`, migrations with `goose/v3` (never GORM), pure domain layer with zero adapter imports.
+3.  Run the tests (`go test ./...`) and verify they compile and **FAIL (RED)** as expected.
 
 ### B. GREEN Phase (Implement Minimum Code)
-1.  Write the absolute **minimum amount of code** required to make the failing tests compile and pass successfully (GREEN).
-2.  Avoid over-engineering, writing speculative code, or implementing capabilities outside the strict scope of the current task.
+1.  Write the absolute **minimum amount of code** required to make the failing tests pass (GREEN).
+2.  Avoid speculative code or out-of-scope refactoring.
 3.  Verify that the entire test suite passes successfully.
 
 ### C. REFACTOR Phase (Clean & Generalize)
-1.  Review the newly added code. Clean up code duplication, improve naming, optimize performance, and generalize abstractions.
-2.  **CRITICAL CONSTRAINT**: Do not modify any test assertions or test logic during this phase. The tests must remain a frozen contract.
-3.  Verify that the test suite remains completely GREEN.
+1.  Clean up code duplication, improve naming, optimize performance, and ensure strict Hexagonal layer isolation.
+2.  **CRITICAL CONSTRAINT**: Do not modify test assertions during refactoring; tests remain a frozen contract.
+3.  Verify the test suite remains completely GREEN.
 
 ---
 
-## Step 3: Integration tests using testcontainers
-Once the task is complete, if an infrastructural dependency is involved:
-1.  Write integration tests, strongly decoupled from unit tests by tags and, if needed, leveraging testcontainers
-2.  Verify that your new integration tests compile successfully 
-3.  Verify that the entire test suite passes successfully.
+## Step 3: Integration & Infrastructure Verification
+If external or infrastructural dependencies are involved (PostgreSQL, Redis, Qdrant, NATS):
+1.  Run integration tests tagged with `integration` using `testcontainers-go`:
+    ```bash
+    go test ./... -tags=integration -v
+    ```
+2.  Run linter and quality checks:
+    ```bash
+    make lint
+    make test
+    ```
 
 ---
 
-## Step 4: Present for Task Completion Approval
-Once the task is complete:
-1.  Update the task file status to `IMPLEMENTED` in accordance with the transition states diagram in Section 3 of the [Project Constitution](file:///Users/R.Pasquini/Projects/side/tacito-square/specs/constitution.md).
-2.  **Index Status Transition (IMPLEMENTED)**: Open the master [Specs Index](file:///Users/R.Pasquini/Projects/side/tacito-square/specs/INDEX.md) and update the status of the **parent functional specification (FR)** to `IMPLEMENTED` inside the milestone specification table.
-3.  Refer the User to the task file link.
-4.  **STOP and wait** for the User's verification and approval to mark the task `VERIFIED`. (Constitution Section 3, Rule 4).
+## Step 4: Pull Request Submission
+Once all tests and quality checks pass:
 
----
+1.  **Commit & Push**:
+    ```bash
+    git add .
+    git commit -m "feat(<component>): <concise description> (Fixes #<ID>)"
+    git push origin <branch-name>
+    ```
+2.  **Create Pull Request**:
+    ```bash
+    gh pr create \
+      --title "<Component>: <Title>" \
+      --body "## Description
+<Summary of changes>
 
-## TASK FILE TEMPLATE
+Fixes #<ID>
 
-```markdown
-# TASK-M{Milestone}.{Feature}.{Task}: {Title}
-
-| Field         | Value                                       |
-|---------------|---------------------------------------------|
-| ID            | TASK-M{Milestone}.{Feature}.{Task}          |
-| Status        | DRAFT                                       |
-| Spec          | SPEC-FR-M{Milestone}.{Feature}              |
-| Depends On    | TASK-M{X}.{Y}.{Z}, ... (or none)             |
-
-## Description
-
-{Detailed description of the task scope, GORM mappings, HTTP controllers, or interface boundaries covered.}
-
-## Work Items
-
-1. **RED Phase**:
-   - {List of tests to create first, e.g. create internal/keeper/domain/llm_binding_test.go verifying input validations.}
-   - {List of database/integration tests to create, e.g. verify repository connection pools.}
-2. **GREEN Phase**:
-   - {List of minimal implementation steps, e.g. implement llm_binding.go validation rules.}
-   - {Define repository interface and write Postgres GORM implementation.}
-3. **REFACTOR Phase**:
-   - {Refactor plan, e.g. optimize query allocations, improve error wraps.}
-
-## Acceptance Criteria
-
-1. {Concrete test outputs and success benchmarks, e.g. all GORM unit and integration tests pass successfully.}
-2. {Hexagonal architecture boundaries are fully verified with zero import violations.}
-```
+## Checklist
+- [x] Unit/Integration tests added (TDD RED -> GREEN -> REFACTOR)
+- [x] Hexagonal architecture boundaries verified
+- [x] Local test suite passes (make test)"
+    ```
+3.  **Update Issue Label**:
+    ```bash
+    gh issue edit <ID> --remove-label "status:in-progress" --add-label "status:implemented"
+    ```
+4.  Present the PR link to the user for review and merge. Merging the PR closes the issue and completes the lifecycle.
