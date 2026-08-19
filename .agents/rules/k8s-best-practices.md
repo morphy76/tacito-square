@@ -1,18 +1,29 @@
 ---
-trigger: always_on
-glob: **/*.{go,ts,yaml,Dockerfile}
-description: Kubernetes deployment requirements, including HPA autoscaling, dependency-aware health probes, and distroless container configurations.
+trigger: glob
+globs: ["**/*.{go,ts,yaml,Dockerfile}"]
+description: Kubernetes deployment requirements, Kubebuilder operator reconcilers, HPA autoscaling, health probes, and distroless container configurations.
 ---
 
 # Kubernetes Best Practices Guidelines
 
-This rule enforces Kubernetes-native configuration, autoscaling design, deployment health validation, and container base constraints as specified in `SPEC-NFR-HPA`, `SPEC-NFR-HEALTH`, and `SPEC-NFR-STACK`.
+This rule enforces Kubernetes-native configuration, Kubebuilder controller patterns, autoscaling design, deployment health validation, and container base constraints.
 
-## 1. Horizontal Pod Autoscaling (SPEC-NFR-HPA)
+## 1. Kubernetes Operator & Controller Patterns (`sigs.k8s.io/controller-runtime`)
+
+All controllers and reconcilers (e.g. `cmd/operator`, `operator/`) must adhere to cloud-native reconciliation semantics:
+
+- **Idempotence**: The `Reconcile(ctx context.Context, req ctrl.Request)` loop MUST be strictly idempotent. Running reconcile repeatedly against the same state must produce identical results without duplicating pods, secrets, or services.
+- **Level-Triggered State**: Reconcilers must reconcile toward the desired state defined in the CRD spec (`Agent`, `Community`), not assume sequential step transitions.
+- **Status Condition Updates**: Use standard Kubernetes condition arrays (`metav1.Condition`) to report state (`Ready`, `Reconciling`, `Error`) with clear `Reason` and `Message`.
+- **Finalizer Hygiene**: When managing external resources (e.g. stateful storage, external registrations), register a finalizer and ensure cleanup executes before removing the finalizer string.
+- **Error Requeue Strategy**: Return transient errors with exponential backoff (`ctrl.Result{RequeueAfter: ...}`). Return non-recoverable domain/validation errors without requeue to avoid infinite hot loops.
+- **Pure Reconciler Layer**: Reconcilers must orchestrate Kubernetes manifests, delegating complex domain logic and config compilation to application services.
+
+## 2. Horizontal Pod Autoscaling (SPEC-NFR-HPA)
 
 Every deployable microservice (e.g., `keeper`, `agent`, `bff`) must support automated scaling configurations:
 
-- **HPA Configurations:** Every deployable artifact MUST have an HPA configuration with load-factor-based scaling. HPA templates must be included in Helm charts (`deploy/helm/`) with configurable `minReplicas`, `maxReplicas`, and metrics.
+- **HPA Configurations:** Every deployable artifact MUST have an HPA configuration with load-factor-based scaling. HPA templates must be included in Helm charts (`tools/helm/`) with configurable `minReplicas`, `maxReplicas`, and metrics.
 - **Component Scaling Metrics:**
   - **Agent Component:** 
     - Primary Metric: `active_threads` (custom Prometheus metric)
@@ -29,7 +40,7 @@ Every deployable microservice (e.g., `keeper`, `agent`, `bff`) must support auto
 - **Prometheus Metric Exporting:** All custom scaling metrics (e.g., `active_threads`) must be exported in Prometheus exposition format and consumed by the HPA adapter (`prometheus-adapter` or KEDA).
 - **Idle agent scale-to-zero:** Scale-to-zero should be supported for idle agents (this capability must be configurable and defaulted to `disabled`).
 
-## 2. Dependency-Aware Health Probes (SPEC-NFR-HEALTH)
+## 3. Dependency-Aware Health Probes (SPEC-NFR-HEALTH)
 
 All network-exposed Go/TypeScript processes must implement and expose `/healthz` and `/readyz` probes:
 
@@ -49,7 +60,7 @@ All network-exposed Go/TypeScript processes must implement and expose `/healthz`
     - If any dependency is unhealthy, return `503 Service Unavailable` with details and errors per-dependency (JSON format).
   - Logging: Only log readiness failures and first recovery success.
 
-## 3. Container Images (SPEC-NFR-STACK)
+## 4. Container Images (SPEC-NFR-STACK)
 
 Ensure all microservice deployment containers utilize secure, lightweight base images:
 
@@ -61,8 +72,8 @@ Ensure all microservice deployment containers utilize secure, lightweight base i
 
 ## Developer Checklists & Verifications
 
+- [ ] Is my controller reconciler idempotent and non-blocking?
 - [ ] Does my Dockerfile use `gcr.io/distroless/base-nossl-debian13` as the runtime stage?
 - [ ] Are `/healthz` and `/readyz` endpoints exposed?
 - [ ] Does `/readyz` perform dependency checks in parallel?
 - [ ] Is there an HPA template in the Helm chart for this service?
-- [ ] Are custom metrics properly exported in Prometheus text format?

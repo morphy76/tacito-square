@@ -1,7 +1,7 @@
 ---
-trigger: always_on
-glob: **/*.{go,ts}
-description: Cloud-First Development patterns, multitenancy design, API-First principles, and live OpenAPI specs.
+trigger: glob
+globs: ["**/*.go", "**/*.ts", "**/*.tsx"]
+description: Cloud-First Development patterns, multitenancy design, API-First principles, circuit breakers, and live OpenAPI specs.
 ---
 
 # Cloud-First Development & Multitenancy Guidelines

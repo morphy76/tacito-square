@@ -1,6 +1,6 @@
 ---
 trigger: always_on
-glob: *
+globs: ["*"]
 description: General non-functional requirements, including technology stack locks, monorepo Makefile build system, semantic versioning lifecycle, and HTTP framework conventions.
 ---
 
@@ -21,14 +21,14 @@ The following software versions, frameworks, and client libraries are strictly l
 - **LLM Integrations:** OpenAI Go library (`github.com/openai/openai-go`)
 - **Short-Term Memory (STM):** Redis (`github.com/redis/go-redis`)
 - **Long-Term Memory (LTM):** Qdrant gRPC (`github.com/qdrant/go-client`)
-- **Databases & Migrations:** PostgreSQL (`github.com/jackc/pgx`) and goose (`github.com/pressly/goose`)
+- **Databases & Migrations:** PostgreSQL (`github.com/jackc/pgx/v5`) and goose (`github.com/pressly/goose/v3`)
 - **Event Bus & Messaging:** NATS (`github.com/nats-io/nats.go`)
 - **Model Context Protocol:** MCP SDK (`github.com/modelcontextprotocol/go-sdk`)
 - **Identity & OIDC:** Zitadel OIDC client (`github.com/zitadel/oidc/v3`)
 - **Kubernetes Operators:** Kubebuilder (`sigs.k8s.io/controller-runtime`)
 - **Frontend Architecture:** React 19 + Compiler
 - **Object Storage:** S3-compatible (with MinIO in dev environment)
-- **Umbrella Helm Chart:** Located under `deploy/helm/tacito-square/`
+- **Helm Charts:** Located under `tools/helm/`
 
 ## 2. Monorepo Build System (SPEC-NFR-BUILDING)
 
@@ -55,7 +55,7 @@ Tacito Square components use independent semantic versions:
 
 - **Version File:** Each component must maintain its current SemVer in a flat text file at the root: `VERSION.keeper`, `VERSION.agent`, `VERSION.operator`, `VERSION.bff`.
 - **SemVer Format:** Strictly adhere to Semantic Versioning 2.0.0 (`MAJOR.MINOR.PATCH`).
-- **Helm System Versioning:** The parent `deploy/helm/tacito-square/Chart.yaml` version field governs the overall **system version**, which operates independently of component releases.
+- **Helm System Versioning:** The parent `tools/helm/tacito-square/Chart.yaml` version field governs the overall **system version**, which operates independently of component releases.
 - **Git Tags Structure:**
   - Component Release tag format: `<component>-v<version>` (e.g. `keeper-v0.2.0`, `agent-v0.1.3`).
   - Helm Chart Release tag format: `chart-<chart-name>-v<version>` (e.g. `chart-tacito-square-v0.2.0`).

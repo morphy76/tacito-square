@@ -1,7 +1,7 @@
 ---
-trigger: always_on
-glob: **/*.{go,ts}
-description: Hexagonal design pattern, DDD layering boundaries, and Go concurrency/reactive programming paradigms.
+trigger: glob
+globs: ["**/*.go", "**/*.ts", "**/*.tsx"]
+description: Hexagonal (Ports & Adapters) design pattern, DDD layering boundaries, and Go reactive concurrency paradigms.
 ---
 
 # Code Architecture Guidelines

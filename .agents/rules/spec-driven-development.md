@@ -1,6 +1,6 @@
 ---
 trigger: always_on
-glob: **/*.{go,ts,md,yml,yaml}
+globs: ["*"]
 description: Spec-Driven Development (SDD) compliance and Test-Driven Development (TDD) operational practices with GitHub Issues and PRs.
 ---
 
