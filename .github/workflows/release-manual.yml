@@ -63,7 +63,7 @@ jobs:
             arch=$(echo $target | cut -d'/' -f2)
             bin_name="${{ inputs.target_name }}-${os}-${arch}"
             echo "Compiling $bin_name..."
-            CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -mod=vendor -ldflags="-s -w" -o "dist/$bin_name" "./cmd/${{ inputs.target_name }}"
+            CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -ldflags="-s -w" -o "dist/$bin_name" "./cmd/${{ inputs.target_name }}"
           done
           cd dist && sha256sum * > checksums.txt
 

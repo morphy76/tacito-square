@@ -10,8 +10,10 @@ RUN cd ui/configurator && npm run build
 # Stage 2: Compile a lightweight Go static server to comply with the Distroless runtime constraint
 FROM golang:1.26-alpine AS go-builder
 WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -mod=vendor -ldflags="-s -w" -o static-server ./cmd/ui-server
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o static-server ./cmd/ui-server
 
 # Stage 3: Package into final secure Distroless container
 FROM gcr.io/distroless/base-nossl-debian13:nonroot
