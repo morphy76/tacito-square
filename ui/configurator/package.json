@@ -39,6 +39,6 @@
     "json-server": "^0.17.4",
     "typescript": "^5.7.2",
     "vite": "^6.0.5",
-    "vitest": "^2.1.8"
+    "vitest": "^4.1.10"
   }
 }
