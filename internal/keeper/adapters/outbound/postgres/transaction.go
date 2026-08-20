@@ -92,7 +92,7 @@ func ExecuteInTxOrPool(ctx context.Context, pool *pgxpool.Pool, fn func(tx pgx.T
 	if err != nil {
 		return fmt.Errorf("begin local transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	if err := fn(tx); err != nil {
 		return err

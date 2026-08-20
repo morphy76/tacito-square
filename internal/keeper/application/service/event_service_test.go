@@ -11,6 +11,7 @@ import (
 	"github.com/morphy76/tacito-square/internal/keeper/application/ports/outbound"
 	"github.com/morphy76/tacito-square/internal/keeper/application/service"
 	"github.com/morphy76/tacito-square/internal/keeper/domain/model"
+	"github.com/morphy76/tacito-square/internal/shared/tenant"
 	"github.com/morphy76/tacito-square/pkg/events"
 	"github.com/stretchr/testify/assert"
 )
@@ -27,10 +28,6 @@ func (m *mockPublisher) Publish(ctx context.Context, subject string, event event
 	return m.errToReturn
 }
 
-type mockSubscription struct{}
-
-func (m *mockSubscription) Stop() error { return nil }
-
 type mockSubscriber struct {
 	subscribedSubject string
 	subscribedTenant  string
@@ -42,6 +39,11 @@ func (m *mockSubscriber) Subscribe(ctx context.Context, subjectPattern string, t
 	m.subscribedSubject = subjectPattern
 	m.subscribedTenant = tenantID
 	return m.subToReturn, m.errToReturn
+}
+
+func testTenantCtx(tenantID string) context.Context {
+	ten, _ := tenant.New(tenantID, "")
+	return tenant.ContextWithTenant(context.Background(), ten)
 }
 
 // mockCommunityRepo implements outbound.CommunityRepository for unit tests.
@@ -109,9 +111,8 @@ func TestPublishEvent_Success_Conversational(t *testing.T) {
 	}
 	payloadBytes, _ := json.Marshal(payload)
 
-	ctx := context.Background()
 	tenantID := "tenant-xyz"
-	ctx = context.WithValue(ctx, "tenant_id", tenantID) // Simulating resolved tenant
+	ctx := testTenantCtx(tenantID)
 
 	evt, err := svc.PublishEvent(ctx, schemaRef, payloadBytes)
 	assert.NoError(t, err)
@@ -151,9 +152,8 @@ func TestPublishEvent_Success_Conversational_OptionalAgentName(t *testing.T) {
 	}
 	payloadBytes, _ := json.Marshal(payload)
 
-	ctx := context.Background()
 	tenantID := "tenant-xyz"
-	ctx = context.WithValue(ctx, "tenant_id", tenantID)
+	ctx := testTenantCtx(tenantID)
 
 	_, err := svc.PublishEvent(ctx, schemaRef, payloadBytes)
 	assert.NoError(t, err)
@@ -187,8 +187,7 @@ func TestPublishEvent_HubSpoke_RoutesToHub(t *testing.T) {
 	}
 	payloadBytes, _ := json.Marshal(payload)
 
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, "tenant_id", "tenant-xyz")
+	ctx := testTenantCtx("tenant-xyz")
 
 	_, err := svc.PublishEvent(ctx, schemaRef, payloadBytes)
 	assert.NoError(t, err)
@@ -222,8 +221,7 @@ func TestPublishEvent_SingleAgent_RoutesToAll(t *testing.T) {
 	}
 	payloadBytes, _ := json.Marshal(payload)
 
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, "tenant_id", "tenant-xyz")
+	ctx := testTenantCtx("tenant-xyz")
 
 	_, err := svc.PublishEvent(ctx, schemaRef, payloadBytes)
 	assert.NoError(t, err)
@@ -248,8 +246,7 @@ func TestPublishEvent_UnknownCommunity_RoutesToAll(t *testing.T) {
 	}
 	payloadBytes, _ := json.Marshal(payload)
 
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, "tenant_id", "tenant-xyz")
+	ctx := testTenantCtx("tenant-xyz")
 
 	_, err := svc.PublishEvent(ctx, schemaRef, payloadBytes)
 	assert.NoError(t, err)
@@ -271,8 +268,7 @@ func TestPublishEvent_Conversational_StartThread_GenerateThreadID(t *testing.T) 
 	}
 	payloadBytes, _ := json.Marshal(payload)
 
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, "tenant_id", "tenant-xyz")
+	ctx := testTenantCtx("tenant-xyz")
 
 	evt, err := svc.PublishEvent(ctx, schemaRef, payloadBytes)
 	assert.NoError(t, err)
@@ -300,8 +296,7 @@ func TestPublishEvent_Conversational_StartThread_PreserveThreadID(t *testing.T) 
 	}
 	payloadBytes, _ := json.Marshal(payload)
 
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, "tenant_id", "tenant-xyz")
+	ctx := testTenantCtx("tenant-xyz")
 
 	evt, err := svc.PublishEvent(ctx, schemaRef, payloadBytes)
 	assert.NoError(t, err)
@@ -338,8 +333,7 @@ func TestPublishEvent_Sanitization(t *testing.T) {
 	}
 	payloadBytes, _ := json.Marshal(payload)
 
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, "tenant_id", "tenant-xyz")
+	ctx := testTenantCtx("tenant-xyz")
 
 	evt, err := svc.PublishEvent(ctx, schemaRef, payloadBytes)
 	assert.NoError(t, err)
@@ -367,8 +361,7 @@ func TestPublishEvent_SanitizedEmptyError(t *testing.T) {
 	}
 	payloadBytes, _ := json.Marshal(payload)
 
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, "tenant_id", "tenant-xyz")
+	ctx := testTenantCtx("tenant-xyz")
 
 	_, err := svc.PublishEvent(ctx, schemaRef, payloadBytes)
 	assert.Error(t, err)
@@ -383,9 +376,8 @@ func TestPublishEvent_UnknownSchema_RoutesToGenericTopic(t *testing.T) {
 	schemaRef := "urn:tacito:schema:custom:operation:v1"
 	payloadBytes := []byte(`{"some":"data"}`)
 
-	ctx := context.Background()
 	tenantID := "tenant-xyz"
-	ctx = context.WithValue(ctx, "tenant_id", tenantID)
+	ctx := testTenantCtx(tenantID)
 
 	_, err := svc.PublishEvent(ctx, schemaRef, payloadBytes)
 	assert.NoError(t, err)

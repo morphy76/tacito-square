@@ -430,7 +430,8 @@ func TestPromptHandlers_CollectionMembership(t *testing.T) {
 
 		assert.Equal(t, http.StatusConflict, resp.Code)
 		var respBody map[string]string
-		json.Unmarshal(resp.Body.Bytes(), &respBody)
+		err := json.Unmarshal(resp.Body.Bytes(), &respBody)
+		assert.NoError(t, err)
 		assert.Contains(t, respBody["error"], "409 Conflict")
 	})
 
