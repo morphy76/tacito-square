@@ -50,7 +50,7 @@ func TestTracingMiddleware_ExtractsTraceContext(t *testing.T) {
 	ctx := context.Background()
 	shutdown, err := InitTracer(ctx, "test-service", "0.1.0", "localhost:4317")
 	require.NoError(t, err)
-	defer shutdown(ctx)
+	defer func() { _ = shutdown(ctx) }()
 
 	r := gin.New()
 	r.Use(TracingMiddleware("test-service"))
@@ -84,7 +84,7 @@ func TestTracingMiddleware_BypassesSystemEndpoints(t *testing.T) {
 	ctx := context.Background()
 	shutdown, err := InitTracer(ctx, "test-service-bypass", "0.1.0", "localhost:4317")
 	require.NoError(t, err)
-	defer shutdown(ctx)
+	defer func() { _ = shutdown(ctx) }()
 
 	r := gin.New()
 	r.Use(TracingMiddleware("test-service-bypass"))
