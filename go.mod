@@ -15,7 +15,7 @@ require (
 	github.com/openai/openai-go v1.12.0
 	github.com/pressly/goose/v3 v3.27.1
 	github.com/prometheus/client_golang v1.24.1
-	github.com/qdrant/go-client v1.18.2
+	github.com/qdrant/go-client v1.19.0
 	github.com/redis/go-redis/v9 v9.20.1
 	github.com/rs/zerolog v1.35.1
 	github.com/sethvargo/go-retry v0.3.0

@@ -290,8 +290,8 @@ github.com/prometheus/otlptranslator v1.0.0 h1:s0LJW/iN9dkIH+EnhiD3BlkkP5QVIUVEo
 github.com/prometheus/otlptranslator v1.0.0/go.mod h1:vRYWnXvI6aWGpsdY/mOT/cbeVRBlPWtBNDb7kGR3uKM=
 github.com/prometheus/procfs v0.21.1 h1:GljZCt+zSTS+NZq88cyQ1LjZ+RCHp3uVuabBWA5+OJI=
 github.com/prometheus/procfs v0.21.1/go.mod h1:aB55Cww9pdSJVHk0hUf0inxWyyjPogFIjmHKYgMKmtY=
-github.com/qdrant/go-client v1.18.2 h1:7ViiXB/fB4vfzdUtEYZ7g2vSG+yMU6EMu8CaNWF1g1c=
-github.com/qdrant/go-client v1.18.2/go.mod h1:Xkfp+r89uNOgSbvilVAhCZ3wKI4G+hB/r9Zr2m4zifI=
+github.com/qdrant/go-client v1.19.0 h1:WGyC1YDXXU8/Od8+kcFncgD3eMqulAoNHy8Ip76tBE8=
+github.com/qdrant/go-client v1.19.0/go.mod h1:/pjMgiL4SxFxD5rLorlS5/FXcvBSx/P2M81gnqn5fb8=
 github.com/quic-go/go-ossfuzz-seeds v0.1.0 h1:APacT+iIaNF6fd8AGEiN3bT/Jtkd2jz4v4TzM7MFjy0=
 github.com/quic-go/go-ossfuzz-seeds v0.1.0/go.mod h1:3IOHRbJIc+L6YKMwfDtJAM9Vj9k0YY4muhuyUYk5tbk=
 github.com/quic-go/qpack v0.6.0 h1:g7W+BMYynC1LbYLSqRt8PBg5Tgwxn214ZZR34VIOjz8=
