@@ -20,7 +20,7 @@ func TestPgxQueryTracer_Telemetry(t *testing.T) {
 	ctx := context.Background()
 	shutdown, err := InitTracer(ctx, "test-db-service", "1.0.0", "")
 	require.NoError(t, err)
-	defer shutdown(ctx)
+	defer func() { _ = shutdown(ctx) }()
 
 	// Setup mock OpenTelemetry tracer provider
 	tp := trace.NewTracerProvider()

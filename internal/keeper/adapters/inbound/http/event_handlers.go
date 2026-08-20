@@ -165,7 +165,7 @@ func (h *EventHandler) StreamEvents(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	defer sub.Stop()
+	defer func() { _ = sub.Stop() }()
 
 	c.Stream(func(w io.Writer) bool {
 		select {

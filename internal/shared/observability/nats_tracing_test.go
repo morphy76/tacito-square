@@ -137,7 +137,7 @@ func TestRequestMsgWithTrace_InjectsTraceparent(t *testing.T) {
 		_ = msg.Respond([]byte(`{}`))
 	})
 	require.NoError(t, err)
-	defer sub.Unsubscribe()
+	defer func() { _ = sub.Unsubscribe() }()
 
 	tracer := otel.Tracer("test")
 	ctx, span := tracer.Start(context.Background(), "parent")
@@ -172,7 +172,7 @@ func TestRequestMsgWithTrace_ExportsClientSpan(t *testing.T) {
 		_ = msg.Respond([]byte(`{}`))
 	})
 	require.NoError(t, err)
-	defer sub.Unsubscribe()
+	defer func() { _ = sub.Unsubscribe() }()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
@@ -212,7 +212,7 @@ func TestRequestMsgWithTrace_RecordsOutboundMetric(t *testing.T) {
 	ctx := context.Background()
 	shutdown, err := InitTracer(ctx, "test-nats-metric", "0.0.1", "")
 	require.NoError(t, err)
-	defer shutdown(ctx)
+	defer func() { _ = shutdown(ctx) }()
 
 	ns, nc := startNATSServer(t)
 	defer ns.Shutdown()
@@ -224,7 +224,7 @@ func TestRequestMsgWithTrace_RecordsOutboundMetric(t *testing.T) {
 		_ = msg.Respond([]byte(`{}`))
 	})
 	require.NoError(t, err)
-	defer sub.Unsubscribe()
+	defer func() { _ = sub.Unsubscribe() }()
 
 	reqCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
@@ -295,7 +295,7 @@ func TestWrapNATSHandler_ConsumerSpan_LinksToParent(t *testing.T) {
 
 	sub, err := nc.Subscribe(subject, WrapNATSHandler("nats.echo_handler", logger, inner))
 	require.NoError(t, err)
-	defer sub.Unsubscribe()
+	defer func() { _ = sub.Unsubscribe() }()
 
 	// Publish a message carrying the injected header
 	pubMsg := &natsclient.Msg{
@@ -356,7 +356,7 @@ func TestWrapNATSHandler_LogsTraceID(t *testing.T) {
 
 	sub, err := nc.Subscribe(subject, WrapNATSHandler("nats.echo_handler", logger, inner))
 	require.NoError(t, err)
-	defer sub.Unsubscribe()
+	defer func() { _ = sub.Unsubscribe() }()
 
 	pubMsg := &natsclient.Msg{
 		Subject: subject,

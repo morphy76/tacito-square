@@ -401,7 +401,7 @@ func TestEventSubscriber_DLQRouting(t *testing.T) {
 		dlqChan <- m
 	})
 	require.NoError(t, err)
-	defer dlqSub.Unsubscribe()
+	defer func() { _ = dlqSub.Unsubscribe() }()
 
 	select {
 	case dlqMsg := <-dlqChan:

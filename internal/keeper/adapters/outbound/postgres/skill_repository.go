@@ -253,7 +253,7 @@ func (r *SkillRepository) CreateCollection(ctx context.Context, c *model.SkillCo
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	query := `INSERT INTO skill_collections (
 		id, tenant_id, name, description, created_at, updated_at
@@ -349,7 +349,7 @@ func (r *SkillRepository) UpdateCollection(ctx context.Context, c *model.SkillCo
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	c.UpdatedAt = time.Now().UTC()
 	query := `UPDATE skill_collections SET name = $1, description = $2, updated_at = $3 

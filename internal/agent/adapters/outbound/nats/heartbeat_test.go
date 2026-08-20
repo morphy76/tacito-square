@@ -75,7 +75,7 @@ func TestHeartbeatPublisher_PublishesCard(t *testing.T) {
 		ch <- msg.Data
 	})
 	require.NoError(t, err)
-	defer sub.Unsubscribe()
+	defer func() { _ = sub.Unsubscribe() }()
 
 	// Initialize the heartbeat publisher with a fast tick interval (50ms)
 	pub := agentnats.NewHeartbeatPublisher(nc, cfg, "0.1.0", nil, logger)
@@ -84,7 +84,7 @@ func TestHeartbeatPublisher_PublishesCard(t *testing.T) {
 	ctx := context.Background()
 	err = pub.Start(ctx)
 	require.NoError(t, err)
-	defer pub.Stop()
+	defer func() { _ = pub.Stop() }()
 
 	// Assert message is received and valid
 	select {
@@ -133,7 +133,7 @@ func TestHeartbeatPublisher_IncludesMCPTools(t *testing.T) {
 		ch <- msg.Data
 	})
 	require.NoError(t, err)
-	defer sub.Unsubscribe()
+	defer func() { _ = sub.Unsubscribe() }()
 
 	pub := agentnats.NewHeartbeatPublisher(nc, cfg, "0.1.0", mcpMock, logger)
 	pub.SetInterval(50 * time.Millisecond)
@@ -141,7 +141,7 @@ func TestHeartbeatPublisher_IncludesMCPTools(t *testing.T) {
 	ctx := context.Background()
 	err = pub.Start(ctx)
 	require.NoError(t, err)
-	defer pub.Stop()
+	defer func() { _ = pub.Stop() }()
 
 	select {
 	case data := <-ch:
@@ -184,7 +184,7 @@ func TestHeartbeatPublisher_ParsesSystemPrompt(t *testing.T) {
 		ch <- msg.Data
 	})
 	require.NoError(t, err)
-	defer sub.Unsubscribe()
+	defer func() { _ = sub.Unsubscribe() }()
 
 	pub := agentnats.NewHeartbeatPublisher(nc, cfg, "0.1.0", nil, logger)
 	pub.SetInterval(50 * time.Millisecond)
@@ -192,7 +192,7 @@ func TestHeartbeatPublisher_ParsesSystemPrompt(t *testing.T) {
 	ctx := context.Background()
 	err = pub.Start(ctx)
 	require.NoError(t, err)
-	defer pub.Stop()
+	defer func() { _ = pub.Stop() }()
 
 	select {
 	case data := <-ch:
