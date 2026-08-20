@@ -62,7 +62,7 @@ func TestNATSEventPublisher_Publish(t *testing.T) {
 		msgChan <- msg
 	})
 	require.NoError(t, err)
-	defer sub.Unsubscribe()
+	defer func() { _ = sub.Unsubscribe() }()
 
 	payload := map[string]string{"foo": "bar"}
 	evt, err := events.NewDomainEvent("urn:tacito:schema:conversational:start-thread:v1", "keeper/local", "tenant-123", payload)
@@ -114,14 +114,14 @@ func TestNATSEventSubscriber_Subscribe(t *testing.T) {
 		eventsA <- evt
 	})
 	require.NoError(t, err)
-	defer subA.Stop()
+	defer func() { _ = subA.Stop() }()
 
 	// Subscribe for tenantB
 	subB, err := subscriber.Subscribe(ctx, "ts.community.>", tenantB, func(evt *events.DomainEvent) {
 		eventsB <- evt
 	})
 	require.NoError(t, err)
-	defer subB.Stop()
+	defer func() { _ = subB.Stop() }()
 
 	// Helper to publish with headers
 	pubHelper := func(subject string, evt events.DomainEvent) {

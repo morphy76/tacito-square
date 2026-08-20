@@ -10,14 +10,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	otelprometheus "go.opentelemetry.io/otel/exporters/prometheus"
 	otelmetric "go.opentelemetry.io/otel/metric"
 )
 
 var (
-	// globalPrometheusExporter is the pull-based metrics exporter.
-	globalPrometheusExporter *otelprometheus.Exporter
-
 	// OTel Meter
 	meter = otel.Meter("tacito-square")
 

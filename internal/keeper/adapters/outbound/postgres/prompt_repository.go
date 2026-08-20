@@ -195,7 +195,7 @@ func (r *PromptRepository) CreateCollection(ctx context.Context, c *model.Prompt
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	query := `INSERT INTO prompt_collections (
 		id, tenant_id, name, description, created_at, updated_at
@@ -291,7 +291,7 @@ func (r *PromptRepository) UpdateCollection(ctx context.Context, c *model.Prompt
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	c.UpdatedAt = time.Now().UTC()
 	query := `UPDATE prompt_collections SET 

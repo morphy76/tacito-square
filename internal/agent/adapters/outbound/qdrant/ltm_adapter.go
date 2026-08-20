@@ -41,9 +41,8 @@ func NewQdrantLTMAdapter(qdrantURL string, collectionName string, vectorDim uint
 		cleanedURL = qdrantURL[8:]
 	}
 
-	conn, err := grpc.DialContext(ctx, cleanedURL,
+	conn, err := grpc.NewClient(cleanedURL,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to qdrant gRPC: %w", err)

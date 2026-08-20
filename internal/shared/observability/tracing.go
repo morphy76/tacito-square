@@ -26,7 +26,6 @@ func InitTracer(ctx context.Context, serviceName, serviceVersion, otelEndpoint s
 	if err != nil {
 		return nil, fmt.Errorf("creating Prometheus exporter: %w", err)
 	}
-	globalPrometheusExporter = promExporter
 
 	res, err := resource.New(ctx,
 		resource.WithAttributes(

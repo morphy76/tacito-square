@@ -41,7 +41,7 @@ func TestMetricsExposition_OTel(t *testing.T) {
 	// Initialize unified telemetry (InitTracer acts as our telemetry bootstrapper)
 	shutdown, err := InitTracer(ctx, "test-service", "1.0.0", "")
 	require.NoError(t, err)
-	defer shutdown(ctx)
+	defer func() { _ = shutdown(ctx) }()
 
 	r := gin.New()
 	r.Use(MetricsMiddleware())
