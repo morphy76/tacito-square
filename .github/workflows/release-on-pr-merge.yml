@@ -155,7 +155,7 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/tacito-square/${{ matrix.name }}:latest
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ matrix.name }}-v${{ matrix.version }}
           name: "${{ matrix.name }} v${{ matrix.version }}"
@@ -212,7 +212,7 @@ jobs:
           helm push "$PKG" "oci://ghcr.io/${{ github.repository_owner }}/tacito-square/charts"
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: chart-${{ matrix.name }}-v${{ matrix.version }}
           name: "Helm Chart ${{ matrix.name }} v${{ matrix.version }}"
