@@ -1,5 +1,5 @@
 # Stage 1: Build the React 19 SPA
-FROM node:22-alpine AS ui-builder
+FROM node:26-alpine AS ui-builder
 WORKDIR /app
 COPY ui/configurator/package*.json ./ui/configurator/
 RUN cd ui/configurator && npm install
