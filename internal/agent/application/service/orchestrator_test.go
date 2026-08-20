@@ -512,7 +512,7 @@ func TestOrchestrator_ProcessSpokeResponse(t *testing.T) {
 		// Setup Prometheus metrics provider first
 		shutdown, err := observability.InitTracer(context.Background(), "test-agent", "1.0.0", "")
 		require.NoError(t, err)
-		defer shutdown(context.Background())
+		defer func() { _ = shutdown(context.Background()) }()
 
 		// Set up standard OTel in-memory span exporter after InitTracer
 		exporter := tracetest.NewInMemoryExporter()

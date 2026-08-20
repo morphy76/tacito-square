@@ -460,7 +460,7 @@ func TestSubmitAgentCRD_NATSProgressionStarted(t *testing.T) {
 	subChan := make(chan *nats.Msg, 10)
 	sub, err := nc.ChanSubscribe("agent.provisioning.started", subChan)
 	require.NoError(t, err)
-	defer sub.Unsubscribe()
+	defer func() { _ = sub.Unsubscribe() }()
 
 	err = coordinator.SubmitAgentCRD(context.Background(), agent)
 	assert.NoError(t, err)
@@ -505,7 +505,7 @@ func TestSubmitAgentCRD_NATSProgressionCompleted(t *testing.T) {
 	subChan := make(chan *nats.Msg, 10)
 	sub, err := nc.ChanSubscribe("agent.provisioning.completed", subChan)
 	require.NoError(t, err)
-	defer sub.Unsubscribe()
+	defer func() { _ = sub.Unsubscribe() }()
 
 	err = coordinator.SubmitAgentCRD(context.Background(), agent)
 	assert.NoError(t, err)
@@ -559,7 +559,7 @@ func TestSubmitAgentCRD_NATSProgressionFailed(t *testing.T) {
 	subChan := make(chan *nats.Msg, 10)
 	sub, err := nc.ChanSubscribe("agent.provisioning.failed", subChan)
 	require.NoError(t, err)
-	defer sub.Unsubscribe()
+	defer func() { _ = sub.Unsubscribe() }()
 
 	err = coordinator.SubmitAgentCRD(context.Background(), agent)
 	assert.Error(t, err)
