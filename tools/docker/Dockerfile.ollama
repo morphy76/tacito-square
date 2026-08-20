@@ -1,4 +1,4 @@
-FROM ollama/ollama:0.3.10
+FROM ollama/ollama:0.32.13
 
 # Redirect OLLAMA_MODELS to a non-volume directory so models can be baked in
 ENV OLLAMA_MODELS=/var/lib/ollama/models
