@@ -81,7 +81,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Push Multi-Arch Docker Image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: tools/docker/Dockerfile.${{ inputs.target_name }}
