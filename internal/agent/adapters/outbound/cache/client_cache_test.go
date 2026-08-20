@@ -48,7 +48,7 @@ func TestClientCache_ReactiveUpdates(t *testing.T) {
 	cache := agentcache.NewClientCache(nc, communityID, tenantID, logger)
 	err := cache.Start(context.Background())
 	require.NoError(t, err)
-	defer cache.Stop()
+	defer func() { _ = cache.Stop() }()
 
 	// 1. Simulate a heartbeat for agent-1
 	card := &agentcard.AgentCard{
@@ -102,10 +102,10 @@ func TestClientCache_ReactiveUpdates(t *testing.T) {
 	reqSub, err := nc.Subscribe(requestSubject, func(msg *nats.Msg) {
 		// Respond with empty registry
 		resp, _ := json.Marshal([]*agentcard.AgentCard{})
-		msg.Respond(resp)
+		_ = msg.Respond(resp)
 	})
 	require.NoError(t, err)
-	defer reqSub.Unsubscribe()
+	defer func() { _ = reqSub.Unsubscribe() }()
 
 	// Try fetching again; should result in a cache miss, query NATS request, and return error since we responded empty
 	_, err = cache.GetCardByName(context.Background(), "agent-alpha")
@@ -125,7 +125,7 @@ func TestClientCache_RegistryRequestReply(t *testing.T) {
 	cache := agentcache.NewClientCache(nc, communityID, tenantID, logger)
 	err := cache.Start(context.Background())
 	require.NoError(t, err)
-	defer cache.Stop()
+	defer func() { _ = cache.Stop() }()
 
 	// Set up NATS request-reply responder
 	requestSubject := fmt.Sprintf("ts.community.%s.registry.request", communityID)
@@ -138,10 +138,10 @@ func TestClientCache_RegistryRequestReply(t *testing.T) {
 	reqSub, err := nc.Subscribe(requestSubject, func(msg *nats.Msg) {
 		assert.Equal(t, tenantID, msg.Header.Get("X-Tacito-Tenant"))
 		resp, _ := json.Marshal([]*agentcard.AgentCard{card})
-		msg.Respond(resp)
+		_ = msg.Respond(resp)
 	})
 	require.NoError(t, err)
-	defer reqSub.Unsubscribe()
+	defer func() { _ = reqSub.Unsubscribe() }()
 
 	// Retrieve card; should hit cache miss, request from responder, populate cache, and return
 	fetched, err := cache.GetCardByName(context.Background(), "agent-beta")
@@ -168,7 +168,7 @@ func TestClientCache_ResolveAgentID(t *testing.T) {
 	cache := agentcache.NewClientCache(nc, communityID, tenantID, logger)
 	err := cache.Start(context.Background())
 	require.NoError(t, err)
-	defer cache.Stop()
+	defer func() { _ = cache.Stop() }()
 
 	// Simulate a heartbeat for agent-uuid-123
 	card := &agentcard.AgentCard{
@@ -224,7 +224,7 @@ func TestClientCache_ResolveAgentID_RefreshCacheMiss(t *testing.T) {
 	cache := agentcache.NewClientCache(nc, communityID, tenantID, logger)
 	err := cache.Start(context.Background())
 	require.NoError(t, err)
-	defer cache.Stop()
+	defer func() { _ = cache.Stop() }()
 
 	// Set up NATS responder to simulate registry request-reply
 	requestSubject := fmt.Sprintf("ts.community.%s.registry.request", communityID)
@@ -237,10 +237,10 @@ func TestClientCache_ResolveAgentID_RefreshCacheMiss(t *testing.T) {
 	}
 	reqSub, err := nc.Subscribe(requestSubject, func(msg *nats.Msg) {
 		resp, _ := json.Marshal([]*agentcard.AgentCard{card})
-		msg.Respond(resp)
+		_ = msg.Respond(resp)
 	})
 	require.NoError(t, err)
-	defer reqSub.Unsubscribe()
+	defer func() { _ = reqSub.Unsubscribe() }()
 
 	// Resolve agent-delta -> should result in a cache miss, trigger Refresh, and successfully resolve to agent-uuid-999
 	resolvedID, err := cache.ResolveAgentID(context.Background(), "agent-delta")

@@ -245,8 +245,7 @@ func (a *Adapter) Generate(ctx context.Context, req model.BrainRequest) (*model.
 		logger.Trace().Msg("initiating Ollama chat wire call (with backoff retry)")
 		start := time.Now()
 		err := retry.Do(runCtx, b, func(ctx context.Context) error {
-			var err error
-			err = a.client.Chat(ctx, params, func(resp api.ChatResponse) error {
+			err := a.client.Chat(ctx, params, func(resp api.ChatResponse) error {
 				responseText += resp.Message.Content
 				promptEvalCount = resp.PromptEvalCount
 				evalCount = resp.EvalCount
