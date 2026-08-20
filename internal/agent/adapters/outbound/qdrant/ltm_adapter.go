@@ -249,11 +249,12 @@ func (a *QdrantLTMAdapter) Search(ctx context.Context, tenantID, agentID string,
 
 	qdrantFilter := buildSearchFilter(tenantID, agentID, filter)
 
-	req := &qdrant.SearchPoints{
+	limitVal := uint64(limit)
+	req := &qdrant.QueryPoints{
 		CollectionName: a.collectionName,
-		Vector:         vector,
+		Query:          qdrant.NewQueryDense(vector),
 		Filter:         qdrantFilter,
-		Limit:          uint64(limit),
+		Limit:          &limitVal,
 		WithPayload:    qdrant.NewWithPayload(true),
 	}
 
@@ -261,7 +262,7 @@ func (a *QdrantLTMAdapter) Search(ctx context.Context, tenantID, agentID string,
 		req.ScoreThreshold = &threshold
 	}
 
-	resp, err := a.pointsClient.Search(ctx, req)
+	resp, err := a.pointsClient.Query(ctx, req)
 
 	duration := time.Since(start).Seconds()
 	status := "success"
