@@ -52,12 +52,17 @@ func NewQdrantLTMAdapter(qdrantURL string, collectionName string, vectorDim uint
 	pointsClient := qdrant.NewPointsClient(conn)
 
 	// 2. Ensure collection exists
-	_, err = collectionsClient.Get(ctx, &qdrant.GetCollectionInfoRequest{
-		CollectionName: collectionName,
-	})
-	if err != nil {
+	var lastErr error
+	for attempt := 0; attempt < 5; attempt++ {
+		_, err = collectionsClient.Get(ctx, &qdrant.GetCollectionInfoRequest{
+			CollectionName: collectionName,
+		})
+		if err == nil {
+			lastErr = nil
+			break
+		}
 		// If collection does not exist, create it
-		_, err = collectionsClient.Create(ctx, &qdrant.CreateCollection{
+		_, createErr := collectionsClient.Create(ctx, &qdrant.CreateCollection{
 			CollectionName: collectionName,
 			VectorsConfig: &qdrant.VectorsConfig{
 				Config: &qdrant.VectorsConfig_Params{
@@ -68,10 +73,16 @@ func NewQdrantLTMAdapter(qdrantURL string, collectionName string, vectorDim uint
 				},
 			},
 		})
-		if err != nil {
-			conn.Close()
-			return nil, fmt.Errorf("failed to create collection %q in qdrant: %w", collectionName, err)
+		if createErr == nil {
+			lastErr = nil
+			break
 		}
+		lastErr = createErr
+		time.Sleep(500 * time.Millisecond)
+	}
+	if lastErr != nil {
+		conn.Close()
+		return nil, fmt.Errorf("failed to create collection %q in qdrant: %w", collectionName, lastErr)
 	}
 
 	return &QdrantLTMAdapter{
