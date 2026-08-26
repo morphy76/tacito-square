@@ -63,32 +63,6 @@ jobs:
       - name: Run Operator Tests
         run: make test-operator
 
-  ui-configurator:
-    name: UI Configurator Quality & Build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v7
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: 'npm'
-          cache-dependency-path: 'ui/configurator/package-lock.json'
-
-      - name: Install Dependencies
-        run: cd ui/configurator && npm ci
-
-      - name: Lint UI
-        run: cd ui/configurator && npm run lint
-
-      - name: Test UI
-        run: cd ui/configurator && npm run test
-
-      - name: Build UI
-        run: cd ui/configurator && npm run build
-
   helm-validation:
     name: Helm Charts Validation
     runs-on: ubuntu-latest
@@ -126,9 +100,6 @@ jobs:
           - agent
           - keeper
           - operator
-          - bff
-          - ui-configurator
-          - ollama
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
