@@ -5,6 +5,18 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    groups:
+      kubernetes:
+        patterns:
+          - "k8s.io/*"
+          - "sigs.k8s.io/*"
+      opentelemetry:
+        patterns:
+          - "go.opentelemetry.io/*"
+      testcontainers:
+        patterns:
+          - "github.com/testcontainers/testcontainers-go*"
+
 
   - package-ecosystem: "npm"
     directory: "/ui/configurator"
